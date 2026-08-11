@@ -38,6 +38,7 @@ Graphitiは**アイデア源のみ**です。private diary本文、個人情報�
 pipeline/
   cli.py                     # candidate / publish entry point
   core.py                    # collection, drafting, source gate, review, publish
+  runtime.py                 # Copilot CLI response normalization / fail-close JSON adapter
   graphiti.py                # private weekly → readable in-memory context → public-safe topic
   selection.py               # candidate maturation + month-end review-all selection
   audit.py                   # fail-close repository/privacy audit
@@ -106,6 +107,6 @@ python -m pipeline.cli candidate
 python -m pipeline.cli publish
 ```
 
-GitHub Actionsの生成バックエンドは **GitHub Copilot CLI** です。`copilot-requests: write` と組み込み `GITHUB_TOKEN` で認証し、CLIには read/write/shell/url/memory tool を許可せず、純粋なテキスト生成器として使います。GitHub Modelsは2026-07-30に終了したため使用しません。private Graphiti readは別のread-only credential `GRAPHITI_READ_TOKEN` を使い、未設定時はGraphiti入力のみskipします。
+GitHub Actionsの生成バックエンドは **GitHub Copilot CLI** です。`copilot-requests: write` と組み込み `GITHUB_TOKEN` で認証し、CLIには read/write/shell/url/memory tool を許可せず、純粋なテキスト生成器として使います。`runtime.py` はJSON契約がMarkdown fenceや短い前置きで装飾された場合でも最初の正当なJSON objectだけを正規化し、objectが無い場合はfail-closeします。GitHub Modelsは2026-07-30に終了したため使用しません。private Graphiti readは別のread-only credential `GRAPHITI_READ_TOKEN` を使い、未設定時はGraphiti入力のみskipします。
 
 詳細は [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) と [`docs/GRAPHITI_WEEKLY.md`](docs/GRAPHITI_WEEKLY.md) を参照してください。
