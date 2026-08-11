@@ -9,7 +9,7 @@ LEGACY_ROOT_FILES = {
     "C2H5OH.md",
     "index.html",
 }
-LEGACY_DIRS = {"article_factory"}
+LEGACY_DIRS = {"article_factory", "candidates", "reports"}
 FORBIDDEN_PUBLIC_MARKERS = (
     "PRIVATE_GRAPHITI_DIARY:",
     "PRIVATE_WEEKLY_CONTEXT:",
