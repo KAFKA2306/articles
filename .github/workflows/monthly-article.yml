@@ -1,6 +1,11 @@
 name: Monthly LAPRAS Article Factory
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/monthly-article.yml"
   workflow_dispatch:
     inputs:
       mode:
@@ -44,6 +49,8 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "mode=${{ inputs.mode }}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "mode=candidate" >> "$GITHUB_OUTPUT"
           elif [[ "${{ github.event.schedule }}" == "0 0 * * 1" ]]; then
             echo "mode=candidate" >> "$GITHUB_OUTPUT"
           else
