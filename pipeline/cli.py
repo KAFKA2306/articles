@@ -21,7 +21,7 @@ def candidate() -> int:
 def publish() -> int:
     path = core.publish_best()
     if path is None:
-        print("publish=no-op reason=already_published_this_month")
+        print("publish=no-op")
         return 0
     print(f"published={path.relative_to(core.ROOT)}")
     return 0
