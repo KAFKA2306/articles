@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import tempfile
 import unittest
 from datetime import datetime
+from pathlib import Path
+from unittest.mock import patch
 
 from pipeline import core
+from pipeline.cli import normalize_legacy_candidate_metadata
 from pipeline.graphiti import compact_weekly_record
 
 
@@ -53,6 +57,23 @@ class PipelineContractTests(unittest.TestCase):
             core.strip_pipeline_meta(sample),
             "# Public article\n",
         )
+
+    def test_legacy_factory_metadata_is_normalized_before_pipeline_action(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            candidate = Path(tmp) / "candidate.md"
+            candidate.write_text(
+                '<!-- factory_meta: {"idea_only": true} -->\n\n# Public article\n',
+                encoding="utf-8",
+            )
+            with patch.object(
+                core,
+                "candidate_files_this_month",
+                return_value=[candidate],
+            ):
+                self.assertEqual(normalize_legacy_candidate_metadata(), 1)
+            migrated = candidate.read_text(encoding="utf-8")
+            self.assertTrue(migrated.startswith("<!-- pipeline_meta: "))
+            self.assertEqual(core.strip_pipeline_meta(migrated), "# Public article\n")
 
     def test_month_end_detection_handles_leap_years(self) -> None:
         self.assertTrue(
