@@ -1,0 +1,36 @@
+name: Article Factory CI
+
+on:
+  pull_request:
+    paths:
+      - "article_factory/**"
+      - ".github/workflows/monthly-article.yml"
+      - ".github/workflows/article-factory-ci.yml"
+      - "articles/**"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile Python
+        run: python -m py_compile article_factory/run.py
+      - name: Validate config
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          c = json.loads(Path('article_factory/config.json').read_text(encoding='utf-8'))
+          gate = c['quality_gate']
+          assert gate['target_overall'] >= 4.0
+          assert gate['minimum_overall'] >= 3.5
+          assert gate['minimum_axis'] >= 3.5
+          assert gate['minimum_primary_sources'] >= 3
+          assert gate['minimum_own_github_evidence'] >= 2
+          PY
