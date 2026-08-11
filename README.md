@@ -1,109 +1,110 @@
-# 初心者にもわかりやすい投資ガイド：基礎編と応用編
+# KAFKA2306/articles
 
-## 基礎編
+技術記事の**生成・検証・選抜・公開を行う正準repository**です。
 
-### 投資を始める前の自己分析
+このrepoは投資ガイドや単発HTMLの保管場所ではありません。private `KAFKA2306/graphiti` の週間記録と公開GitHub活動から技術テーマを発見し、公開一次証拠へ再接地できた候補だけを記事化します。
 
-- 自分の財務状況を把握する
-  > 例：月々の収入と支出、貯金額、借金の有無など
+## Canonical loop
 
-- リスク許容度を理解する
-  > どの程度の資産の変動に耐えられるか、自分の性格を知ることが重要です
+```text
+Graphiti weekly (private) ─┐
+                          ├─> topic discovery
+Public GitHub evidence ───┘
+        ↓
+public evidence grounding
+        ↓
+draft
+        ↓
+source gate
+        ↓
+multi-review
+        ↓
+revision
+        ↓
+best-of-month selection
+        ↓
+articles/*.md
+```
 
-### 投資の基礎知識
+Graphitiは**アイデア源のみ**です。private diary本文、個人情報、税務、資産、健康、旅行、私生活、勤務先内部情報、未公開情報をpublic repoへ保存しません。
 
-- 複利の力を理解する
-  > 利益が利益を生む仕組み。例：100万円を年利5%で運用すると、10年後には約163万円になります
+## Directory contract
 
-- インフレーションの影響を認識する
-  > 物価が上がると、同じお金でも買えるものが少なくなります。投資はこの影響を軽減する方法の一つです
+```text
+.github/workflows/
+  article-pipeline.yml       # weekly candidate / monthly publish
+  article-pipeline-ci.yml    # compile + tests + repository audit
 
-### 必要最小限の現金以外は投資に回す
+pipeline/
+  cli.py                     # candidate / publish entry point
+  core.py                    # collection, drafting, source gate, review, publish
+  graphiti.py                # private weekly → readable in-memory context → public-safe topic
+  audit.py                   # fail-close repository/privacy audit
+  config.json                # quality and path contract
+  contracts/article.md       # writing/review contract
 
-- 現金はインフレ分だけ常に減価。
-  - 歴史的に常にお金の価値は下がり続けてきました。
-  - 安定的な経済成長には緩やかなインフレが必要とされています。
+docs/
+  ARCHITECTURE.md
+  GRAPHITI_WEEKLY.md
 
-- **投資は長期的に見て年率7%程度のリターンが期待できる**。超長期では現金で持っているよりも投資した方が有利です。
-  - 日本では長期的なデフレを経験したため、投資よりも現金保有を好む傾向がありましたが、これは世界的に見れば例外的です。
+artifacts/
+  candidates/YYYY-MM/        # unpublished, public-safe candidates only
+  reports/YYYY-MM/           # review/source evidence
 
-### 投資先は分散する
+articles/                    # Zenn-compatible published articles only
+tests/
+```
 
-- **リスクを抑えつつ、できるだけ高いリターンを目指す**
-- 自分が許容できる範囲で資産の変動を抑え、その中で最大限のリターンを追求する
+`articles/` だけが公開記事の正準出力です。候補と査読証跡は `artifacts/` に隔離し、実装コードは `pipeline/` に集約します。
 
-### 投資サイクルを見極める
+## Automation
 
-- **市場価値は、経済成長、金利、お金の供給量、企業収益などによって年単位で変動する**
-- 繰り返し起こるパターンを見極めることで、より良いタイミングで投資ができる可能性があります
+毎週月曜 09:00 JST:
+- Graphiti weeklyをread-onlyで読む（`GRAPHITI_READ_TOKEN` がある場合のみ）
+- weeklyを読みやすい作業用contextへ圧縮
+- private内容を根拠にせず、公開GitHub evidence 2件以上へ再接地
+- Graphiti由来候補 + public GitHub由来候補を生成
 
-### 投資先の選択と注意点
+毎月25日・27日・29日 09:30 JST:
+- 当月候補を比較
+- source gateを再実行
+- 5軸を3回独立査読して中央値で判定
+- 最大3回改稿
+- 合格した最高品質1本だけを `articles/` へ公開
 
-- 投資先の例：各国の株式、国債、社債、金、外国通貨、仮想通貨、不動産
-  - 伝統的には、様々な資産に分散投資することで、それぞれの変動を打ち消し合い、全体のリスクを減らすことができます
-  - ただし、グローバル企業の影響力が強まっているため、国による分散効果は以前ほど大きくない可能性があります
+## Quality gate
 
-- 注意が必要な投資先：原油・小麦などの商品、不動産、バイオテクノロジー関連、マイナーな仮想通貨
-  - これらは価格変動が大きく、専門知識が必要なため、初心者には向いていない場合があります
+- target overall: 4.1
+- minimum overall: 3.8
+- minimum each axis: 3.5
+- primary-source URLs: 3件以上
+- KAFKA2306 GitHub evidence: 2件以上
+- external official primary source: 1件以上
+- URLは実HTTP取得で検証
+- gate失敗時は公開しない
 
-### 日本の税制を活用する
+## Local verification
 
-- **確定拠出年金(DC,iDeCo)、NISA（少額投資非課税制度）を利用して税金を抑える**
-- 長期投資では利益確定を急がず、損失が出た際に売却することで、税金を最小限に抑える戦略も考えられます
-- 投資信託を利用すると、配当にかかる税金や、為替・売買にかかる手数料を抑えられる場合があります
+```bash
+python -m compileall pipeline
+python -m unittest discover -s tests -v
+python -m pipeline.audit
+```
 
-### 若者の潜在的な資産価値
+## Runtime
 
-- 若者は将来的に安定した収入を得られる可能性があり、これは大きな資産と言えます
-- 例えば、年間数百万円の収入が見込める場合、それは数億円の資産から得られる利息に相当する可能性があります
-- このことから、若いうちは自分の将来の収入を考慮に入れて、より積極的に海外を含めた投資を検討することも一つの選択肢です
+候補生成:
 
-## 応用編
+```bash
+python -m pipeline.cli candidate
+```
 
-### なぜ各投資セクターの価値が変動するのか(理論)
+公開選抜:
 
-- 市場価値は、経済成長、金利、お金の供給量、企業収益などによって年単位で変動します
-- 市場には予期せぬ大きな変化が起こることがあります。例：ITバブル、2008年の金融危機、コロナ禍での市場の変動
-- 中央銀行（日本では日本銀行）の政策により、市場の動きが影響を受けることがあります。歴史は完全には繰り返しませんが、似たようなパターンが見られることがあります
+```bash
+python -m pipeline.cli publish
+```
 
-### なぜ個別の企業の株価が変動するのか(理論)
+GitHub ActionsではGitHub Modelsを利用します。private Graphiti readは別のread-only credential `GRAPHITI_READ_TOKEN` を使い、未設定時はGraphiti入力のみskipします。
 
-- **企業の価値（時価総額）は、企業の利益（EPS）と、その利益に対する評価（PER）の掛け算で表されます**
-  > EPS: 1株当たりの利益、PER: 株価収益率（株価÷EPS）
-
-- 一般的に、企業の利益が高いほど、その企業の価値も高くなります
-- 将来の成長が期待される企業は、現在の利益に比べて高い評価（高いPER）を受けることがあります
-- 企業が将来生み出すと予想される利益の合計（DCF：割引キャッシュフロー）によって、現在の高い評価が正当化されることもあります
-- 決算報告、新製品の発表、在庫状況、関連企業の動向なども株価に影響を与えます
-
-### 個別企業の株価変動から利益を得る(応用編)
-
-- **市場の非効率な部分を見つけ出す**
-  > 効率的市場仮説：すべての情報が即座に株価に反映されるという考え方。しかし、現実にはそうでない場合もあります
-
-- 市場参加者の認識（PER、EPS、アナリストの予想など）をデータから読み取る
-- まだ広く知られていない情報や、一般的な投資家が取りにくいリスク、株式の需要と供給のサイクルなどから利益を得る機会を探す
-
-### AIを活用した投資(応用編)
-
-- 市場の需給状況、企業の財務データ、ニュースなどのテキストデータを分析し、通常とは異なる動きを見つけ出す
-
-### 投資において注目すべき点と注意点
-
-- 注目すべき点：政治の動向、中央銀行の政策、市場全体の動き、企業の決算と利益
-- 注意すべき点：根拠の薄い株価予想、信頼性の低い情報源からの投資アドバイス
-
-## まとめ
-
-### 投資の基本原則
-
-- 生活に必要な分以外の現金は投資に回す
-- 投資先を適切に分散し、リスクを管理する
-- 市場の動きを理解し、長期的な視点で投資する
-- 税制優遇措置を活用して、税金を適切に管理する
-
-### 応用的な視点
-
-- 各投資分野の価値が変動する要因を理解する
-- 個別の企業の株価が変動するメカニズムを把握する
-- 市場の非効率な部分を見つけ、それを活用する方法を考える
+詳細は [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) と [`docs/GRAPHITI_WEEKLY.md`](docs/GRAPHITI_WEEKLY.md) を参照してください。

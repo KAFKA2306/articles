@@ -1,0 +1,1 @@
+"""Canonical article generation pipeline."""

@@ -1,0 +1,43 @@
+name: Article Pipeline CI
+
+on:
+  pull_request:
+    paths:
+      - "pipeline/**"
+      - "tests/**"
+      - "docs/**"
+      - "articles/**"
+      - "artifacts/**"
+      - "README.md"
+      - ".github/workflows/article-pipeline.yml"
+      - ".github/workflows/article-pipeline-ci.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "pipeline/**"
+      - "tests/**"
+      - "docs/**"
+      - "articles/**"
+      - "artifacts/**"
+      - "README.md"
+      - ".github/workflows/article-pipeline.yml"
+      - ".github/workflows/article-pipeline-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile
+        run: python -m compileall pipeline
+      - name: Contract tests
+        run: python -m unittest discover -s tests -v
+      - name: Repository and privacy audit
+        run: python -m pipeline.audit
