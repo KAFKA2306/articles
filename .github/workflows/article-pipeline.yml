@@ -57,42 +57,80 @@ jobs:
             echo "mode=publish" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Pin current GitHub REST API version
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          current = "2026-03-10"
-
-          core = Path("pipeline/core.py")
-          text = core.read_text(encoding="utf-8")
-          needle = '            "Accept": "application/vnd.github+json",\n            "Authorization":'
-          replacement = (
-              '            "Accept": "application/vnd.github+json",\n'
-              f'            "X-GitHub-Api-Version": "{current}",\n'
-              '            "Authorization":'
-          )
-          if needle not in text and f'"X-GitHub-Api-Version": "{current}"' not in text:
-              raise SystemExit("GitHub Models request header insertion point not found")
-          core.write_text(text.replace(needle, replacement, 1), encoding="utf-8")
-
-          graphiti = Path("pipeline/graphiti.py")
-          text = graphiti.read_text(encoding="utf-8")
-          text = text.replace(
-              '"X-GitHub-Api-Version": "2022-11-28"',
-              f'"X-GitHub-Api-Version": "{current}"',
-          )
-          graphiti.write_text(text, encoding="utf-8")
-          PY
-
       - name: Preflight audit
         run: |
           python -m compileall pipeline
           python -m unittest discover -s tests -v
           python -m pipeline.audit
 
+      - name: Check GitHub Models availability
+        id: models
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p /tmp/article-pipeline
+          set +e
+          code=$(curl -sS -L \
+            -o /tmp/article-pipeline/models-response.json \
+            -w "%{http_code}" \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Content-Type: application/json" \
+            https://models.github.ai/inference/chat/completions \
+            -d '{"model":"openai/gpt-4.1","messages":[{"role":"user","content":"Reply with OK."}],"max_tokens":8,"temperature":0}')
+          curl_status=$?
+          set -e
+
+          if [[ "$curl_status" -ne 0 ]]; then
+            echo "GitHub Models preflight transport failure" >&2
+            exit "$curl_status"
+          fi
+
+          if [[ "$code" == "200" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            month=$(TZ=Asia/Tokyo date +%Y-%m)
+            rm -f "artifacts/reports/$month/runtime-status.json"
+            exit 0
+          fi
+
+          if [[ "$code" == "410" ]]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            export MODELS_HTTP_STATUS="$code"
+            python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timedelta, timezone
+          from pathlib import Path
+
+          jst = timezone(timedelta(hours=9))
+          now = datetime.now(jst)
+          out = Path("artifacts/reports") / now.strftime("%Y-%m")
+          out.mkdir(parents=True, exist_ok=True)
+          payload = {
+              "status": "blocked",
+              "reason_code": "github_models_http_410",
+              "http_status": int(os.environ["MODELS_HTTP_STATUS"]),
+              "checked_at": now.isoformat(),
+              "official_prerequisite": "Enable GitHub Models for this repository before inference is used.",
+              "official_docs": "https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/managing-github-models-in-your-repository",
+          }
+          (out / "runtime-status.json").write_text(
+              json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+            echo "GitHub Models inference unavailable (HTTP 410); candidate/publish generation is fail-closed." >&2
+            exit 0
+          fi
+
+          echo "Unexpected GitHub Models HTTP status: $code" >&2
+          cat /tmp/article-pipeline/models-response.json >&2 || true
+          exit 1
+
       - name: Generate or publish
+        if: steps.models.outputs.available == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GRAPHITI_READ_TOKEN: ${{ secrets.GRAPHITI_READ_TOKEN }}

@@ -52,7 +52,7 @@ docs/
 
 artifacts/
   candidates/YYYY-MM/        # unpublished, public-safe candidates only
-  reports/YYYY-MM/           # review/source/selection evidence
+  reports/YYYY-MM/           # review/source/selection/runtime evidence
 
 articles/                    # Zenn-compatible published articles only
 tests/
@@ -63,6 +63,8 @@ tests/
 ## Automation
 
 毎週月曜 09:00 JST:
+- GitHub Models inferenceをpreflightする
+- inferenceがHTTP 410なら生成をfail-closeし、`artifacts/reports/YYYY-MM/runtime-status.json` にblockerを保存する
 - Graphiti weeklyをread-onlyで読む（`GRAPHITI_READ_TOKEN` がある場合のみ）
 - weeklyを読みやすい作業用contextへ圧縮
 - private内容を根拠にせず、公開GitHub evidence 2件以上へ再接地
@@ -99,6 +101,17 @@ tests/
 - gate失敗時は公開しない
 - monthly publication limit: 1
 
+## GitHub-side prerequisites
+
+GitHub ActionsからGitHub Modelsを使うには、workflowの `models: read` だけでなく、repository自体でGitHub Modelsが有効になっている必要があります。
+
+- GitHub公式: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/managing-github-models-in-your-repository
+- `KAFKA2306/articles` では **Settings → Models → Models in this repository → Enabled** が必要
+- inferenceが利用不可の間は、記事を捏造・代替公開せずruntime blockerを記録して正常終了する
+- 利用可能になった次回runではblocker reportを削除して通常生成へ復帰する
+
+Graphiti入力には別途、private `KAFKA2306/graphiti` だけをread-onlyで読める `GRAPHITI_READ_TOKEN` が必要です。未設定時はGraphiti入力のみskipし、GitHub Modelsが利用可能ならpublic GitHub由来候補は継続します。
+
 ## Local verification
 
 ```bash
@@ -120,7 +133,5 @@ python -m pipeline.cli candidate
 ```bash
 python -m pipeline.cli publish
 ```
-
-GitHub ActionsではGitHub Modelsを利用します。private Graphiti readは別のread-only credential `GRAPHITI_READ_TOKEN` を使い、未設定時はGraphiti入力のみskipします。
 
 詳細は [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) と [`docs/GRAPHITI_WEEKLY.md`](docs/GRAPHITI_WEEKLY.md) を参照してください。
