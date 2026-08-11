@@ -15,13 +15,17 @@ public evidence grounding
         ↓
 draft
         ↓
-source gate
+source gate + internal proxy review
         ↓
-multi-review
+revision / best-version retention
         ↓
-revision
+weekly candidate accumulation
         ↓
-best-of-month selection
+month-end: re-verify all candidates
+        ↓
+3-review median + deterministic ranking
+        ↓
+highest passing candidate only
         ↓
 articles/*.md
 ```
@@ -32,24 +36,23 @@ Graphitiは**アイデア源のみ**です。private diary本文、個人情報�
 
 ```text
 .github/workflows/
-  article-pipeline.yml       # weekly candidate / monthly publish
+  article-pipeline.yml       # weekly candidate / actual month-end publish
   article-pipeline-ci.yml    # compile + tests + repository audit
 
 pipeline/
   cli.py                     # candidate / publish entry point
-  core.py                    # collection, drafting, source gate, review, publish
+  core.py                    # collection, drafting, source gate, proxy review, selection, publish
   graphiti.py                # private weekly → readable in-memory context → public-safe topic
   audit.py                   # fail-close repository/privacy audit
   config.json                # quality and path contract
-  contracts/article.md       # writing/review contract
-
+  contracts/article.md       # writing/review/selection contract
 docs/
   ARCHITECTURE.md
   GRAPHITI_WEEKLY.md
 
 artifacts/
   candidates/YYYY-MM/        # unpublished, public-safe candidates only
-  reports/YYYY-MM/           # review/source evidence
+  reports/YYYY-MM/           # review/source/selection evidence
 
 articles/                    # Zenn-compatible published articles only
 tests/
@@ -64,16 +67,28 @@ tests/
 - weeklyを読みやすい作業用contextへ圧縮
 - private内容を根拠にせず、公開GitHub evidence 2件以上へ再接地
 - Graphiti由来候補 + public GitHub由来候補を生成
+- source gateと内部proxy査読を実施
+- target 4.1に届かなければ最大 `revision_limit` 回改稿
+- 改稿で悪化した場合は評価済み版の最良版を候補として保持
 
-毎月25日・27日・29日 09:30 JST:
-- 当月候補を比較
-- source gateを再実行
-- 5軸を3回独立査読して中央値で判定
-- 最大3回改稿
-- 合格した最高品質1本だけを `articles/` へ公開
+毎月28〜31日 23:30 JST:
+- workflowはfinalization windowとして起動
+- 実際の暦上の月末日だけpublish処理を続行
+- 当月の全候補から `pipeline_meta` を除いた公開本文だけを再検証
+- 全候補を5軸×3回独立査読し、各軸中央値で判定
+- `overall >= 3.8`、全軸 `>= 3.5`、source gate PASSのみを公開可能集合にする
+- `overall` → 最低軸 → 自GitHub証拠数 → 有効一次情報数で決定的に順位付け
+- 最高品質の1本だけを `articles/` へ公開
+- 合格候補がなければ0本で終了
+- 同月に1本公開済みなら追加公開しない
+
+`workflow_dispatch` の `publish` は明示的な手動実行として月末日前でも許可します。ローカルで早期公開判定を試す場合は `ARTICLE_ALLOW_EARLY_PUBLISH=1` を明示します。
 
 ## Quality gate
 
+内部評価は **LAPRAS AI Reviewで公開されている5軸を参考にしたproxy** です。LAPRAS上の実測AI Review値ではありません。
+
+- evaluation kind: `internal_lapras_rubric_proxy`
 - target overall: 4.1
 - minimum overall: 3.8
 - minimum each axis: 3.5
@@ -82,6 +97,7 @@ tests/
 - external official primary source: 1件以上
 - URLは実HTTP取得で検証
 - gate失敗時は公開しない
+- monthly publication limit: 1
 
 ## Local verification
 

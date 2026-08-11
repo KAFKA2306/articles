@@ -216,8 +216,9 @@ def generate_graphiti_candidate() -> str | None:
     topic = extract_public_safe_topic(records, public_signals)
     digest = topic.pop("record_digest", None)
     article = core.draft_article(topic, public_signals)
-    sources_ok, source_report = core.source_gate(article)
-    review = core.aggregate_evaluations(article, rounds=1)
+    article, review, source_report, sources_ok, revision_attempts = (
+        core.improve_candidate(article, review_rounds=1)
+    )
 
     meta = {
         "idea_source": "private-graphiti-weekly",
@@ -226,12 +227,18 @@ def generate_graphiti_candidate() -> str | None:
         "record_count": len(records),
         "record_digest": digest,
         "topic": topic,
-        "initial_review": review,
-        "initial_sources": source_report,
+        "evaluation_kind": core.EVALUATION_KIND,
+        "candidate_review": review,
+        "candidate_sources": source_report,
+        "sources_ok": sources_ok,
+        "passes_gate": core.passes_quality(review, sources_ok),
+        "revision_attempts": revision_attempts,
     }
     path = core.save_candidate(article, meta)
     print(
         f"graphiti_candidate={path.relative_to(core.ROOT)} "
-        f"sources_ok={sources_ok} score={review['overall']}"
+        f"sources_ok={sources_ok} "
+        f"passes_gate={core.passes_quality(review, sources_ok)} "
+        f"proxy_score={review['overall']}"
     )
     return str(path)

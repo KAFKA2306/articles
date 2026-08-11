@@ -16,6 +16,9 @@ PROMPT = (PIPELINE_DIR / "contracts" / "article.md").read_text(encoding="utf-8")
 JST = timezone(timedelta(hours=9))
 MODEL_ENDPOINT = "https://models.github.ai/inference/chat/completions"
 URL_RE = re.compile(r"https://[^\s)\]>\"']+")
+PIPELINE_META_RE = re.compile(r"\A<!-- pipeline_meta: [^\n]*-->\s*", flags=re.MULTILINE)
+AXIS_KEYS = ["logic", "utility", "readability", "originality", "clarity"]
+EVALUATION_KIND = str(CONFIG.get("evaluation_kind", "internal_lapras_rubric_proxy"))
 
 
 def now_jst() -> datetime:
@@ -115,13 +118,19 @@ def collect_public_github_signals(owner: str) -> list[dict[str, object]]:
     return signals
 
 
+def strip_pipeline_meta(text: str) -> str:
+    return PIPELINE_META_RE.sub("", text, count=1).lstrip()
+
+
 def existing_titles() -> list[str]:
     titles: list[str] = []
     for base in (output_dir("published"), output_dir("candidates")):
         if not base.exists():
             continue
         for path in base.rglob("*.md"):
-            text = path.read_text(encoding="utf-8", errors="ignore")
+            text = strip_pipeline_meta(
+                path.read_text(encoding="utf-8", errors="ignore")
+            )
             heading = re.search(r"^#\s+(.+)$", text, flags=re.MULTILINE)
             frontmatter = re.search(
                 r'^title:\s*["\']?(.+?)["\']?\s*$',
@@ -231,8 +240,10 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
 
 def evaluate(article: str) -> dict[str, object]:
     user = f"""
-LAPRAS AI Reviewの5軸に合わせてこの記事を厳格に評価してください。
-0.0〜5.0。overallは5軸の算術平均。甘く採点しないでください。
+LAPRAS AI Reviewで公開されている5軸を参考にした内部proxyとして、
+この記事を厳格に評価してください。
+これはLAPRAS上の実測AI Review値ではありません。
+0.0〜5.0で採点し、overallは5軸の算術平均とします。甘く採点しないでください。
 
 {PROMPT}
 
@@ -249,9 +260,9 @@ JSONのみ返してください。
             json_mode=True,
         )
     )
-    axes = ["logic", "utility", "readability", "originality", "clarity"]
-    values = [float(result.get(key, 0.0)) for key in axes]
+    values = [float(result.get(key, 0.0)) for key in AXIS_KEYS]
     result["overall"] = round(sum(values) / len(values), 3)
+    result["evaluation_kind"] = EVALUATION_KIND
     return result
 
 
@@ -261,9 +272,11 @@ def aggregate_evaluations(
     rounds: int = 3,
 ) -> dict[str, object]:
     reviews = [evaluate(article) for _ in range(rounds)]
-    axes = ["logic", "utility", "readability", "originality", "clarity", "overall"]
-    aggregate: dict[str, object] = {"reviews": reviews}
-    for key in axes:
+    aggregate: dict[str, object] = {
+        "reviews": reviews,
+        "evaluation_kind": EVALUATION_KIND,
+    }
+    for key in [*AXIS_KEYS, "overall"]:
         values = sorted(float(review.get(key, 0.0)) for review in reviews)
         aggregate[key] = values[len(values) // 2]
     aggregate["blocking_issues"] = list(
@@ -287,12 +300,24 @@ def aggregate_evaluations(
 
 def passes_quality(review: dict[str, object], sources_ok: bool) -> bool:
     gate = CONFIG["quality_gate"]
-    axes = ["logic", "utility", "readability", "originality", "clarity"]
     return bool(
         sources_ok
         and float(review["overall"]) >= float(gate["minimum_overall"])
-        and all(float(review[key]) >= float(gate["minimum_axis"]) for key in axes)
+        and all(
+            float(review[key]) >= float(gate["minimum_axis"])
+            for key in AXIS_KEYS
+        )
     )
+
+
+def review_rank_key(
+    review: dict[str, object],
+    source_report: dict[str, object],
+) -> tuple[float, float, int, int]:
+    minimum_axis = min(float(review[key]) for key in AXIS_KEYS)
+    own_count = len(source_report.get("own_github", []))
+    valid_count = len(source_report.get("valid_urls", []))
+    return (float(review["overall"]), minimum_axis, own_count, valid_count)
 
 
 def revise(
@@ -307,7 +332,7 @@ Markdown本文のみ返してください。
 品質契約:
 {PROMPT}
 
-査読結果:
+内部proxy査読結果:
 {json.dumps(review, ensure_ascii=False, indent=2)}
 
 一次情報検証:
@@ -324,6 +349,38 @@ GitHub一次証拠と再現手順を厚くしてください。
         user,
         temperature=0.15,
     )
+
+
+def improve_candidate(
+    article: str,
+    *,
+    review_rounds: int = 1,
+) -> tuple[str, dict[str, object], dict[str, object], bool, int]:
+    best: tuple[str, dict[str, object], dict[str, object], bool] | None = None
+    best_key: tuple[int, int, float, float, int, int] | None = None
+    target = float(CONFIG["quality_gate"]["target_overall"])
+    attempts_used = 0
+
+    for attempt in range(int(CONFIG["revision_limit"]) + 1):
+        sources_ok, source_report = source_gate(article)
+        review = aggregate_evaluations(article, rounds=review_rounds)
+        key = (
+            int(passes_quality(review, sources_ok)),
+            int(sources_ok),
+            *review_rank_key(review, source_report),
+        )
+        if best_key is None or key > best_key:
+            best = (article, review, source_report, sources_ok)
+            best_key = key
+        attempts_used = attempt
+
+        if passes_quality(review, sources_ok) and float(review["overall"]) >= target:
+            break
+        if attempt < int(CONFIG["revision_limit"]):
+            article = revise(article, review, source_report)
+
+    assert best is not None
+    return best[0], best[1], best[2], best[3], attempts_used
 
 
 def article_title(article: str) -> str:
@@ -386,33 +443,80 @@ def candidate_files_this_month() -> list[Path]:
     return sorted(base.glob("*.md"))
 
 
-def choose_best_candidate(paths: list[Path]) -> str:
-    if len(paths) == 1:
-        return paths[0].read_text(encoding="utf-8")
-    corpus = []
+def is_month_end(moment: datetime) -> bool:
+    return (moment + timedelta(days=1)).month != moment.month
+
+
+def scheduled_publish_allowed() -> bool:
+    return bool(
+        os.environ.get("ARTICLE_ALLOW_EARLY_PUBLISH") == "1"
+        or os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch"
+        or is_month_end(now_jst())
+    )
+
+
+def evaluate_monthly_candidates(paths: list[Path]) -> list[dict[str, object]]:
+    evaluated: list[dict[str, object]] = []
     for path in paths:
-        text = path.read_text(encoding="utf-8")
-        corpus.append(
+        article = strip_pipeline_meta(path.read_text(encoding="utf-8"))
+        sources_ok, source_report = source_gate(article)
+        review = aggregate_evaluations(article, rounds=3)
+        passes_gate = passes_quality(review, sources_ok)
+        rank_key = review_rank_key(review, source_report)
+        evaluated.append(
             {
-                "path": path.name,
-                "title": article_title(text),
-                "excerpt": text[:3500],
+                "path": path,
+                "article": article,
+                "title": article_title(article),
+                "sources_ok": sources_ok,
+                "source_report": source_report,
+                "review": review,
+                "passes_gate": passes_gate,
+                "rank_key": rank_key,
             }
         )
-    result = json.loads(
-        model_call(
-            "あなたは月次の技術編集長です。独自性・実用性・一次証拠密度が最も高い1本を選びます。",
-            '次の候補から最高品質の1本を選び、JSONで {"path":"..."} のみ返してください。\n'
-            + json.dumps(corpus, ensure_ascii=False),
-            temperature=0.0,
-            json_mode=True,
+        print(
+            f"monthly_candidate={path.name} sources_ok={sources_ok} "
+            f"passes_gate={passes_gate} proxy_score={review['overall']}"
         )
+    return evaluated
+
+
+def save_monthly_selection_report(
+    evaluated: list[dict[str, object]],
+    *,
+    selected: dict[str, object] | None,
+    status: str,
+) -> Path:
+    month = now_jst().strftime("%Y-%m")
+    report_dir = output_dir("reports") / month
+    report_dir.mkdir(parents=True, exist_ok=True)
+
+    payload = {
+        "month": month,
+        "evaluation_kind": EVALUATION_KIND,
+        "status": status,
+        "publication_limit": int(CONFIG.get("monthly_publication_limit", 1)),
+        "selected_candidate": selected["path"].name if selected else None,
+        "candidates": [
+            {
+                "path": item["path"].name,
+                "title": item["title"],
+                "sources_ok": item["sources_ok"],
+                "passes_gate": item["passes_gate"],
+                "rank_key": list(item["rank_key"]),
+                "review": item["review"],
+                "sources": item["source_report"],
+            }
+            for item in evaluated
+        ],
+    }
+    path = report_dir / "monthly-selection.json"
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
     )
-    selected = str(result.get("path", ""))
-    for path in paths:
-        if path.name == selected:
-            return path.read_text(encoding="utf-8")
-    return paths[0].read_text(encoding="utf-8")
+    return path
 
 
 def publish(
@@ -420,6 +524,7 @@ def publish(
     review: dict[str, object],
     source_report: dict[str, object],
 ) -> Path:
+    article = strip_pipeline_meta(article)
     out = output_dir("published")
     out.mkdir(parents=True, exist_ok=True)
     slug = slug_for(article)
@@ -447,6 +552,7 @@ def publish(
     report_dir = output_dir("reports") / now_jst().strftime("%Y-%m")
     report_dir.mkdir(parents=True, exist_ok=True)
     report = {
+        "evaluation_kind": EVALUATION_KIND,
         "review": review,
         "sources": source_report,
         "published_path": str(path.relative_to(ROOT)),
@@ -464,47 +570,87 @@ def generate_public_candidate() -> Path:
     selected = topics.get("selected", topics)
     topic = selected if isinstance(selected, dict) else topics
     article = draft_article(topic, signals)
-    sources_ok, source_report = source_gate(article)
-    review = aggregate_evaluations(article, rounds=1)
+    article, review, source_report, sources_ok, revision_attempts = improve_candidate(
+        article,
+        review_rounds=1,
+    )
     meta = {
         "idea_source": "public-github",
         "topic_selection": topics,
-        "initial_review": review,
-        "initial_sources": source_report,
+        "evaluation_kind": EVALUATION_KIND,
+        "candidate_review": review,
+        "candidate_sources": source_report,
+        "sources_ok": sources_ok,
+        "passes_gate": passes_quality(review, sources_ok),
+        "revision_attempts": revision_attempts,
     }
     return save_candidate(article, meta)
 
 
 def publish_best() -> Path | None:
-    if published_this_month():
-        return None
-    paths = candidate_files_this_month()
-    if paths:
-        article = choose_best_candidate(paths)
-    else:
-        signals = collect_public_github_signals(str(CONFIG["owner"]))
-        topics = choose_topic(signals)
-        selected = topics.get("selected", topics)
-        topic = selected if isinstance(selected, dict) else topics
-        article = draft_article(topic, signals)
-
-    last_review: dict[str, object] = {}
-    last_sources: dict[str, object] = {}
-    for attempt in range(int(CONFIG["revision_limit"]) + 1):
-        sources_ok, last_sources = source_gate(article)
-        last_review = aggregate_evaluations(article, rounds=3)
+    if not scheduled_publish_allowed():
         print(
-            f"attempt={attempt} sources_ok={sources_ok} "
-            f"score={last_review['overall']}"
+            "publish=skipped reason=not_month_end "
+            f"date={now_jst():%Y-%m-%d}"
         )
-        if passes_quality(last_review, sources_ok):
-            return publish(article, last_review, last_sources)
-        if attempt < int(CONFIG["revision_limit"]):
-            article = revise(article, last_review, last_sources)
-    raise RuntimeError(
-        "quality_gate_failed "
-        + json.dumps(
-            {"review": last_review, "sources": last_sources},
-            ensure_ascii=False,
+        return None
+
+    if published_this_month():
+        print("publish=skipped reason=monthly_publication_limit_reached")
+        return None
+
+    paths = candidate_files_this_month()
+    if not paths:
+        report = save_monthly_selection_report(
+            [],
+            selected=None,
+            status="no_candidates",
         )
+        print(
+            "publish=skipped reason=no_candidates "
+            f"report={report.relative_to(ROOT)}"
+        )
+        return None
+
+    evaluated = evaluate_monthly_candidates(paths)
+    eligible = [item for item in evaluated if bool(item["passes_gate"])]
+    if not eligible:
+        report = save_monthly_selection_report(
+            evaluated,
+            selected=None,
+            status="no_candidate_passed_quality_gate",
+        )
+        print(
+            "publish=skipped reason=no_candidate_passed_quality_gate "
+            f"report={report.relative_to(ROOT)}"
+        )
+        return None
+
+    eligible.sort(
+        key=lambda item: (
+            item["rank_key"],
+            str(item["path"].name),
+        ),
+        reverse=True,
     )
+    selected = eligible[0]
+    report = save_monthly_selection_report(
+        evaluated,
+        selected=selected,
+        status="selected",
+    )
+
+    article = str(selected["article"])
+    review = dict(selected["review"])
+    source_report = dict(selected["source_report"])
+    sources_ok = bool(selected["sources_ok"])
+
+    if not passes_quality(review, sources_ok):
+        raise RuntimeError("selected candidate unexpectedly failed quality gate")
+
+    path = publish(article, review, source_report)
+    print(
+        f"monthly_selection={report.relative_to(ROOT)} "
+        f"selected={selected['path'].name} proxy_score={review['overall']}"
+    )
+    return path

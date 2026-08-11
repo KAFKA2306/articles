@@ -18,8 +18,9 @@ on:
   schedule:
     # Monday 09:00 JST.
     - cron: "0 0 * * 1"
-    # Monthly finalization retries: 25th, 27th, 29th at 09:30 JST.
-    - cron: "30 0 25,27,29 * *"
+    # Month-end finalization window: 28th-31st at 23:30 JST.
+    # pipeline/core.py only publishes on the actual last calendar day.
+    - cron: "30 14 28-31 * *"
 
 permissions:
   contents: write
@@ -32,7 +33,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:

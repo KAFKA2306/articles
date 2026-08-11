@@ -3,6 +3,8 @@
   "model": "openai/gpt-4.1",
   "candidate_count": 5,
   "revision_limit": 3,
+  "evaluation_kind": "internal_lapras_rubric_proxy",
+  "monthly_publication_limit": 1,
   "paths": {
     "candidates": "artifacts/candidates",
     "reports": "artifacts/reports",

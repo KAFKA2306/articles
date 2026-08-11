@@ -44,6 +44,10 @@ def audit_layout() -> None:
 
 def audit_config() -> None:
     gate = core.CONFIG["quality_gate"]
+    if core.CONFIG.get("evaluation_kind") != "internal_lapras_rubric_proxy":
+        fail("evaluation_kind must identify the internal LAPRAS-rubric proxy")
+    if int(core.CONFIG.get("monthly_publication_limit", 0)) != 1:
+        fail("monthly_publication_limit must be exactly 1")
     if float(gate["target_overall"]) < 4.0:
         fail("target_overall must be >= 4.0")
     if float(gate["minimum_overall"]) < 3.5:
@@ -81,6 +85,8 @@ def audit_articles() -> None:
         text = path.read_text(encoding="utf-8", errors="ignore")
         if not text.startswith("---\n"):
             fail(f"missing front matter: {path}")
+        if "pipeline_meta:" in text:
+            fail(f"candidate metadata leaked into published article: {path}")
         if "published: true" in text and not re.search(
             r"^published_at: \d{4}-\d{2}-\d{2}",
             text,
