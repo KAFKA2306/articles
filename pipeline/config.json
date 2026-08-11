@@ -1,10 +1,8 @@
 {
   "owner": "KAFKA2306",
-  "model": "openai/gpt-4.1",
+  "model": "gpt-5.2",
   "candidate_count": 5,
   "revision_limit": 3,
-  "evaluation_kind": "internal_lapras_rubric_proxy",
-  "monthly_publication_limit": 1,
   "paths": {
     "candidates": "artifacts/candidates",
     "reports": "artifacts/reports",
@@ -49,5 +47,8 @@
     "openai.com",
     "platform.openai.com",
     "zenn.dev"
-  ]
+  ],
+  "evaluation_kind": "internal_lapras_rubric_proxy",
+  "monthly_publication_limit": 1,
+  "model_provider": "github-copilot-cli"
 }

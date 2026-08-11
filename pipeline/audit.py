@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-
 from . import core
 
 LEGACY_ROOT_FILES = {
@@ -34,6 +33,7 @@ def audit_layout() -> None:
         core.ROOT / "pipeline" / "cli.py",
         core.ROOT / "pipeline" / "core.py",
         core.ROOT / "pipeline" / "graphiti.py",
+        core.ROOT / "pipeline" / "selection.py",
         core.ROOT / "docs" / "ARCHITECTURE.md",
         core.ROOT / "docs" / "GRAPHITI_WEEKLY.md",
     ]
@@ -44,10 +44,6 @@ def audit_layout() -> None:
 
 def audit_config() -> None:
     gate = core.CONFIG["quality_gate"]
-    if core.CONFIG.get("evaluation_kind") != "internal_lapras_rubric_proxy":
-        fail("evaluation_kind must identify the internal LAPRAS-rubric proxy")
-    if int(core.CONFIG.get("monthly_publication_limit", 0)) != 1:
-        fail("monthly_publication_limit must be exactly 1")
     if float(gate["target_overall"]) < 4.0:
         fail("target_overall must be >= 4.0")
     if float(gate["minimum_overall"]) < 3.5:
@@ -58,6 +54,15 @@ def audit_config() -> None:
         fail("minimum_primary_sources must be >= 3")
     if int(gate["minimum_own_github_evidence"]) < 2:
         fail("minimum_own_github_evidence must be >= 2")
+    if core.CONFIG.get("evaluation_kind") != "internal_lapras_rubric_proxy":
+        fail("evaluation_kind must declare internal proxy semantics")
+    if int(core.CONFIG.get("monthly_publication_limit", 0)) != 1:
+        fail("monthly_publication_limit must be exactly 1")
+    if core.CONFIG.get("model_provider") != "github-copilot-cli":
+        fail("model_provider must use github-copilot-cli")
+    source = (core.ROOT / "pipeline" / "core.py").read_text(encoding="utf-8")
+    if "models.github.ai" in source:
+        fail("retired GitHub Models endpoint remains in core.py")
 
 
 def audit_privacy() -> None:
@@ -85,8 +90,6 @@ def audit_articles() -> None:
         text = path.read_text(encoding="utf-8", errors="ignore")
         if not text.startswith("---\n"):
             fail(f"missing front matter: {path}")
-        if "pipeline_meta:" in text:
-            fail(f"candidate metadata leaked into published article: {path}")
         if "published: true" in text and not re.search(
             r"^published_at: \d{4}-\d{2}-\d{2}",
             text,

@@ -2,17 +2,11 @@ from __future__ import annotations
 
 import argparse
 
-from . import core
+from . import core, selection
 from .graphiti import generate_graphiti_candidate
 
 
 def normalize_legacy_candidate_metadata() -> int:
-    """Migrate one-off bootstrap metadata before any pipeline action.
-
-    The bootstrap candidate used ``factory_meta`` before ``pipeline_meta`` became
-    canonical. Normalize it in-place so monthly evaluation and publication use
-    the same metadata-stripping contract and never publish the internal comment.
-    """
     normalized = 0
     for path in core.candidate_files_this_month():
         text = path.read_text(encoding="utf-8")
@@ -29,11 +23,11 @@ def normalize_legacy_candidate_metadata() -> int:
 
 
 def candidate() -> int:
-    generated = []
+    generated: list[str] = []
     graphiti_path = generate_graphiti_candidate()
     if graphiti_path:
         generated.append(graphiti_path)
-    public_path = core.generate_public_candidate()
+    public_path = selection.generate_public_candidate()
     generated.append(str(public_path))
     for path in generated:
         print(f"candidate_output={path}")
@@ -41,11 +35,9 @@ def candidate() -> int:
 
 
 def publish() -> int:
-    path = core.publish_best()
-    if path is None:
-        print("publish=no-op")
-        return 0
-    print(f"published={path.relative_to(core.ROOT)}")
+    path = selection.publish_best()
+    if path is not None:
+        print(f"published={path.relative_to(core.ROOT)}")
     return 0
 
 

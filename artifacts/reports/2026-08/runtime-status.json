@@ -1,8 +1,0 @@
-{
-  "status": "blocked",
-  "reason_code": "github_models_http_410",
-  "http_status": 410,
-  "checked_at": "2026-08-11T14:51:55.049905+09:00",
-  "official_prerequisite": "Enable GitHub Models for this repository before inference is used.",
-  "official_docs": "https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/managing-github-models-in-your-repository"
-}

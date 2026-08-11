@@ -7,8 +7,7 @@ import os
 import re
 import urllib.parse
 import urllib.request
-
-from . import core
+from . import core, selection
 
 TOKEN_ENV = "GRAPHITI_READ_TOKEN"
 
@@ -34,8 +33,8 @@ def github_json(path: str) -> object:
         headers={
             "Accept": "application/vnd.github+json",
             "Authorization": f"Bearer {token}",
-            "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "KAFKA2306-articles/2.0",
+            "X-GitHub-Api-Version": "2026-03-10",
+            "User-Agent": "KAFKA2306-articles/3.0",
         },
     )
     with urllib.request.urlopen(request, timeout=20) as response:
@@ -217,7 +216,7 @@ def generate_graphiti_candidate() -> str | None:
     digest = topic.pop("record_digest", None)
     article = core.draft_article(topic, public_signals)
     article, review, source_report, sources_ok, revision_attempts = (
-        core.improve_candidate(article, review_rounds=1)
+        selection.improve_candidate(article, review_rounds=1)
     )
 
     meta = {
@@ -227,18 +226,14 @@ def generate_graphiti_candidate() -> str | None:
         "record_count": len(records),
         "record_digest": digest,
         "topic": topic,
-        "evaluation_kind": core.EVALUATION_KIND,
+        "evaluation_kind": selection.EVALUATION_KIND,
         "candidate_review": review,
         "candidate_sources": source_report,
-        "sources_ok": sources_ok,
-        "passes_gate": core.passes_quality(review, sources_ok),
         "revision_attempts": revision_attempts,
     }
     path = core.save_candidate(article, meta)
     print(
         f"graphiti_candidate={path.relative_to(core.ROOT)} "
-        f"sources_ok={sources_ok} "
-        f"passes_gate={core.passes_quality(review, sources_ok)} "
-        f"proxy_score={review['overall']}"
+        f"sources_ok={sources_ok} score={review['overall']}"
     )
     return str(path)

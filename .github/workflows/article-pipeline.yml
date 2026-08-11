@@ -19,12 +19,12 @@ on:
     # Monday 09:00 JST.
     - cron: "0 0 * * 1"
     # Month-end finalization window: 28th-31st at 23:30 JST.
-    # pipeline/core.py only publishes on the actual last calendar day.
+    # pipeline.selection.is_month_end() allows only the actual last day.
     - cron: "30 14 28-31 * *"
 
 permissions:
   contents: write
-  models: read
+  copilot-requests: write
 
 concurrency:
   group: canonical-article-pipeline
@@ -33,13 +33,13 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -49,13 +49,20 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "mode=${{ inputs.mode }}" >> "$GITHUB_OUTPUT"
+            echo "manual=1" >> "$GITHUB_OUTPUT"
           elif [[ "${{ github.event_name }}" == "push" ]]; then
             echo "mode=candidate" >> "$GITHUB_OUTPUT"
+            echo "manual=0" >> "$GITHUB_OUTPUT"
           elif [[ "${{ github.event.schedule }}" == "0 0 * * 1" ]]; then
             echo "mode=candidate" >> "$GITHUB_OUTPUT"
+            echo "manual=0" >> "$GITHUB_OUTPUT"
           else
             echo "mode=publish" >> "$GITHUB_OUTPUT"
+            echo "manual=0" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Install GitHub Copilot CLI
+        run: npm install -g @github/copilot
 
       - name: Preflight audit
         run: |
@@ -63,79 +70,13 @@ jobs:
           python -m unittest discover -s tests -v
           python -m pipeline.audit
 
-      - name: Check GitHub Models availability
-        id: models
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          mkdir -p /tmp/article-pipeline
-          set +e
-          code=$(curl -sS -L \
-            -o /tmp/article-pipeline/models-response.json \
-            -w "%{http_code}" \
-            -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Content-Type: application/json" \
-            https://models.github.ai/inference/chat/completions \
-            -d '{"model":"openai/gpt-4.1","messages":[{"role":"user","content":"Reply with OK."}],"max_tokens":8,"temperature":0}')
-          curl_status=$?
-          set -e
-
-          if [[ "$curl_status" -ne 0 ]]; then
-            echo "GitHub Models preflight transport failure" >&2
-            exit "$curl_status"
-          fi
-
-          if [[ "$code" == "200" ]]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-            month=$(TZ=Asia/Tokyo date +%Y-%m)
-            rm -f "artifacts/reports/$month/runtime-status.json"
-            exit 0
-          fi
-
-          if [[ "$code" == "410" ]]; then
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            export MODELS_HTTP_STATUS="$code"
-            python - <<'PY'
-          import json
-          import os
-          from datetime import datetime, timedelta, timezone
-          from pathlib import Path
-
-          jst = timezone(timedelta(hours=9))
-          now = datetime.now(jst)
-          out = Path("artifacts/reports") / now.strftime("%Y-%m")
-          out.mkdir(parents=True, exist_ok=True)
-          payload = {
-              "status": "blocked",
-              "reason_code": "github_models_http_410",
-              "http_status": int(os.environ["MODELS_HTTP_STATUS"]),
-              "checked_at": now.isoformat(),
-              "official_prerequisite": "Enable GitHub Models for this repository before inference is used.",
-              "official_docs": "https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/managing-github-models-in-your-repository",
-          }
-          (out / "runtime-status.json").write_text(
-              json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-              encoding="utf-8",
-          )
-          PY
-            echo "GitHub Models inference unavailable (HTTP 410); candidate/publish generation is fail-closed." >&2
-            exit 0
-          fi
-
-          echo "Unexpected GitHub Models HTTP status: $code" >&2
-          cat /tmp/article-pipeline/models-response.json >&2 || true
-          exit 1
-
       - name: Generate or publish
-        if: steps.models.outputs.available == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GRAPHITI_READ_TOKEN: ${{ secrets.GRAPHITI_READ_TOKEN }}
           GRAPHITI_REPO: KAFKA2306/graphiti
-          ARTICLE_MODEL: openai/gpt-4.1
+          ARTICLE_MODEL: gpt-5.2
+          ARTICLE_MANUAL: ${{ steps.mode.outputs.manual }}
         run: python -m pipeline.cli "${{ steps.mode.outputs.mode }}"
 
       - name: Postflight audit
