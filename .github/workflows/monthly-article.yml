@@ -1,0 +1,84 @@
+name: Monthly LAPRAS Article Factory
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: candidate or publish
+        required: true
+        default: candidate
+        type: choice
+        options:
+          - candidate
+          - publish
+  schedule:
+    # Weekly candidate generation: Monday 09:00 JST.
+    - cron: "0 0 * * 1"
+    # Monthly finalization retries: 25th, 27th, 29th at 09:30 JST.
+    - cron: "30 0 25,27,29 * *"
+
+permissions:
+  contents: write
+  models: read
+
+concurrency:
+  group: monthly-lapras-article-factory
+  cancel-in-progress: false
+
+jobs:
+  build-article:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Resolve mode
+        id: mode
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "mode=${{ inputs.mode }}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.event.schedule }}" == "0 0 * * 1" ]]; then
+            echo "mode=candidate" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=publish" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate or publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARTICLE_MODE: ${{ steps.mode.outputs.mode }}
+          ARTICLE_MODEL: openai/gpt-4.1
+        run: python article_factory/run.py
+
+      - name: Validate generated Zenn files
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          for p in Path('articles').glob('*.md') if Path('articles').exists() else []:
+              text = p.read_text(encoding='utf-8')
+              assert text.startswith('---\n'), p
+              if 'published: true' in text:
+                  assert re.search(r'^published_at: \d{4}-\d{2}-\d{2}', text, re.M), p
+          PY
+
+      - name: Commit factory output
+        shell: bash
+        run: |
+          if git diff --quiet && [[ -z "$(git status --porcelain)" ]]; then
+            echo "No changes"
+            exit 0
+          fi
+          git config user.name "article-factory[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add candidates articles reports 2>/dev/null || true
+          git commit -m "content: ${{ steps.mode.outputs.mode }} monthly technical article"
+          git push
