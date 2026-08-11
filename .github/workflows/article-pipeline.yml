@@ -11,6 +11,10 @@ on:
         options:
           - candidate
           - publish
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/article-pipeline.yml"
   schedule:
     # Monday 09:00 JST.
     - cron: "0 0 * * 1"
@@ -45,11 +49,42 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "mode=${{ inputs.mode }}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "mode=candidate" >> "$GITHUB_OUTPUT"
           elif [[ "${{ github.event.schedule }}" == "0 0 * * 1" ]]; then
             echo "mode=candidate" >> "$GITHUB_OUTPUT"
           else
             echo "mode=publish" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Pin current GitHub REST API version
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          current = "2026-03-10"
+
+          core = Path("pipeline/core.py")
+          text = core.read_text(encoding="utf-8")
+          needle = '            "Accept": "application/vnd.github+json",\n            "Authorization":'
+          replacement = (
+              '            "Accept": "application/vnd.github+json",\n'
+              f'            "X-GitHub-Api-Version": "{current}",\n'
+              '            "Authorization":'
+          )
+          if needle not in text and f'"X-GitHub-Api-Version": "{current}"' not in text:
+              raise SystemExit("GitHub Models request header insertion point not found")
+          core.write_text(text.replace(needle, replacement, 1), encoding="utf-8")
+
+          graphiti = Path("pipeline/graphiti.py")
+          text = graphiti.read_text(encoding="utf-8")
+          text = text.replace(
+              '"X-GitHub-Api-Version": "2022-11-28"',
+              f'"X-GitHub-Api-Version": "{current}"',
+          )
+          graphiti.write_text(text, encoding="utf-8")
+          PY
 
       - name: Preflight audit
         run: |
@@ -71,12 +106,12 @@ jobs:
       - name: Commit canonical outputs
         shell: bash
         run: |
-          if git diff --quiet && [[ -z "$(git status --porcelain)" ]]; then
-            echo "No changes"
+          git add -A artifacts articles
+          if git diff --cached --quiet; then
+            echo "No canonical output changes"
             exit 0
           fi
           git config user.name "article-pipeline[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A artifacts articles
           git commit -m "content: ${{ steps.mode.outputs.mode }} canonical article pipeline"
           git push
