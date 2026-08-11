@@ -75,7 +75,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GRAPHITI_READ_TOKEN: ${{ secrets.GRAPHITI_READ_TOKEN }}
           GRAPHITI_REPO: KAFKA2306/graphiti
-          ARTICLE_MODEL: gpt-5.2
+          ARTICLE_MODEL: auto
           ARTICLE_MANUAL: ${{ steps.mode.outputs.manual }}
         run: python -m pipeline.cli "${{ steps.mode.outputs.mode }}"
 

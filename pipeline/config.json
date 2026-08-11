@@ -1,6 +1,6 @@
 {
   "owner": "KAFKA2306",
-  "model": "gpt-5.2",
+  "model": "auto",
   "candidate_count": 5,
   "revision_limit": 3,
   "paths": {
