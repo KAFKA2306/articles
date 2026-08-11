@@ -4,6 +4,9 @@ import argparse
 
 from . import core, selection
 from .graphiti import generate_graphiti_candidate
+from .runtime import install_robust_model_call
+
+install_robust_model_call()
 
 
 def normalize_legacy_candidate_metadata() -> int:
