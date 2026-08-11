@@ -33,7 +33,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       COPILOT_AUTO_UPDATE: "false"
     steps:
@@ -79,7 +79,20 @@ jobs:
           GRAPHITI_REPO: KAFKA2306/graphiti
           ARTICLE_MODEL: auto
           ARTICLE_MANUAL: ${{ steps.mode.outputs.manual }}
-        run: python -m pipeline.cli "${{ steps.mode.outputs.mode }}"
+        shell: bash
+        run: |
+          python -m pipeline.cli "${{ steps.mode.outputs.mode }}"
+
+          # Fresh repositories must not remain permanently empty until month-end.
+          # After candidate generation, bootstrap exactly one publication when
+          # there is still no Zenn article. publish_best() keeps all source and
+          # quality gates; ARTICLE_MANUAL only bypasses the calendar restriction.
+          if [[ "${{ steps.mode.outputs.mode }}" == "candidate" ]]; then
+            if ! find articles -maxdepth 1 -type f -name '*.md' ! -name '.gitkeep' -print -quit | grep -q .; then
+              echo "bootstrap_publish=attempt"
+              ARTICLE_MANUAL=1 python -m pipeline.cli publish
+            fi
+          fi
 
       - name: Postflight audit
         run: python -m pipeline.audit
