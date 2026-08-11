@@ -1,0 +1,40 @@
+{
+  "owner": "KAFKA2306",
+  "model": "openai/gpt-4.1",
+  "candidate_count": 5,
+  "revision_limit": 3,
+  "quality_gate": {
+    "target_overall": 4.1,
+    "minimum_overall": 3.8,
+    "minimum_axis": 3.5,
+    "minimum_primary_sources": 3,
+    "minimum_own_github_evidence": 2
+  },
+  "lapras_axes": [
+    "論理性",
+    "実用性",
+    "読みやすさ",
+    "独自性",
+    "明確性"
+  ],
+  "preferred_topics": [
+    "backend",
+    "infrastructure",
+    "product-engineering",
+    "technical-leadership",
+    "data-engineering",
+    "ai-agents"
+  ],
+  "allowed_primary_source_hosts": [
+    "github.com",
+    "docs.github.com",
+    "docs.python.org",
+    "docs.astral.sh",
+    "docs.docker.com",
+    "kubernetes.io",
+    "developer.mozilla.org",
+    "openai.com",
+    "platform.openai.com",
+    "zenn.dev"
+  ]
+}
