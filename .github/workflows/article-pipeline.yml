@@ -34,6 +34,8 @@ jobs:
   run:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      COPILOT_AUTO_UPDATE: "false"
     steps:
       - uses: actions/checkout@v6
         with:
