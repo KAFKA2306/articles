@@ -1,0 +1,81 @@
+name: Branch Hygiene
+
+on:
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+  schedule:
+    # Monday 03:17 JST. Conservative fallback cleanup for redundant branches.
+    - cron: "17 18 * * 0"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/branch-hygiene.yml"
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: branch-hygiene
+  cancel-in-progress: false
+
+jobs:
+  delete-merged-head:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref != github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Delete merged same-repository head branch
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads origin "$HEAD_REF" >/dev/null 2>&1; then
+            git push origin --delete "$HEAD_REF"
+          else
+            echo "Already deleted: $HEAD_REF"
+          fi
+
+  sweep-redundant:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Delete only branches with no unique patch and no open PR
+        shell: bash
+        run: |
+          set -euo pipefail
+          default_branch="${{ github.event.repository.default_branch }}"
+          git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*'
+
+          while IFS= read -r branch; do
+            [[ -z "$branch" || "$branch" == "HEAD" || "$branch" == "$default_branch" ]] && continue
+
+            open_prs="$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "$branch" --json number --jq 'length')"
+            if [[ "$open_prs" != "0" ]]; then
+              echo "KEEP open PR: $branch"
+              continue
+            fi
+
+            if git cherry "origin/$default_branch" "origin/$branch" | grep -q '^+'; then
+              echo "KEEP unique patch: $branch"
+              continue
+            fi
+
+            echo "DELETE redundant branch: $branch"
+            git push origin --delete "$branch"
+          done < <(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin | sort -u)
