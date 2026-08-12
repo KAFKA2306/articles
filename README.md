@@ -59,6 +59,7 @@ Graphitiは**アイデア源のみ**です。private diary本文、個人情報�
 .github/workflows/
   article-pipeline.yml       # weekly candidate / monthly publish
   article-pipeline-ci.yml    # compile + tests + repository audit
+  branch-hygiene.yml         # merged/redundant work branch cleanup
 
 pipeline/
   cli.py                     # candidate / publish entry point
@@ -85,6 +86,19 @@ tests/
 ```
 
 `articles/` だけが公開記事の正準出力です。候補と査読証跡は `artifacts/` に隔離し、実装コードは `pipeline/` に集約します。
+
+## Branch lifecycle
+
+**`main` だけを長寿命branchとします。branchを履歴・成果物・記事置き場として残しません。**
+
+- canonical article pipeline の生成物は `main` に直接commitする
+- 通常の記事追加・画像追加も、独立したレビューが不要なら `main` に直接commitする
+- pipeline / CI / contract の変更などレビュー価値がある変更だけ短命branch + PRを使う
+- same-repository PRをmergeしたらhead branchを即時削除する
+- open PRがなく、`main` に対するunique patchもないbranchは `branch-hygiene.yml` が削除する
+- unique patchが残るbranchは自動削除せず、PR化・`main`への取り込み・明示的な破棄のいずれかを行う
+
+branch数を進捗指標にしません。正準状態は常に `main` と、その時点で本当にレビュー中のopen PRだけです。
 
 ## Automation
 
