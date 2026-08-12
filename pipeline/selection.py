@@ -6,11 +6,18 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from . import core
+from .editorial import EDITORIAL_AXES, TECHNICAL_AXES
 
 EVALUATION_KIND = str(
     core.CONFIG.get("evaluation_kind", "internal_lapras_rubric_proxy")
 )
-AXIS_KEYS = ["logic", "utility", "readability", "originality", "clarity"]
+EDITORIAL_EVALUATION_KIND = str(
+    core.CONFIG.get("editorial_evaluation_kind", "story_interest_proxy")
+)
+AXIS_KEYS = list(TECHNICAL_AXES)
+STORY_KEYS = list(EDITORIAL_AXES)
+
+
 def strip_pipeline_meta(text: str) -> str:
     return core.strip_internal_meta(text)
 
@@ -18,12 +25,17 @@ def strip_pipeline_meta(text: str) -> str:
 def review_rank_key(
     review: dict[str, object],
     source_report: dict[str, object],
-) -> tuple[float, float, int, int]:
+) -> tuple[float, float, float, float, float, float, int, int]:
     minimum_axis = min(float(review[key]) for key in AXIS_KEYS)
+    minimum_story_axis = min(float(review[key]) for key in STORY_KEYS)
     own_count = len(source_report.get("own_github", []))
     valid_count = len(source_report.get("valid_urls", []))
     return (
+        float(review["story_overall"]),
+        float(review["interest"]),
+        float(review["discovery"]),
         float(review["overall"]),
+        minimum_story_axis,
         minimum_axis,
         own_count,
         valid_count,
@@ -36,14 +48,16 @@ def improve_candidate(
     review_rounds: int = 1,
 ) -> tuple[str, dict[str, object], dict[str, object], bool, int]:
     best: tuple[str, dict[str, object], dict[str, object], bool] | None = None
-    best_key: tuple[int, int, float, float, int, int] | None = None
+    best_key: tuple[int, int, float, float, float, float, float, float, int, int] | None = None
     target = float(core.CONFIG["quality_gate"]["target_overall"])
+    story_target = float(core.CONFIG["quality_gate"]["target_story_overall"])
     attempts_used = 0
 
     for attempt in range(int(core.CONFIG["revision_limit"]) + 1):
         sources_ok, source_report = core.source_gate(article)
         review = core.aggregate_evaluations(article, rounds=review_rounds)
         review["evaluation_kind"] = EVALUATION_KIND
+        review["editorial_evaluation_kind"] = EDITORIAL_EVALUATION_KIND
         key = (
             int(core.passes_quality(review, sources_ok)),
             int(sources_ok),
@@ -56,6 +70,7 @@ def improve_candidate(
         if (
             core.passes_quality(review, sources_ok)
             and float(review["overall"]) >= target
+            and float(review["story_overall"]) >= story_target
         ):
             break
         if attempt < int(core.CONFIG["revision_limit"]):
@@ -80,6 +95,7 @@ def generate_public_candidate() -> Path:
         {
             "idea_source": "public-github",
             "evaluation_kind": EVALUATION_KIND,
+            "editorial_evaluation_kind": EDITORIAL_EVALUATION_KIND,
             "topic_selection": topics,
             "candidate_review": review,
             "candidate_sources": sources,
@@ -107,6 +123,7 @@ def evaluate_monthly_candidates(paths: list[Path]) -> list[dict[str, object]]:
         sources_ok, source_report = core.source_gate(article)
         review = core.aggregate_evaluations(article, rounds=3)
         review["evaluation_kind"] = EVALUATION_KIND
+        review["editorial_evaluation_kind"] = EDITORIAL_EVALUATION_KIND
         passes_gate = core.passes_quality(review, sources_ok)
         rank_key = review_rank_key(review, source_report)
         evaluated.append(
@@ -124,7 +141,9 @@ def evaluate_monthly_candidates(paths: list[Path]) -> list[dict[str, object]]:
         print(
             f"monthly_candidate={path.name} "
             f"sources_ok={sources_ok} passes_gate={passes_gate} "
-            f"proxy_score={review['overall']}"
+            f"technical_score={review['overall']} "
+            f"story_score={review['story_overall']} "
+            f"interest={review['interest']}"
         )
     return evaluated
 
@@ -141,6 +160,7 @@ def save_monthly_selection_report(
     payload = {
         "month": month,
         "evaluation_kind": EVALUATION_KIND,
+        "editorial_evaluation_kind": EDITORIAL_EVALUATION_KIND,
         "status": status,
         "publication_limit": int(
             core.CONFIG.get("monthly_publication_limit", 1)
