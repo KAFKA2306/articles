@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import json
 import unittest
 
 from pipeline import core, editorial, selection
@@ -36,6 +37,33 @@ class PipelineContractTests(unittest.TestCase):
             ["interest", "discovery", "narrative", "context"],
         )
         self.assertEqual(core.CONFIG["monthly_publication_limit"], 1)
+
+    def test_popularity_benchmark_is_not_a_low_engagement_training_set(self) -> None:
+        policy = core.CONFIG["benchmark_policy"]
+        self.assertEqual(policy["positive_min_likes"], 100)
+        self.assertTrue(policy["positive_requires_confirmed_like_count"])
+        self.assertEqual(
+            policy["below_threshold_role"],
+            "non_positive_or_antipattern",
+        )
+        self.assertEqual(
+            policy["lapras_role"],
+            "quality_floor_not_objective",
+        )
+        self.assertTrue(policy["forbid_style_imitation"])
+
+        benchmark_path = (
+            core.ROOT / "pipeline" / "benchmarks" / "zenn-positive.json"
+        )
+        benchmark = json.loads(benchmark_path.read_text(encoding="utf-8"))
+        self.assertEqual(benchmark["policy"]["positive_min_likes"], 100)
+        self.assertFalse(
+            benchmark["policy"]["below_threshold_articles_may_be_used_as_positive_examples"]
+        )
+        self.assertGreaterEqual(len(benchmark["positive_examples"]), 1)
+        for example in benchmark["positive_examples"]:
+            self.assertGreaterEqual(example["engagement_floor"], 100)
+            self.assertTrue(example["engagement_evidence_url"].startswith("https://"))
 
     def test_story_gate_is_stricter_than_technical_gate(self) -> None:
         review = {
