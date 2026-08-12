@@ -1,3 +1,12 @@
+---
+title: "Unity / VRChatで『VRだけ二重に見える』をどう考えるか"
+emoji: "🥽"
+type: "tech"
+topics: ["vrchat", "unity", "shader", "liltoon", "poiyomi"]
+published: true
+published_at: 2026-08-12 19:46
+---
+
 # Unity / VRChatで「VRだけ二重に見える」をどう考えるか
 
 Unityでは普通に見える。Desktopでも大きな異常は分からない。しかしVRの人から見ると二重に見える、左右の目で違って見える、あるいは直接見ると崩れる。
