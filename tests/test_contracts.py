@@ -65,6 +65,35 @@ class PipelineContractTests(unittest.TestCase):
             self.assertGreaterEqual(example["engagement_floor"], 100)
             self.assertTrue(example["engagement_evidence_url"].startswith("https://"))
 
+    def test_premature_conclusion_is_a_blocking_editorial_pattern(self) -> None:
+        self.assertTrue(
+            editorial.opening_has_premature_conclusion(
+                "具体例の前に書きます。この記事で伝えたい結論は一つです。"
+            )
+        )
+        self.assertFalse(
+            editorial.opening_has_premature_conclusion(
+                "最初の集計は856行だった。取り直すと7,699行になった。どちらが間違っていたのか。"
+            )
+        )
+        otherwise_passing = {
+            "logic": 5.0,
+            "utility": 5.0,
+            "readability": 5.0,
+            "originality": 5.0,
+            "clarity": 5.0,
+            "overall": 5.0,
+            "interest": 5.0,
+            "discovery": 5.0,
+            "narrative": 5.0,
+            "context": 5.0,
+            "story_overall": 5.0,
+            "blocking_issues": ["premature_conclusion_in_opening"],
+        }
+        self.assertFalse(
+            editorial.passes_quality(otherwise_passing, sources_ok=True)
+        )
+
     def test_story_gate_is_stricter_than_technical_gate(self) -> None:
         review = {
             "logic": 5.0,
