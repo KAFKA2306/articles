@@ -25,6 +25,15 @@
     "minimum_primary_sources": 3,
     "minimum_own_github_evidence": 2
   },
+  "benchmark_policy": {
+    "positive_min_likes": 100,
+    "positive_requires_confirmed_like_count": true,
+    "below_threshold_role": "non_positive_or_antipattern",
+    "like_count_role": "eligibility_filter_not_quality_proof",
+    "lapras_role": "quality_floor_not_objective",
+    "minimum_positive_exemplars": 1,
+    "forbid_style_imitation": true
+  },
   "ratchet_kpis": [
     "publication_pass_rate",
     "primary_source_rate",
