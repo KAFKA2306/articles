@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Codex ChatGPT GitHub Issue Bridge の E2E 実践フロー</title>
+  <desc id="desc">read-only 調査から worker evidence の確認、必要時のみ workspace-write に昇格する流れ</desc>
+  <rect width="1600" height="900" fill="#ffffff"/>
+  <text x="70" y="90" font-family="sans-serif" font-size="44" font-weight="700" fill="#111827">具体例：read-only 調査 → evidence確認 → 必要時だけ workspace-write</text>
+  <text x="70" y="140" font-family="sans-serif" font-size="24" fill="#4b5563">KAFKA2306/articles を題材にした Codex ↔ private GitHub Issue bridge の実践フロー</text>
+
+  <g font-family="sans-serif">
+    <rect x="70" y="220" width="250" height="170" rx="18" fill="#eff6ff" stroke="#2563eb" stroke-width="3"/>
+    <text x="195" y="265" text-anchor="middle" font-size="28" font-weight="700" fill="#1e3a8a">1. 調査を投入</text>
+    <text x="195" y="310" text-anchor="middle" font-size="23" fill="#111827">send-task.ps1</text>
+    <text x="195" y="345" text-anchor="middle" font-size="22" fill="#166534">sandbox: read-only</text>
+    <text x="195" y="375" text-anchor="middle" font-size="19" fill="#4b5563">cwd は AllowedRoot 配下</text>
+
+    <path d="M330 305 H395" stroke="#374151" stroke-width="5" fill="none"/>
+    <path d="M395 305 l-18 -12 v24 z" fill="#374151"/>
+
+    <rect x="405" y="220" width="270" height="170" rx="18" fill="#f9fafb" stroke="#374151" stroke-width="3"/>
+    <text x="540" y="265" text-anchor="middle" font-size="28" font-weight="700" fill="#111827">2. controller comment</text>
+    <text x="540" y="310" text-anchor="middle" font-size="22" fill="#111827">private queue Issue</text>
+    <text x="540" y="345" text-anchor="middle" font-size="20" fill="#4b5563">task ID + JSON</text>
+    <text x="540" y="375" text-anchor="middle" font-size="19" fill="#4b5563">人にも機械にも読める</text>
+
+    <path d="M685 305 H750" stroke="#374151" stroke-width="5" fill="none"/>
+    <path d="M750 305 l-18 -12 v24 z" fill="#374151"/>
+
+    <rect x="760" y="220" width="280" height="170" rx="18" fill="#fff7ed" stroke="#ea580c" stroke-width="3"/>
+    <text x="900" y="265" text-anchor="middle" font-size="28" font-weight="700" fill="#9a3412">3. daemon が実行</text>
+    <text x="900" y="310" text-anchor="middle" font-size="22" fill="#111827">codex exec</text>
+    <text x="900" y="345" text-anchor="middle" font-size="20" fill="#111827">poll: 30秒</text>
+    <text x="900" y="375" text-anchor="middle" font-size="19" fill="#4b5563">author / cwd / sandbox を再検査</text>
+
+    <path d="M1050 305 H1115" stroke="#374151" stroke-width="5" fill="none"/>
+    <path d="M1115 305 l-18 -12 v24 z" fill="#374151"/>
+
+    <rect x="1125" y="220" width="405" height="170" rx="18" fill="#ecfdf5" stroke="#16a34a" stroke-width="3"/>
+    <text x="1327" y="265" text-anchor="middle" font-size="28" font-weight="700" fill="#166534">4. worker evidence</text>
+    <text x="1327" y="310" text-anchor="middle" font-size="21" fill="#111827">exit_code / sandbox / cwd</text>
+    <text x="1327" y="345" text-anchor="middle" font-size="21" fill="#111827">repo_root / HEAD / git status</text>
+    <text x="1327" y="375" text-anchor="middle" font-size="19" fill="#4b5563">final message と一緒に Issue へ返す</text>
+
+    <rect x="250" y="505" width="1100" height="115" rx="20" fill="#f3f4f6" stroke="#9ca3af" stroke-width="2"/>
+    <text x="800" y="550" text-anchor="middle" font-size="28" font-weight="700" fill="#111827">5. ChatGPT / 人間が evidence を読んで判断</text>
+    <text x="800" y="590" text-anchor="middle" font-size="21" fill="#4b5563">「直しました」だけではなく、どの repository・HEAD・sandbox で何が起きたかを確認する</text>
+
+    <path d="M800 630 V685" stroke="#374151" stroke-width="5" fill="none"/>
+    <path d="M800 685 l-12 -18 h24 z" fill="#374151"/>
+
+    <rect x="405" y="705" width="790" height="120" rx="22" fill="#f5f3ff" stroke="#7c3aed" stroke-width="3"/>
+    <text x="800" y="750" text-anchor="middle" font-size="30" font-weight="700" fill="#5b21b6">6. 修正が必要なときだけ 2本目を workspace-write</text>
+    <text x="800" y="792" text-anchor="middle" font-size="22" fill="#111827">調査 task と修正 task を分離し、最初から書き込み権限を渡さない</text>
+  </g>
+</svg>
