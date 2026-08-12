@@ -41,3 +41,12 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Repository and privacy audit
         run: python -m pipeline.audit
+      - name: Verify clean checkout
+        shell: bash
+        run: |
+          find . -type d -name __pycache__ -prune -exec rm -rf {} +
+          status="$(git status --porcelain --untracked-files=all)"
+          if [ -n "$status" ]; then
+            printf '%s\n' "$status"
+            exit 1
+          fi
