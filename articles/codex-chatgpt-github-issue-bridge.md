@@ -1,5 +1,5 @@
 ---
-title: "Codexの結果コピペをやめたくて、private GitHub IssueをAI間のメッセージキューにした"
+title: "private GitHub IssueをAI間キューにした。最初のsmokeで壊れたのはqueueではなくCodexの初期化だった"
 emoji: "🔁"
 type: "tech"
 topics: ["chatgpt", "codex", "github", "powershell", "automation"]
@@ -9,14 +9,10 @@ published_at: 2026-08-12 17:02
 
 ローカルの Codex CLI に調査や修正を任せたあと、最後の出力を ChatGPT に貼り直す。
 
-数回なら気になりません。しかし、調査 → 修正 → テスト → 次の指示、と往復するほど、毎回のコピー＆ペーストがワークフローそのものになります。
-
-そこで考えたのが、**private GitHub Issue を ChatGPT とローカル Codex の受け渡し場所にする**方法でした。
-
-最初の想定は単純でした。
+このコピー＆ペーストを消すために、private GitHub Issueをtask/resultの受け渡し場所にしました。
 
 ```text
-ChatGPT
+ChatGPT / local sender
   ↓
 private GitHub Issue
   ↓
@@ -25,24 +21,22 @@ local daemon
 Codex CLI
   ↓
 private GitHub Issue
-  ↓
-ChatGPT
 ```
 
-Issue comment を queue にするだけなら、RedisもWebhook serverも公開APIもいりません。
+Issue commentをpollしてCodexを呼ぶ。最初は、難しいのはこのtransportだと思っていました。
 
-しかし、実装を進めると、本当に難しかったのは queue ではありませんでした。
+ところが開発中の最初のsmoke testで、**Issue queueではなく、Codex本体が応答する前に追加MCP/app層のOAuth要求で落ちました。**
 
-1. ChatGPT から GitHub に「書ける」とは限らない
-2. Codex の本体処理と、普段使っている app / plugin / MCP の初期化を分けないといけない
-3. ローカル agent にどこまで書き込みを許すかを queue より先に決めないと危険
+transportが通ってもworkerが起動しない。さらに調べると、ChatGPT側のGitHub write可否、空repositoryのHEAD、local agentのfilesystem権限まで、それぞれ別の境界として扱わないといけませんでした。
 
-この3点を分離した結果、公開版は **1コマンド installer + private queue + Windows daemon + read-only既定 + cwd allowlist + end-to-end smoke test** という構成になりました。
+ここで問いが変わりました。
+
+**「Issueをどうqueueにするか」ではなく、「普段の対話型Codex環境から、自律workerに必要な能力だけをどこまで削れるか」。**
+
+最終的に2026-08-12 16:54 JSTのE2Eでは、private queueを通したworkerが `exit_code: 0` と `BRIDGE_OK` を返しました。ただし、そこへ到達するまでに壊れた場所を順に追うと、bridgeの本体がpollingではなく境界設計だったことが分かります。
 
 公開実装:
 https://github.com/KAFKA2306/KAFKA2306/tree/main/scripts/codex-chatgpt-bridge
-
-2026-08-12 16:54 JST のE2Eでは、private queueを通したworkerが `exit_code: 0` と `BRIDGE_OK` を返しました。raw queueはローカルパスやrepository状態を含み得るためprivateのままにし、公開側には最小限の検証記録だけ残しています。
 
 検証記録:
 https://github.com/KAFKA2306/KAFKA2306/blob/9f9c05d10ae2c10109ba4ad1d460057a85779a80/scripts/codex-chatgpt-bridge/VERIFICATION.md
