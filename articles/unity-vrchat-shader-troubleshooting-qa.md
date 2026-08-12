@@ -1,43 +1,77 @@
 ---
-title: "Desktopは正常、VRだけ二重。原因をShader本体に決め打ちできない理由"
+title: "Desktopは正常、VRだけ二重。真因はShaderではなくUploader経路だった"
 emoji: "🥽"
 type: "tech"
-topics: ["vrchat", "unity", "shader", "liltoon", "poiyomi"]
+topics: ["vrchat", "unity", "shader", "liltoon", "vrcsdk"]
 published: true
 published_at: 2026-08-12 19:46
 ---
 
-# Desktopは正常、VRだけ二重。原因をShader本体に決め打ちできない理由
+# Desktopは正常、VRだけ二重。真因はShaderではなくUploader経路だった
 
-過去のlilToon Issue #46では、**Desktopでは正常、VRChat Mirrorでも正常なのに、VRで直接見るとRefraction materialが壊れる**という報告がありました。
+「VRだけ二重に見える」。
 
-- lilToon Issue #46: https://github.com/lilxyzw/lilToon/issues/46
-
-Poiyomiでも、Desktopでは正常なのにVRで二重に見えるIssue #4、Direct Stereoだけ左右眼のphaseがずれるIssue #24があります。
+この症状から最初に疑ったのはStereo Shaderでした。PoiyomiやlilToonには、DesktopやMirrorでは正常でもDirect VRだけ壊れる過去事例が実際にあります。
 
 - Poiyomi Issue #4: https://github.com/poiyomi/PoiyomiToonShader/issues/4
 - Poiyomi Issue #24: https://github.com/poiyomi/PoiyomiToonShader/issues/24
+- lilToon Issue #46: https://github.com/lilxyzw/lilToon/issues/46
 
-この3件だけでも、一つのことが分かります。
+しかし今回の実機切り分けでは、そこが真因ではありませんでした。
 
-**「VRだけ壊れる」はStereo描画経路を疑う強い手掛かりですが、それ自体は「Shader sourceが犯人」という診断名ではありません。**
+**同じAvatarを標準のVRChat SDK Control Panelからアップロードすると正常になり、Continuous Avatar Uploader（CAU）経路では問題が再現しました。**
 
-Material feature、compiled Shader Variant、AnimatorによるMaterial state、Modular Avatar / NDMFのbuild変換、最終Renderer状態のどこでも、VRでだけ露出する状態を作れます。
+つまり今回の故障境界は、少なくともShader sourceより上流の **build / upload pipeline差** にありました。
 
-この記事は応急処置ではありません。まず1個のlilToon ShaderをReimportして切り分ける手順は、別記事に限定しています。
-
-- 最初の10分の切り分け: `liltoon-reimport-first-aid-qa.md`
-
-ここでは、**Reimportだけでは直らない、または原因層まで特定したいときに、どこを比較するか**だけを扱います。
+この記事は「CAU一般に左右眼バグがある」と主張するものではありません。今回得られた観測を、公開一次情報と照らしてどこまで一般化できるかを分けて整理します。
 
 ---
 
-## 1. 3つの過去事例を、症状の差だけで並べる
+## 結論
 
-| 事例 | Desktop | Mirror | Direct VR | 主な症状 |
+今回の診断順序は、次のように更新します。
+
+```text
+旧
+VR-only / eye-dependent
+→ Shader / Material
+→ Reimport
+→ MA / NDMF
+→ Built Avatar
+
+新
+VR-only / eye-dependent
+→ 標準VRCSDK vs 第三者Uploader A/B
+→ Build / Upload経路で分岐するか
+→ 分岐しなければ Source / Built / Shaderへ降りる
+```
+
+最重要点は、**Uploaderを単なる最後の配送手段として扱わない**ことです。
+
+VRChat公式SDKは、組み込みのControl PanelからAvatarを `Build & Publish` できます。
+
+- https://creators.vrchat.com/avatars/creating-your-first-avatar/
+
+一方、CAU作者anatawa12氏が2026年1月13日に公開した `SimpleAvatarUploader.cs` は、CAUと同じ方法でcompatibilityを検証するためのtoolだと明記し、CAUが `IVRCSdkAvatarBuilderApi.Build` と `VRCApi.UpdateAvatarBundle` を使うと説明しています。
+
+- https://gist.github.com/anatawa12/029f749b527ed0a8d6dc853a5bcf9b94
+
+さらにVRChat SDK 3.9.0公式リリースノートは、built-in UI利用とtool author向けAPI利用を分け、`BuildAndUpload` と手動 `Build` / `Upload` 系APIに異なる実装上の注意があると説明しています。
+
+- https://creators.vrchat.com/releases/release-3-9-0/
+
+したがって、Uploader / SDK API pathは独立した診断変数です。
+
+---
+
+## 1. なぜShader説はもっともらしかったのか
+
+過去事例が実在したからです。
+
+| 事例 | Desktop | Mirror | Direct VR | 症状 |
 |---|---|---|---|---|
-| Poiyomi #4 | NORMAL | - | ABNORMAL | avatarが二重に見える |
-| Poiyomi #24 | NORMAL | NORMAL | ABNORMAL | Left / Right EyeでPanosphere phaseがずれる |
+| Poiyomi #4 | NORMAL | - | ABNORMAL | Avatarが二重に見える |
+| Poiyomi #24 | NORMAL | NORMAL | ABNORMAL | 左右眼でPanosphere phaseがずれる |
 | lilToon #46 | NORMAL | NORMAL | ABNORMAL | Refraction materialがVRで壊れる |
 
 一次情報:
@@ -46,312 +80,398 @@ Material feature、compiled Shader Variant、AnimatorによるMaterial state、M
 - https://github.com/poiyomi/PoiyomiToonShader/issues/24
 - https://github.com/lilxyzw/lilToon/issues/46
 
-ここで重要なのは、3件の内部原因を同一視することではありません。
+UnityもStereo RenderingとSingle Pass Instanced custom Shaderの要件を公式に説明しています。
 
-**同じ「Desktop正常 / VR異常」という観測から、原因をShader package全体へ一足飛びに固定できない**ことです。
-
-特にPoiyomi #24とlilToon #46ではMirrorが正常でもDirect VRが異常でした。
+- https://docs.unity3d.com/2022.3/Documentation/Manual/SinglePassStereoRendering.html
+- https://docs.unity3d.com/Manual/SinglePassInstancing.html
 
 したがって、
 
 ```text
-Mirrorで正常だった
-        ↓
-VRでも正常なはず
+Desktop正常
+VRだけ異常
 ```
 
-という推論は成立しません。
+からStereo経路を疑うこと自体は合理的でした。
+
+問題は、**Stereo経路を疑うこと**と**Shader sourceを最初の原因に固定すること**を混同した点です。
 
 ---
 
-## 2. 症状が出る場所と、原因がある場所を分ける
+## 2. 抜けていた層はUploaderだった
 
-最終的な見た目までを、診断に必要な粒度だけに縮めると次の4層です。
+初版の診断モデルはこうでした。
 
 ```text
 Source Avatar
-  Mesh / Renderer / Material / Shader / Animator / MA components
+  Mesh / Renderer / Material / Shader / Animator
         ↓
 Build Processing
-  Modular Avatar / NDMF / animation transformation
+  Modular Avatar / NDMF
         ↓
 Built Avatar
-  final Renderer / final Material state / Shader Variant
+  final Renderer / Material / Shader Variant
         ↓
 Render Context
-  Desktop / Mirror / Direct VR / Left Eye / Right Eye
+  Desktop / Mirror / Direct VR / Left / Right
+```
+
+これは1層足りませんでした。
+
+修正版はこうです。
+
+```text
+Source Avatar
+        ↓
+Build Processing
+        ↓
+Built Bundle
+        ↓
+Build / Upload API path
+  VRCSDK Control Panel
+  or third-party uploader
+        ↓
+VRChat backend
+        ↓
+Client / Stereo Rendering
         ↓
 Symptom
 ```
 
-Unity公式はShader Variantを、同じShaderの異なる条件に対応するprogram variationとして説明しています。
+今回、結果が分岐したのはこの `Build / Upload API path` を変えたときでした。
 
-- Unity Manual — Shader variants: https://docs.unity3d.com/2022.3/Documentation/Manual/shader-variants.html
-
-またStereo Renderingでは左右眼を別の描画条件として扱い、Single Pass Instanced対応のcustom ShaderではStereo用macroが必要です。
-
-- Unity Manual — Stereo rendering: https://docs.unity3d.com/2022.3/Documentation/Manual/SinglePassStereoRendering.html
-- Unity Manual — Single-pass instanced rendering and custom shaders: https://docs.unity3d.com/Manual/SinglePassInstancing.html
-
-したがって、Desktopで正常だったという観測は、**左右眼を含むVR描画条件まで正常だった証明にはなりません。**
-
-一方で、VRでだけ壊れたからといって、source Shaderだけを原因に固定することもできません。
+つまり、Shader、Material、Meshを変更するより前に、もっと大きな情報量を持つA/Bがありました。
 
 ---
 
-## 3. ShaderとMaterialは排他的な原因ではない
+## 3. CAUと標準VRCSDKで結果が分かれる前例はある
 
-lilToon #46は、Shader側のregressionとRefractionを使うMaterialが組み合わさった事例として読めます。
+あります。ただし今回と同一症状ではありません。
 
-報告では、lilToon 1.3.5へ更新後にRefraction materialがVRで壊れ、1.3.4では正常でした。その後、報告者は修正版をVRで確認し、作者は1.3.6へ反映すると回答しています。
+Continuous Avatar Uploader Issue #154は、2026年5月4日にVRCFuryのShader Optimizer関連エラーについて、**VRC SDKからuploadした場合は出ず、CAUからuploadした場合だけ出る**と報告しています。
 
-- Issue: https://github.com/lilxyzw/lilToon/issues/46
-- 修正版VR確認: https://github.com/lilxyzw/lilToon/issues/46#issuecomment-1239775190
-- 1.3.6への反映: https://github.com/lilxyzw/lilToon/issues/46#issuecomment-1242675841
+- https://github.com/anatawa12/ContinuousAvatarUploader/issues/154
 
-Poiyomi #24も、症状はPanosphere / PanningというMaterial側で設定する機能に現れています。
+Issue #154の症状は「Unlocked Shader」エラーであり、今回の左右眼二重表示とは別物です。
 
-つまり診断単位は、
+したがって、ここから言えるのは限定的です。
 
 ```text
-Shader package
+言える:
+標準VRCSDKとCAUで結果が分岐するcompatibility issueは実在する
+
+言えない:
+Issue #154と今回の左右眼異常が同じ内部原因である
 ```
 
-では粗すぎます。
+この区別は重要です。
 
-より有用なのは、
-
-```text
-Shader source
-  × Material feature / property
-  × compiled variant
-  × Stereo context
-```
-
-です。
-
-そのため、Materialを確認するときは「同じMaterial名か」ではなく、**どのfeatureをON/OFFしたときにNORMAL→ABNORMALが切り替わるか**を見ます。
-
-一度に全部OFFにすると、どの変数が効いたか分からなくなります。
+過去Issueは**原因の証明**ではなく、Uploaderを比較変数として扱う根拠です。
 
 ---
 
-## 4. Source Avatarが正常でも、Built Avatarは同じとは限らない
+## 4. 最初に取るべきだったA/B
 
-Modular Avatarはbuild時やPlay Modeでcomponentに基づく変換を適用します。公式のManual Processingでは、`Manual bake avatar` により変換適用後のavatar copyを生成できると説明しています。
-
-- Modular Avatar — Manual processing: https://modular-avatar.nadena.dev/docs/manual-processing
-
-さらにMaterialを変更するReactive Componentもあります。
-
-- Material Setter: https://modular-avatar.nadena.dev/docs/reference/reaction/material-setter
-- Material Swap: https://modular-avatar.nadena.dev/docs/reference/reaction/material-swap
-- Reactive Components: https://modular-avatar.nadena.dev/docs/reference/reaction
-
-NDMFもbuild processingをphaseに分け、`Transforming` phaseをavatar transformation用として定義しています。
-
-- NDMF BuildPhase: https://ndmf.nadena.dev/api/nadena.dev.ndmf.BuildPhase.html
-
-したがって、Unityのsource状態でMaterialが正常でも、
+同一Avatarを使います。
 
 ```text
-Source Material
-      ↓
-Animator / MA / NDMF
-      ↓
-Built Material / Renderer
-      ↓
-Direct VRでだけ異常
+A. VRChat SDK Control Panel
+   Build & Publish
+
+B. Continuous Avatar Uploader
+   upload
 ```
 
-という経路は残ります。
+変更してはいけないもの:
 
-MA / NDMFを疑うときは、「componentがあるか」だけではなく、**SourceとBake後でRenderer / Material assignment / propertiesが変わったか**を比較します。
+- Avatar Prefab
+- Material
+- Shader
+- MA component
+- Animator
+- Unity version
+- target platform
+
+比較するもの:
+
+| 観測 | A: VRCSDK | B: CAU |
+|---|---|---|
+| upload/build成功 | PASS/FAIL | PASS/FAIL |
+| VR Direct | NORMAL/ABNORMAL | NORMAL/ABNORMAL |
+| Left Eye | NORMAL/ABNORMAL | NORMAL/ABNORMAL |
+| Right Eye | NORMAL/ABNORMAL | NORMAL/ABNORMAL |
+| Mirror | NORMAL/ABNORMAL | NORMAL/ABNORMAL |
+
+ここでAとBが分岐すれば、Shaderを編集する前に故障境界を大きく狭められます。
 
 ---
 
-## 5. 今回の症状で、確定していることと未確定なこと
+## 5. `Build & Publish` は何を基準にする？
 
-今回の観測として確実に扱えるのは、複数対象でVR上の見え方に異常が認識され、lilToonのReimportやasset更新を試しても、通常の見た目だけでは原因を確定できていないことです。
+VRChat公式のAvatar作成手順では、Unityの `VRChat SDK > Show Control Panel` を開き、Builderタブから `Build & Publish Your Avatar Online` を選ぶ手順が案内されています。
 
-一方、まだ切り分ける必要があるのは次です。
+- https://creators.vrchat.com/avatars/creating-your-first-avatar/
 
-- 本当に「二重」なのか
-- Left Eye / Right Eyeのどちらでどう違うか
-- Direct VRだけなのか
-- Mirrorでも再現するか
-- Desktop directでは再現しないか
-- 問題箇所のMaterial / featureが共通なのか
-- MA / NDMF build後に何が変わっているか
-- duplicate Rendererが存在するか
-- Shader compile errorが存在するか
+またVRChat公式はtool developer向けにPublic SDK APIを公開しています。
 
-したがって、現時点での診断は、
+- https://creators.vrchat.com/sdk/public-sdk-api/
 
-> **VR-only / eye-dependentな描画経路で故障が露出している可能性は高いが、原因層はShader sourceに限定できない。**
+SDK 3.9.0では、組み込みUI利用者には変更なしとしつつ、tool authorにはcontent ID処理を含むAPI差について注意を出し、手動 `Build` / `Upload` よりcombined `BuildAndUpload` を強く推奨しています。
 
-までです。
+- https://creators.vrchat.com/releases/release-3-9-0/
+
+この公式説明からも、**tool側のbuild/upload実装は診断対象になり得る**ことが分かります。
 
 ---
 
-## 6. 複数の衣装・モデルで同時に壊れたら、共有上流を先に見る
+## 6. Shader / Materialはもう疑わなくていい？
 
-一つの衣装だけなら、そのMaterialやMeshから見るのが自然です。
+違います。
 
-しかし複数の独立対象で同じ時期に症状が出るなら、個別対象より共有依存を先に調べる方が情報量があります。
+Uploader A/Bで結果が分岐しなかった場合は、依然としてShader / Material / Built Avatarを調べます。
 
-候補は、
+ただし順序が変わります。
 
 ```text
-同じlilToon package
-同じUnity project
-同じVRCSDK / build pipeline
-共通Material / Animator
-共通MA / NDMF processing
-同じStereo render path
+Step 1  Uploader A/B
+Step 2  Renderer / Material identity
+Step 3  Source vs Built
+Step 4  Material feature A/B
+Step 5  Shader stereo compatibility
+Step 6  Shader asset 1個だけReimport
+Step 7  package version A/B
 ```
 
-です。
-
-これは「共通Shaderが犯人」と言っているのではありません。
-
-**一度の比較で複数対象の説明力を持つ変数から調べる**という診断順序です。
+この順序なら、最上流で説明できる変数を先に潰せます。
 
 ---
 
-## 7. Reimportで直らなかった後の診断順序
+## 7. Source Avatarが正常でもBuilt Avatarは同じとは限らない
 
-### Step 1: Observation Matrixを埋める
+Uploader差がなければ、次はbuild transformationを見ます。
 
-| Observation | Result |
-|---|---|
-| Unity Scene | NORMAL / ABNORMAL |
-| Unity Game | NORMAL / ABNORMAL |
-| VRChat Desktop direct | NORMAL / ABNORMAL |
-| VR direct | NORMAL / ABNORMAL |
-| VR Left Eye | NORMAL / ABNORMAL |
-| VR Right Eye | NORMAL / ABNORMAL |
-| VRChat Mirror | NORMAL / ABNORMAL |
+Modular Avatarはbuild時またはPlay Modeでcomponentに基づく変換を適用し、Manual Processingで変換後Avatar copyを生成できます。
 
-最初に「どこから壊れるか」を固定します。
+- https://modular-avatar.nadena.dev/docs/manual-processing
 
-### Step 2: Renderer / Material / Shaderを静的確認する
+NDMFもbuild processingをphaseとして扱います。
 
-- Missing Material
-- Missing Shader
-- `Hidden/InternalErrorShader`
-- duplicate Renderer
-- 共通Material
-- 問題Materialで有効なview / screen-space依存feature
+- https://ndmf.nadena.dev/api/nadena.dev.ndmf.BuildPhase.html
 
-なお、Unity公式では通常のShaderで描画できない場合にDefault Error Shaderが使われ、magentaになることを説明しています。ピンク表示は二重表示とは別の症状クラスです。
-
-- Unity Manual — Error and loading shaders: https://docs.unity3d.com/Manual/shader-error.html
-
-### Step 3: Material featureを1つずつA/Bする
-
-実際に使用しているfeatureだけを対象にします。
+したがって、
 
 ```text
-Refraction
-MatCap
-Parallax
-Panosphere / panning
-screen-space系
-FakeShadow
+Source正常
+→ MA / NDMF変換
+→ Built state異常
 ```
 
-全部同時に変えません。
+は依然として有効な仮説です。
 
-### Step 4: Material Swap / animationを確認する
-
-AnimatorやMA Reactive Componentsで、runtime/build時にMaterialが変わっていないか確認します。
-
-### Step 5: SourceとBuiltを比較する
-
-Manual Bake等で変換適用後のcopyを作り、
-
-```text
-Source Renderer / Material
-vs
-Built Renderer / Material
-```
-
-を比較します。
-
-### Step 6: versionをA/Bする
-
-reimport回数ではなくversion差を変数にします。
-
-lilToon #46のように、同じversionを何度reimportしてもversion regression自体は消えません。
+ただし、今回のように標準VRCSDKとCAUで結果が分岐したなら、ここへ降りる前にUploader層を固定するべきです。
 
 ---
 
-## 8. やらない方がいいこと
+## 8. Shader Reimportはどこに置く？
 
-### 「VRだけ二重だからShader」と決める
+最初ではなく後段です。
 
-Stereo依存の疑いは上がりますが、Material / Built stateを飛ばしています。
+Unityはmanual Reimportを公式に提供しています。
 
-### 「ShaderをReimportしたからShaderではない」と決める
+- https://docs.unity3d.com/Manual/ImporterConsistency.html
 
-version regressionや同一設定の再生成は残ります。
+lilToonの通常Shader assetは公式repositoryで確認できます。
 
-### 「Mirrorで正常だから直った」と判断する
+- https://github.com/lilxyzw/lilToon/blob/master/Assets/lilToon/Shader/lts.shader
 
-Poiyomi #24とlilToon #46にはMirror正常 / Direct VR異常の報告があります。
+Reimportが有効なのは、少なくとも次の条件を満たすときです。
 
-### 「Unity上のMaterialが正常だからMAは無関係」と判断する
+```text
+VRCSDKでもCAUでも異常
+AND
+Source / Built差だけでは説明できない
+AND
+問題Rendererが共通Shaderを使う
+```
 
-build後にMaterial / Renderer stateが変わる可能性があります。
+この条件で、実際に使用している `lts*.shader` を1個だけReimportします。
 
-### Shader、SDK、MA、Material、Libraryを一度に変える
+「VRだけ二重」という症状だけでは、Reimportを初手にしません。
 
-直っても原因変数が残りません。
+---
+
+## 9. 壊れた診断例
+
+今回の失敗は、原因候補の粒度が細かすぎました。
+
+```text
+VR only
+→ Stereo
+→ Shader
+→ lilToon
+→ lts.shader
+```
+
+この推論は一見きれいですが、途中にある次の層を飛ばしています。
+
+```text
+Build / Upload API path
+```
+
+その結果、Shaderを再importしても、Materialを比較しても、故障境界を決められませんでした。
+
+---
+
+## 10. 改善後の診断例
+
+同じ症状なら、まずこれだけ行います。
+
+```text
+同一Avatar
+   ├─ VRCSDK → VR確認
+   └─ CAU    → VR確認
+```
+
+もし、
+
+```text
+VRCSDK = NORMAL
+CAU    = ABNORMAL
+```
+
+なら、次の作業はShader編集ではありません。
+
+- CAU versionを記録
+- VRChat SDK versionを記録
+- CAU側build/upload pathのlogを取得
+- 同一Avatarで再現
+- CAUの既知compatibility Issueを確認
+- 必要なら作者のSimpleAvatarUploaderでCAU方式を最小再現
+
+anatawa12氏の `SimpleAvatarUploader.cs` はまさに「CAUと同じ方法で他toolとのcompatibilityを試す」ために公開されています。
+
+- https://gist.github.com/anatawa12/029f749b527ed0a8d6dc853a5bcf9b94
+
+---
+
+## 11. 読者が試せる再現手順
+
+### 前提
+
+異常が出るAvatarが1体あるとします。
+
+### A/Bテスト
+
+1. git commit等でProject状態を固定する。
+2. Unityを再起動しない。
+3. Material / Shader / Prefabを変更しない。
+4. VRChat SDK Control Panelから `Build & Publish` する。
+5. 実HMDでDirect / Left / Right / Mirrorを記録する。
+6. sourceを変更せずCAUで同一Avatarをuploadする。
+7. 同じHMD、同じ確認条件で再測定する。
+8. 結果が分岐したら、Uploader / build-upload pipelineを原因区間として扱う。
+9. 分岐しなければ、Source / Built / Material / Shaderへ進む。
+
+### 記録フォーマット
+
+```text
+Avatar:
+Unity:
+VRCSDK:
+CAU:
+Platform:
+
+VRCSDK upload:
+  Direct:
+  Left:
+  Right:
+  Mirror:
+
+CAU upload:
+  Direct:
+  Left:
+  Right:
+  Mirror:
+
+Source changes between A/B: NONE
+```
+
+これだけで「何となくShaderが怪しい」という診断から脱出できます。
+
+---
+
+## 12. やってはいけないこと
+
+### 「VRだけ二重だからShader」と確定する
+
+Stereo依存の可能性は上がりますが、Uploader / Built stateを飛ばします。
+
+### Shader、Material、CAU versionを同時に変える
+
+直っても何が効いたか分かりません。
+
+### `Reimport All` を初手にする
+
+大量の状態を同時に変え、比較可能性を失います。
+
+### Mirror正常だけで修正完了とする
+
+過去のPoiyomi / lilToon IssueにはMirror正常・Direct VR異常の事例があります。
+
+### CAU Issue #154を今回の直接原因と断定する
+
+症状が異なります。使えるのは「標準SDKとCAUで結果が分岐する前例」の証拠までです。
 
 ---
 
 ## まとめ
 
-「VRだけ二重」は、原因名ではなく**故障境界を狭める観測**です。
+今回いちばん大きかった発見は、Shaderの知識ではありません。
 
-過去のPoiyomi / lilToon Issueが示しているのは、DesktopやMirrorが正常でもDirect VRだけ壊れる故障モードが実際に存在することでした。
+**診断木にUploaderが抜けていたこと**です。
 
-そこから先は、Shader packageを丸ごと疑うのではなく、
+VRChat Avatarの最終見た目は、Source Assetだけでは決まりません。
 
 ```text
-Material feature
-→ Source / Built state
-→ Shader Variant
-→ Direct VR / Left / Right Eye
+Source
+→ Build transformation
+→ Bundle
+→ Build / Upload API path
+→ Backend
+→ Client / Stereo
 ```
 
-のどこでNORMAL→ABNORMALへ変わるかを1変数ずつ取ります。
+この全体を観測対象にする必要があります。
 
-**原因名を当てるより、最初に結果が分岐する境界を見つける方が、次の操作を一意にできます。**
+今回のような「Desktop正常 / VRだけ二重」では、過去のShader事例に引っ張られやすい。しかし、まず同じAvatarを **標準VRCSDKと第三者UploaderでA/B** すれば、はるかに上流で故障境界を切れます。
+
+今後の第一手はこれです。
+
+> **Shaderを触る前に、Uploaderを変えて結果が分岐するか測る。**
 
 ## 参考一次情報
 
-### Unity
+### VRChat
+
+- Creating Your First Avatar: https://creators.vrchat.com/avatars/creating-your-first-avatar/
+- Public SDK API: https://creators.vrchat.com/sdk/public-sdk-api/
+- SDK 3.9.0 release: https://creators.vrchat.com/releases/release-3-9-0/
+
+### Continuous Avatar Uploader / anatawa12
+
+- Continuous Avatar Uploader: https://github.com/anatawa12/ContinuousAvatarUploader
+- CAU Issue #154: https://github.com/anatawa12/ContinuousAvatarUploader/issues/154
+- SimpleAvatarUploader.cs: https://gist.github.com/anatawa12/029f749b527ed0a8d6dc853a5bcf9b94
+
+### Unity / Shader
 
 - Stereo rendering: https://docs.unity3d.com/2022.3/Documentation/Manual/SinglePassStereoRendering.html
-- Single-pass instanced rendering and custom shaders: https://docs.unity3d.com/Manual/SinglePassInstancing.html
+- Single-pass instanced custom shaders: https://docs.unity3d.com/Manual/SinglePassInstancing.html
 - Shader variants: https://docs.unity3d.com/2022.3/Documentation/Manual/shader-variants.html
-- Error and loading shaders: https://docs.unity3d.com/Manual/shader-error.html
+- Importer consistency: https://docs.unity3d.com/Manual/ImporterConsistency.html
 
-### lilToon
+### Shader過去事例
 
-- Issue #46: https://github.com/lilxyzw/lilToon/issues/46
-
-### Poiyomi Toon Shader
-
-- Issue #4: https://github.com/poiyomi/PoiyomiToonShader/issues/4
-- Issue #24: https://github.com/poiyomi/PoiyomiToonShader/issues/24
-
-### Modular Avatar / NDMF
-
-- Manual processing: https://modular-avatar.nadena.dev/docs/manual-processing
-- Material Setter: https://modular-avatar.nadena.dev/docs/reference/reaction/material-setter
-- Material Swap: https://modular-avatar.nadena.dev/docs/reference/reaction/material-swap
-- Reactive Components: https://modular-avatar.nadena.dev/docs/reference/reaction
-- NDMF BuildPhase: https://ndmf.nadena.dev/api/nadena.dev.ndmf.BuildPhase.html
+- Poiyomi #4: https://github.com/poiyomi/PoiyomiToonShader/issues/4
+- Poiyomi #24: https://github.com/poiyomi/PoiyomiToonShader/issues/24
+- lilToon #46: https://github.com/lilxyzw/lilToon/issues/46
