@@ -13,6 +13,11 @@ FORBIDDEN_PUBLIC_MARKERS = (
     "PRIVATE_GRAPHITI_DIARY:",
     "PRIVATE_WEEKLY_CONTEXT:",
 )
+CANONICAL_RATCHET_KPIS = [
+    "publication_pass_rate",
+    "primary_source_rate",
+    "manual_corrections",
+]
 
 
 def fail(message: str) -> None:
@@ -86,6 +91,16 @@ def audit_config() -> None:
     source = (core.ROOT / "pipeline" / "core.py").read_text(encoding="utf-8")
     if "models.github.ai" in source:
         fail("retired GitHub Models endpoint remains in core.py")
+
+    if list(core.CONFIG.get("ratchet_kpis", [])) != CANONICAL_RATCHET_KPIS:
+        fail("ratchet_kpis must be exactly the three canonical outcome KPIs")
+    image_policy = core.CONFIG.get("image_policy", {})
+    if image_policy.get("objective") != "reader_comprehension":
+        fail("image policy must optimize reader comprehension")
+    if image_policy.get("fixed_count") is not None:
+        fail("image policy must not require a fixed image count")
+    if image_policy.get("require_explanatory_value") is not True:
+        fail("every generated diagram must have explanatory value")
 
 
 def audit_editorial_contract() -> None:
