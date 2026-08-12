@@ -1,5 +1,5 @@
 ---
-title: "動画生成APIを直接叩くのをやめた：Storyboard IRでKlingとMiniMaxの仕様差をコンパイル時に止める"
+title: "KlingとMiniMaxの仕様差を、APIエラーになる前にStoryboardのcompile errorへ変えた"
 emoji: "🎬"
 type: "tech"
 topics: ["python", "ai", "architecture", "videogeneration", "testing"]
@@ -7,31 +7,27 @@ published: true
 published_at: 2026-08-12 14:09
 ---
 
-動画生成APIを増やすほど、コードは「似ているのに同じではない」仕様差に侵食されます。
+1つのShotに、開始画像と終了画像を指定する。さらに同じShotへreference videoも付ける。
 
-Text-to-Video、Image-to-Video、First/Last Frame、複数参照画像、参照動画、参照音声。さらに provider ごとに duration、aspect ratio、media count、prompt length、endpoint が違う。そこでAPIごとに `if provider == ...` を増やしていくと、最後に壊れるのは動画そのものではなく、**「この台本を、どの制約で、どうAPIへ変換したか」を説明できる能力**です。
+台本としては不自然ではありません。しかしMiniMax-H3 V2の公式Create APIでは、**first/last-frame mode と reference mode は排他的**です。
 
-今回、動画生成系の実装で、台本からAPI requestへ直接落とす線をやめ、間に provider-neutral な **Storyboard IR（Intermediate Representation / 中間表現）** を置きました。
+- MiniMax-H3 V2 Create: https://platform.minimax.io/docs/api-reference/video-generation-v2-create
 
-結論はこれです。
+この矛盾をAPIへ送ってから知るのでは遅い。
 
-> **生成APIの差異を runtime のAPIエラーとして受け取るのではなく、Storyboard → Provider Request の compile error として先に止める。**
+一方で、Kling側では今回のadapterが表現できるrequest modeが別で、現行adapterが保持できない `reference_video` / `reference_audio` を黙って捨てることもできません。
 
-Kling 側の Storyboard adapter は merge 済みです。MiniMax-H3 V2 adapter は Draft PR として実装・テスト中で、この記事では **live generation を実行済みとは扱いません**。
+ここで問題になったのは「providerごとに違うJSONをどう作るか」ではありませんでした。
 
-実装証拠:
+**人間が書いた同じ映像意図を、provider Aでは表現でき、provider Bでは表現できないとき、その差をどこで失敗させるか。**
+
+そこで台本からAPI requestへ直接落とす線をやめ、間にprovider-neutralな **Storyboard IR（Intermediate Representation / 中間表現）** を置きました。
+
+Kling側のStoryboard adapterはmerge済みです。MiniMax-H3 V2 adapterはDraft PRとして実装・テスト中で、この記事では **live generationを実行済みとは扱いません**。
 
 - Kling merged PR: https://github.com/KAFKA2306/kling/pull/1
 - Kling merge commit: https://github.com/KAFKA2306/kling/commit/1e014f7da47bc162afd90076ad67b66c97ba4543
 - MiniMax Draft PR: https://github.com/KAFKA2306/2511youtuber/pull/56
-- MiniMax Storyboard implementation: https://github.com/KAFKA2306/2511youtuber/blob/feat/storyboard-ir-minimax-h3/src/storyboard.py
-- MiniMax provider implementation: https://github.com/KAFKA2306/2511youtuber/blob/feat/storyboard-ir-minimax-h3/src/providers/video_generation.py
-
-公式仕様:
-
-- MiniMax-H3 V2 Create: https://platform.minimax.io/docs/api-reference/video-generation-v2-create
-- MiniMax-H3 V2 Query: https://platform.minimax.io/docs/api-reference/video-generation-v2-query
-- Kling VIDEO 3.0 User Guide: https://app.klingai.com/cn/quickstart/klingai-video-3-model-user-guide
 
 ## 1. 問題：動画生成APIは「prompt文字列」だけでは抽象化できない
 
@@ -53,11 +49,9 @@ MiniMax-H3 V2 の公式Create APIは `content[]` に text / image / video / audi
 
 つまり共通化すべきものはAPI requestではありません。**映像として何を作りたいか**です。
 
-この図で見るべき点は、Script と provider API の間に Storyboard IR を置き、provider差を adapter に閉じ込めていることです。
-
 ![Storyboard IR boundary](/images/video-storyboard-ir-provider-compile/01-ir-boundary.png)
 
-## 2. 設計判断：Storyboardを「映像の意図」の正準形にする
+## 2. Storyboardを「映像の意図」の正準形にする
 
 Storyboard IR の中心は `VideoStoryboard` と `Shot` です。
 
@@ -79,11 +73,9 @@ Storyboard IR の中心は `VideoStoryboard` と `Shot` です。
 
 Klingのendpoint名も、MiniMaxの`content[]`もStoryboard側には置きません。Storyboardは「何秒から何秒まで、何を伝え、何を参照し、何を維持するか」だけを表します。
 
-この図で見るべき点は、Shotが長いprompt paragraphではなく、時間・メッセージ・参照・根拠を持つ機械検証可能な契約になっていることです。
-
 ![Shot contract](/images/video-storyboard-ir-provider-compile/02-shot-contract.gif)
 
-## 3. 原因：runtimeまで待つと、間違いの責任範囲が広すぎる
+## 3. runtimeまで待つと、間違いの責任範囲が広すぎる
 
 provider APIへ直接requestすると、例えば12秒動画を要求して失敗したとき、原因候補が広がります。
 
@@ -95,9 +87,9 @@ provider APIへ直接requestすると、例えば12秒動画を要求して失�
 - prompt compilerが壊れている
 - network/authenticationの問題
 
-そこで、まず provider に依存しない矛盾をIR生成時に落とします。
+そこで、まずproviderに依存しない矛盾をIR生成時に落とします。
 
-実装では以下を validation error にしています。
+実装では以下をvalidation errorにしています。
 
 - shotの `end_sec <= start_sec`
 - storyboard全体のduration超過
@@ -108,11 +100,7 @@ provider APIへ直接requestすると、例えば12秒動画を要求して失�
 
 例えば 0–5秒のShot Aと4–8秒のShot Bは、network requestへ到達しません。
 
-この図で見るべき点は、timelineの矛盾をAPI側の400エラーにせず、ローカルのschema validationで止めることです。
-
 ![Timeline fail close](/images/video-storyboard-ir-provider-compile/03-timeline-fail-close.gif)
-
-実装の考え方は単純です。
 
 ```python
 if shot.start_sec < previous_end:
@@ -121,7 +109,7 @@ if shot.start_sec < previous_end:
 
 このチェックはKlingにもMiniMaxにも関係ありません。だからIR側に置きます。
 
-## 4. 失敗：1つのShotに複数の論点を詰めると、provider以前に崩れる
+## 4. 1つのShotに複数の論点を詰めると、provider以前に崩れる
 
 生成動画のpromptを組み立てていると、1 Shotの `message` に箇条書きを詰めたくなります。
 
@@ -139,13 +127,11 @@ if len(nonempty_lines) != 1:
     raise ValueError("one-shot-one-message")
 ```
 
-この図で見るべき点は、「1図1メッセージ」と同じ原則を動画のShot contractへ持ち込んでいることです。
-
 ![One shot one message](/images/video-storyboard-ir-provider-compile/04-one-shot-one-message.gif)
 
 これは生成品質を保証する魔法ではありません。狙いは、**失敗したときにどのShotの意味が曖昧だったかを特定できること**です。
 
-## 5. Reference asset は URI ではなく「役割」を持たせる
+## 5. Reference assetはURIではなく「役割」を持たせる
 
 画像URLを単純な `images: list[str]` にすると、provider変換時に意味が消えます。
 
@@ -172,11 +158,9 @@ AssetRole = Literal[
 
 さらに role と kind が矛盾したらrejectします。
 
-この図で見るべき点は、「ファイルの種類」と「生成上の役割」を別フィールドにし、組み合わせをvalidationしていることです。
-
 ![Asset role matrix](/images/video-storyboard-ir-provider-compile/05-asset-role-matrix.gif)
 
-ここまでが provider-neutral contract です。
+ここまでがprovider-neutral contractです。
 
 ## 6. MiniMax-H3：公式V2仕様をadapterで検証してから `content[]` へ落とす
 
@@ -195,8 +179,7 @@ MiniMax-H3 V2 の公式Create APIでは、2026年8月12日時点で以下が確�
 - reference audioは最大3
 - reference video/audioの合計durationは15秒以下
 
-これらは公式Create docsに明記されています。
-
+公式Create docs:
 https://platform.minimax.io/docs/api-reference/video-generation-v2-create
 
 adapterはStoryboardを受け取り、まずこれらをvalidateしてからrequestへcompileします。
@@ -211,43 +194,36 @@ request = {
 }
 ```
 
-この図で見るべき点は、IRのreference roleを、その意味を保持したままMiniMaxのtyped `content[]` に変換していることです。
-
 ![MiniMax compile](/images/video-storyboard-ir-provider-compile/06-minimax-compile.gif)
 
-ここでAPIを呼ばない `compile_request()` を独立させているのが重要です。
-
-API keyが無くてもrequest shapeまではテストできます。live call は `create_task()` 側で `MINIMAX_API_KEY` を要求します。
+APIを呼ばない `compile_request()` を独立させているため、API keyが無くてもrequest shapeまではテストできます。live call は `create_task()` 側で `MINIMAX_API_KEY` を要求します。
 
 ## 7. Kling：同じStoryboardから3つのrequest modeへcompileする
 
-Kling側は merge 済みの `KlingStoryboardCompiler` が、reference semanticsから routeを決定します。
+Kling側はmerge済みの `KlingStoryboardCompiler` が、reference semanticsからrouteを決定します。
 
 - referenceなし → Text-to-Video
 - first frame + optional last frame → Image-to-Video
 - 1–4 reference images → Multi-Image-to-Video
 
 実装:
-
 https://github.com/KAFKA2306/kling/blob/master/usecases/storyboard.py
-
-この図で見るべき点は、呼び出し側がendpointを選ぶのではなく、Storyboardの意味からcompilerがrouteを決めることです。
 
 ![Kling compile modes](/images/video-storyboard-ir-provider-compile/07-kling-compile-modes.gif)
 
-なお、Klingの公式VIDEO 3.0 user guideは現在、multi-shot、15秒、element reference、native audioなど広い製品能力を説明しています。
+Klingの公式VIDEO 3.0 user guideは現在、multi-shot、15秒、element reference、native audioなど広い製品能力を説明しています。
 
 https://app.klingai.com/cn/quickstart/klingai-video-3-model-user-guide
 
 ただし、**今回のadapterがその最新製品能力をすべて表現しているとは扱っていません。**
 
-mergeしたadapterは「このrepoの現在のrequest modelがlosslessに表現できる範囲」に限定しています。この区別は重要です。
+mergeしたadapterは「このrepoの現在のrequest modelがlosslessに表現できる範囲」に限定しています。
 
-## 8. Provider capability mismatch は「丸める」のではなく止める
+## 8. Provider capability mismatchは「丸める」のではなく止める
 
 最も危険なのは、adapterが親切に見える変換をすることです。
 
-例えば Kling adapter の現行request modelが5秒または10秒しか受け付けないとき、Storyboardが12秒なら10秒へ丸めることもできます。
+例えばKling adapterの現行request modelが5秒または10秒しか受け付けないとき、Storyboardが12秒なら10秒へ丸めることもできます。
 
 今回はしません。
 
@@ -260,23 +236,17 @@ if duration not in {5, 10}:
 
 reference video/audioも同じです。現行adapterがそのroleを保持できないなら、黙ってdropせずrejectします。
 
-この図で見るべき点は、「近いrequestに変換する」より「意味を保存できないならcompile失敗」を優先していることです。
-
 ![Capability mismatch](/images/video-storyboard-ir-provider-compile/08-capability-mismatch.gif)
-
-これは地味ですが、後から再現性を守る上で効きます。
 
 12秒Storyboardを10秒動画として生成してしまうと、生成は「成功」しても、設計上は別物です。
 
-## 9. 検証：同じIRから同じprompt/requestが生成されることをテストする
-
-生成AIは非決定的でも、**生成前のcompileは決定的にできます。**
+## 9. 生成AIが非決定的でも、生成前のcompileは決定的にできる
 
 MiniMax側のテストでは、12秒・5 shot fixtureについて同じStoryboardを2回compileし、prompt一致を確認しています。
 
 Kling側でも同じStoryboardから同じ `KlingStoryboardPlan` が出ることをテストしています。
 
-さらに audit に以下を残す設計にしました。
+さらにauditに以下を残す設計にしました。
 
 - storyboard ID
 - provider
@@ -288,15 +258,11 @@ Kling側でも同じStoryboardから同じ `KlingStoryboardPlan` が出ること
 - compiler version
 - generated artifact hash
 
-この図で見るべき点は、非決定的な動画生成の手前に、決定的に監査できるcompile chainを作っていることです。
-
 ![Audit chain](/images/video-storyboard-ir-provider-compile/09-audit-chain.gif)
 
-ここで `artifact hash` を残す理由は、同じtask IDやURLだけでは、後から取得したbytesが同一か確認できないからです。
+非決定的な動画生成の手前に、決定的に監査できるcompile chainを置きます。
 
-## 10. 検証境界：mocked API successを「動画生成成功」と呼ばない
-
-今回の実装で最も明示したかった失敗は、テストの成功範囲を拡大解釈することです。
+## 10. mocked API successを「動画生成成功」と呼ばない
 
 Kling merged PRのテストは `FakeClient` を使い、compiled endpointとpayloadがclientへ渡ることを確認します。実network callはしません。
 
@@ -320,15 +286,13 @@ MiniMax Draft PRでも `compile_request()` はnetworkなしで検証し、API ke
 
 です。
 
-この図で見るべき点は、compile-time contractの成功とlive generationの成功を別のEvidenceとして扱っていることです。
-
 ![Verification boundary](/images/video-storyboard-ir-provider-compile/10-verification-boundary.gif)
+
+compile-time contractの成功とlive generationの成功を別のEvidenceとして扱います。
 
 ## 11. 再現方法
 
 ### Kling側
-
-merge済み実装を確認します。
 
 ```bash
 git clone https://github.com/KAFKA2306/kling.git
@@ -366,8 +330,6 @@ MiniMax公式仕様と突き合わせる場合は、必ず現行docsを確認し
 
 ## 12. 何が失敗だったか
 
-今回の設計で避けたかった失敗は3つです。
-
 ### 失敗1：provider requestを正準データモデルにする
 
 provider Aのfieldを正準にすると、provider Bを追加した瞬間に`Optional` fieldだらけになります。
@@ -386,34 +348,13 @@ request compileが正しくても、auth、rate limit、provider runtime、生�
 
 解決はverification boundaryを明記することです。
 
-## 13. 実務で使う最小チェックリスト
-
-新しい動画providerを追加するとき、まず次を埋めます。
-
-| 質問 | 置く場所 |
-|---|---|
-| Shotは何秒から何秒か | Storyboard IR |
-| 1 Shotで何を伝えるか | Storyboard IR |
-| 参照mediaの意味は何か | ReferenceAsset.role |
-| timelineにgap/overlapを許すか | Storyboard validation |
-| providerのduration制約 | Provider adapter |
-| providerのratio制約 | Provider adapter |
-| providerで表現できないrole | compile error |
-| API endpoint/payload | Provider adapter |
-| requestを再現できるか | deterministic compiler |
-| live callしたか | audit / verification evidence |
-
 ## まとめ
 
-動画生成providerを増やすとき、共通化する対象を「API request」にすると苦しくなります。
+同じStoryboardでも、KlingとMiniMaxでは「表現できる映像意図」の境界が違います。
 
-共通化すべきなのは、
+その差をprovider固有JSONへ埋め込むと、失敗はnetwork requestの後まで遅れます。
 
-**何を、いつ、どの参照素材を使い、どの制約を守って見せたいか**
-
-という映像の意図です。
-
-その意図をStoryboard IRとして固定し、
+そこで、
 
 ```text
 Script
@@ -425,39 +366,17 @@ Script
   -> Audit
 ```
 
-に分ける。
+へ分けました。
 
-するとprovider差は「巨大なif文」ではなく「compile contract」になります。
-
-特に有効だった原則は3つです。
-
-1. **providerに依存しない矛盾はIRで止める**
-2. **providerで意味を保存できない場合はfail-closeする**
-3. **compile成功とlive generation成功を別のEvidenceとして扱う**
+**providerで意味を保存できないなら、近いrequestへ丸めず、生成前にcompile errorとして止める。**
 
 生成AIが非決定的でも、その手前の設計・変換・検証まで非決定的にする必要はありません。
 
----
-
 ## 参照した一次情報
 
-- MiniMax-H3 V2 Create Video Generation Task  
-  https://platform.minimax.io/docs/api-reference/video-generation-v2-create
-- MiniMax-H3 V2 Query Task  
-  https://platform.minimax.io/docs/api-reference/video-generation-v2-query
-- Kling VIDEO 3.0 Model User Guide  
-  https://app.klingai.com/cn/quickstart/klingai-video-3-model-user-guide
-- KAFKA2306/kling PR #1  
-  https://github.com/KAFKA2306/kling/pull/1
-- KAFKA2306/kling merge commit  
-  https://github.com/KAFKA2306/kling/commit/1e014f7da47bc162afd90076ad67b66c97ba4543
-- KAFKA2306/2511youtuber PR #56  
-  https://github.com/KAFKA2306/2511youtuber/pull/56
-
-## LAPRAS AI Review 5軸セルフレビュー
-
-- **論理性**: API差異という問題から、IR分離、compile validation、provider adapter、verification boundaryまで因果を一本化した。
-- **実用性**: 実装field、validation例、provider compile例、再現コマンド、チェックリストを含めた。
-- **読みやすさ**: 10図を「構造→契約→失敗→provider変換→監査→検証境界」の順に配置した。
-- **独自性**: 実際にmergeされたKling adapterと、進行中MiniMax adapterの仕様差を同一IRから比較した。
-- **明確性**: merged / Draft、compile test / live call、公式provider能力 / 現行repo adapter能力を明示的に分離した。
+- MiniMax-H3 V2 Create Video Generation Task: https://platform.minimax.io/docs/api-reference/video-generation-v2-create
+- MiniMax-H3 V2 Query Task: https://platform.minimax.io/docs/api-reference/video-generation-v2-query
+- Kling VIDEO 3.0 Model User Guide: https://app.klingai.com/cn/quickstart/klingai-video-3-model-user-guide
+- KAFKA2306/kling PR #1: https://github.com/KAFKA2306/kling/pull/1
+- KAFKA2306/kling merge commit: https://github.com/KAFKA2306/kling/commit/1e014f7da47bc162afd90076ad67b66c97ba4543
+- KAFKA2306/2511youtuber PR #56: https://github.com/KAFKA2306/2511youtuber/pull/56
