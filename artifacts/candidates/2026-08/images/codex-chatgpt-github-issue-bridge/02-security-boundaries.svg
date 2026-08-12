@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Codex ChatGPT GitHub Issue Bridge の安全境界</title>
+  <desc id="desc">private queue、controller author、AllowedRoot、sandbox allowlist、二重検査、smoke test の関係</desc>
+  <rect width="1600" height="900" fill="#ffffff"/>
+  <text x="70" y="90" font-family="sans-serif" font-size="44" font-weight="700" fill="#111827">安全境界：Issue をローカル任意実行器にしない</text>
+  <text x="70" y="140" font-family="sans-serif" font-size="24" fill="#4b5563">sender と daemon の両方で境界を検査し、成功条件も E2E で固定する</text>
+
+  <g font-family="sans-serif">
+    <rect x="90" y="210" width="1420" height="120" rx="20" fill="#f9fafb" stroke="#111827" stroke-width="3"/>
+    <text x="130" y="258" font-size="27" font-weight="700" fill="#111827">Queue boundary</text>
+    <text x="430" y="258" font-size="24" fill="#111827">repository は PRIVATE</text>
+    <text x="850" y="258" font-size="24" fill="#111827">controller author == configured GitHub login</text>
+    <text x="430" y="300" font-size="21" fill="#4b5563">Issue comment が transport。credential は comment に置かない。</text>
+
+    <rect x="90" y="375" width="650" height="255" rx="22" fill="#eff6ff" stroke="#2563eb" stroke-width="3"/>
+    <text x="415" y="425" text-anchor="middle" font-size="30" font-weight="700" fill="#1e3a8a">Sender 側：投入前チェック</text>
+    <text x="140" y="480" font-size="23" fill="#111827">• cwd を絶対パスへ正規化</text>
+    <text x="140" y="520" font-size="23" fill="#111827">• cwd ∈ AllowedRoot を確認</text>
+    <text x="140" y="560" font-size="23" fill="#111827">• sandbox ∈ {read-only, workspace-write}</text>
+    <text x="140" y="600" font-size="23" fill="#111827">• 既定 sandbox = read-only</text>
+
+    <rect x="860" y="375" width="650" height="255" rx="22" fill="#fff7ed" stroke="#ea580c" stroke-width="3"/>
+    <text x="1185" y="425" text-anchor="middle" font-size="30" font-weight="700" fill="#9a3412">Daemon 側：実行直前に再チェック</text>
+    <text x="910" y="480" font-size="23" fill="#111827">• controller author を再確認</text>
+    <text x="910" y="520" font-size="23" fill="#111827">• 未処理 task ID だけ処理</text>
+    <text x="910" y="560" font-size="23" fill="#111827">• AllowedRoot を再確認</text>
+    <text x="910" y="600" font-size="23" fill="#111827">• 許可外 sandbox は拒否</text>
+
+    <path d="M750 500 H850" stroke="#374151" stroke-width="5" stroke-dasharray="12 10"/>
+    <text x="800" y="485" text-anchor="middle" font-size="19" fill="#4b5563">二重境界</text>
+
+    <rect x="270" y="690" width="1060" height="130" rx="22" fill="#ecfdf5" stroke="#16a34a" stroke-width="3"/>
+    <text x="800" y="735" text-anchor="middle" font-size="30" font-weight="700" fill="#166534">Completion boundary：installer の E2E smoke test</text>
+    <text x="800" y="780" text-anchor="middle" font-size="23" fill="#111827">最大180秒以内に worker result が返り、final message に BRIDGE_OK、かつ exit_code = 0</text>
+  </g>
+</svg>
