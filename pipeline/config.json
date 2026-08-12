@@ -1,7 +1,7 @@
 {
   "owner": "KAFKA2306",
   "model": "auto",
-  "candidate_count": 5,
+  "candidate_count": 8,
   "revision_limit": 3,
   "paths": {
     "candidates": "artifacts/candidates",
@@ -18,6 +18,10 @@
     "target_overall": 4.1,
     "minimum_overall": 3.8,
     "minimum_axis": 3.5,
+    "target_story_overall": 4.3,
+    "minimum_story_overall": 4.0,
+    "minimum_story_axis": 3.8,
+    "minimum_interest": 4.1,
     "minimum_primary_sources": 3,
     "minimum_own_github_evidence": 2
   },
@@ -27,6 +31,20 @@
     "読みやすさ",
     "独自性",
     "明確性"
+  ],
+  "editorial_axes": [
+    "interest",
+    "discovery",
+    "narrative",
+    "context"
+  ],
+  "story_types": [
+    "anomaly",
+    "contradiction",
+    "failure",
+    "unexpected-connection",
+    "counterintuitive-result",
+    "magnitude"
   ],
   "preferred_topics": [
     "backend",
@@ -46,9 +64,11 @@
     "developer.mozilla.org",
     "openai.com",
     "platform.openai.com",
-    "zenn.dev"
+    "zenn.dev",
+    "info.zenn.dev"
   ],
   "evaluation_kind": "internal_lapras_rubric_proxy",
+  "editorial_evaluation_kind": "story_interest_proxy",
   "monthly_publication_limit": 1,
   "model_provider": "github-copilot-cli"
 }

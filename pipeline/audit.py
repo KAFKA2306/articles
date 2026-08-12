@@ -32,10 +32,13 @@ def audit_layout() -> None:
         core.ROOT / "pipeline" / "config.json",
         core.ROOT / "pipeline" / "cli.py",
         core.ROOT / "pipeline" / "core.py",
+        core.ROOT / "pipeline" / "editorial.py",
         core.ROOT / "pipeline" / "runtime.py",
         core.ROOT / "pipeline" / "graphiti.py",
         core.ROOT / "pipeline" / "selection.py",
+        core.ROOT / "pipeline" / "contracts" / "article.md",
         core.ROOT / "docs" / "ARCHITECTURE.md",
+        core.ROOT / "docs" / "EDITORIAL_DESIGN.md",
         core.ROOT / "docs" / "GRAPHITI_WEEKLY.md",
     ]
     for path in required:
@@ -51,12 +54,31 @@ def audit_config() -> None:
         fail("minimum_overall must be >= 3.5")
     if float(gate["minimum_axis"]) < 3.5:
         fail("minimum_axis must be >= 3.5")
+    if float(gate["target_story_overall"]) < 4.2:
+        fail("target_story_overall must be >= 4.2")
+    if float(gate["minimum_story_overall"]) < 3.9:
+        fail("minimum_story_overall must be >= 3.9")
+    if float(gate["minimum_story_axis"]) < 3.7:
+        fail("minimum_story_axis must be >= 3.7")
+    if float(gate["minimum_interest"]) < 4.0:
+        fail("minimum_interest must be >= 4.0")
     if int(gate["minimum_primary_sources"]) < 3:
         fail("minimum_primary_sources must be >= 3")
     if int(gate["minimum_own_github_evidence"]) < 2:
         fail("minimum_own_github_evidence must be >= 2")
+    if int(core.CONFIG.get("candidate_count", 0)) < 6:
+        fail("candidate_count must be >= 6 for editorial selection")
     if core.CONFIG.get("evaluation_kind") != "internal_lapras_rubric_proxy":
         fail("evaluation_kind must declare internal proxy semantics")
+    if core.CONFIG.get("editorial_evaluation_kind") != "story_interest_proxy":
+        fail("editorial_evaluation_kind must declare story-interest semantics")
+    if list(core.CONFIG.get("editorial_axes", [])) != [
+        "interest",
+        "discovery",
+        "narrative",
+        "context",
+    ]:
+        fail("editorial_axes contract changed")
     if int(core.CONFIG.get("monthly_publication_limit", 0)) != 1:
         fail("monthly_publication_limit must be exactly 1")
     if core.CONFIG.get("model_provider") != "github-copilot-cli":
@@ -64,6 +86,31 @@ def audit_config() -> None:
     source = (core.ROOT / "pipeline" / "core.py").read_text(encoding="utf-8")
     if "models.github.ai" in source:
         fail("retired GitHub Models endpoint remains in core.py")
+
+
+def audit_editorial_contract() -> None:
+    contract = (
+        core.ROOT / "pipeline" / "contracts" / "article.md"
+    ).read_text(encoding="utf-8")
+    required_markers = (
+        "ひとつの発見",
+        "冒頭300文字",
+        "initial_hypothesis",
+        "hypothesis_update",
+        "story_overall",
+        "interest",
+        "discovery",
+        "narrative",
+        "context",
+        "一文で持ち帰れる結論",
+    )
+    for marker in required_markers:
+        if marker not in contract:
+            fail(f"editorial contract missing: {marker}")
+
+    cli = (core.ROOT / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    if "install_editorial_pipeline()" not in cli:
+        fail("editorial pipeline is not installed by cli.py")
 
 
 def audit_privacy() -> None:
@@ -102,6 +149,7 @@ def audit_articles() -> None:
 def main() -> int:
     audit_layout()
     audit_config()
+    audit_editorial_contract()
     audit_privacy()
     audit_articles()
     print("AUDIT_PASS")
