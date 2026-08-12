@@ -1,3 +1,12 @@
+---
+title: "lilToonで左右の目の見え方が違うとき、最初に何をする？ — Reimportだけで切り分けるQA"
+emoji: "👁️"
+type: "tech"
+topics: ["vrchat", "unity", "liltoon", "shader"]
+published: true
+published_at: 2026-08-12 19:12
+---
+
 # lilToonで左右の目の見え方が違うとき、最初に何をする？ — Reimportだけで切り分けるQA
 
 VRChatで「左目では正常なのに右目ではおかしい」「VRだけ見え方が崩れる」といった症状が出たとき、いきなりアバターやMaterialを作り直す必要はありません。
