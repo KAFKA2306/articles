@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "positive_min_likes": 100,
+    "confirmed_count_required": true,
+    "like_count_is_sufficient_quality_proof": false,
+    "below_threshold_articles_may_be_used_as_positive_examples": false,
+    "purpose": "Extract editorial structure from verified high-engagement individual articles without imitating author style."
+  },
+  "positive_examples": [
+    {
+      "title": "AIのハーネスを徹底的に整えたら、レビューもシステム運用も自動化され、非エンジニアも開発に参加できるようになった話",
+      "url": "https://zenn.dev/aircloset/articles/d416342f46f16b",
+      "engagement_floor": 300,
+      "engagement_evidence": "Zenn公式のPublication四半期表彰2026/Q2が『300を超えるいいね』と明記",
+      "engagement_evidence_url": "https://info.zenn.dev/2026-07-02-publication-quarterly-award-2026q2",
+      "observed_editorial_patterns": [
+        "scene_before_concept",
+        "specific_operational_outcome",
+        "measured_scale",
+        "author_specific_experience",
+        "limitations_disclosed",
+        "mechanism_after_payoff"
+      ]
+    }
+  ],
+  "reference_principles": [
+    {
+      "name": "Zenn experience-first policy",
+      "url": "https://info.zenn.dev/2026-02-03-community-guidelines-update",
+      "use": "Prefer concrete trial-and-error and author-specific perspective over generic knowledge summaries."
+    },
+    {
+      "name": "Zenn human-led AI content policy",
+      "url": "https://info.zenn.dev/2026-03-10-ai-contents-guideline",
+      "use": "Require author verification, experience, insight, and restraint against high-volume AI article production."
+    },
+    {
+      "name": "LAPRAS AI Review",
+      "url": "https://talent-help.lapras.com/ja/articles/8039514-ai%E3%83%AC%E3%83%93%E3%83%A5%E3%83%BC%E6%A9%9F%E8%83%BD%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6",
+      "use": "Use logic, utility, readability, originality, and clarity as a technical quality floor rather than an engagement objective."
+    },
+    {
+      "name": "堀元見: 良い問いの作り方",
+      "url": "https://note.com/kenhori2/n/nc90dfc3f3255",
+      "use": "Reject gap-spotting-only topics and prefer questions that challenge a premise. Use the principle only; do not imitate prose style."
+    }
+  ]
+}
