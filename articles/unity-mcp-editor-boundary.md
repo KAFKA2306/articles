@@ -1,5 +1,5 @@
 ---
-title: "『AIがUnityを触れた』は完成ではない：VRChat改変へMCPを入れる設計で分けた3つの境界"
+title: "AIがUnityを操作できても、VRChatアバターが完成したことにはならない"
 emoji: "🛠️"
 type: "tech"
 topics: ["unity", "mcp", "codex", "vrchat", "ai"]
@@ -7,25 +7,30 @@ published: true
 published_at: 2026-08-12 16:03
 ---
 
-Unityで何かが壊れたとき、原因がC#にあるとは限りません。
+`KAFKA2306/image2outfit` にUnity MCP連携を入れたDraft PR #212には、setup、doctor、config、static testsがあります。
 
-Prefabの参照切れ、Animator Controller、Material、BlendShape、Componentの値、Scene上の状態、Packageの解決結果。Unityでは、**コードの外側にあるEditor stateそのもの**が不具合の原因になります。
+それでも2026-08-12時点で、次は **NOT_RUN** のままです。
 
-ここで以前から気になっていたことがありました。
+- user Windows環境でのPowerShell setup
+- live Blender MCP connection
+- live Unity MCP connection / package resolution
+- Blender Assistant → Codex → MCP のend-to-end call
 
-> AI coding agentにrepositoryを読ませるだけでなく、Unity Editorそのものを調査・操作させたら、アバター改変のデバッグはどこまで変わるのか。
+PR: https://github.com/KAFKA2306/image2outfit/pull/212
 
-そこで `KAFKA2306/image2outfit` に、CoplayDevの **MCP for Unity** をOpenAI Codexから利用するローカルauthoring adapterとして組み込む設計を入れました。
+ここで「MCP対応を実装した」と「Unity上で正しく動いた」の間に、かなり大きな空白があることに気づきました。
 
-最初は「UnityをAIから操作できれば自動化が進む」という話だと思っていました。しかし実装を詰めるほど、重要だったのは能力の追加ではなく、次の3つを分離することでした。
+AIがEditorを操作できる。tool callが成功する。SceneやComponentを変更できる。
 
-1. **AIがUnityを操作できること**
-2. **その操作が正しかったことを検証できること**
-3. **VRChat向け成果物が完成したこと**
+**それでも、VRChat向け成果物が完成した証拠にはなりません。**
 
-この3つは同じではありません。
+最初は「UnityをAIから操作できれば自動化が進む」という話だと思っていました。実装を詰めるほど、必要だったのは能力の追加より、次の3つを別々に証明することでした。
 
-この記事では、2026-08-12時点の公式一次情報と、実際に作成したIssue / Draft PRだけを根拠に、どこまで実装済みで、どこから先をまだ「未検証」として残しているかを整理します。
+1. AIがUnityを操作できる
+2. その操作が正しかったと検証できる
+3. VRChat向け成果物が完成した
+
+なぜこの3つを一つの“成功”にしてはいけないのか。MCP for Unityをローカルauthoring adapterとして組み込んだ過程から追います。
 
 ## まず一次情報：MCP for Unityは何をするものか
 
