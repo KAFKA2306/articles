@@ -25,6 +25,16 @@
     "minimum_primary_sources": 3,
     "minimum_own_github_evidence": 2
   },
+  "ratchet_kpis": [
+    "publication_pass_rate",
+    "primary_source_rate",
+    "manual_corrections"
+  ],
+  "image_policy": {
+    "objective": "reader_comprehension",
+    "fixed_count": null,
+    "require_explanatory_value": true
+  },
   "lapras_axes": [
     "論理性",
     "実用性",
