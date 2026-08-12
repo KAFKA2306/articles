@@ -1,5 +1,5 @@
 ---
-title: "CSV移行でいきなり書き込まない：dry-run診断を本番ロジックと共有する設計"
+title: "CSV importerを作る前にdry-runしか作らなかったら、CLIとブラウザの判定が1本になった"
 emoji: "🧪"
 type: "tech"
 topics: ["javascript", "dataengineering", "testing", "privacy"]
@@ -7,18 +7,19 @@ published: true
 published_at: 2026-08-12 12:30
 ---
 
-CSVで既存システムへデータを移すとき、最初に作りたくなるのは `import` コマンドです。ところが、実運用で危ないのは「変換できないこと」より、**変換できたように見えて正準データへ副作用を残すこと**です。
+CSVの1行が、構文上は正常だとします。
 
-今回、蔵書管理リポジトリ `KAFKA2306/books` でCSV移行機能を作る際、最初の成果物をimporterではなく **non-destructive migration diagnosis** にしました。さらに後続でブラウザUIを追加しましたが、サーバへCSVをアップロードするAPIは作らず、CLIとブラウザが同じ判定コアを共有する形にしています。
+ISBNは新しい。しかし正規化した書名は既存Workに近い。
 
-- CLI dry-run実装: https://github.com/KAFKA2306/books/pull/42
-- ブラウザ内診断: https://github.com/KAFKA2306/books/pull/43
-- 実装commit: https://github.com/KAFKA2306/books/commit/e9dbe8c968f17dd3626d9488a3fcb269fdbaaecc
-- ブラウザ版commit: https://github.com/KAFKA2306/books/commit/9f83eb07b126d2236e79246b92cc27df1417e2e2
+これは「成功」でしょうか。それとも「失敗」でしょうか。
 
-この記事で伝えたい結論は一つです。
+今回 `KAFKA2306/books` で移行機能を作っていて、この2値では足りませんでした。`safe_new_work`、`safe_new_edition`、`existing_holding`、`review_similar_title` は、どれも単純なparse errorではないからです。
 
-**移行処理では「書き込めるか」を先に作るより、「書き込まずに同じ判定を説明できるか」を先に作る方が、後続のCLI・UI・監査を単純化できます。**
+そこで最初に作ったのはimporterではなく、**正準データを一切変更せず、本番と同じ判定理由だけを返すdry-run診断**でした。
+
+その後にCLIとブラウザUIを増やしたところ、両方を別々に実装する必要はありませんでした。どちらも同じ `diagnoseMigration()` へ合流できたからです。
+
+なぜ「書き込む機能を作らない」というMVPが、後続のUIまで単純化したのか。そこを実装順に追います。
 
 ## 1. 問題：importは成功/失敗だけでは足りない
 
