@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 import unittest
 
-from pipeline import core, selection
+from pipeline import core, editorial, selection
 from pipeline.graphiti import compact_weekly_record
 
 
@@ -27,7 +27,85 @@ class PipelineContractTests(unittest.TestCase):
             core.CONFIG["evaluation_kind"],
             "internal_lapras_rubric_proxy",
         )
+        self.assertEqual(
+            core.CONFIG["editorial_evaluation_kind"],
+            "story_interest_proxy",
+        )
+        self.assertEqual(
+            core.CONFIG["editorial_axes"],
+            ["interest", "discovery", "narrative", "context"],
+        )
         self.assertEqual(core.CONFIG["monthly_publication_limit"], 1)
+
+    def test_story_gate_is_stricter_than_technical_gate(self) -> None:
+        review = {
+            "logic": 5.0,
+            "utility": 5.0,
+            "readability": 5.0,
+            "originality": 5.0,
+            "clarity": 5.0,
+            "overall": 5.0,
+            "interest": 3.0,
+            "discovery": 5.0,
+            "narrative": 5.0,
+            "context": 5.0,
+            "story_overall": 4.5,
+        }
+        self.assertFalse(editorial.passes_quality(review, sources_ok=True))
+
+    def test_story_ready_requires_one_complete_discovery(self) -> None:
+        topic = {
+            "central_question": "なぜ件数を増やすほど確定できない値が増えるのか？",
+            "surprising_finding": "公開行数が増えても正確な損益計算には直結しない",
+            "initial_hypothesis": "取引行を集めれば損益まで復元できる",
+            "hypothesis_update": "金額がカテゴリ表示であることを確認して予想を更新する",
+            "stakes": "公開データから何を計算できるかの境界が変わる",
+            "story_type": "counterintuitive-result",
+            "evidence_urls": [
+                "https://github.com/KAFKA2306/investor2/a",
+                "https://github.com/KAFKA2306/investor2/b",
+            ],
+            "why_interesting": "データ量と推定可能性が同じ方向に動かない",
+        }
+        self.assertTrue(editorial.story_ready(topic))
+        topic.pop("hypothesis_update")
+        self.assertFalse(editorial.story_ready(topic))
+
+    def test_monthly_rank_prefers_story_quality(self) -> None:
+        sources = {
+            "own_github": ["a", "b"],
+            "valid_urls": ["a", "b", "c"],
+        }
+        technically_higher = {
+            "logic": 5.0,
+            "utility": 5.0,
+            "readability": 5.0,
+            "originality": 5.0,
+            "clarity": 5.0,
+            "overall": 5.0,
+            "interest": 4.1,
+            "discovery": 4.1,
+            "narrative": 4.1,
+            "context": 4.1,
+            "story_overall": 4.1,
+        }
+        more_compelling = {
+            "logic": 4.2,
+            "utility": 4.2,
+            "readability": 4.2,
+            "originality": 4.2,
+            "clarity": 4.2,
+            "overall": 4.2,
+            "interest": 4.8,
+            "discovery": 4.8,
+            "narrative": 4.8,
+            "context": 4.8,
+            "story_overall": 4.8,
+        }
+        self.assertGreater(
+            selection.review_rank_key(more_compelling, sources),
+            selection.review_rank_key(technically_higher, sources),
+        )
 
     def test_current_model_backend_contract(self) -> None:
         self.assertEqual(core.CONFIG["model_provider"], "github-copilot-cli")
