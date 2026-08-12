@@ -1,5 +1,5 @@
 ---
-title: "一次資料と派生集計を混ぜない：公開データ分析を fail-close にする Provenance 設計"
+title: "856件を7,699件に直したとき、問題は『計算ミス』ではなくscopeだった"
 emoji: "🔎"
 type: "tech"
 topics: ["dataengineering", "provenance", "python", "github"]
@@ -7,11 +7,26 @@ published: true
 published_at: 2026-08-12 11:21
 ---
 
-公開資料を集計するとき、いちばん危険なのは「公式PDFから作った数字だから、その集計値も公式発表だ」と扱ってしまうことです。この記事では、U.S. Office of Government Ethics（OGE）の Form 278-T を題材に、**一次資料・観測値・外部パーサによる派生値を別レイヤーとして保存する**方法を、実際の公開GitHub実装から整理します。
+最初の集計は **856行** でした。
 
-結論は単純です。**一次資料が保証する事実と、自分たちが計算した値を同じ provenance に載せない**。これだけで、後から数字が訂正されたときの事故範囲が大きく変わります。
+同じテーマを後から取り直すと、今度は **7,699行**。内訳は **5,026 purchases + 2,673 sales** です。
 
-## 1. 何が問題だったか
+では、856は計算ミスだったのでしょうか。
+
+そうではありませんでした。856は部分集合を対象にした値で、7,699は対象文書集合を広げた派生集計でした。しかも7,699も、U.S. Office of Government Ethics（OGE）が公表した単一の「公式合計」ではありません。
+
+ここで壊れていたのは足し算ではなく、**その数字が何を代表するのかというラベル**でした。
+
+この問題をきっかけに、OGE Form 278-T の公開データでは、一次資料そのもの、一次資料から観測した値、外部パーサを使った派生集計を別レイヤーへ分けました。
+
+- 実装commit: https://github.com/KAFKA2306/investor2/commit/c8a3ab271b58396c2aa3b38d9ba7a8f4244a3210
+- 正準snapshot: https://github.com/KAFKA2306/investor2/blob/main/docs/research/data/us_oge_trump_278t_trade_count_2026-08-11.json
+
+この記事の問いは一つです。
+
+**数字が更新されたとき、「前の値が間違っていた」のか、「scopeが違った」のかを、後からどう判別できるようにするか。**
+
+## 1. 856と7,699は、何を数えていたのか
 
 OGE Form 278-T は Periodic Transaction Report です。OGE公式ガイドでは、対象者に報告対象取引がある場合に提出が必要で、取引通知を受けてから30日以内、かつ取引から45日以内という提出期限が示されています。
 
@@ -20,14 +35,9 @@ OGE Form 278-T は Periodic Transaction Report です。OGE公式ガイドでは
 
 Job Aid は、原則として1取引あたり1,000ドル超の株式・債券・先物・オプション等の purchase / sale / exchange を報告対象として説明しています。したがって、PDFに並ぶ行は「公開された報告取引」であり、そのまま「本人が直接発注したトレード回数」と読み替えることはできません。
 
-ここでデータ分析側に別の問題が生じます。複数PDFをパースして合計した値は便利ですが、**OGE自身が公開した単一の合計値ではありません**。
+実装では17件のOGE Form 278-T文書を公式URL付きで索引化する一方、7,699行という集計値を `derived_external_parser_crosscheck` として分離しています。5,026 purchases + 2,673 sales = 7,699 という reconciliation は保持しますが、これを「OGE公式集計」とは呼びません。
 
-実装ではこの境界を明示しました。
-
-- 実装commit: https://github.com/KAFKA2306/investor2/commit/c8a3ab271b58396c2aa3b38d9ba7a8f4244a3210
-- 正準snapshot: https://github.com/KAFKA2306/investor2/blob/main/docs/research/data/us_oge_trump_278t_trade_count_2026-08-11.json
-
-このsnapshotでは、17件のOGE Form 278-T文書を公式URL付きで索引化する一方、7,699行という集計値を `derived_external_parser_crosscheck` として分離しています。さらに 5,026 purchases + 2,673 sales = 7,699 という reconciliation は保持しますが、これを「OGE公式集計」とは呼びません。
+ここで初めて、856から7,699へ変わった理由を「値の訂正」ではなく「scopeの更新」として説明できます。
 
 ## 2. 失敗しやすいデータモデル
 
