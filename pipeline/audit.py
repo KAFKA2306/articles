@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from . import core
 
@@ -42,6 +43,7 @@ def audit_layout() -> None:
         core.ROOT / "pipeline" / "graphiti.py",
         core.ROOT / "pipeline" / "selection.py",
         core.ROOT / "pipeline" / "contracts" / "article.md",
+        core.ROOT / "pipeline" / "benchmarks" / "zenn-positive.json",
         core.ROOT / "docs" / "ARCHITECTURE.md",
         core.ROOT / "docs" / "EDITORIAL_DESIGN.md",
         core.ROOT / "docs" / "GRAPHITI_WEEKLY.md",
@@ -88,6 +90,32 @@ def audit_config() -> None:
         fail("monthly_publication_limit must be exactly 1")
     if core.CONFIG.get("model_provider") != "github-copilot-cli":
         fail("model_provider must use github-copilot-cli")
+
+    benchmark_policy = core.CONFIG.get("benchmark_policy", {})
+    if int(benchmark_policy.get("positive_min_likes", 0)) < 100:
+        fail("positive benchmark minimum must be >= 100 likes")
+    if benchmark_policy.get("positive_requires_confirmed_like_count") is not True:
+        fail("positive benchmark like count must be confirmed")
+    if benchmark_policy.get("below_threshold_role") != "non_positive_or_antipattern":
+        fail("below-threshold articles must not be positive exemplars")
+    if benchmark_policy.get("lapras_role") != "quality_floor_not_objective":
+        fail("LAPRAS proxy must remain a quality floor, not the objective")
+    if benchmark_policy.get("forbid_style_imitation") is not True:
+        fail("benchmark policy must forbid style imitation")
+
+    benchmark_path = core.ROOT / "pipeline" / "benchmarks" / "zenn-positive.json"
+    benchmark = json.loads(benchmark_path.read_text(encoding="utf-8"))
+    examples = benchmark.get("positive_examples", [])
+    if len(examples) < int(benchmark_policy.get("minimum_positive_exemplars", 1)):
+        fail("positive benchmark corpus is empty")
+    for example in examples:
+        if int(example.get("engagement_floor", 0)) < int(
+            benchmark_policy["positive_min_likes"]
+        ):
+            fail("positive benchmark below configured like threshold")
+        if not str(example.get("engagement_evidence_url", "")).startswith("https://"):
+            fail("positive benchmark lacks engagement evidence URL")
+
     source = (core.ROOT / "pipeline" / "core.py").read_text(encoding="utf-8")
     if "models.github.ai" in source:
         fail("retired GitHub Models endpoint remains in core.py")
@@ -109,7 +137,9 @@ def audit_editorial_contract() -> None:
     ).read_text(encoding="utf-8")
     required_markers = (
         "ひとつの発見",
-        "冒頭300文字",
+        "冒頭500文字",
+        "100以上",
+        "品質床",
         "initial_hypothesis",
         "hypothesis_update",
         "story_overall",
