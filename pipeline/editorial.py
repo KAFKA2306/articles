@@ -28,6 +28,12 @@ STORY_FIELDS = [
     "evidence_urls",
     "why_interesting",
 ]
+PREMATURE_CONCLUSION_MARKERS = (
+    "結論はこれです",
+    "結論は単純です",
+    "この記事で伝えたい結論は一つです",
+    "この記事で伝えたい結論は1つです",
+)
 
 
 def _score(value: object) -> float:
@@ -35,6 +41,15 @@ def _score(value: object) -> float:
         return max(0.0, min(5.0, float(value)))
     except (TypeError, ValueError):
         return 0.0
+
+
+def opening_has_premature_conclusion(
+    article: str,
+    *,
+    char_limit: int = 800,
+) -> bool:
+    opening = article[:char_limit]
+    return any(marker in opening for marker in PREMATURE_CONCLUSION_MARKERS)
 
 
 def story_ready(topic: dict[str, object]) -> bool:
@@ -62,6 +77,10 @@ def choose_topic(signals: list[dict[str, object]]) -> dict[str, object]:
 - 専門用語そのものではなく、数値、挙動、失敗、矛盾、桁差、予想外の接続を主役にする。
 - 既存記事の焼き直しは禁止する。
 - 証拠が弱い候補は捨てる。面白そうという理由で事実を補わない。
+- 既知のベストプラクティスを別の技術へ適用しただけの `gap spotting` は選ばない。
+- 読者の自然な予想または既存前提が、一次証拠によってどう崩れるかを明示できない候補は落とす。
+- `why_interesting` が「役に立つ」「安全になる」「理解しやすい」の言い換えだけなら落とす。
+- 文章を上手く書けば面白くなりそう、ではなく、事実そのものに読む理由がある候補だけを残す。
 
 既存タイトル:
 {json.dumps(core.existing_titles(), ensure_ascii=False)}
@@ -79,7 +98,7 @@ PUBLIC_GITHUB_SIGNALS:
   "stakes": "なぜ確かめる価値があるか",
   "story_type": "anomaly|contradiction|failure|unexpected-connection|counterintuitive-result|magnitude",
   "evidence_urls": ["https://github.com/KAFKA2306/...", "https://github.com/KAFKA2306/..."],
-  "why_interesting": "この題材固有の面白さ",
+  "why_interesting": "この題材固有の面白さ。どの前提がどう裏切られるかまで書く",
   "technical_payoff": "最後に一般化できる技術知見"
 }}
 
@@ -88,7 +107,7 @@ JSONのみ返してください。
 """
     result = json.loads(
         core.model_call(
-            "あなたは事実検証を優先する技術編集者です。強い問いと一つの発見で記事を選びます。文体模倣はしません。",
+            "あなたは事実検証を優先する技術編集者です。弱い問いを文章力で救済せず、前提を更新する強い問いと一つの発見で記事を選びます。文体模倣はしません。",
             user,
             temperature=0.0,
             json_mode=True,
@@ -115,6 +134,8 @@ def enrich_topic(
 - 元テーマにない事実を創作しない。
 - PUBLIC_GITHUB_SIGNALSで支えられない発見は採用しない。
 - 単なる生成ミス、URL間違い、設定漏れだけの話にはしない。
+- 既知の原則を別技術へ適用しただけなら `publishable` を false にする。
+- 読者の自然な予想・既存前提を何も更新しない場合は `publishable` を false にする。
 - 十分な発見を作れない場合は `publishable` を false にする。
 
 元テーマ:
@@ -140,7 +161,7 @@ JSONのみ返してください。
 """
     result = json.loads(
         core.model_call(
-            "あなたは技術テーマを一つの検証可能な発見へ絞る編集者です。",
+            "あなたは技術テーマを一つの検証可能な発見へ絞る編集者です。問いが弱ければ公開不可にします。",
             user,
             temperature=0.0,
             json_mode=True,
@@ -169,20 +190,26 @@ Markdown本文のみ。front matterは不要です。
 {json.dumps(signals, ensure_ascii=False, indent=2)}
 
 必須:
-- `central_question` を冒頭で自然に提示する。
+- 最初の具体物を、一般論・用語定義・アーキテクチャ説明より前に置く。
+- 冒頭はscene、実測値、失敗ログ、差分、予想外の挙動のいずれかから始める。
+- `central_question` を冒頭500文字以内で自然に成立させる。
+- 冒頭500文字では最終結論を完全に閉じない。読者に一つの未解決状態を残す。
+- `結論はこれです`、`結論は単純です`、`この記事で伝えたい結論は一つです` のような結論先出し定型句を使わない。
 - `initial_hypothesis` を置き、観測や実験で `hypothesis_update` へ進む。
 - `surprising_finding` 以外の論点を主役にしない。
+- 公開URLを冒頭で一覧化しない。証拠は、その事実を使う位置へ置く。
 - 技術用語は必要になった位置で短く説明する。
 - 固有名詞は役割が分かる一文を添える。
 - GitHub上で確認できない実装事実を創作しない。
 - 外部仕様を断定する場合は公式一次情報URLを直後に付ける。
 - URLを確信できない場合、その外部仕様自体を削除する。
+- 中心の問いを前進させない正しい節は削る。網羅性を目的にしない。
 - 最後に一文の持ち帰りを置く。
 - 最後に「一次情報・再現証拠」節を設け、本文で実際に使ったURLだけを列挙する。
 - 最低でもKAFKA2306 GitHub URLを2件、外部の公式一次情報を1件含める。
 """
     return core.model_call(
-        "あなたは調査の過程を読者が追体験できる技術ライターです。正確さと面白さを両立し、文体模倣はしません。",
+        "あなたは調査の過程を読者が追体験できる技術ライターです。正確さと面白さを両立し、具体的なsceneから始め、文体模倣はしません。",
         user,
     )
 
@@ -199,15 +226,24 @@ def evaluate(article: str) -> dict[str, object]:
 - clarity
 
 編集品質:
-- interest: 冒頭から続きを知りたくなる問い・意外性・具体性があるか
+- interest: 冒頭から続きを知りたくなる未解決の問い・意外性・具体性があるか
 - discovery: 一つの検証可能な発見へ記事全体が収束しているか
-- narrative: 問い→仮説→観測/実験→仮説更新→結論の因果が通るか
+- narrative: scene→自然な予想→観測/実験→仮説更新→結論の因果が通るか
 - context: 本文だけで固有名詞・数値・技術の意味を追えるか
 
 甘く採点しないでください。
-技術的に正しくても、用語説明が先行する、論点が散る、結論が予想通り、
-具体物が遅い、導入を読んでも続きを知りたくならない場合は編集品質を下げてください。
+LAPRAS相当の技術品質は「他のエンジニアに役立つか」の品質床であり、面白さの代理ではありません。
+技術的に正しくても、次の場合は `interest` を3.5以下にしてください。
+- 用語説明や一般論がsceneより先行する。
+- 冒頭で記事全体の最終結論を閉じ、続きを読む必要をなくしている。
+- タイトル相当の主張を予想通り説明するだけで、前提更新がない。
+- 既知のベストプラクティスを別技術へ適用しただけのgap spottingである。
+- repository / PR / URLの列挙が具体的事件より先に来る。
+- 説明書としては有用だが、この著者の実測・失敗・判断変更がなくても成立する。
+
+具体物が遅い、論点が散る、結論が予想通り、導入を読んでも続きを知りたくならない場合は編集品質を下げてください。
 クリックを誘うだけで本文が回収しない場合も `interest` を下げてください。
+100+人気記事の文体を模倣したかではなく、scene before concept、具体的結果、実測、著者固有の経験、制約開示という編集原理が素材に根ざしているかを見てください。
 
 {core.PROMPT}
 
@@ -231,7 +267,7 @@ JSONのみ返してください。
 """
     result = json.loads(
         core.model_call(
-            "あなたは独立した技術記事の編集査読者です。正確さと読ませる構造を別々に採点します。",
+            "あなたは独立した技術記事の編集査読者です。正確さ・有用性と、実際に読み進めたくなる構造を別々に採点します。",
             user,
             temperature=0.0,
             json_mode=True,
@@ -239,6 +275,16 @@ JSONのみ返してください。
     )
     for key in TECHNICAL_AXES + EDITORIAL_AXES:
         result[key] = _score(result.get(key, 0.0))
+
+    if opening_has_premature_conclusion(article):
+        result["interest"] = min(_score(result.get("interest")), 3.4)
+        blocking = result.get("blocking_issues")
+        if not isinstance(blocking, list):
+            blocking = []
+        if "premature_conclusion_in_opening" not in blocking:
+            blocking.append("premature_conclusion_in_opening")
+        result["blocking_issues"] = blocking
+
     result["overall"] = round(
         sum(result[key] for key in TECHNICAL_AXES) / len(TECHNICAL_AXES),
         3,
@@ -296,6 +342,9 @@ def aggregate_evaluations(
 
 def passes_quality(review: dict[str, object], sources_ok: bool) -> bool:
     gate = core.CONFIG["quality_gate"]
+    blocking = review.get("blocking_issues", [])
+    if isinstance(blocking, list) and "premature_conclusion_in_opening" in blocking:
+        return False
     return bool(
         sources_ok
         and _score(review.get("overall")) >= float(gate["minimum_overall"])
@@ -336,16 +385,20 @@ ARTICLE:
 {article}
 
 改稿規則:
-- `interest` が弱い場合、抽象的な導入を削り、具体的な現象・数値・失敗から始める。
+- `interest` が弱い場合、抽象的な導入を削り、具体的なscene・数値・失敗から始める。
+- 冒頭に最終結論がある場合、それを削り、自然な予想と予想外の観測の差へ置き換える。
 - `discovery` が弱い場合、最も強い一つ以外の論点を削る。
-- `narrative` が弱い場合、問い→仮説→観測→更新→結論の順に組み直す。
+- `narrative` が弱い場合、scene→予想→観測→更新→結論の因果順に組み直す。
 - `context` が弱い場合、必要な固有名詞だけをその場で一文説明する。
+- URL一覧がsceneより先にある場合、URLを事実の使用箇所へ移す。
+- 中心の問いを前進させない正しい節を削る。網羅性を増やさない。
+- 既知のベストプラクティス適用だけで問いが弱い場合、無理に文章で救済せずblocking issueを残す。
 - 存在確認できないURL・断定・数値は削除する。
 - 面白さのために新しい事実を作らない。
 - 最後を一文の持ち帰りで閉じる。
 """
     return core.model_call(
-        "あなたは記事の論点を削って強くするリビジョン担当です。",
+        "あなたは記事の論点を削って強くするリビジョン担当です。冒頭の答えを消してsceneと問いを前に出します。",
         user,
         temperature=0.0,
     )
