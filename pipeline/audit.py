@@ -38,6 +38,7 @@ def audit_layout() -> None:
         core.ROOT / "pipeline" / "selection.py",
         core.ROOT / "pipeline" / "contracts" / "article.md",
         core.ROOT / "docs" / "ARCHITECTURE.md",
+        core.ROOT / "docs" / "EDITORIAL_DESIGN.md",
         core.ROOT / "docs" / "GRAPHITI_WEEKLY.md",
     ]
     for path in required:
@@ -91,8 +92,8 @@ def audit_editorial_contract() -> None:
     contract = (
         core.ROOT / "pipeline" / "contracts" / "article.md"
     ).read_text(encoding="utf-8")
-    required_phrases = (
-        "一つの発見",
+    required_markers = (
+        "ひとつの発見",
         "冒頭300文字",
         "initial_hypothesis",
         "hypothesis_update",
@@ -103,9 +104,9 @@ def audit_editorial_contract() -> None:
         "context",
         "一文で持ち帰れる結論",
     )
-    for phrase in required_phrases:
-        if phrase not in contract:
-            fail(f"editorial contract missing: {phrase}")
+    for marker in required_markers:
+        if marker not in contract:
+            fail(f"editorial contract missing: {marker}")
 
     cli = (core.ROOT / "pipeline" / "cli.py").read_text(encoding="utf-8")
     if "install_editorial_pipeline()" not in cli:
