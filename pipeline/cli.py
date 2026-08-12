@@ -3,10 +3,12 @@ from __future__ import annotations
 import argparse
 
 from . import core, selection
+from .editorial import install_editorial_pipeline
 from .graphiti import generate_graphiti_candidate
 from .runtime import install_robust_model_call
 
 install_robust_model_call()
+install_editorial_pipeline()
 
 
 def normalize_legacy_candidate_metadata() -> int:
