@@ -326,7 +326,7 @@ function diagnoseMigration(rows, canonical) {
     mode: 'dry-run',
     catalog_mutated: false,
     results: precheck.results.map(toDiagnosticResult),
-  }
+  };
 }
 ```
 
