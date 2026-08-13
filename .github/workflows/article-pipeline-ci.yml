@@ -10,6 +10,7 @@ on:
       - "artifacts/**"
       - "demos/**"
       - "README.md"
+      - "AGENTS.md"
       - ".github/workflows/article-pipeline.yml"
       - ".github/workflows/article-pipeline-ci.yml"
   push:
@@ -23,6 +24,7 @@ on:
       - "artifacts/**"
       - "demos/**"
       - "README.md"
+      - "AGENTS.md"
       - ".github/workflows/article-pipeline.yml"
       - ".github/workflows/article-pipeline-ci.yml"
 
