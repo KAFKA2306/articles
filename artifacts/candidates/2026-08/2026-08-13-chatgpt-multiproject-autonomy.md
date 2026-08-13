@@ -405,6 +405,184 @@ HTTP 200 != correct content
 
 これはVRChatカレンダーのprojection、arXiv pipeline、画像pipeline、現在のPages deployまで一貫して使える原則です。
 
+## データ基盤の実態：GitHubをcontrol plane、private bucketをdata planeに分けた
+
+ここまでGitHubを状態機械として書きましたが、データ本体までGitへ詰め込んでいるわけではありません。
+
+2026年8月13日時点の実装では、**GitHub側のrepo・Issue・PR・Actionsをcontrol plane、private Hugging Face Storage Bucket `k4fka/kafka-data-lake` をmaterialized data plane**として分離しています。
+
+Hugging Face公式もStorage Bucketsを、Git履歴を持つrepositoryとは別の、mutableなS3-like object storageとして説明しています。
+
+- current publish contract: https://github.com/KAFKA2306/semiconductor-earnings-model/blob/main/config/data_lake_publish.json
+- publisher workflow: https://github.com/KAFKA2306/semiconductor-earnings-model/blob/main/.github/workflows/hf-bucket-smoke.yml
+- architecture note: https://github.com/KAFKA2306/semiconductor-earnings-model/blob/main/docs/central-data-lake.md
+- Hugging Face Storage Buckets: https://huggingface.co/docs/hub/storage-buckets
+
+全体像はこうです。
+
+```text
+source repositories / local artifacts
+  ├─ factory
+  ├─ books
+  ├─ cast_event_cal
+  ├─ investor2-derived market snapshots
+  ├─ EDINET DB projections
+  ├─ financial analysis
+  ├─ earnings ledger
+  └─ finance artifacts
+          ↓
+KAFKA2306/semiconductor-earnings-model
+HF Bucket - Smoke Test and Central Publisher
+  ├─ stage
+  ├─ validate
+  ├─ authenticate by GitHub OIDC
+  ├─ exact-mirror allowlisted prefixes
+  ├─ publish manifest
+  └─ download again and verify SHA-256
+          ↓
+private Storage Bucket
+k4fka/kafka-data-lake
+          ↓
+central/manifests/latest.json
+```
+
+### データレイクへ何でも入れるのではなく、8つのpublish rootをallow-listする
+
+現在の `config/data_lake_publish.json` には、次の8系統だけが明示されています。
+
+| source | destination prefix |
+|---|---|
+| `artifacts/edinetdb/projections` | `edinetdb/projections` |
+| `data/financial_analysis` | `financial_analysis` |
+| `artifacts/earnings_ledger` | `earnings_ledger` |
+| `artifacts/finance` | `finance` |
+| `KAFKA2306/factory:data` | `factory/data` |
+| `KAFKA2306/books:data` | `books/data` |
+| `KAFKA2306/cast_event_cal:data` | `events` |
+| `data/market_snapshots` | `market_snapshots` |
+
+最後の `market_snapshots` はpublisher側へstageされますが、contractにはprovenanceとして `source_repository: KAFKA2306/investor2` と `source_ref: main` も保持されています。
+
+つまり「146 repoを全部中央へコピーする」のではありません。
+
+**中央data planeへ出してよいものを、機械可読なallow-listとして絞る。**
+
+ここでも、自律化を強くする方法は権限を広げることではなく、境界を狭くすることでした。
+
+### writerも1本に絞り、長期HF tokenをrepoへ置かない
+
+architecture noteでは、このbucketへのauthenticated writerを `KAFKA2306/semiconductor-earnings-model` の `.github/workflows/hf-bucket-smoke.yml` に限定しています。
+
+workflow自身も、
+
+```yaml
+permissions:
+  contents: read
+  id-token: write
+```
+
+を持ち、`huggingface/login@v1` でGitHub Actions OIDCからHugging Faceへ認証します。
+
+GitHub公式でも、OIDC token取得には `id-token: write` が必要で、長期credentialをworkflowへ保存せず外部providerへ認証するための仕組みとして説明されています。Hugging Faceの公式login actionもOIDC認証用です。
+
+- GitHub OIDC: https://docs.github.com/en/actions/reference/security/oidc
+- Hugging Face login action: https://github.com/huggingface/login
+
+ここで重要なのは、bucketがあることより、**誰が書けるかを1本へ絞り、credential lifecycleまでworkflow contractへ入れたこと**です。
+
+### publishは単純コピーではなく、検証可能な順序にした
+
+現在のpublisherは、いきなりremoteへ書きません。
+
+```text
+sourceをstage
+↓
+manifestを生成
+↓
+staged treeとmanifestをvalidate
+↓
+allow-listされたdestination prefixだけexact mirror
+↓
+central manifestをpublish
+↓
+remoteからmanifestとobjectsを再download
+↓
+SHA-256を再計算して一致確認
+```
+
+manifest `central/manifests/latest.json` には、source repository / ref / path、destination、byte size、SHA-256などを残す設計です。
+
+exact mirrorでもbucket全体を消すのではなく、allow-listされたprefixだけを置き換え、無関係なpathには触れません。
+
+これはデータベースのtransactionそのものではありませんが、**「途中までコピーできた」を「publish完了」と誤認しないためのtransaction-likeなpublish protocol**にはなっています。
+
+### 設計文書より、実行されるconfigとworkflowを運用上の正本として読む
+
+ここは実運用らしいズレもあります。
+
+`docs/central-data-lake.md` の `first release` の説明には、factory / books / cast_event_cal とEDINET DB / earnings ledger / financeが書かれています。一方、現在の実行contract `config/data_lake_publish.json` には、それに加えて `financial_analysis` と `market_snapshots` も入っています。
+
+したがって現状を監査するときは、
+
+```text
+architecture note
+  = 設計意図
+
+config/data_lake_publish.json
+  = 現在のpublish contract
+
+hf-bucket-smoke.yml
+  = 実行手順
+
+Actions run
+  = 実際にその手順が通った証拠
+```
+
+と分けて扱うのが安全です。
+
+これは記事を書くときにも重要でした。READMEや設計文書だけを読んで「今こう動いている」とは断定しません。
+
+### 2026年8月13日のscheduled runで、publishとremote再検証まで実際に成功している
+
+最後に、構成ファイルが存在するだけでは「動いている」とは言えません。
+
+2026年8月13日17:03 JSTに開始されたscheduled run `31680400569` は `success` で完了しています。
+
+- run: https://github.com/KAFKA2306/semiconductor-earnings-model/actions/runs/31680400569
+
+このrunでは、少なくともworkflow上で次の主要stepがすべて `success` になっています。
+
+```text
+Build and validate publish bundle
+Hugging Face login (OIDC)
+Upload / verify / delete bucket marker
+Publish fresh J-Quants inputs from investor2
+Exact mirror allowlisted data-lake prefixes
+Publish central manifest
+Verify published manifest and all objects
+```
+
+さらに、このrunのhead SHA `f2bcb5235ce6d4f5e435b8994b6760cd65b7ac4f` で `config/data_lake_publish.json` を取得すると、上で示した現在の8つのpublish rootと一致します。
+
+つまり現在のデータ基盤は、概念図だけではありません。
+
+**複数repoの状態をGitHubで制御し、中央publisherだけがOIDCでprivate data planeへ書き、manifestとhashを使ってremote側まで再検証するところまで実装されている。**
+
+ここまで来ると、GitHubは単なるソースコード置き場でも、data lakeそのものでもありません。
+
+```text
+GitHub
+= control plane + versioned contract + evidence
+
+private Storage Bucket
+= mutable materialized data plane
+
+manifest / SHA-256
+= 両者をつなぐprovenance contract
+```
+
+この分離のおかげで、コード・状態・レビュー履歴はGitHubへ残しながら、頻繁に更新されるdata objectまでGit履歴へ抱え込まずに済みます。
+
 ## ChatGPTのScheduled Tasksも「repoごと」ではなく制御ループに使う
 
 OpenAIの公式ヘルプでは、ChatGPTのScheduled Tasksは定期タスクやmonitoringを扱え、1時間に1回より高い頻度では実行できません。アクティブなタスク数にもプラン別上限があります。
@@ -494,15 +672,24 @@ ChatGPT
      → design bounded task
      → verify completion
 
-GitHub
+GitHub = control plane
   ├─ Issue = contract
   ├─ PR = candidate change
-  ├─ Actions = machine evidence
+  ├─ Actions = machine evidence / publisher
   ├─ main = canonical state
-  └─ Pages / production = observed outcome
+  └─ source repositories + publish contract
+              ↓
+       single-writer Actions
+              ↓ OIDC
+private Hugging Face Storage Bucket = data plane
+  └─ k4fka/kafka-data-lake
+              ↓
+       manifest + SHA-256 verification
+              ↓
+Pages / production / downstream artifacts
 
 Automation
-  └─ repetitive collection / validation / build / deploy / cleanup
+  └─ repetitive collection / validation / build / publish / deploy / cleanup
 ```
 
 直近1か月の805 PRは目立ちます。
@@ -513,10 +700,12 @@ Automation
 
 2026年夏に新しかったのは、それらを**repoの中だけで使わず、repo間の次の行動を選ぶために使い始めたこと**です。
 
+その裏では、GitHubに全データを抱え込むのではなく、**GitHubをcontrol plane、private Storage Bucketをdata plane、manifestとhashをその間の契約**として分離するところまで進んでいました。
+
 コード生成は、そのループの一工程にすぎません。
 
 マルチプロジェクト開発を自律化するときに本当に効いたのは、
 
-**状態を減らすこと。契約を書くこと。証拠を残すこと。停止条件を決めること。そして、人間が判断すべき場所を最後まで消さないこと。**
+**状態を減らすこと。契約を書くこと。データの置き場と制御の置き場を分けること。証拠を残すこと。停止条件を決めること。そして、人間が判断すべき場所を最後まで消さないこと。**
 
 でした。
