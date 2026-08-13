@@ -30,7 +30,7 @@ GitHubのプロフィールには、公開リポジトリが146個ある。
 
 Repository Searchでは、通常の公開repo検索で123件、`fork:only` で23件が確認できる。
 
-- non-fork側: https://api.github.com/search/repositories?q=user%3AKAFKA2306+is%3Apublic
+- non-fork側: https://api.github.com/search/repositories?q=user%3AKAFKA2306+is%3Apublic+fork%3Afalse
 - forkのみ: https://api.github.com/search/repositories?q=user%3AKAFKA2306+fork%3Aonly
 
 つまり、最初に少なくとも次を分けないといけない。
@@ -60,6 +60,7 @@ forkは無価値という意味ではない。
 4. 各テーマ群から複数repoを確認する
 5. 詳細な設計を本文で主張するrepoはREADMEまで読む
 6. 作成日と現在READMEの設計を混同しない
+7. どのテーマにも安全に分類できないrepoを捨てず、全件inventoryに残す
 ```
 
 以下の長いrepo名一覧は、**公開repository metadata上に存在するテーマの広がりを示すインベントリ**である。各repoの内部設計を名前だけから断定するためのものではない。
@@ -354,7 +355,144 @@ fork側には `DeepCode`、`claude-code`、`openclaw`、`financial-services-plug
 
 現在の制御ループが機能するのは、金融系のprovenance、VR系のartifact validation、ゲーム系のCI再現性、情報系のcanonical/projection分離、生活系のprivacy boundaryなど、**他系統で先に必要になった契約が持ち込まれているから**である。
 
-## 23 forksは全件、別の集合として扱う
+## 付録A：123 non-fork public repositories 全件
+
+ここまでの系統分類に無理に押し込まなかったrepoも含め、GitHub Search APIの `user:KAFKA2306 is:public fork:false` で得た123件を全て残す。
+
+<details>
+<summary>123件を表示</summary>
+
+```text
+anime
+vrpoker
+2510youtuber
+books
+nlm
+yt4
+mitsuikaggle
+furutsatotax
+investor2
+know
+vrc_cast_event_calender
+BestEthernet
+prompt-vault
+CrewTrade
+DominionDeckDrawSimlator
+vrmine
+image2outfit
+WealthAudit
+hitaiall
+magicaltexture
+alpha
+patent
+salary
+agent-resources
+VRPhotoJourney
+Swiss-Tournament-Manager
+kafin3
+finAnalist
+us-swing-strategy-bi-pages
+expense2
+Year2035
+trahist
+nk225seasonality
+molecularshader
+vrcrelator
+bodogenomikata2
+articles
+readable-github
+vrcviewer
+gennote
+rule-scribe-games
+kafka
+cedar-pollen-bi
+vrcgimmicknetwork
+shaderGPT
+vmatch2
+mastramcp
+fin_age_cfd
+pal-atlas
+dancer
+factory
+jhr
+KAFKA2306
+x
+vrcplat
+irr
+com
+SecureVCC
+hitaiou
+RooBrawser
+chat-code-architect-ai2
+m2
+backend
+vrc-pilot-test
+oil
+semiconductor-earnings-model
+chat-code-architect-ai
+skew
+VeilVoice
+AutoPhotogrammetry
+kakeibo
+photoprism
+fx
+UnityMCPforUbuntu22.04
+NVII
+abestudy
+launcher
+aboutkafka
+furuyoni
+game-library-dashboard
+bpyutils
+auto-invest
+summer
+vlogrs
+PictureChangerTools
+detective
+fit
+adaptive_wear_generator_pro
+investor
+kindle2
+pamiq-poker
+2511youtuber
+nonfarmpayroll
+kafin2
+CantStopExpressLearn
+blendshapedeformer
+vmatching
+option
+cast_event_cal
+boothitemmanager
+kimeraassist
+uranium
+bonus
+dmovie2511
+VRChat-bolt
+boardgamelist
+yt3
+vlog
+finBI
+tradermade_cfd
+mstr
+kindle
+ytmanager
+financeLLM
+vtttv
+econalert
+333
+marvelousdesigner
+mj
+BMAX
+hf-cache-hub
+etf
+travel
+```
+
+</details>
+
+この一覧の存在自体が重要で、たとえば `factory`、`jhr`、`KAFKA2306`、`x`、`com`、`SecureVCC`、`hitaiou`、`m2`、`333`、`BMAX`、`kimeraassist` のように、名前だけでは安全に一つの系統へ押し込めないrepoも落とさず残せる。
+
+## 付録B：23 forks 全件
 
 GitHub Searchで `fork:only` を指定して得た23件は次の通りだった。
 
