@@ -1,5 +1,5 @@
 ---
-title: "一括同期でPythonが壊れた。6ファイルだけ巻き戻してcompileallを門番にした"
+title: "一括同期でコードが壊れた。6ファイルだけ戻して「壊れたら止まる」門番を置いた"
 emoji: "🧯"
 type: "tech"
 topics: ["python", "githubactions", "testing", "ci"]

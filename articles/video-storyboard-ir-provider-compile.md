@@ -1,5 +1,5 @@
 ---
-title: "KlingとMiniMaxの仕様差を、APIエラーになる前にStoryboardのcompile errorへ変えた"
+title: "同じ動画指示なのに、生成AIを変えると壊れる。仕様差を実行前に止めた"
 emoji: "🎬"
 type: "tech"
 topics: ["python", "ai", "architecture", "videogeneration", "testing"]

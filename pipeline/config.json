@@ -25,6 +25,18 @@
     "minimum_primary_sources": 3,
     "minimum_own_github_evidence": 2
   },
+  "title_policy": {
+    "minimum_candidates": 3,
+    "candidate_roles": [
+      "general_problem",
+      "concrete_anomaly",
+      "searchable"
+    ],
+    "prefer_plain_language_entry": true,
+    "technical_terms_after_problem": true,
+    "require_selected_from_candidates": true,
+    "blocking_issue": "narrow_technical_title_entry"
+  },
   "benchmark_policy": {
     "positive_min_likes": 100,
     "positive_requires_confirmed_like_count": true,

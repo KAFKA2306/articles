@@ -28,6 +28,13 @@ STORY_FIELDS = [
     "evidence_urls",
     "why_interesting",
 ]
+TITLE_POLICY = dict(core.CONFIG.get("title_policy", {}))
+TITLE_OPTION_ROLES = tuple(
+    str(role) for role in TITLE_POLICY.get("candidate_roles", [])
+)
+TITLE_BLOCKING_ISSUE = str(
+    TITLE_POLICY.get("blocking_issue", "narrow_technical_title_entry")
+)
 PREMATURE_CONCLUSION_MARKERS = (
     "結論はこれです",
     "結論は単純です",
@@ -52,13 +59,37 @@ def opening_has_premature_conclusion(
     return any(marker in opening for marker in PREMATURE_CONCLUSION_MARKERS)
 
 
+def title_options_ready(topic: dict[str, object]) -> bool:
+    title = str(topic.get("title", "")).strip()
+    options = topic.get("title_options")
+    if not title or not isinstance(options, dict):
+        return False
+
+    minimum = int(TITLE_POLICY.get("minimum_candidates", 3))
+    if len(TITLE_OPTION_ROLES) < minimum:
+        return False
+
+    candidates = [str(options.get(role, "")).strip() for role in TITLE_OPTION_ROLES]
+    if any(not candidate for candidate in candidates):
+        return False
+    if len(set(candidates)) < minimum:
+        return False
+    if TITLE_POLICY.get("require_selected_from_candidates") is True:
+        return title in candidates
+    return True
+
+
 def story_ready(topic: dict[str, object]) -> bool:
     if any(not topic.get(key) for key in STORY_FIELDS):
         return False
     if str(topic.get("story_type")) not in set(core.CONFIG["story_types"]):
         return False
     urls = topic.get("evidence_urls")
-    return isinstance(urls, list) and len(urls) >= 2
+    return (
+        isinstance(urls, list)
+        and len(urls) >= 2
+        and title_options_ready(topic)
+    )
 
 
 def choose_topic(signals: list[dict[str, object]]) -> dict[str, object]:
@@ -82,6 +113,18 @@ def choose_topic(signals: list[dict[str, object]]) -> dict[str, object]:
 - `why_interesting` が「役に立つ」「安全になる」「理解しやすい」の言い換えだけなら落とす。
 - 文章を上手く書けば面白くなりそう、ではなく、事実そのものに読む理由がある候補だけを残す。
 
+タイトルは各候補で必ず3案作る:
+1. `general_problem`: 技術名を知らない人でも、自分に関係する問題だと分かる一般語の入口。
+2. `concrete_anomaly`: 本文で証明できる数字、失敗、矛盾、反転、具体的事件を入口にする。
+3. `searchable`: 検索に必要な正式技術名を残す。ただし前半は一般語の問題または具体例にする。
+
+タイトル規則:
+- repository名、内部クラス名、API名、ライブラリ名、略語だけでタイトルを始めない。
+- 専門語は、一般語で問題が分かった後の後半・副題へ送る。
+- 一般化したタイトルが本文の証拠範囲を超えないようにする。
+- 3案は意味の違う案にし、同じ文の言い換え3個にしない。
+- `title` は3案のうち最も広い入口と証拠の強さを両立する1案をそのまま選ぶ。
+
 既存タイトル:
 {json.dumps(core.existing_titles(), ensure_ascii=False)}
 
@@ -90,7 +133,12 @@ PUBLIC_GITHUB_SIGNALS:
 
 各候補を次の形にしてください。
 {{
-  "title": "技術名ではなく現象または問いを中心にした仮タイトル",
+  "title": "title_optionsの3案から選んだ1案",
+  "title_options": {{
+    "general_problem": "一般語の問題から入る案",
+    "concrete_anomaly": "具体的な異常・失敗から入る案",
+    "searchable": "一般語の入口を保ちながら技術検索性も残す案"
+  }},
   "central_question": "一文の問い",
   "surprising_finding": "一文の発見",
   "initial_hypothesis": "調査前に自然だった予想",
@@ -107,7 +155,7 @@ JSONのみ返してください。
 """
     result = json.loads(
         core.model_call(
-            "あなたは事実検証を優先する技術編集者です。弱い問いを文章力で救済せず、前提を更新する強い問いと一つの発見で記事を選びます。文体模倣はしません。",
+            "あなたは事実検証を優先する技術編集者です。弱い問いを文章力で救済せず、前提を更新する強い問いと一つの発見で記事を選びます。タイトルは一般語の問題から入り、技術名は後から与えます。文体模倣はしません。",
             user,
             temperature=0.0,
             json_mode=True,
@@ -137,6 +185,9 @@ def enrich_topic(
 - 既知の原則を別技術へ適用しただけなら `publishable` を false にする。
 - 読者の自然な予想・既存前提を何も更新しない場合は `publishable` を false にする。
 - 十分な発見を作れない場合は `publishable` を false にする。
+- タイトルは `general_problem` / `concrete_anomaly` / `searchable` の3案を作る。
+- 技術名を知らない読者がタイトル前半だけで問題を理解できるようにする。
+- `title` は3案のいずれかをそのまま採用する。
 
 元テーマ:
 {json.dumps(topic, ensure_ascii=False, indent=2)}
@@ -147,7 +198,12 @@ PUBLIC_GITHUB_SIGNALS:
 JSONのみ返してください。
 {{
   "publishable": true,
-  "title": "...",
+  "title": "title_optionsから選ぶ",
+  "title_options": {{
+    "general_problem": "...",
+    "concrete_anomaly": "...",
+    "searchable": "..."
+  }},
   "central_question": "...",
   "surprising_finding": "...",
   "initial_hypothesis": "...",
@@ -161,7 +217,7 @@ JSONのみ返してください。
 """
     result = json.loads(
         core.model_call(
-            "あなたは技術テーマを一つの検証可能な発見へ絞る編集者です。問いが弱ければ公開不可にします。",
+            "あなたは技術テーマを一つの検証可能な発見へ絞る編集者です。問いが弱ければ公開不可にします。タイトルは一般語の問題から入ります。",
             user,
             temperature=0.0,
             json_mode=True,
@@ -190,6 +246,8 @@ Markdown本文のみ。front matterは不要です。
 {json.dumps(signals, ensure_ascii=False, indent=2)}
 
 必須:
+- 最初のH1は `記事の核.title` を一字一句そのまま使う。
+- タイトル前半だけで、技術名を知らない読者にも問題または具体的事件が分かる状態を保つ。
 - 最初の具体物を、一般論・用語定義・アーキテクチャ説明より前に置く。
 - 冒頭はscene、実測値、失敗ログ、差分、予想外の挙動のいずれかから始める。
 - `central_question` を冒頭500文字以内で自然に成立させる。
@@ -209,7 +267,7 @@ Markdown本文のみ。front matterは不要です。
 - 最低でもKAFKA2306 GitHub URLを2件、外部の公式一次情報を1件含める。
 """
     return core.model_call(
-        "あなたは調査の過程を読者が追体験できる技術ライターです。正確さと面白さを両立し、具体的なsceneから始め、文体模倣はしません。",
+        "あなたは調査の過程を読者が追体験できる技術ライターです。正確さと面白さを両立し、一般語の問題と具体的なsceneから始め、文体模倣はしません。",
         user,
     )
 
@@ -230,6 +288,13 @@ def evaluate(article: str) -> dict[str, object]:
 - discovery: 一つの検証可能な発見へ記事全体が収束しているか
 - narrative: scene→自然な予想→観測/実験→仮説更新→結論の因果が通るか
 - context: 本文だけで固有名詞・数値・技術の意味を追えるか
+
+タイトルの「入口の広さ」も必ず査読してください。
+タイトル前半が、repository名、内部クラス名、API名、ライブラリ名、略語、専門用語の知識を前提にし、
+それらを知らない読者が「何が問題なのか」「なぜ読むのか」を判断できない場合は、
+`interest` を3.5以下にし、`blocking_issues` に `{TITLE_BLOCKING_ISSUE}` を入れてください。
+技術名がタイトル後半にあっても、前半が一般語の問題・具体的失敗・数字・疑問として成立していれば、この理由では落としません。
+逆に、入口を広く見せるために本文の証拠より大きな主張へ広げている場合も、logic / clarityを下げ、blocking issueに理由を記録してください。
 
 甘く採点しないでください。
 LAPRAS相当の技術品質は「他のエンジニアに役立つか」の品質床であり、面白さの代理ではありません。
@@ -267,7 +332,7 @@ JSONのみ返してください。
 """
     result = json.loads(
         core.model_call(
-            "あなたは独立した技術記事の編集査読者です。正確さ・有用性と、実際に読み進めたくなる構造を別々に採点します。",
+            "あなたは独立した技術記事の編集査読者です。正確さ・有用性と、実際に読み進めたくなる構造を別々に採点します。タイトルは技術名を知らない第三者の視点でも査読します。",
             user,
             temperature=0.0,
             json_mode=True,
@@ -343,7 +408,8 @@ def aggregate_evaluations(
 def passes_quality(review: dict[str, object], sources_ok: bool) -> bool:
     gate = core.CONFIG["quality_gate"]
     blocking = review.get("blocking_issues", [])
-    if isinstance(blocking, list) and "premature_conclusion_in_opening" in blocking:
+    blocking_set = set(blocking) if isinstance(blocking, list) else set()
+    if {"premature_conclusion_in_opening", TITLE_BLOCKING_ISSUE} & blocking_set:
         return False
     return bool(
         sources_ok
@@ -386,6 +452,8 @@ ARTICLE:
 
 改稿規則:
 - `interest` が弱い場合、抽象的な導入を削り、具体的なscene・数値・失敗から始める。
+- `{TITLE_BLOCKING_ISSUE}` がある場合、H1を「一般語の問題または具体的事件 → 必要なら技術名」の順へ改める。技術語を消すのではなく後半へ送る。
+- タイトルを広げるときも本文の証拠範囲を超えた一般化はしない。
 - 冒頭に最終結論がある場合、それを削り、自然な予想と予想外の観測の差へ置き換える。
 - `discovery` が弱い場合、最も強い一つ以外の論点を削る。
 - `narrative` が弱い場合、scene→予想→観測→更新→結論の因果順に組み直す。
@@ -398,7 +466,7 @@ ARTICLE:
 - 最後を一文の持ち帰りで閉じる。
 """
     return core.model_call(
-        "あなたは記事の論点を削って強くするリビジョン担当です。冒頭の答えを消してsceneと問いを前に出します。",
+        "あなたは記事の論点を削って強くするリビジョン担当です。タイトルと冒頭を一般語の問題から入り、答えを消してsceneと問いを前に出します。",
         user,
         temperature=0.0,
     )

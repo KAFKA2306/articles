@@ -38,6 +38,21 @@ class PipelineContractTests(unittest.TestCase):
         )
         self.assertEqual(core.CONFIG["monthly_publication_limit"], 1)
 
+    def test_broad_entry_title_policy_is_canonical(self) -> None:
+        policy = core.CONFIG["title_policy"]
+        self.assertEqual(policy["minimum_candidates"], 3)
+        self.assertEqual(
+            policy["candidate_roles"],
+            ["general_problem", "concrete_anomaly", "searchable"],
+        )
+        self.assertTrue(policy["prefer_plain_language_entry"])
+        self.assertTrue(policy["technical_terms_after_problem"])
+        self.assertTrue(policy["require_selected_from_candidates"])
+        self.assertEqual(
+            policy["blocking_issue"],
+            "narrow_technical_title_entry",
+        )
+
     def test_popularity_benchmark_is_not_a_low_engagement_training_set(self) -> None:
         policy = core.CONFIG["benchmark_policy"]
         self.assertEqual(policy["positive_min_likes"], 100)
@@ -94,6 +109,25 @@ class PipelineContractTests(unittest.TestCase):
             editorial.passes_quality(otherwise_passing, sources_ok=True)
         )
 
+    def test_narrow_technical_title_is_a_blocking_editorial_pattern(self) -> None:
+        otherwise_passing = {
+            "logic": 5.0,
+            "utility": 5.0,
+            "readability": 5.0,
+            "originality": 5.0,
+            "clarity": 5.0,
+            "overall": 5.0,
+            "interest": 5.0,
+            "discovery": 5.0,
+            "narrative": 5.0,
+            "context": 5.0,
+            "story_overall": 5.0,
+            "blocking_issues": ["narrow_technical_title_entry"],
+        }
+        self.assertFalse(
+            editorial.passes_quality(otherwise_passing, sources_ok=True)
+        )
+
     def test_story_gate_is_stricter_than_technical_gate(self) -> None:
         review = {
             "logic": 5.0,
@@ -110,8 +144,32 @@ class PipelineContractTests(unittest.TestCase):
         }
         self.assertFalse(editorial.passes_quality(review, sources_ok=True))
 
+    def test_title_options_require_three_distinct_roles_and_selected_title(self) -> None:
+        topic = {
+            "title": "バラバラな記録を、あとで使えるデータにするには？",
+            "title_options": {
+                "general_problem": "バラバラな記録を、あとで使えるデータにするには？",
+                "concrete_anomaly": "同じ本が4件に増えた。人間には同じでも機械には別物だった",
+                "searchable": "バラバラな記録を使えるデータにする：dry-runで書き込み前に判定する",
+            },
+        }
+        self.assertTrue(editorial.title_options_ready(topic))
+
+        topic["title_options"]["searchable"] = topic["title_options"]["general_problem"]
+        self.assertFalse(editorial.title_options_ready(topic))
+
+        topic["title_options"]["searchable"] = "記録を構造化する：dry-runとentity resolution"
+        topic["title"] = "3案にないタイトル"
+        self.assertFalse(editorial.title_options_ready(topic))
+
     def test_story_ready_requires_one_complete_discovery(self) -> None:
         topic = {
+            "title": "856件が7,699件になった。でも計算ミスではなかった",
+            "title_options": {
+                "general_problem": "同じデータを数え直したら件数が9倍になった。何を数えたか残していた？",
+                "concrete_anomaly": "856件が7,699件になった。でも計算ミスではなかった",
+                "searchable": "856件が7,699件になった：集計scopeとprovenanceを保存する",
+            },
             "central_question": "なぜ件数を増やすほど確定できない値が増えるのか？",
             "surprising_finding": "公開行数が増えても正確な損益計算には直結しない",
             "initial_hypothesis": "取引行を集めれば損益まで復元できる",
