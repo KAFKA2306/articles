@@ -45,6 +45,41 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Apply fail-close editorial migration
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          unpublish = [
+              Path("articles/codex-chatgpt-github-issue-bridge.md"),
+              Path("articles/liltoon-reimport-first-aid-qa.md"),
+              Path("articles/unity-mcp-editor-boundary.md"),
+              Path("articles/unity-vrchat-shader-troubleshooting-qa.md"),
+          ]
+          for path in unpublish:
+              text = path.read_text(encoding="utf-8")
+              if "published: true\n" in text:
+                  text = text.replace("published: true\n", "published: false\n", 1)
+                  path.write_text(text, encoding="utf-8")
+
+          core = Path("pipeline/core.py")
+          text = core.read_text(encoding="utf-8")
+          text = text.replace(
+              '        needle in path.read_text(encoding="utf-8", errors="ignore")\n',
+              '        "published: true" in path.read_text(encoding="utf-8", errors="ignore")\n'
+              '        and needle in path.read_text(encoding="utf-8", errors="ignore")\n',
+              1,
+          )
+          text = text.replace(
+              '        "published: true\\n"\n',
+              '        # Fail-close: generation never grants publication approval.\n'
+              '        "published: false\\n"\n',
+              1,
+          )
+          core.write_text(text, encoding="utf-8")
+          PY
+
       - name: Resolve mode
         id: mode
         shell: bash
@@ -97,10 +132,10 @@ jobs:
       - name: Postflight audit
         run: python -m pipeline.audit
 
-      - name: Commit canonical outputs
+      - name: Commit canonical outputs and publication policy
         shell: bash
         run: |
-          git add -A artifacts articles
+          git add -A artifacts articles pipeline/core.py
           if git diff --cached --quiet; then
             echo "No canonical output changes"
             exit 0
