@@ -53,6 +53,31 @@ Graphitiは**アイデア源のみ**です。private diary本文、個人情報�
 
 設計根拠とZennの観察結果は [`docs/EDITORIAL_DESIGN.md`](docs/EDITORIAL_DESIGN.md) に固定しています。
 
+## Interactive examples
+
+`articles/*.md` は Zenn-compatible な公開物です。記事本文へ任意の JavaScript / Web Worker を注入できることを前提にしません。
+
+Pyodide 等の interactive demo は、次の条件をすべて満たす場合だけ別の静的Web成果物として採用します。
+
+- 入力を変えて再計算することが、静的なコード例より明確に理解を改善する
+- Python source を JavaScript へ再実装しない
+- 共通 runtime / worker を1実装だけ共有する
+- runtime と追加 package は読者が実行を選ぶまで読み込まない
+- package は demo ごとに明示し、共通 bundle を肥大化させない
+- demo が停止・未配信でも記事本文だけで主張・失敗例・改善例・再現方法を理解できる
+- 公開URLを実際に取得して E2E を確認できるまで、記事から「実行できる」とは書かない
+
+Zenn 側で任意の custom interactive embed が公式にサポートされていると確認できない限り、記事への独自 component 埋め込みは行いません。対応済み外部サービスの埋め込み記法と、通常のリンクカードを区別します。
+
+したがって Pyodide は標準機能ではなく、**有用性が上がり、かつ全体の複雑性を下げられる場合だけ採用する optional progressive enhancement** です。
+
+一次仕様:
+
+- https://zenn.dev/zenn/articles/markdown-guide
+- https://pyodide.org/en/stable/usage/webworker.html
+- https://pyodide.org/en/stable/usage/packages-in-pyodide.html
+- https://pyodide.org/en/stable/usage/wasm-constraints.html
+
 ## Directory contract
 
 ```text
@@ -71,7 +96,6 @@ pipeline/
   audit.py                   # fail-close repository/privacy/editorial audit
   config.json                # quality and path contract
   contracts/article.md       # writing/review contract
-
 docs/
   ARCHITECTURE.md
   EDITORIAL_DESIGN.md
