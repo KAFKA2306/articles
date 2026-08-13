@@ -1,0 +1,36 @@
+name: Embed multiproject article illustrations
+
+on:
+  push:
+    branches:
+      - edit/embed-multiproject-autonomy-images
+
+permissions:
+  contents: write
+
+jobs:
+  embed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Materialize generated image blobs and embed Markdown
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python .github/scripts/embed_multiproject_images.py
+      - name: Commit article and images
+        run: |
+          if git diff --quiet; then
+            echo "No changes required."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/candidates/2026-08/2026-08-13-chatgpt-multiproject-autonomy.md images/chatgpt-multiproject-autonomy
+          git diff --cached --check
+          git commit -m "docs: embed multiproject autonomy illustrations"
+          git push
