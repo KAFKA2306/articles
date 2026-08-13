@@ -1,39 +1,75 @@
 ---
-title: "146公開リポジトリを母集団にして見直した。個人開発がChatGPTのマルチプロジェクト制御へ収束するまで"
+title: "146リポジトリは突然こうならなかった。バラバラな個人開発が、ChatGPTのマルチプロジェクト制御になるまで"
 emoji: "🛰️"
 type: "tech"
 topics: ["chatgpt", "github", "automation", "githubactions"]
 published: false
 ---
 
-GitHubのプロフィールには、公開リポジトリが146個ある。
+GitHubに公開リポジトリが146個ある。
 
-前稿では、その中から `finBI`、`AutoPhotogrammetry`、`mastramcp`、VRChat Event Calendar、`daily-arXiv-ai-enhanced` などを選び、2023年から2026年までの「自動化の成熟史」として並べた。
+金融、VRChat、ボードゲーム、動画、家計、旅行、論文、3D制作、データ収集、AI agent。
 
-しかし、この見方には大きな問題があった。
+最初から一つの製品群として設計したわけではない。用途もデータも実行環境もかなり違う。
 
-**146個を先に母集団として調べたのではなく、説明しやすいrepoを先に選び、その後で歴史を作っていた。**
+それなのに2026年夏、これらをChatGPTから横断して扱うようになった。
 
-実際にrepository一覧を広く取り直すと、金融、VR/3D、ゲーム、情報収集、動画生成、個人データ、Web UI、MCP/agent基盤など、かなり違う系統が並行して存在していた。
+あるrepoのIssueを読み、次に進める作業を選び、実装し、CIを確認し、PRをmergeし、productionを確認する。終わったら別のrepoを見る。
 
-したがって、この記事では一本道の「進化史」をやめる。
+**なぜ、もともと何の関係もなかった大量の個人プロジェクトを、一つの制御ループで扱えるようになったのか。**
 
-**複数の開発系統が別々に自動化・検証・公開・権限分離を獲得し、2026年に一部がGitHubを共通状態として読む制御ループへ収束した**、という形で整理し直す。
+この記事で書きたいのは、その理由だ。
 
-## まず146 repoを分解する
+## 直近1か月だけ見ると、急に何かが起きたように見える
+
+2026年8月13日18時台にGitHub Search APIを再取得すると、2026年7月13日から8月13日までに `KAFKA2306` アカウントで作成されたものは次の規模になっている。
+
+- Issues: 387
+- Pull Requests: 813
+- Merged Pull Requests: 686
+
+一次情報:
+
+- Profile: https://api.github.com/users/KAFKA2306
+- Issues: https://api.github.com/search/issues?q=author%3AKAFKA2306+is%3Aissue+created%3A2026-07-13..2026-08-13
+- Pull Requests: https://api.github.com/search/issues?q=author%3AKAFKA2306+is%3Apr+created%3A2026-07-13..2026-08-13
+- Merged Pull Requests: https://api.github.com/search/issues?q=author%3AKAFKA2306+is%3Apr+is%3Amerged+merged%3A2026-07-13..2026-08-13
+
+8月13日を含む検索なので、同日中は数字が増える。ここでは18時台のsnapshotとして扱う。
+
+数字だけ見ると、最近になって突然「大量の開発をAIへ任せ始めた」ように見える。
+
+しかし、面白いのはPRの本数そのものではない。
+
+コードを書く速度だけなら、プロジェクト数が増えるほど別の仕事が増える。
+
+```text
+次はどのrepoを見る？
+↓
+前回どこまで終わった？
+↓
+PRは残っていない？
+↓
+CI successはproduction successなのか？
+↓
+Issueをcloseしてよい？
+↓
+似た作業を別repoでまたやっていない？
+```
+
+AIへ実装を渡しても、**仕事の選択と完了判定が人間に残る**。
+
+repoが増えるほど、人間自身がオーケストレーターになる。
+
+2026年夏に変わったのは、コード生成の量より、**この「次を決めるループ」まで機械が扱えるようになったこと**だった。
+
+## 146個は、同じ種類のrepoではない
+
+ここで重要なのは、146個を一つの年代順ストーリーへ押し込まないことだった。
 
 2026年8月13日時点のGitHub profile APIは `public_repos: 146` を返す。
 
-- Profile: https://api.github.com/users/KAFKA2306
-- 公開repo一覧 1ページ目: https://api.github.com/users/KAFKA2306/repos?per_page=100&page=1&sort=created&direction=asc
-- 公開repo一覧 2ページ目: https://api.github.com/users/KAFKA2306/repos?per_page=100&page=2&sort=created&direction=asc
-
-Repository Searchでは、通常の公開repo検索で123件、`fork:only` で23件が確認できる。
-
-- non-fork側: https://api.github.com/search/repositories?q=user%3AKAFKA2306+is%3Apublic+fork%3Afalse
-- forkのみ: https://api.github.com/search/repositories?q=user%3AKAFKA2306+fork%3Aonly
-
-つまり、最初に少なくとも次を分けないといけない。
+Repository Searchで分けると、
 
 ```text
 146 public repositories
@@ -41,47 +77,14 @@ Repository Searchでは、通常の公開repo検索で123件、`fork:only` で23
 └─ 23 forks
 ```
 
-forkは無価値という意味ではない。
+となる。
 
-既存OSSを評価・改造・実験するための重要なrepoもある。
+- non-fork側: https://api.github.com/search/repositories?q=user%3AKAFKA2306+is%3Apublic+fork%3Afalse
+- forkのみ: https://api.github.com/search/repositories?q=user%3AKAFKA2306+fork%3Aonly
 
-ただし、**forkを「自分がゼロから構築したシステムの歴史」と同じ証拠として数えるのは不適切**なので、以降の自作系統とは分離して扱う。
+123個のnon-forkを広く見ると、金融、VR/3D、ゲーム、情報収集、動画・音声、生活・個人データ、MCP/agent基盤などが並行している。
 
-また、古いrepoのREADMEは2026年の横断監査で更新されたものがある。repoの作成日は「そのテーマがGitHub上に現れた時点」の証拠として使い、現在READMEの高度な設計が作成当初から存在したとは主張しない。
-
-### 今回の採用ルール
-
-前稿の失敗を繰り返さないため、今回は次の順序で見る。
-
-```text
-1. 146公開repoを母集団として取得する
-2. 23 forks と 123 non-forks を先に分離する
-3. repo名・metadataから広いテーマ群を作る
-4. 各テーマ群から複数repoを確認する
-5. 詳細な設計を本文で主張するrepoはREADMEまで読む
-6. 作成日と現在READMEの設計を混同しない
-7. どのテーマにも安全に分類できないrepoを捨てず、全件inventoryに残す
-```
-
-以下の長いrepo名一覧は、**公開repository metadata上に存在するテーマの広がりを示すインベントリ**である。各repoの内部設計を名前だけから断定するためのものではない。
-
-一方、「このrepoでは何を検証している」「このpipelineは何段階である」といった具体的な設計上の主張は、READMEや実装を実際に確認したものに限定する。
-
-## 一番古い時期から、すでにテーマは一つではなかった
-
-最初期の公開repoには、ゲーム学習の `CantStopExpressLearn`、VR/Unity系のfork `BoneRenamer`、金融系の `finBI` がある。
-
-ここだけでも、
-
-```text
-ゲーム
-VR / Unity
-金融
-```
-
-という別々の方向が同時に現れている。
-
-だから、
+だからこの記事の主題は、
 
 ```text
 2023 = app
@@ -90,15 +93,13 @@ VR / Unity
 2026 = orchestration
 ```
 
-のように年ごとに一つの成熟段階を割り当てるのは、実際のrepository群を圧縮しすぎていた。
+という一本の進化史ではない。
 
-より正確なのは、**複数の系統がそれぞれの問題に応じて別の能力を獲得した**と見ることだ。
+むしろ逆で、**全然違う問題を解いていたrepoが、なぜ後から同じAI制御へ接続できたのか**を見る。
 
-## 系統1：金融・市場・投資研究
+## 金融では「いつの数字か」を曖昧にできなかった
 
-金融系は `finBI` だけではない。
-
-公開non-fork repoには、少なくとも次のような系統がある。
+金融系だけでもかなり多い。
 
 ```text
 finBI
@@ -128,32 +129,34 @@ skew
 irr
 ```
 
-これらは同じ「投資アプリ」のコピーではない。
+たとえば `auto-invest` は市場価格からKelly基準、ボラティリティ、Expected Shortfallなどを計算し、入力不足や品質不良時には確信的な数値を出さない。
 
-- `auto-invest` は市場価格からKelly基準、ボラティリティ、Expected Shortfallなどを計算し、入力不足や品質不良時には確信的な数値を出さない。
-- `semiconductor-earnings-model` は企業開示、規制開示、業界KPI、市場観測を別の値種別として保持し、JSON / SQLite / Webまで生成する。
-- `finBI` は古いUI試作を縮約し、計算とpoint-in-time provenanceを検証する方向へ再構成された。
+`semiconductor-earnings-model` は企業開示、規制開示、業界KPI、市場観測を別の値種別として保持し、JSON / SQLite / Webへ投影する。
+
+`finBI` では、単に値が存在するかではなく、その時点で本当に利用可能だった値かというpoint-in-time provenanceまで問題になった。
 
 - https://github.com/KAFKA2306/auto-invest
 - https://github.com/KAFKA2306/semiconductor-earnings-model
 - https://github.com/KAFKA2306/finBI
 
-この系統で発達したのは、主に次の能力だった。
+金融で必要になったのは、AIらしさより、
 
 ```text
-データ取得
-→ 単位・期間・観測時点の固定
-→ 派生計算
-→ 出典と計算系譜
-→ fail-closedな品質判定
-→ API / DB / Pagesへの投影
+観測値
+推定値
+シナリオ
+判断
 ```
 
-つまり金融系から得た重要な要素は「AI」より、**観測値・推定値・シナリオ・判断を混ぜないこと**だった。
+を混ぜないことだった。
 
-## 系統2：VRChat・Unity・3D制作
+さらに、source、observation date、availability、unit、計算式、派生値を後から辿れる必要がある。
 
-別の巨大な系統がVR/3Dである。
+ここで育ったのは、**provenance / PIT / unit / evidence** という契約だった。
+
+## VR・3Dでは「ファイルがある」だけでは成功にならなかった
+
+VRChatや3D制作では問題がまるで違う。
 
 ```text
 VRPhotoJourney
@@ -182,34 +185,34 @@ shaderGPT
 PictureChangerTools
 ```
 
-この系統では、単なるWeb APIとは違う問題が起きる。
+FBX、BlendShape、bone、material、Unity asset、Prefab、Modular Avatar、外部3Dツール。
 
-FBX、BlendShape、bone、material、Unity asset、Prefab、Modular Avatar、外部3Dツールなど、**状態を持つ制作環境とファイルの整合性**が問題になる。
+この世界では、処理がexit code 0でも成果物が壊れていることがある。
 
-`AutoPhotogrammetry` の現在READMEでは、実写画像の収集元とSHA-256を保存し、特徴抽出・クラスタリング・選別・外部photogrammetry実行を分離している。
+`AutoPhotogrammetry` の現在READMEでは、実写画像の収集元とSHA-256を保存し、特徴抽出、クラスタリング、選別、外部photogrammetry実行を分離している。
 
-`boothitemmanager` は、BOOTHの商品情報について販売者が明示した事実とシステムの派生タグを分け、根拠不足を `UNKNOWN` / `quarantine` に落とす。
+`boothitemmanager` では、販売者が明示した事実とシステム側の派生タグを分け、根拠不足を `UNKNOWN` / `quarantine` に落とす。
 
 - https://github.com/KAFKA2306/AutoPhotogrammetry
 - https://github.com/KAFKA2306/boothitemmanager
 
-この系統で育ったのは、
+ここでは、
 
 ```text
 sourceを壊さない
 identityを曖昧にしない
 生成物を保存する
-実環境の状態を再取得する
-見た目と内部参照の両方を検証する
+実環境を再取得する
+見た目と内部参照の両方を見る
 ```
 
-という考え方だった。
+という契約が必要になった。
 
-後の `source immutable`、artifact manifest、visual evidence、build / upload gateは、この問題群と相性がよい。
+つまり **source immutability / identity / artifact validation / visual evidence** である。
 
-## 系統3：ゲーム・ルール・シミュレーション
+## ゲームでは「自分のPCで動いた」を捨てる必要があった
 
-ゲーム系も古くから独立して存在する。
+ゲーム系も独立した系統として存在する。
 
 ```text
 CantStopExpressLearn
@@ -227,16 +230,18 @@ bodogenomikata2
 
 `Swiss-Tournament-Manager` はReact frontendとExpress/Mongoose backendを分け、clean checkoutから `npm ci`、test、build、DB不要のstartup smokeまでCI契約にしている。
 
-`rule-scribe-games` はボードゲーム情報を検索・構造化するWebサービスで、AIによるルール生成だけでなく、cache、deploy、data fix、search verificationなどの運用workflowsも持つ。
+`rule-scribe-games` はAIによるルール生成だけでなく、cache、deploy、data fix、search verificationなど運用側のworkflowも持つ。
 
 - https://github.com/KAFKA2306/Swiss-Tournament-Manager
 - https://github.com/KAFKA2306/rule-scribe-games
 
-ここから見えるのは、**AIを使うかどうかに関係なく、clean install・再現可能build・外部依存を切ったsmoke testが自動化の土台になる**ということだ。
+ここで必要になったのは、**clean install / reproducible build / smoke test / regression test** だった。
 
-## 系統4：情報収集・知識・検索・出版
+AIを使う以前に、「別環境でも同じ状態から同じ確認ができる」ことが必要になる。
 
-情報を集めて、人間が読める形へ変える系統もある。
+## 情報収集では「原情報」と「見せるもの」を分ける必要があった
+
+情報・知識・出版系では別の境界が生まれた。
 
 ```text
 articles
@@ -253,9 +258,7 @@ RooBrawser
 detective
 ```
 
-`daily-arXiv-ai-enhanced` と `notebooklm-py` はforkを起点にした実験なので、自作repoとは別枠で扱う。
-
-`know` は開発・AI・金融・生活で再利用する知識を集め、観測、推定、主張、test、evidence、decisionを共通語彙へ整理する。
+`know` では観測、推定、主張、test、evidence、decisionを共通語彙へ整理している。
 
 VRChat Event Calendarでは `cast_event_cal` を正本、`vrc_cast_event_calender` を配信projectionとして分け、source commit、snapshot、hash、production確認を別段階にしている。
 
@@ -263,11 +266,13 @@ VRChat Event Calendarでは `cast_event_cal` を正本、`vrc_cast_event_calende
 - https://github.com/KAFKA2306/cast_event_cal
 - https://github.com/KAFKA2306/vrc_cast_event_calender
 
-この系統の中心は、**生成することより、原情報・派生情報・公開物の境界を保つこと**だった。
+ここで育ったのは、**canonical source / derived data / projection / publication boundary** だった。
 
-## 系統5：動画・音声・生成コンテンツ
+「取得できた」「分類できた」「公開できた」「利用者が正しいものを見ている」は全部別の状態になる。
 
-前稿ではほぼ抜けていたが、生成・公開系にも複数repoがある。
+## 動画と日記では、同じ生成AIでも境界が逆だった
+
+動画・音声・生成コンテンツにも複数repoがある。
 
 ```text
 dmovie2511
@@ -283,20 +288,18 @@ VeilVoice
 vtttv
 ```
 
-`kling` と `ComfyUI-KLingAI-API` は既存OSSからのforkなので、自作側の系統には数えない。
-
-`2511youtuber` は、ニュース候補取得から台本、VOICEVOX音声、字幕、動画、metadata、YouTube公開までを一つのpipelineにしている。
+`2511youtuber` はニュース候補取得から台本、VOICEVOX音声、字幕、動画、metadata、YouTube公開までを一つのpipelineにしている。
 
 一方 `vlog` は、VRChatの音声・写真・会話を単純にAI日記へ変換するのではなく、Evidence → Human Memory → Narrative Artifact → Public Projectionという層へ分けている。
 
 - https://github.com/KAFKA2306/2511youtuber
 - https://github.com/KAFKA2306/vlog
 
-同じ「生成AI」でも、前者は**media production pipeline**、後者は**memory / privacy / publication boundary**が中心で、設計課題はかなり違う。
+同じ生成AIでも、前者ではproduction pipelineが中心になり、後者ではmemory / privacy / publication boundaryが中心になる。
 
-## 系統6：生活・個人データ・日常ツール
+## 家計では、自動化する前に「外へ出さない」を決める必要があった
 
-生活系も、金融投資とは分けた方がよい。
+生活・個人データ系には次のようなrepoがある。
 
 ```text
 salary
@@ -311,24 +314,24 @@ cedar-pollen-bi
 Year2035
 ```
 
-`kakeibo` は銀行・カード明細を扱うため、実データ、ログ、認証情報をGit外へ隔離し、privacy guard、local-only review、入力SHA-256、決定論的monthly snapshotまで持つ。
+`kakeibo` は銀行・カード明細を扱うため、実データ、ログ、認証情報をGit外へ隔離し、privacy guard、local-only review、入力SHA-256、決定論的monthly snapshotを持つ。
 
 - https://github.com/KAFKA2306/kakeibo
 
-ここでは「自動化を増やす」より先に、
+ここでは「もっと自動化する」より前に、
 
 ```text
 何をGitへ出さないか
 何を外部へ送らないか
 何を匿名化するか
-何を再現できる形で残すか
+何を再現可能な形で残すか
 ```
 
-が重要になる。
+を決める必要がある。
 
-この系統を落とすと、マルチプロジェクト自律化を単なる開発速度の話に誤読してしまう。
+つまり **privacy / local-only / redaction / reproducible snapshot** が契約になる。
 
-## 系統7：MCP・agent・開発基盤
+## MCPでは、AIを強くするより権限を狭くした
 
 AIそのものを扱うnon-fork repoも複数ある。
 
@@ -343,21 +346,262 @@ prompt-vault
 launcher
 ```
 
-fork側には `DeepCode`、`claude-code`、`openclaw`、`financial-services-plugins` など、既存agentic / domain基盤を評価するために取り込んだrepoもある。
-
 `mastramcp` ではWeb検索、filesystem、package管理、GitHub操作を役割別に分け、読み取りと書き込み、最小権限、人間承認の境界を検討していた。
 
 - https://github.com/KAFKA2306/mastramcp
 
-この系統だけを見ると「AI agentが進化して今の運用になった」と言いたくなる。
+ここで必要だったのは、**tool boundary / least privilege / approval boundary** だった。
 
-しかし全repoを横断すると、それは一部にすぎない。
+自律化を強くするために、何でも触れるAIを作るのではなく、むしろ「何を触ってよいか」を狭くする。
 
-現在の制御ループが機能するのは、金融系のprovenance、VR系のartifact validation、ゲーム系のCI再現性、情報系のcanonical/projection分離、生活系のprivacy boundaryなど、**他系統で先に必要になった契約が持ち込まれているから**である。
+## 全然違うrepoなのに、同じ形が見えてくる
+
+ここまでを並べると、各分野で必要になったものは違う。
+
+```text
+金融
+  provenance / PIT / unit / evidence
+
+VR・3D
+  identity / source immutability / artifact validation
+
+ゲーム
+  clean install / reproducible build / smoke test
+
+情報収集
+  canonical source / derived data / projection
+
+動画・生成
+  provider boundary / production pipeline / publish gate
+
+生活・個人データ
+  privacy / local-only / redaction / reproducible snapshot
+
+agent・MCP
+  tool boundary / least privilege / orchestration
+```
+
+ところが、抽象度を一段上げると共通点がある。
+
+どのrepoも最終的には、
+
+```text
+今どういう状態か
+何を成功とするか
+何を根拠にしたか
+何を機械がしてよいか
+何を人間へ返すか
+```
+
+を外へ出す必要があった。
+
+**異なるプロジェクトが、偶然同じアプリ構造になったのではない。異なる理由から「状態・契約・証拠を機械可読にする」方向へ寄っていった。**
+
+ここが、後から全部をつなげられた理由だった。
+
+## GitHubが共通状態になった
+
+複数repoをまたいでも共通して読めるものは、最終的にGitHub上へ寄った。
+
+```text
+Issue
+  = 変更要求 + Acceptance Criteria
+
+Pull Request
+  = 実装候補 + 差分
+
+GitHub Actions
+  = 機械検証
+
+main
+  = repositoryの正準状態
+
+Pages / production
+  = 利用者が観測する成果物
+```
+
+中央管理用の `agent-resources` では、repository、Issue / PR、Actionsを収集し、状態を機械可読なJSONへ落とす方向へ進めている。
+
+- https://github.com/KAFKA2306/agent-resources
+
+大事なのは、ChatGPTが146個のrepoを全部記憶することではない。
+
+**各repoが自分の真実をGitHubへ出し、ChatGPTはその時点の状態を読む。**
+
+これなら、会話履歴の長さに依存しない。
+
+## 状態を4つへ圧縮すると「次」が選べる
+
+生のGitHub状態は多い。
+
+Issueのopen / closed、PRのdraft / open / merged、workflowのqueued / in_progress / completed、conclusionのsuccess / failure / cancelled。
+
+そのままでは「次に何をするか」が分からない。
+
+そこで横断側では、行動につながる状態へ圧縮する。
+
+```text
+working  = 機械が次へ進められる
+waiting  = 人間判断または外部依存待ち
+done     = 完了証拠がある
+failed   = 失敗または再確認が必要
+```
+
+この4状態が成立するのは、各repo側で先に、
+
+```text
+何を成功とするか
+何を公開してよいか
+何を証拠として残すか
+何がUNKNOWNか
+どこで停止するか
+```
+
+が定義されているからである。
+
+つまり中央のAIが賢いから状態を理解できるのではなく、**repo側が理解可能な状態を出している**。
+
+## 自律化したのは「作業」より「次を決めるループ」だった
+
+現在の制御ループは、だいたい次の形になる。
+
+```text
+全体状態を見る
+↓
+次に進められる候補を選ぶ
+↓
+Issueの完了条件を読む
+↓
+実装する
+↓
+テスト / CIを確認する
+↓
+PR / merge
+↓
+productionを確認する
+↓
+branch / PR / 一時ファイルをcleanupする
+↓
+もう一度全体を見る
+```
+
+以前から各repoの中では、
+
+```text
+取得する
+計算する
+生成する
+検証する
+公開する
+```
+
+を自動化していた。
+
+2026年夏に加わったのは、**その外側で「どのrepoの何を次に進めるか」を扱うループ**だった。
+
+ここまで来ると、コード生成は一工程にすぎない。
+
+## 人間を消したわけではない
+
+分野ごとに、人間へ残す境界も違う。
+
+金融なら売買判断そのもの。
+
+VR/3Dなら見た目やcreative choice。
+
+動画なら公開してよい内容か。
+
+個人データなら、何を記憶として採用し、何を公開するか。
+
+OSS forkなら、上流をそのまま使うか、自分の設計へ持ち帰るか。
+
+共通するのは、
+
+```text
+機械的に証明できるもの
+→ 機械へ
+
+意味・価値・不可逆性を含むもの
+→ 人間へ
+```
+
+という境界である。
+
+自律化は、人間をループから消すことではない。
+
+**人間が毎回やらなくてよい調整仕事を状態と契約へ移し、本当に人間が決める必要のある場所だけを残すこと**だった。
+
+## 146件を全件見た理由
+
+この記事では、代表例だけを並べて「146 repo全部がこの設計思想で作られた」とは言わない。
+
+母集団を先に固定した。
+
+2026年8月13日時点で、
+
+```text
+146 public repositories
+├─ 123 non-fork
+└─ 23 fork
+```
+
+である。
+
+詳細な設計上の主張は、READMEや実装を確認したrepoだけに限定した。
+
+一方、名前だけでは安全に分類できないrepoも消さず、付録に全件残す。
+
+また、古いrepoのREADMEは2026年の横断監査で更新されたものがある。repoの作成日は「そのテーマがGitHub上に現れた時点」の証拠として使い、現在READMEの高度な設計が作成当初から存在したとは主張しない。
+
+forkも無価値という意味ではない。
+
+既存OSSを読み、変更し、自分の用途へ適合するか試す重要な実験場になっている。
+
+ただし、それを「ゼロから作った自作repo」と同じ証拠には数えない。
+
+## 結論：146個を一つにしたのは、AIではなく「読める状態」だった
+
+金融、VR、ゲーム、動画、家計、旅行、情報収集、AI agent。
+
+これらは最初から一つのシステムとして作ったものではない。
+
+しかし、別々の問題を真面目に自動化していくと、それぞれで
+
+```text
+状態
+契約
+証拠
+権限境界
+停止条件
+```
+
+が必要になった。
+
+それがGitHubという共通状態へ出るようになると、初めてChatGPTがrepoをまたいで扱えるようになった。
+
+```text
+146 repositories
+        ↓
+それぞれが状態・契約・証拠を出す
+        ↓
+GitHubを共通状態として読む
+        ↓
+ChatGPTが次の1件を選ぶ
+        ↓
+実装・検証・公開
+        ↓
+状態を更新して次へ
+```
+
+だから、146個を一つにしたのは「同じ技術スタック」でも「同じAIモデル」でもなかった。
+
+**各プロジェクトが、自分の真実を機械が読める形で外へ出せるようになったこと。**
+
+それが、バラバラな個人開発をマルチプロジェクト制御へ変えた。
 
 ## 付録A：123 non-fork public repositories 全件
 
-ここまでの系統分類に無理に押し込まなかったrepoも含め、GitHub Search APIの `user:KAFKA2306 is:public fork:false` で得た123件を全て残す。
+GitHub Search APIの `user:KAFKA2306 is:public fork:false` で得た123件。
 
 <details>
 <summary>123件を表示</summary>
@@ -490,11 +734,11 @@ travel
 
 </details>
 
-この一覧の存在自体が重要で、たとえば `factory`、`jhr`、`KAFKA2306`、`x`、`com`、`SecureVCC`、`hitaiou`、`m2`、`333`、`BMAX`、`kimeraassist` のように、名前だけでは安全に一つの系統へ押し込めないrepoも落とさず残せる。
+`factory`、`jhr`、`KAFKA2306`、`x`、`com`、`SecureVCC`、`hitaiou`、`m2`、`333`、`BMAX`、`kimeraassist` のように、名前だけでは安全に一つの系統へ分類できないrepoも、このinventoryからは落としていない。
 
 ## 付録B：23 forks 全件
 
-GitHub Searchで `fork:only` を指定して得た23件は次の通りだった。
+GitHub Search APIで `fork:only` を指定して得た23件。
 
 ```text
 AntennaPod
@@ -522,207 +766,15 @@ kling
 financial-services-plugins
 ```
 
-この23件は、自作repoの数に混ぜて成熟度の証拠にしない。
+この23件は、自作repoの成熟度の証拠には混ぜない。
 
-一方で、forkには別の意味がある。
+一方で、
 
 ```text
 既存OSSを読む
 → 手元で変更する
 → 自分の用途へ適合するか検証する
-→ 必要なら別の自作repoへ考え方を持ち帰る
+→ 必要なら自作repoへ考え方を持ち帰る
 ```
 
-この経路は「ゼロから作った歴史」ではなく、**外部OSSを実験台として採用・評価した歴史**として別枠に置く方が正確だ。
-
-この分離をしたことで、前稿で自作側へ誤って入れていた `Unique3D`、`jquants-api-quick-start`、`kling`、`financial-services-plugins`、`notebooklm-py`、`ComfyUI-KLingAI-API`、`open-fitter` なども除外できた。
-
-## ここまで見て初めて、2026年の横断制御を説明できる
-
-2026年7月13日から8月13日までをGitHub Search APIで確認すると、`KAFKA2306` アカウントではIssueが385件、PRが805件作成され、680件のPRが同期間内にmergeされている。
-
-- Issues: https://api.github.com/search/issues?q=author%3AKAFKA2306+is%3Aissue+created%3A2026-07-13..2026-08-13
-- Pull Requests: https://api.github.com/search/issues?q=author%3AKAFKA2306+is%3Apr+created%3A2026-07-13..2026-08-13
-- Merged Pull Requests: https://api.github.com/search/issues?q=author%3AKAFKA2306+is%3Apr+is%3Amerged+merged%3A2026-07-13..2026-08-13
-
-この数字は大きいが、重要なのは件数そのものではない。
-
-以前は、各repoの中で
-
-```text
-取得する
-計算する
-生成する
-検証する
-公開する
-```
-
-を自動化していた。
-
-現在はそこに、
-
-```text
-どのrepoが止まっているかを見る
-↓
-次に進められる候補を選ぶ
-↓
-Issueの完了条件を読む
-↓
-実装・検証する
-↓
-PR / mergeする
-↓
-productionを確認する
-↓
-残骸を片付ける
-↓
-もう一度全体を見る
-```
-
-という**repo間の制御**が加わった。
-
-## GitHubを共通状態にした
-
-複数repoで共通して使える単位は、最終的にGitHub上へ寄っていった。
-
-```text
-Issue
-  = 変更要求 + Acceptance Criteria
-
-Pull Request
-  = 実装候補 + 差分
-
-GitHub Actions
-  = 機械検証
-
-main
-  = repositoryの正準状態
-
-Pages / production
-  = 利用者が観測する成果物
-```
-
-中央管理用の `agent-resources` では、repository、Issue / PR、Actionsを集め、状態を機械可読なJSONへ落とす方向へ進めている。
-
-- https://github.com/KAFKA2306/agent-resources
-
-ここで大事なのは、ChatGPTが146個のrepoを全部「覚える」ことではない。
-
-**各repoが自分の状態・完了条件・証拠をGitHubへ出し、横断側はそれを読むだけにすること**だ。
-
-## 4状態へ圧縮する理由
-
-生のGitHub状態は多い。
-
-Issueのopen / closed、PRのdraft / open / merged、workflowのqueued / in_progress / completed、conclusionのsuccess / failure / cancelledなどを、そのまま横断制御へ使うと複雑になる。
-
-そこで中央側では、最終的な行動へつながる状態へ圧縮する。
-
-```text
-working  = 機械が次へ進められる
-waiting  = 人間判断または外部依存待ち
-done     = 完了証拠がある
-failed   = 失敗または再確認が必要
-```
-
-ただし、この4状態が成立するのは、各repo側ですでに
-
-```text
-何を成功とするか
-何を公開してよいか
-何を証拠として残すか
-何がUNKNOWNか
-どこで停止するか
-```
-
-を持っているからである。
-
-## 一本の成熟史ではなく、「契約の合流」だった
-
-146 repoを広く見ると、最終的な見方はこう変わった。
-
-```text
-金融
-  provenance / PIT / unit / evidence
-
-VR・3D
-  identity / source immutability / artifact validation
-
-ゲーム
-  clean install / deterministic build / smoke test
-
-情報収集
-  canonical source / derived data / projection
-
-動画・生成
-  storyboard / provider boundary / publish gate
-
-生活・個人データ
-  privacy / local-only / redaction / reproducible snapshot
-
-agent・MCP
-  tool boundary / least privilege / orchestration
-
-              ↓
-        GitHub上の共通契約
-              ↓
-  cross-repository control loop
-```
-
-つまり、2026年に突然「ChatGPTが自律化した」のではない。
-
-**多数の別プロジェクトで必要になった契約が、GitHubという共通状態へ合流した。**
-
-この方が、実際のrepository群に近い。
-
-## 人間に残す仕事も、系統ごとに違う
-
-人間境界も一種類ではない。
-
-金融なら、売買判断そのもの。
-
-VR/3Dなら、見た目やcreative choice。
-
-動画なら、公開してよい内容か。
-
-個人データなら、何を記憶として採用し、何を公開するか。
-
-OSS forkなら、上流をそのまま使うか、自分の設計へ持ち帰るか。
-
-そのため、マルチプロジェクト自律化の共通原則は「人間を消す」ではない。
-
-```text
-機械的に証明できるもの
-→ 機械へ
-
-意味・価値・不可逆性を含むもの
-→ 人間へ
-```
-
-という境界を、repoごとに明示することになる。
-
-## 結論
-
-最初の原稿では、説明しやすい少数repoを採用しすぎた。
-
-146公開repoという数字をタイトルへ置くなら、先に146を母集団として見なければならなかった。
-
-広く調べ直すと、実態は一本の自動化史ではない。
-
-金融、VR/3D、ゲーム、知識、イベント収集、動画、個人データ、Web UI、MCP/agentという**複数の独立した問題群**があり、それぞれが別の理由で検証、provenance、privacy、CI、artifact、権限境界を必要としていた。
-
-その後、それらの契約がGitHub上へ集まり、ChatGPTが
-
-```text
-全体を見る
-→ 次を選ぶ
-→ 実行する
-→ 証拠を確認する
-→ 状態を更新する
-```
-
-というrepo横断ループを回せるようになった。
-
-コード生成は、その中の一工程にすぎない。
-
-本質は、**異なる種類のプロジェクトを同じAIへ無理に揃えることではなく、各プロジェクトが自分の真実を機械可読な状態・契約・証拠として外へ出せるようにすること**だった。
+という別の開発経路として残す。
