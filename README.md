@@ -90,6 +90,7 @@ pipeline/
   cli.py                     # candidate / publish entry point
   core.py                    # collection, source verification, persistence
   editorial.py               # story shaping, drafting, dual review, revision
+  filenames.py               # readable publication filename contract
   runtime.py                 # Copilot CLI response normalization / fail-close JSON adapter
   graphiti.py                # private weekly → readable in-memory context → public-safe topic
   selection.py               # candidate maturation + story-first month-end selection
@@ -110,6 +111,30 @@ tests/
 ```
 
 `articles/` だけが公開記事の正準出力です。候補と査読証跡は `artifacts/` に隔離し、実装コードは `pipeline/` に集約します。
+
+### Article filename policy
+
+新規公開記事のrepository内ファイル名は、一覧性を優先して次を正準とします。
+
+```text
+YYYY-MM-DD-NN-title.md
+```
+
+例:
+
+```text
+2026-08-13-01-codex-chatgpt-github-issue-bridge.md
+2026-08-13-02-csv-migration-dry-run-before-write.md
+```
+
+- `YYYY-MM-DD` は公開処理を行ったJST日付
+- `NN` は同日内の `01`, `02`, ... の連番
+- `title` は記事内容を識別する短いASCII kebab-caseで、表示用の日本語 `title:` とは分離する
+- Zennのslug上限50文字に収めるため `title` 部分は最大36文字
+- この規則は**新規公開記事だけ**に適用し、既存公開記事はrenameしない
+- Zennでは `articles/[slug].md` のファイル名が公開URLのslugになるため、公開済みファイルのrenameを管理目的だけで行わない
+
+Zenn一次仕様: https://zenn.dev/zenn/articles/what-is-slug
 
 ## Branch lifecycle
 
