@@ -20,6 +20,8 @@ GitHubに公開リポジトリが146個ある。
 
 この記事で書きたいのは、その理由だ。
 
+![146個の個人開発をGitHubとChatGPTで横断運用する全体像](/images/chatgpt-multiproject-autonomy/chatgpt-multiproject-autonomy-01.webp)
+
 ## 直近1か月だけ見ると、急に何かが起きたように見える
 
 2026年8月13日18時台にGitHub Search APIを再取得すると、2026年7月13日から8月13日までに `KAFKA2306` アカウントで作成されたものは次の規模になっている。
@@ -43,6 +45,8 @@ GitHubに公開リポジトリが146個ある。
 
 実際に同じ時期に起きていたことは、もう少し種類が違う。
 
+![813 PRの中で達成された4つの具体的成果](/images/chatgpt-multiproject-autonomy/chatgpt-multiproject-autonomy-02.webp)
+
 ### 公開前に「未来の金利データ」を弾いた
 
 `finBI` では、`retrieved_at = 2026-07-24T20:17:00Z` のsnapshotに `2026-07-24 = 4.69` が入っていた。
@@ -52,6 +56,8 @@ GitHubに公開リポジトリが146個ある。
 つまり、値そのものは正しくても、**「その時点ではまだ知り得なかった未来の値」が混ざっていた。**
 
 公開前にこれをblockerとして検出し、source availability / vintage timestampまで検証するfail-close契約と回帰testへ落とした。
+
+![finBIで未来の金利データを弾くpoint-in-time検証](/images/chatgpt-multiproject-autonomy/chatgpt-multiproject-autonomy-03.webp)
 
 - https://github.com/KAFKA2306/finBI/issues/10
 
@@ -63,6 +69,8 @@ GitHubに公開リポジトリが146個ある。
 
 `#root` へgrid ownershipを移し、1280px / 800pxのPlaywright実寸回帰を追加し、Vercel PreviewとProduction deployを通し、公開 `/games/big-shot` とAPIのHTTP 200まで確認して完了にした。
 
+![rule-scribe-gamesの320pxレイアウト崩れを本番まで修復する流れ](/images/chatgpt-multiproject-autonomy/chatgpt-multiproject-autonomy-04.webp)
+
 - https://github.com/KAFKA2306/rule-scribe-games/issues/76
 
 ### 別repoの画像を、公開後にもう一度取得してhash一致まで確認した
@@ -73,6 +81,8 @@ Prompt Vaultのsource commit、source SHA-256、consumer側destination SHA-256�
 
 つまり、**source repoで正しい → consumer repoで正しい → 公開後も同じものが見えている**を一続きのDone条件にした。
 
+![Prompt Vaultからtravelへ共有画像を配布し公開後にhash検証する流れ](/images/chatgpt-multiproject-autonomy/chatgpt-multiproject-autonomy-05.webp)
+
 - https://github.com/KAFKA2306/travel/issues/20
 
 ### 複数repoのデータをprivate bucketへ定期publishし、全objectを検証した
@@ -80,6 +90,8 @@ Prompt Vaultのsource commit、source SHA-256、consumer側destination SHA-256�
 `semiconductor-earnings-model` では、GitHub側をcontrol plane、private Hugging Face Storage Bucketをdata planeとして分けている。
 
 2026年8月13日のscheduled Actions runでは、GitHub OIDCでprivate bucketへ認証し、allow-listされたprefixだけをexact mirrorし、**publish後にevery objectをverifyするところまで成功**した。
+
+![GitHubをControl Plane、private bucketをData Planeに分ける構成](/images/chatgpt-multiproject-autonomy/chatgpt-multiproject-autonomy-06.webp)
 
 - https://github.com/KAFKA2306/semiconductor-earnings-model/actions/runs/31680400569
 
@@ -449,6 +461,8 @@ agent・MCP
 
 **異なるプロジェクトが、偶然同じアプリ構造になったのではない。異なる理由から「状態・契約・証拠を機械可読にする」方向へ寄っていった。**
 
+![金融・VR・ゲーム・情報・家計・MCPが状態・契約・証拠へ収束する図](/images/chatgpt-multiproject-autonomy/chatgpt-multiproject-autonomy-07.webp)
+
 ここが、後から全部をつなげられた理由だった。
 
 ## GitHubが共通状態になった
@@ -499,6 +513,8 @@ done     = 完了証拠がある
 failed   = 失敗または再確認が必要
 ```
 
+![working waiting done failedの4つの横断状態](/images/chatgpt-multiproject-autonomy/chatgpt-multiproject-autonomy-08.webp)
+
 この4状態が成立するのは、各repo側で先に、
 
 ```text
@@ -536,6 +552,8 @@ branch / PR / 一時ファイルをcleanupする
 ↓
 もう一度全体を見る
 ```
+
+![ChatGPTが全体確認からcleanupまで次の仕事を選ぶ制御ループ](/images/chatgpt-multiproject-autonomy/chatgpt-multiproject-autonomy-09.webp)
 
 以前から各repoの中では、
 
@@ -576,6 +594,8 @@ OSS forkなら、上流をそのまま使うか、自分の設計へ持ち帰る
 意味・価値・不可逆性を含むもの
 → 人間へ
 ```
+
+![機械へ渡す仕事と人間へ残す判断の境界](/images/chatgpt-multiproject-autonomy/chatgpt-multiproject-autonomy-10.webp)
 
 という境界である。
 
