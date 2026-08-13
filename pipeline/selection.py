@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from . import core
+from . import core, filenames
 from .editorial import EDITORIAL_AXES, TECHNICAL_AXES
 
 EVALUATION_KIND = str(
@@ -189,6 +190,74 @@ def save_monthly_selection_report(
     return path
 
 
+def publication_file_title(article: str) -> str:
+    """Create the readable ASCII title segment used only for file management."""
+    title = core.article_title(article)
+    policy = core.CONFIG["filename_policy"]
+    max_length = int(policy["title_max_length"])
+    prompt = f"""
+次の記事タイトルを、ファイル管理用の短い英語kebab-caseへ変換してください。
+表示タイトルの翻訳ではなく、内容を識別できる3〜6語程度のASCII識別子です。
+半角英小文字 a-z、数字 0-9、ハイフンだけを使い、{max_length}文字以内にしてください。
+
+記事タイトル:
+{title}
+
+JSONのみ返してください。
+{{"file_title":"example-readable-title"}}
+"""
+    try:
+        result = json.loads(
+            core.model_call(
+                "あなたは技術記事のファイル命名担当です。意味を保ち、短く安定した識別子だけを作ります。",
+                prompt,
+                json_mode=True,
+            )
+        )
+        return filenames.normalize_file_title(
+            str(result.get("file_title", "")),
+            max_length=max_length,
+        )
+    except Exception:
+        try:
+            return filenames.normalize_file_title(title, max_length=max_length)
+        except ValueError:
+            digest = hashlib.sha256(article.encode("utf-8")).hexdigest()[:10]
+            return f"article-{digest}"
+
+
+def finalize_publication_filename(old_path: Path, article: str) -> Path:
+    """Rename only the newly generated artifact; existing publications are untouched."""
+    policy = core.CONFIG["filename_policy"]
+    moment = core.now_jst()
+    file_title = publication_file_title(article)
+    slug = filenames.next_publication_slug(
+        file_title,
+        moment=moment,
+        published_dir=old_path.parent,
+        sequence_width=int(policy["sequence_width"]),
+        max_slug_length=int(policy["max_slug_length"]),
+    )
+    new_path = old_path.with_name(f"{slug}.md")
+    old_path.rename(new_path)
+
+    reports_root = core.output_dir("reports")
+    matches = list(reports_root.rglob(f"{old_path.stem}.json")) if reports_root.exists() else []
+    for old_report in matches:
+        payload = json.loads(old_report.read_text(encoding="utf-8"))
+        payload["published_path"] = str(new_path.relative_to(core.ROOT))
+        payload["filename_policy"] = str(policy["format"])
+        new_report = old_report.with_name(f"{slug}.json")
+        new_report.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        if new_report != old_report:
+            old_report.unlink()
+
+    return new_path
+
+
 def publish_best() -> Path | None:
     if not scheduled_publish_allowed():
         print(
@@ -238,8 +307,9 @@ def publish_best() -> Path | None:
         selected=selected,
         status="selected",
     )
-    return core.publish(
+    old_path = core.publish(
         str(selected["article"]),
         dict(selected["review"]),
         dict(selected["source_report"]),
     )
+    return finalize_publication_filename(old_path, str(selected["article"]))
