@@ -1,5 +1,5 @@
 ---
-title: "CSV importerを作る前にdry-runしか作らなかったら、CLIとブラウザの判定が1本になった"
+title: "バラバラな記録を「使えるデータ」にするには？ 書き込む前に判定だけを作った"
 emoji: "🧪"
 type: "tech"
 topics: ["javascript", "dataengineering", "testing", "privacy"]
@@ -7,19 +7,30 @@ published: true
 published_at: 2026-08-12 12:30
 ---
 
-CSVの1行が、構文上は正常だとします。
+人が残した記録は、そのままでは「使えるデータ」になりません。
 
-ISBNは新しい。しかし正規化した書名は既存Workに近い。
+たとえば同じ本について、メモや一覧表に次のような記録が混ざっているとします。
 
-これは「成功」でしょうか。それとも「失敗」でしょうか。
+```text
+1984 / Kindle
+1984 新訳版 / 購入済み
+一九八四年 / 紙
+サンプル: 1984
+```
 
-今回 `KAFKA2306/books` で移行機能を作っていて、この2値では足りませんでした。`safe_new_work`、`safe_new_edition`、`existing_holding`、`review_similar_title` は、どれも単純なparse errorではないからです。
+人間なら「同じ作品について、版や取得状態が違いそうだ」と読めます。しかし機械へそのまま渡すと、4件の別データとして扱われるかもしれません。
 
-そこで最初に作ったのはimporterではなく、**正準データを一切変更せず、本番と同じ判定理由だけを返すdry-run診断**でした。
+あとから検索・集計・更新できる形にするには、少なくとも「同じ作品か」「別の版・形式か」「実際に所蔵しているか」「自動で決めてよいか」を分ける必要があります。
 
-その後にCLIとブラウザUIを増やしたところ、両方を別々に実装する必要はありませんでした。どちらも同じ `diagnoseMigration()` へ合流できたからです。
+今回のケーススタディは `KAFKA2306/books` という本棚データベースです。このDBでは、**Work = 作品**、**Edition = 版・形式**、**Holding = 実際の所蔵**として分けて管理しています。
 
-なぜ「書き込む機能を作らない」というMVPが、後続のUIまで単純化したのか。そこを実装順に追います。
+ここへ別のCSVから記録を追加しようとすると、単純な「成功 / 失敗」では足りません。ISBNが新しくても既存Workの別Editionかもしれない。ISBNが同じなら既所蔵かもしれない。ISBNがなくても、正規化した書名が既存Workに近ければ人間確認が必要かもしれません。
+
+そこで最初に作ったのはimporterではなく、**正準データを一切変更せず、「この行なら何をする予定か」だけを本番と同じ規則で返すdry-run診断**でした。
+
+その後にCLIとブラウザUIを増やしたところ、両方を別々に実装する必要もありませんでした。どちらも同じ `diagnoseMigration()` へ合流できたからです。
+
+この記事では、「バラバラな記録をDBへ入れる」前に何を決めるべきかを、この蔵書CSVを具体例に追います。
 
 ## 1. 問題：importは成功/失敗だけでは足りない
 
@@ -35,7 +46,7 @@ ISBNは新しい。しかし正規化した書名は既存Workに近い。
 
 直接importする設計では、これらを「成功した行」「失敗した行」の2値に押し込みがちです。しかし実際には、`safe_new_work` と `review_similar_title` はどちらも構文エラーではありません。必要なのは**行ごとの意味的な判定理由**です。
 
-この図で見るべき点は、CSVと正準catalogの間に「診断」という読み取り専用段階を置いていることです。書き込みより前に、何が安全で何が要確認かを分離します。
+CSVと正準catalogの間に「診断」という読み取り専用段階を置くと、書き込みより前に、何が安全で何が要確認かを分離できます。
 
 ![移行診断の全体像](/images/csv-migration-dry-run-before-write/01-overview.png)
 
@@ -67,7 +78,7 @@ parse
 # canonical mutation は存在しない
 ```
 
-この図では、直接importが「判定」と「書き込み」を同時に抱えることで、ISBN不正やbatch重複を見つけるタイミングと副作用の順序が絡む点を見ます。
+直接importでは「判定」と「書き込み」が同時に進むため、ISBN不正やbatch重複を見つけるタイミングと副作用の順序が絡みます。
 
 ![直接importのリスク](/images/csv-migration-dry-run-before-write/02-direct-import-risk.png)
 
@@ -99,7 +110,7 @@ https://github.com/KAFKA2306/books/commit/e9dbe8c968f17dd3626d9488a3fcb269fdbaae
 
 そこでmigrationは既存の `precheckCandidates` を呼ぶadapterにしました。
 
-この図で見るべき点は、CLIとBrowserが互いを再実装せず、中央の `diagnoseMigration()` に合流していることです。UIが増えても判定規則は一か所です。
+CLIとBrowserは互いの判定を再実装せず、中央の `diagnoseMigration()` に合流します。UIが増えても判定規則は一か所です。
 
 ![共有判定コア](/images/csv-migration-dry-run-before-write/03-shared-core.png)
 
@@ -139,7 +150,7 @@ const catalog = await response.json();
 currentReport = diagnoseMigration(rows, catalog);
 ```
 
-この図では、ネットワーク境界を見ます。外から取得するのは公開catalogだけで、Local CSVからUpload APIへ向かう経路はありません。
+ネットワーク境界では、外から取得するのは公開catalogだけです。Local CSVからUpload APIへ向かう経路はありません。
 
 ![ローカル処理のプライバシー境界](/images/csv-migration-dry-run-before-write/04-local-privacy-boundary.png)
 
@@ -165,7 +176,7 @@ safe_new_work
 safe_new_edition
 ```
 
-この図で見るべき点は、「何が起きたか」を文言ではなく安定したコードとして残すことです。UI表示と自動処理を分離できます。
+「何が起きたか」を文言ではなく安定したコードとして残すことで、UI表示と自動処理を分離できます。
 
 ![reason code](/images/csv-migration-dry-run-before-write/05-reason-codes.png)
 
@@ -186,7 +197,7 @@ assert.equal(report.catalog_mutated, false);
 assert.equal(JSON.stringify(catalog), before);
 ```
 
-この図では、`catalog_mutated: false` という自己申告と、before/after同一性検証を分けて見るべきです。重要なのは後者です。
+重要なのは、`catalog_mutated: false` という自己申告ではなく、before/afterが同一だという検証です。
 
 ![非破壊性テスト](/images/csv-migration-dry-run-before-write/06-non-mutation-test.png)
 
@@ -205,7 +216,7 @@ https://github.com/KAFKA2306/books/commit/e9dbe8c968f17dd3626d9488a3fcb269fdbaae
 
 正準catalogへ「適用する」ボタンはありません。MVPの目的を診断に限定したためです。
 
-この図で見るべき点は、ユーザーフローの中に書き込み操作が存在しないことです。誤クリックで正準データが変わる経路自体を作っていません。
+ユーザーフローの中に書き込み操作が存在しないため、誤クリックで正準データが変わる経路自体を作っていません。
 
 ![3段階の操作](/images/csv-migration-dry-run-before-write/07-three-step-flow.png)
 
@@ -232,7 +243,7 @@ await fs.writeFile(
 ブラウザ版でも同じ `renderDiagnosisHtml(report)` を使ってダウンロードできます。Blob URLの作成・解放には `URL.createObjectURL()` と `URL.revokeObjectURL()` を使っています。MDNは前者がBlob等を指すobject URLを生成し、不要になったURLはrevokeすることを説明しています。
 https://developer.mozilla.org/en-US/docs/Web/API/URL/createObjectURL_static
 
-この図で見るべき点は、JSONとHTMLが別々の判定処理ではなく、一つのreportの投影であることです。
+JSONとHTMLは別々に判定せず、一つのreportを用途別に投影しています。
 
 ![JSONとHTML](/images/csv-migration-dry-run-before-write/08-json-html-output.png)
 
@@ -247,7 +258,7 @@ https://developer.mozilla.org/en-US/docs/Web/API/URL/createObjectURL_static
 - 不正ISBN + 書名なし → `invalid_isbn` + `insufficient_metadata`
 - 同一入力内重複 → `duplicate_in_batch`
 
-この図では、成功ケースよりBLOCKケースの方が多い点を見ます。migration diagnosisは「通す機能」ではなく「止める理由を説明する機能」だからです。
+成功ケースよりBLOCKケースの方を厚くします。migration diagnosisは「通す機能」ではなく「止める理由を説明する機能」だからです。
 
 ![テストマトリクス](/images/csv-migration-dry-run-before-write/09-test-matrix.png)
 
@@ -322,7 +333,7 @@ CLIはファイルI/O、Browserは `File.text()` とDOM描画だけを担当さ�
 }
 ```
 
-この図で見るべき点は、個別ライブラリ固有の実装より、別システムへ持ち出せる4つの境界です。
+個別ライブラリ固有の実装より、別システムへ持ち出せる境界を残すことが重要です。
 
 ![再利用できる設計原則](/images/csv-migration-dry-run-before-write/10-takeaways.png)
 
