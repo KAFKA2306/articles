@@ -1,391 +1,130 @@
 ---
-title: "『モデル差し替えは未対応』の前提が、BOOTHを見直したら消えた：Muchioを犬へつなぐ設計を引き直す"
+title: "「モデル差し替え」を作ろうとしたら、公式説明の1行で設計が変わった"
 emoji: "🐶"
 type: "tech"
-topics: ["vrchat", "unity", "modularavatar", "animation", "architecture"]
-published: true
+topics: ["vrchat", "unity", "modularavatar", "architecture"]
+published: false
 published_at: 2026-08-12 14:18
 ---
 
-最初の前提は、こうでした。
+# 「モデル差し替え」を作ろうとしたら、公式説明の1行で設計が変わった
 
-> ムチォのモデル差し替えはまだ将来機能。ならば既存Prefabを分解し、犬モデルへ置き換える仕組みをこちらで作る必要がある。
+この原稿は、現時点では公開しません。
 
-ところが、販売元の現行BOOTHページを読み直すと、同梱物に **「オリジナルペットの作り方」** と書かれていました。
+最初は「ムチォは既存モデルを別の犬モデルへ差し替える仕組みをこちらで作る必要がある」と考えていました。
 
-この1行で、作ろうとしていたものの前提が崩れました。
+しかし販売元の現行BOOTHページを確認すると、同梱物に **「オリジナルペットの作り方」** が含まれています。また、ムチォはModular Avatar対応Prefabとしてアバター直下へ配置する構成で、同梱モデルの改変も許可されています。
 
-問題は「ムチォの身体をどう犬へ強引に置換するか」ではありません。
+一次情報:
+https://booth.pm/ja/items/8657397
 
-**すでに完成している犬Prefabの耳・尻尾・Animator・接触挙動を壊さず、ムチォの追従・発話・インタラクションだけをどう接続するか。**
-
-設計の中心を、モデル置換から **Core / Body分離** へ引き直す必要がありました。
-
-ここでは、一次情報を読み直しただけで問題設定がどう変わったか、その後に `happy_shiroi-nu_PC` の実Prefabを何から観測すべきかを追います。
-
-## 1. 一次情報を更新したら、問題設定そのものが変わった
-
-2026年8月12日に確認したムチォの現行BOOTHページでは、現行版は **2026-08-05 v1.3.6** とされ、重要な事実を次のように確認できます。
-
-1. Modular Avatar対応Prefabとして導入する
-2. サンプル9体＋素体が同梱される
-3. 「オリジナルペットの作り方」が同梱される
-4. 同梱モデルの改変は自由と明記されている
-
-さらに、現行v1.3.6では同期パラメータ使用量が77bitと明記されています。
-
-- ムチォ商品ページ: https://booth.pm/ja/items/8657397
-
-ここから設計を次のように更新しました。
+この情報だけで、問題設定は変わります。
 
 ```text
-旧い前提
-Muchio Prefab
-  -> meshを犬に差し替える
-  -> 壊れた部分を個別修復する
+旧仮説
+Muchioのmodelをこちらで置換する
 
-更新後の前提
-Muchio Core
-  -> Body側の既存機能を保持する
-  -> 必要な接続点だけAdapterで定義する
+↓
+
+更新後の問い
+既存Bodyの機能を壊さず、Muchio側の機能とどう接続するか
 ```
 
-この差は大きいです。
+ただし、ここから先を実装済みの事実として書くことはできません。
 
-前者では「ムチォ側が身体を所有する」ため、犬モデル固有の機能をムチォに移植し直す必要があります。
+## 公開情報で確認できたこと
 
-後者では「犬Prefabが身体を所有する」ため、ムチォは身体へ命令するだけです。
+2026年8月13日に販売ページから確認できる範囲は次です。
 
-## 2. 「幸せのしろい～ぬ」は、置換対象ではなく既に完成したBodyだった
+- Modular Avatar対応Prefabとして導入する
+- サンプル9体と素体が同梱される
+- 「オリジナルペットの作り方」が同梱される
+- 同梱モデルの改変が許可されている
+- アバター本体は非改変で、Prefabの出し入れによる導入・撤去を想定している
 
-今回の第1号Body候補は、アトリエ・モココの **「幸せのしろい～ぬ」** です。
+これらは販売元が公開している仕様です。
 
-- 商品ページ: https://booth.pm/ja/items/8446507
+## まだ確認できていないこと
 
-販売元の現行ページでは、次の仕様が確認できます。
+一方、今回のAcceptance Criteriaで必要だった `happy_shiroi-nu_PC` の実Prefab内部については、この環境から観測証拠を取得できていません。
 
-- 2026-07-11 ver1.0頒布開始
-- 2026-07-24 ver1.01でPC版Prefabの一部Animator欠如などを修正
-- Unity 2022.3、制作環境は2022.3.22f1
-- VRChat SDK 3.10.4
-- Modular Avatar 1.17.1
-- Humanoidボーンを使用
-- 尻尾は常に揺れる
-- 耳は触って持ち上げられる
-- PC / Android / iOS対応
-- 4030 polygons
-- mesh 1個
-- shape key 29個
-
-ここで重要なのはポリゴン数ではありません。
-
-**この犬は、ムチォへ取り込む前から「身体としての挙動」を持っている**ことです。
-
-耳や尻尾をムチォAdapter側でもう一度実装すると、同じ責務を二重に持つ可能性があります。
-
-しかも、商品ページだけでは「耳を持ち上げる実装がどのVRCPhysBoneなのか」「接触反応がどのContactなのか」までは断定できません。
-
-だから、ここで実装を始めてはいけません。
-
-**公開ページで存在が確認できる機能と、Prefab内部でしか確認できない実装方式を分ける必要があります。**
-
-## 3. Body Adapterは「耳や尻尾を実装する場所」ではない
-
-当初は、Body Adapterへ耳PhysBone、尻尾PhysBone、なでContactまでまとめる設計を考えていました。
-
-しかし、これは責務が大きすぎます。
-
-VRChat公式ドキュメントでは、PhysBonesはボーンへ物理的な動きを与え、Contactsは接触を検知してAnimator Parameterやエフェクトを駆動するAvatar Dynamicsの構成要素として定義されています。
-
-- Avatar Components: https://creators.vrchat.com/avatars/avatar-components/
-- PhysBones: https://creators.vrchat.com/common-components/physbones/
-- Contacts: https://creators.vrchat.com/common-components/contacts/
-
-元Bodyがこれらを持っているなら、第一選択は **そのままBody Prefabへ残すこと** です。
-
-Adapterが持つべきなのは、実装そのものではなく接続ポリシーです。
-
-```yaml
-bodyPrefab: happy_shiroi-nu_PC
-bodyRoot: <inspect-from-prefab>
-speechAnchorOffset: <inspect-and-measure>
-
-locomotion:
-  idleClip: <inspect-from-controller>
-  walkClip: <inspect-from-controller>
-
-preserve:
-  physBones: true
-  contacts: true
-
-overrides: {}
-```
-
-`preservePhysBones: true` は「PhysBoneをAdapterが作る」という意味ではありません。
-
-**Body側で見つけた既存PhysBoneを、Core接続のために壊さない**という契約です。
-
-Contactsも同じです。
-
-## 4. CoreとBodyの境界を、機能で切り直す
-
-ここから、Muchio側を機能単位で分離します。
-
-これは現行Prefab内部のGameObject名を断定するものではなく、実装前の責務分割です。
+したがって、次は未確認です。
 
 ```text
-Muchio Core
-├─ playerへの追従
-├─ grab / stretch等のペット操作
-├─ idle / walk等の状態判定
-├─ pet mount / constraint系の接続
-├─ kiss等のペット間インタラクション
-├─ enable / disable state
-├─ PCアプリ / OSCとの通信
-└─ speech board / 発話表示
-
-BodyProfile / Adapter
-├─ bodyPrefab
-├─ bodyRoot transform
-├─ speechAnchorOffset
-├─ idleClip
-├─ walkClip
-├─ optional transform remapping
-├─ optional animation overrides
-├─ preservePhysBones
-└─ preserveContacts
+Animator Controllerの実参照
+idle / walk Clipの実参照
+VRCPhysBoneのcomponent位置とrootTransform
+Contact Sender / Receiverの実配置
+Body rootとして使うべきTransform
+Muchio接続後のlocomotion
+Core / Body境界が実際に成立するか
 ```
 
-この設計で最も重要なのは、**Coreが「犬の耳」を知らない**ことです。
+これらを商品ページや命名から推測して埋めません。
 
-Coreが知るのは「歩いている」「発話する」「掴まれた」といった意味です。
+## 設計案と観測事実を分ける
 
-Bodyは、それを自分のAnimationClipやTransformへ変換します。
-
-これなら、次のBodyを追加するときもCoreを変更せずに済みます。
+現時点で言える設計仮説は、次までです。
 
 ```text
-Muchio Core
-   ├─ BodyProfile: 幸せのしろい～ぬ
-   ├─ BodyProfile: 狛乃
-   ├─ BodyProfile: まめひなた
-   ├─ BodyProfile: パグ
-   └─ BodyProfile: コーギー
-```
-
-「Prefabを指定するだけ」に近づけるには、身体固有の実装をCoreへ吸い上げないことが重要です。
-
-## 5. Modular Avatarの思想とも整合する
-
-この分離は、Modular Avatarの使い方とも相性が良いです。
-
-Modular Avatar公式ドキュメントでは、Merge ArmatureはGameObject階層をAvatar Armatureへ統合し、衣装セットアップ時にはPhysBonesなどのactive componentsを元の位置へ残すよう処理すると説明されています。
-
-- Merge Armature: https://modular-avatar.nadena.dev/docs/reference/merge-armature
-- Outfit tutorial: https://modular-avatar.nadena.dev/docs/tutorials/clothing
-
-またMerge Animatorは、既存Playable Layerを置き換えるのではなく、指定したAnimator Controllerを追加統合できます。
-
-- Merge Animator: https://modular-avatar.nadena.dev/docs/reference/merge-animator
-
-つまり、Modular Avatar自体が目指しているのも、
-
-```text
-完成済みAvatar
-+ 独立したPrefab / Animator / component
-= build時に非破壊統合
-```
-
-という方向です。
-
-Body Adapter側が元モデルの物理・接触・Animatorを破壊してから再構築する設計は、この利点を自分で消してしまいます。
-
-## 6. VRLabs/Followerは「Coreと追従対象を分ける」先行例として面白い
-
-OSSの比較対象として、VRLabs/Followerも確認しました。
-
-- Repository: https://github.com/VRLabs/Follower
-
-READMEでは、Damping ConstraintをWorld Constraint内で利用してFollowerを構成し、追従させたいオブジェクトを `Container` 配下へ置く構造になっています。
-
-```text
-Follower
-|- Container
-|  |- Cube
-|- Look Constraint
-|- Follower Target
-   |- Look Target
-```
-
-さらに、READMEはFollower自体をMITで公開しています。
-
-ここで参考にしたいのは、Constraintの具体実装ではありません。
-
-**追従ロジックと、追従させる実体を別の階層として扱っていること**です。
-
-VRLabs/Follower自身もQuestではunsupported components/shadersを除去する必要があると注意しており、VRChat公式ドキュメントもAndroid/QuestではUnity Constraintが無効で、VRChat Constraintsを使うよう案内しています。
-
-- Android / Quest limitations: https://creators.vrchat.com/platforms/android/quest-content-limitations/
-
-したがって、Followerをそのままコピーするのではなく、**境界設計の先行例**として使うのが適切です。
-
-## 7. Walkを接続する前に、`happy_shiroi-nu_PC` を8項目だけ読む
-
-ここまでで設計は絞れました。
-
-次に必要なのは、公開情報を増やすことではなくUnity上の実Prefab観測です。
-
-対象は `happy_shiroi-nu_PC`。
-
-確認順序を次の8項目に固定します。
-
-| # | 観測対象 | 取得する事実 |
-|---|---|---|
-| 1 | Rootの全Component | Avatar Descriptor / Animator / MA / VRC componentの有無 |
-| 2 | Animator / Avatar Descriptor | Playable Layer、Controller参照、Avatar設定 |
-| 3 | Armature全階層 | bodyRoot候補、Humanoid bone、独自bone |
-| 4 | VRCPhysBone一覧 | component位置、`rootTransform`、collider参照 |
-| 5 | Contact Sender / Receiver | parameter、tag、対象Transform |
-| 6 | Animator Controller / Clip | idle・walk・表情・装飾のClip一覧 |
-| 7 | idle / locomotion実再生 | どのTransformが実際に動くか |
-| 8 | Quest版との差分 | 削除・差替されたcomponent / shader / animation |
-
-ここで重要なのは、**名前ではなく参照関係を取ること**です。
-
-例えば `walk.anim` という名前のClipがあっても、それだけでは採用しません。
-
-Animator stateから参照され、実再生時に脚やBody Rootへ期待したTransform差分が出ていることを確認します。
-
-## 8. `VelocityX/Z` は使える。ただし、先に犬側のClipを確定する
-
-VRChatはBuilt-in Animator Parametersとして `VelocityX`、`VelocityY`、`VelocityZ`、`VelocityMagnitude` を提供しています。
-
-- Animator Parameters: https://creators.vrchat.com/avatars/animator-parameters/
-
-`VelocityX` は横方向速度、`VelocityZ` は前後方向速度です。
-
-このため、Muchio Coreの移動状態をBody側locomotionへ渡す設計では、これらの値を入力に使えます。
-
-ただし、接続順序を逆にしてはいけません。
-
-```text
-NG
-VelocityX/Zがある
-  -> 適当な犬Clipをwalkとして接続
-
-OK
-happy_shiroi-nu_PCのAnimatorを観測
-  -> locomotionで実際に使われるClipを特定
-  -> Transform差分を再生確認
-  -> BodyProfile.walkClipへ登録
-  -> Coreの移動状態と接続
-```
-
-**先に「どのClipが犬の正しい歩行か」を確定し、その後でCoreへ結ぶ。**
-
-これがPhase 2の実装仕様を固定する最後の観測になります。
-
-## 9. PC / Questは「Body互換」と「Muchio機能互換」を分ける
-
-もう1つ、境界を分けておく必要があります。
-
-「幸せのしろい～ぬ」は商品ページ上、PC / Android / iOS対応です。
-
-一方、ムチォの現行商品ページはPC版VRChatでOSCを利用し、**Quest単体では喋らない**と明記しています。
-
-したがって、次の2つを同じcompatibility flagにしてはいけません。
-
-```text
-Body platform support
-  happy_shiroi-nu: PC / Android / iOS
-
-Muchio speech support
-  PC VRChat + Windows app + OSC
-```
-
-Quest版Body Adapterを作る場合も、「犬モデルが表示・動作する」と「ムチォの会話機能が動く」は別のAcceptance Criteriaにします。
-
-## 10. 実装を開始してよい条件
-
-`happy_shiroi-nu_PC` をMuchio化するPhase 2は、次が揃ってから開始します。
-
-- [ ] Root component inventoryが取れている
-- [ ] Armature階層が保存されている
-- [ ] 全PhysBoneと`rootTransform`を列挙できている
-- [ ] 全Contact Sender / Receiverを列挙できている
-- [ ] Animator ControllerとClip一覧が取れている
-- [ ] idle時に動くTransformを確認している
-- [ ] locomotion時に動くTransformを確認している
-- [ ] PC / Quest差分を確認している
-- [ ] `BodyProfile.idleClip` を確定している
-- [ ] `BodyProfile.walkClip` を確定している
-- [ ] 元Bodyの既存挙動をAdapter側で二重実装していない
-
-この時点で初めて、
-
-```text
-Muchio Core walk state
+Muchio側の機能
         ↓
-BodyProfile.walkClip
+接続境界
         ↓
-happy_shiroi-nu_PC locomotion
+既存Body Prefab
 ```
 
-を接続します。
+Body側に既に耳・尻尾・Animator・Contact等の挙動があるなら、それらを再実装するより保存する方がよい可能性があります。
 
-## 11. 以前のMuchio連携でも、同じ境界問題に当たっていた
+しかし、**実Prefabに何が存在するかを観測する前に `preservePhysBones: true` や `walkClip: ...` を完成仕様として書くことはしません。**
 
-実は、Muchioを別システムへ接続するときにも似た判断をしています。
+## 実Prefabで取るべき証拠
 
-`KAFKA2306/vlog` では、VRCPet/MuchioのログをHuman Memoryへ取り込む際、ペットログそのものを「記憶」にせず、read-onlyなobservation sourceとして分離しました。
+公開再開前に、Unity上で最低限次を機械的に採取します。
 
-- Issue #27: https://github.com/KAFKA2306/vlog/issues/27
-- PR #28: https://github.com/KAFKA2306/vlog/pull/28
+| 観測対象 | 必要な証拠 |
+|---|---|
+| Root | 全Component一覧 |
+| Animator | Controller / Playable Layer参照 |
+| Armature | Transform階層 |
+| PhysBone | component / rootTransform / collider参照 |
+| Contact | Sender / Receiver / parameter / tag |
+| Animation | idle / walk候補Clipと参照元state |
+| Runtime | idle / locomotion時に実際に動くTransform |
+| 統合後 | Muchio機能とBody機能の両方が維持されること |
 
-今回も構造は同じです。
+名前だけでは採用しません。例えば `walk.anim` が存在しても、Animatorから参照され、実再生で期待したTransformが動くことまで確認します。
+
+## Acceptance Gate
+
+この記事を再公開する条件を次に固定します。
 
 ```text
-ログ統合
-VRCPet observation != Human Memory
-
-Body統合
-Body behavior != Muchio Core
+BOOTH等の公開仕様を確認
+AND
+happy_shiroi-nu_PC 実Prefabを観測
+AND
+推測と観測を分離
+AND
+Core / Body境界をfixtureまたは実装で検証
+AND
+未実装機能を現在形で書かない
 ```
 
-境界を消すと、短期的には実装量が減ります。
+現時点では2つ目以降を満たしていません。
 
-しかし、2体目、3体目を追加した瞬間にモデル固有処理がCoreへ漏れ始めます。
+そのため、設計仮説を成功事例へ膨らませず `published: false` とします。
 
-逆に、境界を維持できれば、Coreは一つのままBodyProfileだけを増やせます。
+## まとめ
 
-## 結論：やるべきことは「犬へ置換」ではなく「犬を壊さず接続」だった
+この記事で確定した発見は、実装成功ではありません。
 
-現行BOOTHを確認したことで、最初の仮説は更新されました。
+**一次情報を読み直したことで、「モデルを置換する」という問題設定自体が怪しくなった。**
 
-ムチォにはすでにオリジナルペット作成の導線があります。そして「幸せのしろい～ぬ」は、Humanoid、Animator、耳や尻尾の挙動、クロスプラットフォーム対応を持った完成済みのBodyです。
+ここまでは根拠があります。
 
-だから、`PetMount/muchio` を雑に犬へ置換するのは順序が逆です。
+その先のCore / Body Adapterが本当に成立するかは、実Prefabを観測して初めて記事にできます。
 
-先に `happy_shiroi-nu_PC` のPrefabを読み、既存機能を棚卸しする。
+## 一次情報
 
-そのうえで、Muchio Coreから必要な意味だけを `BodyProfile` 経由で渡す。
-
-**Body Adapterの仕事は身体機能を再実装することではない。完成済みBodyの挙動を保存したまま、Coreとの最小接続点を定義すること。**
-
-次の作業は、公開情報収集ではなく `happy_shiroi-nu_PC` の実Prefab監査です。
-
-## 検証に使った一次情報
-
-- ムチォ v1.3.6 商品ページ: https://booth.pm/ja/items/8657397
-- 幸せのしろい～ぬ 商品ページ: https://booth.pm/ja/items/8446507
-- Modular Avatar / Merge Armature: https://modular-avatar.nadena.dev/docs/reference/merge-armature
-- Modular Avatar / Merge Animator: https://modular-avatar.nadena.dev/docs/reference/merge-animator
-- Modular Avatar / clothing tutorial: https://modular-avatar.nadena.dev/docs/tutorials/clothing
-- VRChat / Avatar Components: https://creators.vrchat.com/avatars/avatar-components/
-- VRChat / PhysBones: https://creators.vrchat.com/common-components/physbones/
-- VRChat / Contacts: https://creators.vrchat.com/common-components/contacts/
-- VRChat / Animator Parameters: https://creators.vrchat.com/avatars/animator-parameters/
-- VRChat / Android Content Limitations: https://creators.vrchat.com/platforms/android/quest-content-limitations/
-- VRLabs/Follower: https://github.com/VRLabs/Follower
-- KAFKA2306/vlog Issue #27: https://github.com/KAFKA2306/vlog/issues/27
-- KAFKA2306/vlog PR #28: https://github.com/KAFKA2306/vlog/pull/28
+- ムチォ販売元BOOTH: https://booth.pm/ja/items/8657397
