@@ -37,6 +37,58 @@ GitHubに公開リポジトリが146個ある。
 
 8月13日を含む検索なので、同日中は数字が増える。ここでは18時台のsnapshotとして扱う。
 
+## この数字の中身は、たとえばこんな成果だった
+
+`813 PR` とだけ書くと、単にコードを大量生成したように見える。
+
+実際に同じ時期に起きていたことは、もう少し種類が違う。
+
+### 公開前に「未来の金利データ」を弾いた
+
+`finBI` では、`retrieved_at = 2026-07-24T20:17:00Z` のsnapshotに `2026-07-24 = 4.69` が入っていた。
+
+ところがFRED公式の当時の表示を確認すると、その時点で利用可能だった最新観測は `2026-07-23 = 4.71` で、7月24日の4.69は7月27日の更新で初めて現れていた。
+
+つまり、値そのものは正しくても、**「その時点ではまだ知り得なかった未来の値」が混ざっていた。**
+
+公開前にこれをblockerとして検出し、source availability / vintage timestampまで検証するfail-close契約と回帰testへ落とした。
+
+- https://github.com/KAFKA2306/finBI/issues/10
+
+### 画面の3/4が空白になったWebアプリを、原因特定からproductionまで直した
+
+`rule-scribe-games` では、desktopのゲーム詳細ページ全体が左約320pxへ押し込まれ、右側がほぼ空白になっていた。
+
+原因は見た目のCSS値ではなく、`body` にgridを定義したのに、実際の `header / aside / main` がReactの `#root` 配下にいたという **layout ownershipの構造バグ**だった。
+
+`#root` へgrid ownershipを移し、1280px / 800pxのPlaywright実寸回帰を追加し、Vercel PreviewとProduction deployを通し、公開 `/games/big-shot` とAPIのHTTP 200まで確認して完了にした。
+
+- https://github.com/KAFKA2306/rule-scribe-games/issues/76
+
+### 別repoの画像を、公開後にもう一度取得してhash一致まで確認した
+
+`prompt-vault` で管理する共有assetを `travel` のPagesへ配るときは、画像を単にコピーしなかった。
+
+Prompt Vaultのsource commit、source SHA-256、consumer側destination SHA-256をlockし、`travel` のbuildとPages deployを実行。その後、公開URLから画像をもう一度取得して `sha256sum -c` が `OK` になるところまで確認した。
+
+つまり、**source repoで正しい → consumer repoで正しい → 公開後も同じものが見えている**を一続きのDone条件にした。
+
+- https://github.com/KAFKA2306/travel/issues/20
+
+### 複数repoのデータをprivate bucketへ定期publishし、全objectを検証した
+
+`semiconductor-earnings-model` では、GitHub側をcontrol plane、private Hugging Face Storage Bucketをdata planeとして分けている。
+
+2026年8月13日のscheduled Actions runでは、GitHub OIDCでprivate bucketへ認証し、allow-listされたprefixだけをexact mirrorし、**publish後にevery objectをverifyするところまで成功**した。
+
+- https://github.com/KAFKA2306/semiconductor-earnings-model/actions/runs/31680400569
+
+金融データの時点整合性、Web UIの構造バグ、repo間asset配布、private data planeへのpublish。
+
+同じ「AI開発」と言っても、成功条件はまったく違う。
+
+それでも共通しているのは、**「コードを書けた」で止めず、何をもってDoneとするかをrepo側に明示していること**だった。
+
 数字だけ見ると、最近になって突然「大量の開発をAIへ任せ始めた」ように見える。
 
 しかし、面白いのはPRの本数そのものではない。
