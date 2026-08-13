@@ -18,7 +18,7 @@ APIの互換性を守るために古い `limit=60` 引数を残したまま、�
 - https://github.com/KAFKA2306/vlog/blob/4bec2f9d04fa12b0b469cc0a3dc68ec6593d58b8/apps/reader/lib/public-archive.ts
 - https://github.com/KAFKA2306/vlog/blob/4bec2f9d04fa12b0b469cc0a3dc68ec6593d58b8/apps/reader/lib/novels-complete.ts
 - https://github.com/KAFKA2306/vlog/blob/5897543bc432c59e440d09c1a3f8712663419422/apps/reader/tests/public-archive.test.ts
-- https://github.com/PostgREST/postgrest
+- https://github.com/PostgREST/postgrest/blob/main/docs/references/api/pagination_count.rst
 
 ## 1. 問題
 
@@ -52,7 +52,7 @@ export async function getPublicNovels(limit = 60) {
 
 仕様変更後もこの2つを結び付けたままだと、古い既定値が新しいproduction semanticsへ侵入する。
 
-`vlog` PR #54では先に共通の全件取得contractを作り、`Prefer: count=exact` と `Content-Range` の総件数を使ってpagination完了条件を検証するようにした。さらにprivate row、公開開始日前、重複ID、総件数drift、missing pageを失敗扱いにしている。PostgREST自身も、paginationとcountを組み合わせて全rowを辿れること、total countはrange metadataで返すことを公式READMEから参照できる。
+`vlog` PR #54では先に共通の全件取得contractを作り、`Prefer: count=exact` と `Content-Range` の総件数を使ってpagination完了条件を検証するようにした。さらにprivate row、公開開始日前、重複ID、総件数drift、missing pageを失敗扱いにしている。PostgREST公式ドキュメントも、paginationとcountを組み合わせて全rowを辿れること、`Prefer: count=exact` でtotal countを `Content-Range` に含められることを明記している。
 
 ## 3. 設計判断と代替案
 
@@ -112,10 +112,7 @@ export async function getItems(
   legacyLimit = 60,
   fetchImpl: FetchLike = fetch,
 ) {
-  // unit tests or compatibility adapters can keep legacy behavior
   if (fetchImpl !== fetch) return fetchLegacyRows(legacyLimit, fetchImpl)
-
-  // production semantics: complete archive
   return fetchAllPublicRows()
 }
 ```
