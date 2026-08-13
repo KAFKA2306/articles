@@ -8,6 +8,15 @@
     "reports": "artifacts/reports",
     "published": "articles"
   },
+  "filename_policy": {
+    "format": "YYYY-MM-DD-NN-title",
+    "sequence_width": 2,
+    "max_slug_length": 50,
+    "title_max_length": 36,
+    "new_articles_only": true,
+    "rename_existing_articles": false,
+    "zenn_slug_reference": "https://zenn.dev/zenn/articles/what-is-slug"
+  },
   "graphiti": {
     "repo": "KAFKA2306/graphiti",
     "weekly_dir": "diary/weekly",
