@@ -1,5 +1,5 @@
 ---
-title: "生成図は一次情報ではない：ChatGPT Imagesを10回回して『架空のCI・数値・URL』を公開前に落とす"
+title: "生成AIの図に『CI成功』と書いてあった。画像の中の嘘を公開前に落とす"
 emoji: "🔎"
 type: "tech"
 topics: ["chatgpt", "imagegeneration", "zenn", "testing", "automation"]
@@ -7,368 +7,245 @@ published: true
 published_at: 2026-08-13 09:21
 ---
 
-技術記事の図は、コードより危険なことがあります。
+# 生成AIの図に「CI成功」と書いてあった。画像の中の嘘を公開前に落とす
 
-コードならテストで落とせます。しかし生成画像の中に「CI成功」「5.0/5.0」「95%改善」「PR #42」のような**もっともらしい表示**が入っても、Markdownのリンクチェックは通ります。PNGやWebPが存在することと、その中身が事実であることは別だからです。
+生成AIへ技術記事の図を頼むと、見栄えの良いUI、グラフ、URL、数値、CI結果まで描いてくれます。
 
-今回 `KAFKA2306/articles` の公開フローを1回通す試行で、ChatGPT Imagesを **10回、各回1画像**として実行しました。その候補画像には、実行時に一次情報で確認していない評価値・CI状態・性能値・URL・PR/commit表記が複数含まれました。
+問題は、その中に**実行していないCI、測っていない改善率、存在確認していないURL**まで混ざり得ることです。
 
-ここで画像モデルの内部原因は推測しません。観測できた問題だけを扱います。
+Markdown側のリンクチェックは通ります。画像ファイルも存在します。それでも、画像内の主張は真実とは限りません。
 
-**生成図を「証拠」ではなく「未検証の入力」として受け取り、公開前に factual claim を別ゲートで落とす必要がある。**
+そこで `KAFKA2306/articles` の画像生成フローでは、生成画像を最終成果物ではなく**untrusted input**としてもう一度監査する設計にしました。
 
-既存の `pipeline/config.json` でも画像方針は `objective: reader_comprehension`、`require_explanatory_value: true` です。この記事では、その方針に **evidence audit** を追加する設計を具体化します。
+この記事で扱うのは、代表的な5種類だけです。
 
-- https://github.com/KAFKA2306/articles/blob/main/pipeline/config.json
-- https://github.com/KAFKA2306/articles/blob/main/articles/csv-migration-dry-run-before-write.md
+## 1. 「CI成功」は画像に描かれただけでは証拠にならない
 
-## 1. 問題：画像リンクが正しくても、画像内の主張は未検証のまま通る
+生成図には、GitHub風の緑のcheckや `CI SUCCESS` が自然に描かれることがあります。
 
-最初に見るのは、生成候補の一部です。
-
-この図で見るべき点は **LAPRAS AI Review 5軸がすべて5.0/5.0と表示されていること**です。この数値は今回のLAPRAS実測値ではなく、画像生成物の中に描かれたテキストです。
-
-![生成画像内に描かれた未検証のレビュー値](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-01.webp)
-
-この画像ファイルが存在し、Markdownから正しく参照できても、5.0/5.0という値の根拠にはなりません。
-
-ここで分けるべきゲートは2つです。
+しかし、実GitHub Actions runと照合していない表示は単なるpixelです。
 
 ```text
-artifact gate
-  └─ 画像が存在する / 参照できる / Zennで扱える
+画像内
+✓ lint
+✓ test
+✓ deploy
 
-evidence gate
-  └─ 画像内の数値・状態・因果・URLが一次情報で確認済み
+実GitHub
+未確認
 ```
 
-Zenn公式はGitHub連携時の画像をリポジトリ直下の `/images` に配置できること、対応拡張子、1ファイル3MB以内という公開条件を説明しています。これは **artifact gate** の根拠になります。
+このとき画像はCI証拠ではありません。
 
-- https://zenn.dev/zenn/articles/deploy-github-images
+CI状態を記事へ書くなら、GitHub上のrun / check / commitを本文側で確認し、画像は説明用に留めます。
 
-一方、画像内部に書かれた技術的主張の真偽まではZennの画像配置ルールでは検証されません。
+**画像自身をevidence sourceにしない**ことが最初のルールです。
 
-## 2. 原因：生成画像を「出力」として扱い、再び「入力」として査読していない
+## 2. 「5.0/5.0」や「95%改善」は最も危険
 
-2枚目には、PRがmerge済みで複数のCI checkが成功したような画面が描かれています。
+生成AIは、比較図を分かりやすくするために数値を補ってしまうことがあります。
 
-この図で見るべき点は **緑のチェックが並ぶと、それだけで実CI結果に見える**ことです。今回の画像生成時に、この表示と実GitHub Actions runを1対1照合したわけではありません。
-
-![生成画像内の未検証CI成功表示](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-02.webp)
-
-問題は「生成AIが画像を作る」ことではなく、工程設計です。
+例えば、
 
 ```text
-article facts
-  ↓
-image generation
-  ↓
-generated image
-  ↓
-そのまま publish   ← ここが危険
+Before 18.7%
+After   0.6%
+95% improved
 ```
 
-生成画像にはテキスト・数値・UI・コード断片が再構成されます。したがって、生成後は再び **untrusted input** として扱う方が安全です。
+という図が出ても、計測ログがなければその値は採用しません。
 
-改善後はこうします。
+必要なのは少なくとも、
 
 ```text
-verified article facts
-  ↓
-image generation
-  ↓
-untrusted generated image
-  ↓
-visual claim inventory
-  ↓
-primary-source verification
-  ↓
-verified / illustrative / reject
-  ↓
-publish
+source data
+command / script
+execution environment
+commit
+result artifact
 ```
 
-## 3. 具体例：それらしく見える因果を、一次情報なしで採用しない
+です。
 
-3枚目はDocker Composeのヘルスチェック失敗例です。
-
-この図で見るべき点は、`start_period` が短いことと再起動ループを因果で結んでいることです。図としては理解しやすい一方、**この具体的な設定と結果は今回の実測ではありません**。
-
-![生成画像内の未検証な因果説明](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-03.webp)
-
-生成図を公開する前に、少なくとも次を区別します。
-
-- **構造図**: コンポーネント関係だけを示す。数値や成功結果を持たない
-- **比較図**: 比較軸の根拠URLが必要
-- **因果図**: 因果を裏付ける仕様・実験・コード証拠が必要
-- **結果図**: 元データ・実行条件・取得日時が必要
-
-「因果・比較・構造・流れ」を1図1メッセージにするだけでは不十分で、**その1メッセージが factual claim なら evidence を要求する**、という二段階が必要でした。
-
-## 4. 壊れた失敗例：グラフは最も危険な“もっともらしさ”を作れる
-
-4枚目には、KafkaのthroughputとP99 latencyらしきグラフが描かれています。
-
-この図で見るべき点は、軸・系列・数値が揃うと「ベンチマーク済み」に見えることです。しかしこのグラフは、今回のリポジトリで実行したベンチマーク結果ではありません。
-
-![生成画像内の未検証ベンチマーク](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-04.webp)
-
-この種の図には、画像ファイル以外に最低でも次が必要です。
+どれも存在しない場合は、数値を消して構造図へ落とします。
 
 ```text
-benchmark evidence
-├─ source data
-├─ command / script
-├─ environment
-├─ timestamp
-├─ commit SHA
-└─ result artifact
+NG: 95% improved
+OK: before / afterの設計差だけを示す
 ```
 
-1つでも追跡できないなら、結果図としてではなく「概念図」へ落とすか、削除します。
+「N/A」の方が、もっともらしい架空値より有用です。
 
-## 5. URLも画像内に書かれただけでは一次情報にならない
+## 3. グラフは測定結果に見えやすい
 
-5枚目には、Apache KafkaやConfluent風の一次情報URLが並んでいます。
+軸、系列、legendが揃った瞬間、生成グラフは実測結果に見えます。
 
-この図で見るべき点は **URL文字列がもっともらしくても、画像内テキストはクリックもHTTP検証もできない**ことです。
+しかし、AIが描いた折れ線や棒の高さから実データを逆生成してはいけません。
 
-![生成画像内に描かれた未検証URL一覧](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-05.webp)
-
-記事本文ではURLをテキストとして保持し、実際に開ける一次情報URLだけを残します。画像内URLは装飾ではなく factual claim の一種として扱います。
-
-今回の記事で使う外部仕様は、公開前に実URLを確認した次のものだけです。
-
-- OpenAI公式の画像生成機能: https://openai.com/index/image-generation-api/
-- Zenn公式の画像配置ルール: https://zenn.dev/zenn/articles/deploy-github-images
-- Zenn公式Markdown画像記法: https://zenn.dev/zenn/articles/markdown-guide
-
-## 6. 数字には必ず「どの実験の値か」を要求する
-
-6枚目は、Idempotency導入でRPSが大きく上がったように見える性能グラフです。
-
-この図で見るべき点は、**性能倍率らしき結論が視覚的に強く提示されていること**です。生成画像に描かれた数値は、計測ログの代わりにはなりません。
-
-![生成画像内の未検証性能倍率](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-06.webp)
-
-結果図を許可する条件を、次のように固定できます。
+結果グラフを公開できる条件を、次のように固定します。
 
 ```yaml
-claim:
-  kind: benchmark
+figure:
+  type: result
   status: verified
-  value: "..."
   evidence:
-    - command: "..."
-    - commit: "..."
-    - artifact: "..."
-    - source_url: "https://..."
+    data: path/to/result.csv
+    script: path/to/plot.py
+    commit: <sha>
 ```
 
-`status: verified` を埋める材料がなければ、画像から数値を外します。
+このevidence chainがない生成グラフは、`result`ではなく`illustrative`です。
 
-## 7. 「改善率」は特に二重チェックする
+## 4. URL・PR番号・commit SHAも画像から転記しない
 
-7枚目には、Flaky test発生率が `18.7% → 0.6%`、約95%改善したような棒グラフがあります。
-
-この図で見るべき点は、**before/afterと改善率が揃うと、実測結果として非常に強く読める**ことです。今回この数値を実測したログはありません。
-
-![生成画像内の未検証before-after値](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-07.webp)
-
-### 壊れた例
+生成図には、
 
 ```text
-改善前 18.7%
-改善後 0.6%
-約95%改善
+PR #42
+abc1234
+https://example.com/docs
 ```
 
-根拠データがないまま図だけ公開する。
+のような文字列も描けます。
 
-### 改善後の例
+見た目がGitHub UIでも、実GitHubの状態とは無関係です。
 
-```text
-計測なし
-→ 数値を図から削除
-→ 「固定時刻・固定seed・外部依存のmock化」の構造だけを示す
-```
+公開記事へPR番号やcommit SHAを書く場合は、GitHubから取得した値を本文へ置きます。画像内文字列を逆にsourceへしてはいけません。
 
-測っていないものを「N/A」にする方が、もっともらしい数字を埋めるより再利用可能です。
+URLも同じです。
 
-## 8. PR番号・commit SHA・merge状態も画像から信用しない
+画像に描かれたURLではなく、ブラウザで確認できる一次情報URLを本文に保持します。
 
-8枚目には `PR #42`、commit、merge completedという表示があります。
+## 5. 条件表が細かいほど「本物らしく」見える
 
-この図で見るべき点は、**GitHub UI風の見た目と実GitHub状態を分離すること**です。
+モデル名、token数、TTL、request count、hardwareなどが表になっていると、実験条件に見えます。
 
-![生成画像内の未検証PRとcommit表示](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-08.webp)
+しかし条件表そのものも生成できます。
 
-公開レポートへPR番号やcommit SHAを書くなら、GitHub API/実URLから取得した値だけを本文へ転記します。生成画像を逆に情報源としてはいけません。
-
-この原則は、今回の公開フロー自体にも適用します。最終報告のPR/commitは、merge後にGitHubから再取得した値だけを使います。
-
-## 9. 実装：figure manifestで「何を検証したか」を画像の外に置く
-
-9枚目には、モデル名、プロンプト長、リクエスト数、TTLなどのベンチマーク条件らしき表が描かれています。
-
-この図で見るべき点は、**条件表そのものも生成できるため、条件が細かいほど真実らしく見える**ことです。
-
-![生成画像内の未検証ベンチマーク条件](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-09.webp)
-
-そこで、画像の外に正準manifestを置く設計にします。
+そこで、figureごとに画像の外へmanifestを持たせます。
 
 ```json
 {
-  "figures": [
-    {
-      "id": "01",
-      "role": "failure-example",
-      "mode": "illustrative",
-      "factual_claims": [],
-      "evidence_urls": []
-    },
-    {
-      "id": "08",
-      "role": "pr-state-example",
-      "mode": "anti-pattern",
-      "factual_claims": ["PR number", "commit SHA", "merge status"],
-      "evidence_urls": []
-    }
+  "id": "figure-03",
+  "mode": "illustrative",
+  "factual_claims": [],
+  "evidence_urls": []
+}
+```
+
+実測結果なら、
+
+```json
+{
+  "id": "figure-07",
+  "mode": "verified",
+  "factual_claims": [
+    "test run succeeded"
+  ],
+  "evidence_urls": [
+    "https://github.com/.../actions/runs/..."
   ]
 }
 ```
 
-公開用の結果図なら、`mode` を `verified` にし、`evidence_urls` を空にできないようにします。
+とします。
 
-擬似コードなら次です。
+## artifact gateとevidence gateを分ける
+
+画像公開には2種類の成功条件があります。
+
+```text
+artifact gate
+  ├─ file exists
+  ├─ path is valid
+  ├─ format is supported
+  └─ size is acceptable
+
+evidence gate
+  ├─ number is verified
+  ├─ CI state is verified
+  ├─ URL exists
+  ├─ PR / commit exists
+  └─ causal statement has evidence
+```
+
+Zenn公式はGitHub連携時の画像配置やMarkdown記法を説明しています。
+
+- https://zenn.dev/zenn/articles/deploy-github-images
+- https://zenn.dev/zenn/articles/markdown-guide
+
+これらはartifact gateの根拠になります。
+
+一方、画像の中の数値やCI状態が正しいかは、別途こちらで検証する必要があります。
+
+## 実装するevidence gate
+
+最小実装は単純です。
 
 ```python
 def validate_figure(item):
-    if item["mode"] == "verified":
-        assert item["evidence_urls"]
-    if item["factual_claims"] and item["mode"] == "illustrative":
-        raise ValueError("illustrative figure must not carry factual claims")
+    if item["mode"] == "verified" and not item["evidence_urls"]:
+        raise ValueError("verified figure requires evidence")
+
+    if item["mode"] == "illustrative" and item["factual_claims"]:
+        raise ValueError("illustrative figure must not assert facts")
 ```
 
-重要なのはOCR精度ではありません。**生成前に「この図に事実を入れるか」を宣言し、事実を入れる図だけ証拠必須にする**ことです。
+重要なのはOCRを完璧にすることではありません。
 
-## 10. 検証：リンク10/10は必要条件であって十分条件ではない
+**生成前に、その図が何を主張してよいかをcontractとして決めること**です。
 
-最後の生成候補には「画像リンク確認 10枚すべて存在・参照一致」という表示まで描かれました。
+結果図なら証拠が必要。概念図なら実測値を書かない。
 
-この図で見るべき点は、**“確認済み”という文字自体も生成できる**ことです。したがって、確認結果は画像ではなく実ファイルとMarkdownを機械的に照合します。
+## 画像生成モデルが高性能でも、evidence gateは消えない
 
-![生成画像内に描かれたリンク確認表示](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-10.webp)
+OpenAIの現行APIでは、GPT Image 2が画像生成・編集用のモデルとして公開されています。
 
-Zenn互換のartifact gateは、たとえば次で再現できます。
+公式:
+https://developers.openai.com/api/docs/models/gpt-image-2
 
-```python
-from pathlib import Path
-import re
+画像内text renderingの性能が高くなるほど、逆に技術図では「文字として自然だから事実に見える」問題が強くなります。
 
-slug = "one-diagram-one-message-image-pipeline"
-article = Path(f"articles/{slug}.md").read_text(encoding="utf-8")
-refs = re.findall(rf"/images/{slug}/[^)]+", article)
+これは画像モデルの欠陥というより、**生成された説明表現と一次証拠を同じものとして扱う工程の欠陥**です。
 
-assert len(refs) == 10
-assert len(set(refs)) == 10
+## 公開前チェック
 
-allowed = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
-for ref in refs:
-    path = Path(ref.lstrip("/"))
-    assert path.exists(), path
-    assert path.suffix.lower() in allowed, path
-    assert path.stat().st_size <= 3 * 1024 * 1024, path
-```
-
-このtestが通っても、画像内の `5.0/5.0` や `95%改善` が正しいとは証明しません。そこで公開ゲートを分離します。
+生成図1枚ごとに、最低限これだけ確認します。
 
 ```text
-Gate A: artifact
-- 10 refs
-- 10 unique files
-- supported extension
-- <= 3 MB
-
-Gate B: evidence
-- 数値 → 元データあり
-- 因果 → 一次仕様/実験あり
-- URL → HTTPで実在確認
-- PR/commit → GitHubで実在確認
-- CI → workflow runで確認
-
-Gate C: editorial
-- 1図1メッセージ
-- 本文直前に「何を見るか」
-- 重複役割なし
+[ ] 実測していない数値がない
+[ ] 未確認のCI状態がない
+[ ] 架空URLがない
+[ ] 架空PR / commitがない
+[ ] 因果を描くなら根拠がある
+[ ] verified図にはevidence URLがある
+[ ] illustrative図は事実主張を持たない
 ```
 
-## 11. 設計判断と代替案
+1つでも確認できなければ、画像を修正するか削除します。
 
-### 採用：生成図をuntrusted inputとして再査読する
+## まとめ
 
-長所は、生成モデルの内部挙動へ依存しないことです。どのモデルでも、画像に factual claim があれば同じgateを適用できます。
+生成画像は、説明力のあるfigureを高速に作れます。
 
-### 代替案A：図から文字を完全に禁止する
+しかし、
 
-安全側ですが、設定値・比較表・コード断片を見せたい記事では表現力を失います。
+```text
+画像が生成できた
+!=
+画像内の主張が検証できた
+```
 
-### 代替案B：画像生成を使わずSVG/Mermaidだけにする
+です。
 
-検証可能性は上がりますが、今回の目的はChatGPT Imagesを実際に使うことです。また、画像生成を使わないこと自体は「生成画像のevidence audit」の解決ではありません。
+だから生成後にもう一度、画像をuntrusted inputとして扱う。
 
-### 代替案C：生成画像を人間が目視するだけ
+架空CI、架空数値、架空グラフ、架空URL、架空PRを、**figure manifest + evidence gate**で公開前に落とす。
 
-必要ですが、PR番号・URL・数値の実在確認を毎回目視だけにすると漏れます。artifactとURL/commit/CIの存在確認は機械へ寄せる方が再現できます。
+技術記事の画像品質を上げるときに必要なのは、「もっと綺麗な絵」だけではなく、**絵の中の主張までCI対象にすること**でした。
 
-## 12. 読者が試せる再現方法
+## 一次情報
 
-手元の記事で、次の最小実験ができます。
-
-1. 技術記事から factual claim を1つだけ選ぶ
-2. ChatGPT Imagesでその概念図を1枚生成する
-3. 画像内に、入力していない数値・URL・成功状態・コード・PR表記がないか確認する
-4. factual claim を一覧化する
-5. 各claimへ一次情報URLまたは実行artifactを割り当てる
-6. 割り当てられないclaimは画像から削るか、`illustrative` として事実表現を外す
-7. 画像を `/images/{slug}/` に保存する
-8. Markdown参照・実在・拡張子・3MB上限を機械検査する
-9. PRで「見た目」と「証拠」を別項目としてレビューする
-10. merge後にmain上の画像・参照・一次情報URLを再確認する
-
-今回の10枚は、まさに **「生成画像内の文字を証拠と誤認しない」ための失敗教材**として使いました。
-
-## 13. 失敗と学び
-
-今回の最大の失敗は、最初から「生成された画像は記事本文と同じ事実性を持つ」と暗黙に扱いかけたことです。
-
-10回実行してみると、生成物にはレビュー点数、CI成功、性能グラフ、改善率、ベンチ条件、URL、PR/commitなど、**技術記事でそのまま使うと危険な情報形式**が一通り現れました。
-
-一方で、ここから得た設計は単純です。
-
-> 画像生成の完了をpublication readyと呼ばない。
-
-`generated → audited → verified` を別状態にするだけで、生成図を一次情報と混同しにくくなります。
-
-## 14. まとめ
-
-技術記事でChatGPT Imagesを使うとき、品質ゲートは「画像が綺麗か」だけでは足りません。
-
-- **artifact gate**: 画像10枚が存在し、Markdown参照と一致する
-- **evidence gate**: 数値・因果・URL・PR・CIが一次情報と一致する
-- **editorial gate**: 1図1メッセージで、役割が重複しない
-
-この3つを分離すると、画像生成ツールを止めずに使いながら、生成物をそのまま証拠にはしない運用ができます。
-
-## 一次情報・再現証拠
-
-- KAFKA2306/articles `pipeline/config.json`  
-  https://github.com/KAFKA2306/articles/blob/main/pipeline/config.json
-- KAFKA2306/articles 既存の画像配置記事  
-  https://github.com/KAFKA2306/articles/blob/main/articles/csv-migration-dry-run-before-write.md
-- OpenAI公式: 画像生成APIの紹介  
-  https://openai.com/index/image-generation-api/
-- Zenn公式: GitHubリポジトリ連携で画像をアップロードする方法  
-  https://zenn.dev/zenn/articles/deploy-github-images
-- Zenn公式: Markdown記法一覧  
-  https://zenn.dev/zenn/articles/markdown-guide
+- OpenAI GPT Image 2: https://developers.openai.com/api/docs/models/gpt-image-2
+- Zenn — GitHub連携で画像を配置する: https://zenn.dev/zenn/articles/deploy-github-images
+- Zenn — Markdown記法: https://zenn.dev/zenn/articles/markdown-guide
