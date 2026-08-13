@@ -1,18 +1,18 @@
 ---
-title: "個人開発が146個に増えたので、「次に何をするか」までChatGPTに任せた"
+title: "個人開発が123個に増えたので、「次に何をするか」までChatGPTに任せた"
 emoji: "🛰️"
 type: "tech"
 topics: ["chatgpt", "github", "automation", "githubactions"]
 published: false
 ---
 
-GitHubに公開リポジトリが146個ある。
+GitHubに公開リポジトリが146個ある。そのうち、forkを除く123個が自作側の個人開発だ。
 
 金融、VRChat、ボードゲーム、動画、家計、旅行、論文、3D制作、データ収集、AI agent。
 
 最初から一つの製品群として設計したわけではない。用途もデータも実行環境もかなり違う。
 
-それなのに2026年夏、これらをChatGPTから横断して扱うようになった。
+それなのに2026年夏、これらをChatGPTを介して横断して扱うようになった。
 
 あるrepoのIssueを読み、次に進める作業を選び、実装し、CIを確認し、PRをmergeし、productionを確認する。終わったら別のrepoを見る。
 
@@ -20,11 +20,11 @@ GitHubに公開リポジトリが146個ある。
 
 この記事で書きたいのは、その理由だ。
 
-![146個の個人開発をGitHubとChatGPTで横断運用する全体像](/images/chatgpt-multiproject-autonomy/chatgpt-multiproject-autonomy-01.webp)
+![123個の個人開発をGitHubとChatGPTで横断運用する全体像](/images/chatgpt-multiproject-autonomy/chatgpt-multiproject-autonomy-01.webp)
 
 ## 直近1か月だけ見ると、急に何かが起きたように見える
 
-2026年8月13日18時台にGitHub Search APIを再取得すると、2026年7月13日から8月13日までに `KAFKA2306` アカウントで作成されたものは次の規模になっている。
+2026年8月13日18:27:30 JST時点でGitHub Search APIを取得すると、2026年7月13日から同時刻までに `KAFKA2306` アカウントで作成されたIssue / PRと、同期間にmergeされたPRは次の規模になっている。
 
 - Issues: 387
 - Pull Requests: 813
@@ -33,11 +33,11 @@ GitHubに公開リポジトリが146個ある。
 一次情報:
 
 - Profile: https://api.github.com/users/KAFKA2306
-- Issues: https://api.github.com/search/issues?q=author%3AKAFKA2306+is%3Aissue+created%3A2026-07-13..2026-08-13
-- Pull Requests: https://api.github.com/search/issues?q=author%3AKAFKA2306+is%3Apr+created%3A2026-07-13..2026-08-13
-- Merged Pull Requests: https://api.github.com/search/issues?q=author%3AKAFKA2306+is%3Apr+is%3Amerged+merged%3A2026-07-13..2026-08-13
+- Issues: https://api.github.com/search/issues?q=author%3AKAFKA2306+is%3Aissue+created%3A2026-07-13..2026-08-13T09%3A27%3A30Z
+- Pull Requests: https://api.github.com/search/issues?q=author%3AKAFKA2306+is%3Apr+created%3A2026-07-13..2026-08-13T09%3A27%3A30Z
+- Merged Pull Requests: https://api.github.com/search/issues?q=author%3AKAFKA2306+is%3Apr+is%3Amerged+merged%3A2026-07-13..2026-08-13T09%3A27%3A30Z
 
-8月13日を含む検索なので、同日中は数字が増える。ここでは18時台のsnapshotとして扱う。
+検索結果が後から増えないよう、上限時刻を `2026-08-13T09:27:30Z` に固定している。
 
 ## この数字の中身は、たとえばこんな成果だった
 
@@ -127,9 +127,9 @@ repoが増えるほど、人間自身がオーケストレーターになる。
 
 2026年夏に変わったのは、コード生成の量より、**この「次を決めるループ」まで機械が扱えるようになったこと**だった。
 
-## 146個は、同じ種類のrepoではない
+## 123個の個人開発は、同じ種類のrepoではない
 
-ここで重要なのは、146個を一つの年代順ストーリーへ押し込まないことだった。
+ここで重要なのは、123個の自作側repoを一つの年代順ストーリーへ押し込まないことだった。
 
 2026年8月13日時点のGitHub profile APIは `public_repos: 146` を返す。
 
@@ -195,7 +195,7 @@ irr
 
 たとえば `auto-invest` は市場価格からKelly基準、ボラティリティ、Expected Shortfallなどを計算し、入力不足や品質不良時には確信的な数値を出さない。
 
-`semiconductor-earnings-model` は企業開示、規制開示、業界KPI、市場観測を別の値種別として保持し、JSON / SQLite / Webへ投影する。
+`semiconductor-earnings-model` は企業IR・規制開示などのsourceと、実績・ガイダンス・コンセンサス・市場観測・推計・シナリオなどの値種別を分けて保持し、JSON / SQLite / Webへ投影する。
 
 `finBI` では、単に値が存在するかではなく、その時点で本当に利用可能だった値かというpoint-in-time provenanceまで問題になった。
 
@@ -490,7 +490,7 @@ Pages / production
 
 - https://github.com/KAFKA2306/agent-resources
 
-大事なのは、ChatGPTが146個のrepoを全部記憶することではない。
+大事なのは、ChatGPTが123個の個人開発の中身を全部記憶することではない。
 
 **各repoが自分の真実をGitHubへ出し、ChatGPTはその時点の状態を読む。**
 
@@ -603,9 +603,9 @@ OSS forkなら、上流をそのまま使うか、自分の設計へ持ち帰る
 
 **人間が毎回やらなくてよい調整仕事を状態と契約へ移し、本当に人間が決める必要のある場所だけを残すこと**だった。
 
-## 146件を全件見た理由
+## 146公開repoを全件見た理由
 
-この記事では、代表例だけを並べて「146 repo全部がこの設計思想で作られた」とは言わない。
+この記事では、代表例だけを並べて「123個の個人開発すべてがこの設計思想で作られた」とは言わない。
 
 母集団を先に固定した。
 
@@ -631,7 +631,7 @@ forkも無価値という意味ではない。
 
 ただし、それを「ゼロから作った自作repo」と同じ証拠には数えない。
 
-## 結論：146個を一つにしたのは、AIではなく「読める状態」だった
+## 結論：123個を一つにしたのは、AIではなく「読める状態」だった
 
 金融、VR、ゲーム、動画、家計、旅行、情報収集、AI agent。
 
@@ -652,7 +652,7 @@ forkも無価値という意味ではない。
 それがGitHubという共通状態へ出るようになると、初めてChatGPTがrepoをまたいで扱えるようになった。
 
 ```text
-146 repositories
+123 non-fork repositories
         ↓
 それぞれが状態・契約・証拠を出す
         ↓
@@ -665,7 +665,7 @@ ChatGPTが次の1件を選ぶ
 状態を更新して次へ
 ```
 
-だから、146個を一つにしたのは「同じ技術スタック」でも「同じAIモデル」でもなかった。
+だから、123個を一つにしたのは「同じ技術スタック」でも「同じAIモデル」でもなかった。
 
 **各プロジェクトが、自分の真実を機械が読める形で外へ出せるようになったこと。**
 
