@@ -1,5 +1,5 @@
 ---
-title: "146リポジトリは突然こうならなかった。バラバラな個人開発が、ChatGPTのマルチプロジェクト制御になるまで"
+title: "個人開発が146個に増えたので、「次に何をするか」までChatGPTに任せた"
 emoji: "🛰️"
 type: "tech"
 topics: ["chatgpt", "github", "automation", "githubactions"]
