@@ -8,6 +8,7 @@ on:
       - "docs/**"
       - "articles/**"
       - "artifacts/**"
+      - "demos/**"
       - "README.md"
       - ".github/workflows/article-pipeline.yml"
       - ".github/workflows/article-pipeline-ci.yml"
@@ -20,6 +21,7 @@ on:
       - "docs/**"
       - "articles/**"
       - "artifacts/**"
+      - "demos/**"
       - "README.md"
       - ".github/workflows/article-pipeline.yml"
       - ".github/workflows/article-pipeline-ci.yml"
@@ -36,9 +38,26 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile
-        run: python -m compileall pipeline
+        run: python -m compileall pipeline demos/python-syntax-gate/syntax_gate.py
       - name: Contract tests
         run: python -m unittest discover -s tests -v
+      - name: Demo JavaScript syntax
+        run: |
+          node --check demos/_shared/pyodide-worker.mjs
+          node --check demos/python-syntax-gate/app.mjs
+      - name: Demo static route smoke
+        shell: bash
+        run: |
+          python -m http.server 8000 >/tmp/articles-demo-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          for path in \
+            demos/python-syntax-gate/ \
+            demos/python-syntax-gate/demo.json \
+            demos/python-syntax-gate/syntax_gate.py \
+            demos/_shared/pyodide-worker.mjs; do
+            curl --fail --silent --show-error "http://127.0.0.1:8000/$path" >/dev/null
+          done
       - name: Repository and privacy audit
         run: python -m pipeline.audit
       - name: Verify clean checkout
