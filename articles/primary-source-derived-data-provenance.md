@@ -1,5 +1,5 @@
 ---
-title: "856件を7,699件に直したとき、問題は『計算ミス』ではなくscopeだった"
+title: "856件が7,699件になった。でも計算ミスではなかった：「どこまで数えたか」を残す"
 emoji: "🔎"
 type: "tech"
 topics: ["dataengineering", "provenance", "python", "github"]
