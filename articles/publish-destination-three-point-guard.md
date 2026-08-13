@@ -18,7 +18,7 @@ published: true
 
 **認証済みのYouTubeチャンネルが正しくても、その動画を「今この実行から、そのチャンネルへ送ってよい」とは限らないのではないか。**
 
-実際、2026年8月12日の hardening commit より前の `PublishAgent` は、認証先の title / channel ID を環境変数と照合していましたが、`state.bucket` と投稿先 profile の対応は検査していませんでした。現在は、bucket、profile、認証済み channel ID を結び、どれかがずれれば `videos.insert` より前に停止します。
+GitHub API上で `2026-08-12T16:48:28Z`（JSTでは2026年8月13日01:48:28）に記録された hardening commit より前の `PublishAgent` は、認証先の title / channel ID を環境変数と照合していましたが、`state.bucket` と投稿先 profile の対応は検査していませんでした。現在は、bucket、profile、認証済み channel ID を結び、どれかがずれれば `videos.insert` より前に停止します。
 
 - hardening commit: https://github.com/KAFKA2306/yt3/commit/d1e2c42cfdfdb18d9962d15c38b87bab919df285
 - hardening前の `publish.ts`: https://github.com/KAFKA2306/yt3/blob/79829b95ca7acd68d60bdd460e5211bffafc67d9/src/domain/agents/publish.ts
