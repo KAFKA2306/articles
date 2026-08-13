@@ -1,507 +1,209 @@
 ---
-title: "Desktopは正常、VRだけ二重。真因はShaderではなくCAUの中断状態だった"
+title: "VRだけ二重に見えた。Shaderを疑って遠回りした末に、Uploaderの中断へ辿り着いた"
 emoji: "🥽"
 type: "tech"
 topics: ["vrchat", "unity", "shader", "liltoon", "vrcsdk"]
-published: false
+published: true
 published_at: 2026-08-12 19:46
 ---
 
-# Desktopは正常、VRだけ二重。真因はShaderではなくCAUの中断状態だった
+# VRだけ二重に見えた。Shaderを疑って遠回りした末に、Uploaderの中断へ辿り着いた
 
-「Desktopでは正常なのに、VRでは左右眼で二重に見える」。
+Desktopでは正常なのに、VRでは左右眼で二重に見える。
 
-この症状から最初に疑ったのはStereo Shaderでした。PoiyomiやlilToonには、DesktopやMirrorでは正常でもDirect VRだけ壊れる過去事例が実際にあります。
+この症状を見て、最初はShaderを疑いました。Stereo Renderingでは左右眼の描画経路が分かれ、custom Shader側の対応不足でVRだけ壊れることは実際にあります。UnityもSingle Pass Stereo / Single Pass Instanced向けの実装要件を公式に説明しています。
 
-- Poiyomi Issue #4: https://github.com/poiyomi/PoiyomiToonShader/issues/4
-- Poiyomi Issue #24: https://github.com/poiyomi/PoiyomiToonShader/issues/24
-- lilToon Issue #46: https://github.com/lilxyzw/lilToon/issues/46
+- Unity Stereo Rendering: https://docs.unity3d.com/2022.3/Documentation/Manual/SinglePassStereoRendering.html
+- Unity Single-pass instanced custom shaders: https://docs.unity3d.com/Manual/SinglePassInstancing.html
 
-しかし今回の実機切り分けでは、Shaderそのものが真因ではありませんでした。
-
-**今回確認できた事実は、Continuous Avatar Uploader（CAU）のアップロード処理が途中で止まった状態だったこと、その状態を解消して正常なアップロードに戻した後は症状が解消したことです。**
-
-ここで重要なのは、これを「CAUには左右眼バグがある」と一般化しないことです。公開一次情報から確認できるのは、CAUがアップロード進捗を永続化し、中断後にresumeする仕組みを持つこと、また過去にcancel・resume・platform変更後のfreeze周辺で修正履歴があることまでです。
-
-- CAU repository: https://github.com/anatawa12/ContinuousAvatarUploader
-- CAU CHANGELOG: https://github.com/anatawa12/ContinuousAvatarUploader/blob/master/CHANGELOG.md
-- VRChat公式 Avatar upload手順: https://creators.vrchat.com/avatars/creating-your-first-avatar/
-
-したがって、今回の事故は **「CAUそのもの」ではなく「中断されたCAU upload state」** の問題として扱うのが最も正確です。
-
----
-
-## 結論
-
-診断順序は次のように更新します。
+しかし今回、実機で切り分けて確認できた観測事実は別でした。
 
 ```text
-旧
-VR-only / eye-dependent
-→ Shader / Material
-→ Reimport
-→ MA / NDMF
-→ Built Avatar
-
-前版
-VR-only / eye-dependent
-→ 標準VRCSDK vs CAU
-→ Uploader経路差を見る
-
-今回の最終版
-VR-only / eye-dependent
-→ upload処理が正常終了したか確認
-→ CAU等の中断・resume状態を確認
-→ 標準VRCSDKでclean uploadしてbaselineを取る
-→ それでも再現するなら Source / Built / Shaderへ降りる
-```
-
-最重要点は、**Uploader名だけを見るのではなく、upload state machineが正常終了しているかを見る**ことです。
-
----
-
-## 1. なぜShader説はもっともらしかったのか
-
-過去事例が実在したからです。
-
-| 事例 | Desktop | Mirror | Direct VR | 症状 |
-|---|---|---|---|---|
-| Poiyomi #4 | NORMAL | - | ABNORMAL | Avatarが二重に見える |
-| Poiyomi #24 | NORMAL | NORMAL | ABNORMAL | 左右眼でPanosphere phaseがずれる |
-| lilToon #46 | NORMAL | NORMAL | ABNORMAL | Refraction materialがVRで壊れる |
-
-UnityもStereo RenderingとSingle Pass Instanced custom Shaderの要件を公式に説明しています。
-
-- https://docs.unity3d.com/2022.3/Documentation/Manual/SinglePassStereoRendering.html
-- https://docs.unity3d.com/Manual/SinglePassInstancing.html
-
-したがって、
-
-```text
-Desktop正常
-VRだけ異常
-```
-
-からStereo経路を疑うこと自体は合理的でした。
-
-ただし、症状の形がShaderらしいことと、Shaderが真因であることは別です。
-
----
-
-## 2. 抜けていたのは「Uploader」よりさらに細かい「中断状態」だった
-
-前版では次のように整理していました。
-
-```text
-Source Avatar
-→ Build Processing
-→ Built Bundle
-→ Build / Upload API path
-→ VRChat backend
-→ Client / Stereo Rendering
-```
-
-このモデルでもまだ粗すぎました。
-
-実際にはupload層を少なくとも次のように分ける必要があります。
-
-```text
-Build開始
-  ↓
-Build完了
-  ↓
-Upload開始
-  ↓
-Upload進捗保存
-  ↓
-Upload完了
-  ↓
-進捗状態の終了
-```
-
-CAUのCHANGELOGには、0.3.8でUnity Editor crash後にuploadをresumeする機能が追加され、そのために進捗ファイル
-
-`Assets/com.anatawa12.continuous-avatar-uploader.uploader-progress.asset`
-
-を保存すると記載されています。
-
-また同CHANGELOGにはupload状態管理周辺の修正として、少なくとも以下が記録されています。
-
-- buildをcancelできない問題
-- platform変更後にUploaderがfreezeすることがある問題
-- ユーザーがresumeを拒否した後もresumeしてしまう問題
-
-一次情報:
-
-- https://github.com/anatawa12/ContinuousAvatarUploader/blob/master/CHANGELOG.md
-
-これらは今回の左右眼症状そのものを証明するものではありません。
-
-しかし、**CAUが中断・再開・進捗永続化を持つ状態機械であり、その状態が独立した診断変数である**ことは確認できます。
-
----
-
-## 3. 今回どこまで断定できるか
-
-今回の実機観測から言えること:
-
-```text
-CAUのupload処理が途中停止した状態だった
+CAUのupload処理が途中で止まった状態だった
 ↓
-その状態を解消して正常なuploadに戻した
+その状態を解消し、正常にuploadを完了させた
 ↓
 VRの二重表示が解消した
 ```
 
-公開一次情報から追加で確認できること:
+ここから言えるのは、**今回の異常条件にuploadの中断状態が含まれていた**ということまでです。Continuous Avatar Uploader（CAU）内部のどの処理が左右眼表示へ影響したのかは証明していません。
+
+この記事では、この証拠境界を崩さずに、同じ症状を最短で切り分ける順序を整理します。
+
+## 症状から原因へ飛ばない
+
+壊れた診断はこうでした。
 
 ```text
-CAUはupload progressを保存する
-CAUはEditor crash後のresume機能を持つ
-cancel / resume / freeze周辺の修正履歴がある
+VRだけ異常
+→ Stereo
+→ Shader
+→ lilToon
+→ Reimport
 ```
 
-一方、現時点で断定できないこと:
+この推論には「VRだけ壊れるShader問題は存在する」という根拠はあります。しかし、**症状がShaderらしいことと、今回の原因がShaderであることは別**です。
+
+今回抜けていた変数は、Source Avatarと描画の間にあるbuild / upload状態でした。
 
 ```text
-中断されたprogress stateが
-左右眼の二重描画を直接生成する内部メカニズム
+Source Avatar
+→ Build processing
+→ Bundle
+→ Upload
+→ VRChat backend
+→ Client / Stereo Rendering
+→ 見た目
 ```
 
-したがって、この記事では「CAUの中断状態が今回の事故条件だった」と記述し、内部メカニズムまでは推測しません。
+## CAUには「中断・再開」という状態が実在する
 
----
+CAU公式CHANGELOGでは、v0.3.8でUnity Editor crash後のupload resumeが追加されています。またupload progressを次のassetへ保存し、Editor crashやtarget platform変更後のresumeに利用すると明記されています。
 
-## 4. 「CAU経路が悪い」という前版の表現は強すぎた
+`Assets/com.anatawa12.continuous-avatar-uploader.uploader-progress.asset`
 
-前版では、
+さらに公式CHANGELOGには、その後もupload state周辺の修正があります。
+
+- v0.3.10: buildをcancelできない問題を修正
+- v0.3.10: platform変更後にUploaderがfreezeすることがある問題を修正
+- v0.3.11: userがresumeを拒否した後もresumeする問題を修正
+
+一次情報:
+https://github.com/anatawa12/ContinuousAvatarUploader/blob/master/CHANGELOG.md
+
+これらは「CAUのresume stateが左右眼二重表示を起こす」と証明する資料ではありません。確認できるのは、**CAUがupload progressを永続化し、中断・再開を状態として持つ**ことです。
+
+## 今回の観測と未証明部分を分ける
+
+### 観測できたこと
+
+- CAU uploadが途中停止した状態だった
+- その状態を解消し、uploadを正常終了させた
+- その後、実HMDで二重表示が解消した
+
+### 一次情報で確認できること
+
+- CAUはupload progressを保存する
+- Editor crash後のresume機能を持つ
+- cancel / resume / platform change周辺に修正履歴がある
+- VRChat公式SDKにはControl Panelからの `Build & Publish` 手順がある
+
+VRChat公式:
+https://creators.vrchat.com/avatars/creating-your-first-avatar/
+
+### まだ言えないこと
+
+- 中断されたprogress assetが直接左右眼レンダリングを壊した
+- CAU一般に左右眼バグがある
+- Shaderは常に無関係である
+
+この3つは断定しません。
+
+## 診断順を変える
+
+今後はShaderを触る前に、cleanなupload baselineを取ります。
 
 ```text
-VRCSDK = NORMAL
-CAU    = ABNORMAL
+1. 直前のuploadが正常終了したか確認
+2. crash / cancel / platform切替 / resumeの有無を記録
+3. VRChat SDK Control Panelからcleanに Build & Publish
+4. HMDでDirect / Left / Right / Mirrorを確認
+5. 同じSourceのままCAUで正常完了までupload
+6. 同条件で再確認
+7. clean uploadでも再現する場合だけBuilt / Material / Shaderへ降りる
 ```
 
-というA/Bから、Build / Upload API pathを主な故障境界としていました。
+重要なのは、**途中停止したrunを正常なCAU runとして比較しない**ことです。
 
-しかし追加観測を入れると、より正確な比較はこうです。
+## 最小A/Bテスト
 
-```text
-A. 中断状態を抱えたCAU upload
-   → ABNORMAL
+同一Avatar・同一Project stateで次だけ比較します。
 
-B. 正常終了したupload
-   → NORMAL
-```
-
-つまり比較軸は単純な
-
-```text
-VRCSDK vs CAU
-```
-
-ではありません。
-
-より正確には、
-
-```text
-clean / completed upload state
-vs
-interrupted / resumable upload state
-```
-
-です。
-
----
-
-## 5. 最初に確認すべきこと
-
-同じ症状が出たら、Shaderを触る前に次を確認します。
-
-```text
-1. 直前のuploadは最後まで正常終了したか
-2. CAUが途中で止まっていなかったか
-3. Unity crash / platform切替 / cancelが入っていないか
-4. CAUがresume状態を持っていないか
-5. cleanな標準VRCSDK uploadで症状が消えるか
-```
-
-VRChat公式は、SDK Control PanelのBuilderタブから `Build & Publish` する標準手順を案内しています。
-
-- https://creators.vrchat.com/avatars/creating-your-first-avatar/
-
-ここをclean baselineとして使います。
-
----
-
-## 6. 改善後のA/Bテスト
-
-同一Avatar、同一Project stateで比較します。
-
-### A: clean baseline
-
-```text
-VRChat SDK Control Panel
-→ Build & Publish
-→ 完了を確認
-→ HMDで確認
-```
-
-### B: CAU
-
-```text
-CAU
-→ Start Upload
-→ build / uploadが最後まで完了したことを確認
-→ HMDで確認
-```
-
-途中停止、Editor crash、platform変更、resume promptなどが発生したrunは「CAU正常系」のデータとして扱いません。
-
-比較時に固定するもの:
-
-- Avatar Prefab
-- Material
-- Shader
-- MA component
-- Animator
-- Unity version
-- VRChat SDK version
-- target platform
-
-記録するもの:
-
-| 観測 | baseline | CAU |
+| 観測 | clean VRCSDK | CAU |
 |---|---|---|
 | build完了 | PASS/FAIL | PASS/FAIL |
 | upload完了 | PASS/FAIL | PASS/FAIL |
-| 中断発生 | YES/NO | YES/NO |
-| resume発生 | YES/NO | YES/NO |
-| Direct VR | NORMAL/ABNORMAL | NORMAL/ABNORMAL |
+| 中断 | YES/NO | YES/NO |
+| resume | YES/NO | YES/NO |
 | Left Eye | NORMAL/ABNORMAL | NORMAL/ABNORMAL |
 | Right Eye | NORMAL/ABNORMAL | NORMAL/ABNORMAL |
 | Mirror | NORMAL/ABNORMAL | NORMAL/ABNORMAL |
 
----
+固定するものはPrefab、Material、Shader、Animator、Unity version、VRCSDK version、target platformです。複数の変数を同時に触りません。
 
-## 7. Shader / Materialはもう疑わなくていい？
+## clean uploadでも壊れるならShaderへ戻る
 
-違います。
-
-clean uploadでも再現する場合は、依然としてShader / Material / Built Avatarを調べます。
-
-```text
-Step 1  upload完了状態を確認
-Step 2  clean VRCSDK uploadでbaselineを取る
-Step 3  CAUの中断 / resume有無を記録
-Step 4  Source vs Builtを比較
-Step 5  Renderer / Material identity
-Step 6  Material feature A/B
-Step 7  Shader stereo compatibility
-Step 8  必要ならShader assetを限定Reimport
-```
-
-この順序なら、状態機械の異常をShader問題と誤認しにくくなります。
-
----
-
-## 8. Source Avatarが正常でもBuilt Avatarは同じとは限らない
-
-upload stateに問題がなければ、次はbuild transformationを見ます。
-
-Modular Avatarはbuild時またはPlay Modeでcomponentに基づく変換を適用し、Manual Processingで変換後Avatar copyを生成できます。
-
-- https://modular-avatar.nadena.dev/docs/manual-processing
-
-NDMFもbuild processingをphaseとして扱います。
-
-- https://ndmf.nadena.dev/api/nadena.dev.ndmf.BuildPhase.html
-
-したがって、
-
-```text
-Source正常
-→ MA / NDMF変換
-→ Built state異常
-```
-
-は依然として有効な仮説です。
-
----
-
-## 9. Shader Reimportはどこに置く？
-
-最初ではなく後段です。
-
-Unityはmanual Reimportを公式に提供しています。
-
-- https://docs.unity3d.com/Manual/ImporterConsistency.html
-
-lilToonの通常Shader assetは公式repositoryで確認できます。
-
-- https://github.com/lilxyzw/lilToon/blob/master/Assets/lilToon/Shader/lts.shader
-
-Reimportを試すのは、少なくとも次の条件を満たす場合です。
+Shader仮説を捨てるわけではありません。clean uploadでも再現するなら、次にSourceとBuilt stateを分けます。
 
 ```text
 clean uploadでも異常
-AND
-Source / Built差だけでは説明できない
-AND
-問題Rendererが共通Shaderを使う
+→ Source vs Builtを比較
+→ Renderer / Material identity
+→ Material feature A/B
+→ Shader stereo compatibility
+→ 必要なら対象ShaderだけReimport
 ```
 
-「VRだけ二重」という症状だけでは、Reimportを初手にしません。
+Unityにはmanual Reimportの仕組みがあります。
+https://docs.unity3d.com/Manual/ImporterConsistency.html
 
----
+lilToonの通常Shader assetも公式repositoryで確認できます。
+https://github.com/lilxyzw/lilToon/blob/master/Assets/lilToon/Shader/lts.shader
 
-## 10. 壊れた診断例
+ただし、**「VRだけ二重」という症状だけを根拠にReimportを初手にはしません。**
 
-今回の失敗は、症状から直接Shaderへ降りたことです。
+## 失敗から得た一般則
+
+今回の失敗は、もっともらしい既知事例を見つけたことで、観測点を下流へ飛ばしすぎたことでした。
 
 ```text
-VR only
-→ Stereo
-→ Shader
-→ lilToon
-→ lts.shader
+症状
+→ 既知事例に似ている
+→ 原因も同じだろう
 ```
 
-さらに前版では、改善したつもりで
+ではなく、
 
 ```text
-VRCSDK vs CAU
+症状
+→ pipelineを段階に分ける
+→ 直前の正常固定点を作る
+→ 1変数だけ変える
+→ 結果が分岐した境界から調べる
 ```
 
-までしか見ていませんでした。
+とした方が速い。
 
-しかし今回必要だったのは、
+今回なら、最初の正常固定点は**標準VRCSDKで最後まで完了したclean upload**です。
 
-```text
-CAUのrunは正常終了していたか？
-```
+## 読者が試せる再現手順
 
-という、さらに一段細かい状態確認でした。
-
----
-
-## 11. 読者が試せる再現手順
-
-異常が出たAvatarに対して、次の順に実施します。
-
-1. Material / Shader / Prefabを変更しない。
-2. 直前のCAU runが正常終了したか確認する。
-3. crash、cancel、platform変更、resumeがなかったか記録する。
-4. VRChat SDK Control Panelからcleanに `Build & Publish` する。
-5. 実HMDでDirect / Left / Right / Mirrorを確認する。
-6. sourceを変更せずCAUでuploadする。
-7. CAUが最後まで正常終了したことを確認する。
-8. 同じHMD、同じ条件で再測定する。
-9. CAUが途中停止したrunと正常完了runを同列に比較しない。
-10. clean uploadでも再現する場合だけSource / Built / Material / Shaderへ進む。
-
-記録フォーマット:
-
-```text
-Avatar:
-Unity:
-VRCSDK:
-CAU:
-Platform:
-
-Previous CAU run:
-  Build completed:
-  Upload completed:
-  Interrupted:
-  Resume involved:
-  Platform switched:
-
-Clean VRCSDK upload:
-  Direct:
-  Left:
-  Right:
-  Mirror:
-
-Clean CAU upload:
-  Direct:
-  Left:
-  Right:
-  Mirror:
-
-Source changes between runs: NONE
-```
-
----
-
-## 12. やってはいけないこと
-
-### 「VRだけ二重だからShader」と確定する
-
-Stereo依存の可能性は上がりますが、upload stateを飛ばします。
-
-### 「CAUで再現したからCAU自体が悪い」と確定する
-
-今回の追加観測では、問題はCAU一般ではなく **途中停止したCAU状態** でした。
-
-### 中断runと正常完了runを同じ条件として比較する
-
-比較条件が壊れています。
-
-### Shader、Material、CAU versionを同時に変える
-
-直っても何が効いたか分かりません。
-
-### `Reimport All` を初手にする
-
-大量の状態を同時に変え、比較可能性を失います。
-
----
+1. 異常が出ているAvatarのSourceをgit等で固定する。
+2. ShaderやMaterialを変更しない。
+3. 直前のuploadに中断・crash・cancel・resumeがなかったか記録する。
+4. VRChat SDK Control Panelから `Build & Publish` を最後まで完了させる。
+5. 実HMDで左右眼とMirrorを確認する。
+6. Sourceを変更せずCAUでuploadし、最後まで正常終了したことを確認する。
+7. 同じHMD条件で再測定する。
+8. CAU runが途中停止した場合、そのrunは比較対象から外す。
+9. clean uploadでも再現した場合だけShader / Material / Built Avatarへ進む。
 
 ## まとめ
 
-今回の最大の学びは、Shaderの知識ではありません。
+今回確認できたのは「CAUが左右眼を壊した」という一般論ではありません。
 
-**診断木に「uploadの完了状態」が抜けていたこと**です。
+**中断状態を抱えたuploadの後に異常が観測され、正常完了したuploadへ戻した後に症状が消えた。** ここまでが実機観測です。
 
-VRChat Avatarの最終見た目を診断するときは、少なくとも次を分けて観測します。
+だから診断順も変えます。
 
-```text
-Source
-→ Build transformation
-→ Bundle
-→ Upload state
-   ├─ clean / completed
-   └─ interrupted / resumable
-→ Backend
-→ Client / Stereo
-```
+VRだけ異常だからといって、最初にShaderを触らない。まずuploadが正常終了した状態を作り、clean baselineを取る。それでも壊れるなら、そこで初めてSource / Built / Material / Shaderへ降りる。
 
-今回の真因について最も正確な表現はこれです。
+### 一次情報
 
-> **CAUが悪かったのではなく、CAUが途中で止まった状態のままになっていたことが悪かった。**
-
-今後の第一手も変わります。
-
-> **Shaderを触る前に、直前のuploadが本当に最後まで正常終了していたか確認する。**
-
-## 参考一次情報
-
-### VRChat
-
-- Creating Your First Avatar: https://creators.vrchat.com/avatars/creating-your-first-avatar/
-
-### Continuous Avatar Uploader
-
-- Repository: https://github.com/anatawa12/ContinuousAvatarUploader
-- CHANGELOG: https://github.com/anatawa12/ContinuousAvatarUploader/blob/master/CHANGELOG.md
-
-### Unity / Shader
-
-- Stereo rendering: https://docs.unity3d.com/2022.3/Documentation/Manual/SinglePassStereoRendering.html
-- Single-pass instanced custom shaders: https://docs.unity3d.com/Manual/SinglePassInstancing.html
-- Importer consistency: https://docs.unity3d.com/Manual/ImporterConsistency.html
-
-### Shader過去事例
-
-- Poiyomi #4: https://github.com/poiyomi/PoiyomiToonShader/issues/4
-- Poiyomi #24: https://github.com/poiyomi/PoiyomiToonShader/issues/24
-- lilToon #46: https://github.com/lilxyzw/lilToon/issues/46
+- Continuous Avatar Uploader CHANGELOG: https://github.com/anatawa12/ContinuousAvatarUploader/blob/master/CHANGELOG.md
+- Continuous Avatar Uploader: https://github.com/anatawa12/ContinuousAvatarUploader
+- VRChat — Creating Your First Avatar: https://creators.vrchat.com/avatars/creating-your-first-avatar/
+- Unity — Stereo Rendering: https://docs.unity3d.com/2022.3/Documentation/Manual/SinglePassStereoRendering.html
+- Unity — Single-pass instanced custom shaders: https://docs.unity3d.com/Manual/SinglePassInstancing.html
+- Unity — Importer Consistency: https://docs.unity3d.com/Manual/ImporterConsistency.html
+- lilToon `lts.shader`: https://github.com/lilxyzw/lilToon/blob/master/Assets/lilToon/Shader/lts.shader
