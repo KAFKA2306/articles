@@ -1,0 +1,14 @@
+{
+  "schema_version": "articles.pyodide-demo.v1",
+  "title": "Python syntax gate",
+  "python": "./syntax_gate.py",
+  "packages": [],
+  "inputs": {
+    "broken": "value = (1 + 2",
+    "fixed": "value = (1 + 2)"
+  },
+  "expected": {
+    "broken_prefix": "SYNTAX_ERROR",
+    "fixed": "COMPILE_OK"
+  }
+}
