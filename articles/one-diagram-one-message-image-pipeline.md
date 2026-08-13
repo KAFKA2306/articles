@@ -1,189 +1,266 @@
 ---
-title: "10枚の図を作ったのに読みにくい：技術記事を『1図1メッセージ』に分解する画像パイプライン"
-emoji: "🖼️"
+title: "生成図は一次情報ではない：ChatGPT Imagesを10回回して『架空のCI・数値・URL』を公開前に落とす"
+emoji: "🔎"
 type: "tech"
-topics: ["chatgpt", "imagegeneration", "zenn", "technicalwriting", "automation"]
+topics: ["chatgpt", "imagegeneration", "zenn", "testing", "automation"]
 published: true
 published_at: 2026-08-13 09:21
 ---
 
-技術記事に図を増やせば、読みやすくなる。
+技術記事の図は、コードより危険なことがあります。
 
-そう考えて「10枚作る」という目標を置くと、別の失敗が起きます。**枚数だけ満たして、1枚の中に複数の論点を詰め込みすぎる**失敗です。
+コードならテストで落とせます。しかし生成画像の中に「CI成功」「5.0/5.0」「95%改善」「PR #42」のような**もっともらしい表示**が入っても、Markdownのリンクチェックは通ります。PNGやWebPが存在することと、その中身が事実であることは別だからです。
 
-今回 `KAFKA2306/articles` の画像運用を見直したとき、最初に出た候補画像はまさにそれでした。記事本文、評価、CI、10個の図までを1枚に押し込んだ巨大な合成図です。情報量は多いのに、読者が「いま何を見るべきか」を決めにくい。
+今回 `KAFKA2306/articles` の公開フローを1回通す試行で、ChatGPT Imagesを **10回、各回1画像**として実行しました。その候補画像には、実行時に一次情報で確認していない評価値・CI状態・性能値・URL・PR/commit表記が複数含まれました。
 
-そこで、画像生成の目標を「10枚作る」から、**先に10個の役割を決め、1回の生成で1つのメッセージだけを描く**へ変えました。
+ここで画像モデルの内部原因は推測しません。観測できた問題だけを扱います。
 
-この設計は、既存の `pipeline/config.json` にある `image_policy.objective = reader_comprehension` と `require_explanatory_value = true` を、実際の制作手順へ落としたものです。
+**生成図を「証拠」ではなく「未検証の入力」として受け取り、公開前に factual claim を別ゲートで落とす必要がある。**
+
+既存の `pipeline/config.json` でも画像方針は `objective: reader_comprehension`、`require_explanatory_value: true` です。この記事では、その方針に **evidence audit** を追加する設計を具体化します。
 
 - https://github.com/KAFKA2306/articles/blob/main/pipeline/config.json
-
-また、Zenn公式はGitHub連携時の画像をリポジトリ直下の `/images` に置けること、対応拡張子と1ファイル3MB以内という制約を公開しています。
-
-- https://zenn.dev/zenn/articles/deploy-github-images
-
-以下では、失敗した1枚目から、生成・保存・埋め込み・検証までを1本の再利用可能な手順にします。
-
-## 1. 問題：図の枚数と理解しやすさは同じ指標ではない
-
-最初の失敗例はこの画像です。
-
-この図で見るべき点は、**1枚の中に「記事メタデータ」「レビュー」「10個の別図」「CI結果」まで同居していること**です。個々の情報が正しいか以前に、視線の入口が多すぎます。
-
-![1枚に役割を詰め込みすぎた失敗例](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-01.png)
-
-この失敗から、品質条件を次のように分けました。
-
-- **count**: 必要な図が揃っているか
-- **role**: 各図に固有の役割があるか
-- **message**: 1図で伝える主張が1つか
-- **placement**: 本文のどこで何を見る図なのかが明示されているか
-- **reference**: Markdown参照先と実ファイルが一致するか
-
-既存記事でも、図の直前に「この図で見るべき点」を置く形式を使っています。
-
 - https://github.com/KAFKA2306/articles/blob/main/articles/csv-migration-dry-run-before-write.md
 
-## 2. 原因：記事全体をそのまま「1枚の絵」にしようとすると責務が混ざる
+## 1. 問題：画像リンクが正しくても、画像内の主張は未検証のまま通る
 
-画像モデルの内部理由を推測する必要はありません。制作側で観測できたのは、**記事全体の要素を同時に1枚へ載せようとした結果、複数の説明責務が混在した**ことです。
+最初に見るのは、生成候補の一部です。
 
-この図で見るべき点は、入力が「記事全体」のままだと、図の責務も問題・原因・実装・検証へ枝分かれすることです。生成前に責務を切らない限り、完成画像の中で分離するしかありません。
+この図で見るべき点は **LAPRAS AI Review 5軸がすべて5.0/5.0と表示されていること**です。この数値は今回のLAPRAS実測値ではなく、画像生成物の中に描かれたテキストです。
 
-![記事全体を一度に図示すると責務が増える因果](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-02.png)
+![生成画像内に描かれた未検証のレビュー値](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-01.webp)
 
-改善後は、記事アウトラインから先に図の役割を抽出します。
+この画像ファイルが存在し、Markdownから正しく参照できても、5.0/5.0という値の根拠にはなりません。
 
-```text
-article outline
-  ├─ problem
-  ├─ cause
-  ├─ design
-  ├─ implementation
-  ├─ verification
-  ├─ failure
-  └─ reproduction
-
-↓ 先に role を固定
-
-01 anti-pattern
-02 cause
-03 role manifest
-04 generation contract
-05 production flow
-06 naming contract
-07 markdown placement
-08 QA gates
-09 failure recovery
-10 reproduction
-```
-
-## 3. 設計判断と代替案：枚数ではなく「role manifest」を正準にする
-
-採用した設計は、画像生成前に10行の role manifest を作る方法です。
-
-この図で見るべき点は、画像ファイルより先に「何を説明するか」を固定することです。生成物を見てから役割を後付けしません。
-
-![10枚の役割を先に固定するrole manifest](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-03.png)
-
-今回の manifest は次です。
-
-| # | role | 1つだけ伝えること |
-|---|---|---|
-| 01 | anti-pattern | 1枚に全部を詰め込むと入口が増える |
-| 02 | cause | 記事全体を直接図示すると責務が枝分かれする |
-| 03 | manifest | 生成前に10役を固定する |
-| 04 | generation | 10回に分け、各回1図だけ作る |
-| 05 | flow | outline→generate→save→embed→audit |
-| 06 | naming | slugと連番を1対1対応させる |
-| 07 | placement | 図の前後に読み方を書く |
-| 08 | QA | count/unique/existence/size/extを検査する |
-| 09 | recovery | 壊れた1枚だけを差し替える |
-| 10 | reproduce | 読者が同じ手順を再現する |
-
-代替案もあります。
-
-### 代替案A：1枚の大きなインフォグラフィック
-
-全体俯瞰には向きます。ただし記事本文を順に読む用途では、複数の論点を一度に見せやすい。今回は「本文の理解順」を優先したため不採用にしました。
-
-### 代替案B：必要な箇所だけ2〜3枚
-
-既存設定の `fixed_count` は `null` で、常に10枚を要求する設計ではありません。通常運用なら、説明価値のある箇所だけ図にする方が合理的です。
-
-今回だけは、**ChatGPT Imagesを10回、各回1図として動かす運用そのものを検証する**ため10役へ固定しました。
-
-この図で見るべき点は、「10枚を1回で作る」のではなく「1回=1役」を10回積み上げる点です。これはこの検証の運用契約であり、一般的な最適値だとは主張しません。
-
-![1回1図を10回積み上げる生成契約](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-04.png)
-
-OpenAIはChatGPTとAPIで画像生成機能を提供しています。ここではモデル内部の生成過程ではなく、**呼び出し単位を制作側の責務境界として使う**ことだけを扱います。
-
-- https://openai.com/index/image-generation-api/
-
-## 4. 実装：outline → role → generate → save → embed → audit
-
-制作フローは次の6段階にしました。
-
-この図で見るべき点は、画像生成が中央の1工程にすぎず、その前後にrole固定とファイル検証があることです。
-
-![記事画像の制作フロー](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-05.png)
-
-### 4.1 slugを先に決める
-
-今回のslugは次です。
+ここで分けるべきゲートは2つです。
 
 ```text
-one-diagram-one-message-image-pipeline
+artifact gate
+  └─ 画像が存在する / 参照できる / Zennで扱える
+
+evidence gate
+  └─ 画像内の数値・状態・因果・URLが一次情報で確認済み
 ```
 
-### 4.2 ファイル名にslugと連番を含める
-
-```text
-images/
-└─ one-diagram-one-message-image-pipeline/
-   ├─ one-diagram-one-message-image-pipeline-01.png
-   ├─ one-diagram-one-message-image-pipeline-02.png
-   ├─ ...
-   └─ one-diagram-one-message-image-pipeline-10.png
-```
-
-この図で見るべき点は、Markdown側の図番号と実ファイルを目視でも機械でも突合できることです。`01.png`だけより、別ディレクトリへ移したときも由来が残ります。
-
-![slugと連番を1対1対応させる命名規則](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-06.png)
-
-Zenn公式のGitHub連携では、画像はリポジトリ直下の `/images` に配置し、その下の構造は自由です。対応拡張子は `.png` `.jpg` `.jpeg` `.gif` `.webp`、ファイルサイズは3MB以内とされています。
+Zenn公式はGitHub連携時の画像をリポジトリ直下の `/images` に配置できること、対応拡張子、1ファイル3MB以内という公開条件を説明しています。これは **artifact gate** の根拠になります。
 
 - https://zenn.dev/zenn/articles/deploy-github-images
 
-### 4.3 図の前後に「読み方」を置く
+一方、画像内部に書かれた技術的主張の真偽まではZennの画像配置ルールでは検証されません。
 
-Markdownの画像記法そのものだけでは、読者は「なぜここにこの図があるか」を本文から推測する必要があります。そこで図の直前に、見るべき点を1〜2文で固定します。
+## 2. 原因：生成画像を「出力」として扱い、再び「入力」として査読していない
 
-この図で見るべき点は、本文→見るべき点→画像→次の説明という順序です。画像を独立した飾りにしません。
+2枚目には、PRがmerge済みで複数のCI checkが成功したような画面が描かれています。
 
-![本文と図を接続する配置規則](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-07.png)
+この図で見るべき点は **緑のチェックが並ぶと、それだけで実CI結果に見える**ことです。今回の画像生成時に、この表示と実GitHub Actions runを1対1照合したわけではありません。
 
-Zenn公式Markdownガイドは画像記法、Altテキスト、キャプションの書き方を公開しています。
+![生成画像内の未検証CI成功表示](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-02.webp)
 
-- https://zenn.dev/zenn/articles/markdown-guide
+問題は「生成AIが画像を作る」ことではなく、工程設計です。
 
-## 5. 検証：10枚あるだけではpassにしない
+```text
+article facts
+  ↓
+image generation
+  ↓
+generated image
+  ↓
+そのまま publish   ← ここが危険
+```
 
-最低限、次を機械検査できます。
+生成画像にはテキスト・数値・UI・コード断片が再構成されます。したがって、生成後は再び **untrusted input** として扱う方が安全です。
 
-1. Markdown内の対象画像参照が10個
-2. 10個すべてunique
-3. 各参照先ファイルが存在
-4. 拡張子がZenn対応形式
-5. 各ファイルが3MB以内
+改善後はこうします。
 
-この図で見るべき点は、生成品質そのものと、**公開時にリンク切れしないこと**を別ゲートとして扱う点です。
+```text
+verified article facts
+  ↓
+image generation
+  ↓
+untrusted generated image
+  ↓
+visual claim inventory
+  ↓
+primary-source verification
+  ↓
+verified / illustrative / reject
+  ↓
+publish
+```
 
-![画像公開前のQAゲート](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-08.png)
+## 3. 具体例：それらしく見える因果を、一次情報なしで採用しない
 
-再利用できる最小チェックは次のように書けます。
+3枚目はDocker Composeのヘルスチェック失敗例です。
+
+この図で見るべき点は、`start_period` が短いことと再起動ループを因果で結んでいることです。図としては理解しやすい一方、**この具体的な設定と結果は今回の実測ではありません**。
+
+![生成画像内の未検証な因果説明](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-03.webp)
+
+生成図を公開する前に、少なくとも次を区別します。
+
+- **構造図**: コンポーネント関係だけを示す。数値や成功結果を持たない
+- **比較図**: 比較軸の根拠URLが必要
+- **因果図**: 因果を裏付ける仕様・実験・コード証拠が必要
+- **結果図**: 元データ・実行条件・取得日時が必要
+
+「因果・比較・構造・流れ」を1図1メッセージにするだけでは不十分で、**その1メッセージが factual claim なら evidence を要求する**、という二段階が必要でした。
+
+## 4. 壊れた失敗例：グラフは最も危険な“もっともらしさ”を作れる
+
+4枚目には、KafkaのthroughputとP99 latencyらしきグラフが描かれています。
+
+この図で見るべき点は、軸・系列・数値が揃うと「ベンチマーク済み」に見えることです。しかしこのグラフは、今回のリポジトリで実行したベンチマーク結果ではありません。
+
+![生成画像内の未検証ベンチマーク](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-04.webp)
+
+この種の図には、画像ファイル以外に最低でも次が必要です。
+
+```text
+benchmark evidence
+├─ source data
+├─ command / script
+├─ environment
+├─ timestamp
+├─ commit SHA
+└─ result artifact
+```
+
+1つでも追跡できないなら、結果図としてではなく「概念図」へ落とすか、削除します。
+
+## 5. URLも画像内に書かれただけでは一次情報にならない
+
+5枚目には、Apache KafkaやConfluent風の一次情報URLが並んでいます。
+
+この図で見るべき点は **URL文字列がもっともらしくても、画像内テキストはクリックもHTTP検証もできない**ことです。
+
+![生成画像内に描かれた未検証URL一覧](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-05.webp)
+
+記事本文ではURLをテキストとして保持し、実際に開ける一次情報URLだけを残します。画像内URLは装飾ではなく factual claim の一種として扱います。
+
+今回の記事で使う外部仕様は、公開前に実URLを確認した次のものだけです。
+
+- OpenAI公式の画像生成機能: https://openai.com/index/image-generation-api/
+- Zenn公式の画像配置ルール: https://zenn.dev/zenn/articles/deploy-github-images
+- Zenn公式Markdown画像記法: https://zenn.dev/zenn/articles/markdown-guide
+
+## 6. 数字には必ず「どの実験の値か」を要求する
+
+6枚目は、Idempotency導入でRPSが大きく上がったように見える性能グラフです。
+
+この図で見るべき点は、**性能倍率らしき結論が視覚的に強く提示されていること**です。生成画像に描かれた数値は、計測ログの代わりにはなりません。
+
+![生成画像内の未検証性能倍率](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-06.webp)
+
+結果図を許可する条件を、次のように固定できます。
+
+```yaml
+claim:
+  kind: benchmark
+  status: verified
+  value: "..."
+  evidence:
+    - command: "..."
+    - commit: "..."
+    - artifact: "..."
+    - source_url: "https://..."
+```
+
+`status: verified` を埋める材料がなければ、画像から数値を外します。
+
+## 7. 「改善率」は特に二重チェックする
+
+7枚目には、Flaky test発生率が `18.7% → 0.6%`、約95%改善したような棒グラフがあります。
+
+この図で見るべき点は、**before/afterと改善率が揃うと、実測結果として非常に強く読める**ことです。今回この数値を実測したログはありません。
+
+![生成画像内の未検証before-after値](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-07.webp)
+
+### 壊れた例
+
+```text
+改善前 18.7%
+改善後 0.6%
+約95%改善
+```
+
+根拠データがないまま図だけ公開する。
+
+### 改善後の例
+
+```text
+計測なし
+→ 数値を図から削除
+→ 「固定時刻・固定seed・外部依存のmock化」の構造だけを示す
+```
+
+測っていないものを「N/A」にする方が、もっともらしい数字を埋めるより再利用可能です。
+
+## 8. PR番号・commit SHA・merge状態も画像から信用しない
+
+8枚目には `PR #42`、commit、merge completedという表示があります。
+
+この図で見るべき点は、**GitHub UI風の見た目と実GitHub状態を分離すること**です。
+
+![生成画像内の未検証PRとcommit表示](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-08.webp)
+
+公開レポートへPR番号やcommit SHAを書くなら、GitHub API/実URLから取得した値だけを本文へ転記します。生成画像を逆に情報源としてはいけません。
+
+この原則は、今回の公開フロー自体にも適用します。最終報告のPR/commitは、merge後にGitHubから再取得した値だけを使います。
+
+## 9. 実装：figure manifestで「何を検証したか」を画像の外に置く
+
+9枚目には、モデル名、プロンプト長、リクエスト数、TTLなどのベンチマーク条件らしき表が描かれています。
+
+この図で見るべき点は、**条件表そのものも生成できるため、条件が細かいほど真実らしく見える**ことです。
+
+![生成画像内の未検証ベンチマーク条件](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-09.webp)
+
+そこで、画像の外に正準manifestを置く設計にします。
+
+```json
+{
+  "figures": [
+    {
+      "id": "01",
+      "role": "failure-example",
+      "mode": "illustrative",
+      "factual_claims": [],
+      "evidence_urls": []
+    },
+    {
+      "id": "08",
+      "role": "pr-state-example",
+      "mode": "anti-pattern",
+      "factual_claims": ["PR number", "commit SHA", "merge status"],
+      "evidence_urls": []
+    }
+  ]
+}
+```
+
+公開用の結果図なら、`mode` を `verified` にし、`evidence_urls` を空にできないようにします。
+
+擬似コードなら次です。
+
+```python
+def validate_figure(item):
+    if item["mode"] == "verified":
+        assert item["evidence_urls"]
+    if item["factual_claims"] and item["mode"] == "illustrative":
+        raise ValueError("illustrative figure must not carry factual claims")
+```
+
+重要なのはOCR精度ではありません。**生成前に「この図に事実を入れるか」を宣言し、事実を入れる図だけ証拠必須にする**ことです。
+
+## 10. 検証：リンク10/10は必要条件であって十分条件ではない
+
+最後の生成候補には「画像リンク確認 10枚すべて存在・参照一致」という表示まで描かれました。
+
+この図で見るべき点は、**“確認済み”という文字自体も生成できる**ことです。したがって、確認結果は画像ではなく実ファイルとMarkdownを機械的に照合します。
+
+![生成画像内に描かれたリンク確認表示](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-10.webp)
+
+Zenn互換のartifact gateは、たとえば次で再現できます。
 
 ```python
 from pathlib import Path
@@ -204,95 +281,94 @@ for ref in refs:
     assert path.stat().st_size <= 3 * 1024 * 1024, path
 ```
 
-この検査は「図が理解しやすい」ことまでは保証しません。そこはrole manifestとレビューで見る必要があります。機械検査が担当するのは、数・参照・実在・公開形式です。
-
-## 6. 失敗と学び：壊れた1枚だけを捨てられる構造にする
-
-1枚の巨大図を最後に作る方式では、1要素を直したいだけでも全体を再生成しやすくなります。
-
-10個の責務を独立させると、たとえば `04-generation` だけが曖昧だった場合、04だけを差し替えればよい。01〜03と05〜10を巻き込みません。
-
-この図で見るべき点は、失敗範囲を「記事全体」ではなく「1 role」に閉じ込めることです。
-
-![壊れた1枚だけを再生成するfailure recovery](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-09.png)
-
-学びは3つです。
-
-- **生成回数は品質ではない**。roleが重複していれば10枚あっても弱い。
-- **ファイル名は運用UI**。slug+連番ならレビュー時の突合コストが下がる。
-- **画像品質と公開品質を分離する**。画像の説明価値は人間/レビュー、リンク実在や3MB制限は機械で検査する。
-
-## 7. 改善後の例
-
-改善後は、各画像が前節のrole manifestの1行だけを担当します。
-
-たとえば図06は「命名規則」だけ、図08は「QAゲート」だけです。図06へCIや文章構成を足しません。逆に図08へ生成プロンプトの話を足しません。
-
-これにより、記事をスクロールしたときに図だけ拾っても、
+このtestが通っても、画像内の `5.0/5.0` や `95%改善` が正しいとは証明しません。そこで公開ゲートを分離します。
 
 ```text
-失敗
-→ 原因
-→ 分解
-→ 生成契約
-→ 制作
-→ 保存
-→ 配置
-→ 検査
-→ 復旧
-→ 再現
+Gate A: artifact
+- 10 refs
+- 10 unique files
+- supported extension
+- <= 3 MB
+
+Gate B: evidence
+- 数値 → 元データあり
+- 因果 → 一次仕様/実験あり
+- URL → HTTPで実在確認
+- PR/commit → GitHubで実在確認
+- CI → workflow runで確認
+
+Gate C: editorial
+- 1図1メッセージ
+- 本文直前に「何を見るか」
+- 重複役割なし
 ```
 
-という理解順になります。
+## 11. 設計判断と代替案
 
-## 8. 読者が試せる再現方法
+### 採用：生成図をuntrusted inputとして再査読する
 
-手元の技術記事1本で次を試せます。
+長所は、生成モデルの内部挙動へ依存しないことです。どのモデルでも、画像に factual claim があれば同じgateを適用できます。
 
-この図で見るべき点は、再現に必要なのが特定の題材ではなく、**役割の固定→個別生成→保存→参照監査**という順序だけであることです。
+### 代替案A：図から文字を完全に禁止する
 
-![1図1メッセージ画像パイプラインの再現手順](/images/one-diagram-one-message-image-pipeline/one-diagram-one-message-image-pipeline-10.png)
+安全側ですが、設定値・比較表・コード断片を見せたい記事では表現力を失います。
 
-1. 記事の問題・原因・設計・実装・検証・失敗・再現を箇条書きにする
-2. 図にする価値がある役割を重複なしで列挙する
-3. 今回の検証を再現するなら10役へ固定する
-4. ChatGPT Imagesを1回につき1図として個別に生成する
-5. `/images/{slug}/` にslug+連番で保存する
-6. 各図の直前に「この図で見るべき点」を書く
-7. Markdown参照数・unique数・ファイル実在・拡張子・3MB上限を検査する
-8. 壊れた図だけ再生成する
-9. PRで記事と10画像を同時にレビューする
-10. merge後のmainでも10参照と10実ファイルを再確認する
+### 代替案B：画像生成を使わずSVG/Mermaidだけにする
 
-## 9. まとめ
+検証可能性は上がりますが、今回の目的はChatGPT Imagesを実際に使うことです。また、画像生成を使わないこと自体は「生成画像のevidence audit」の解決ではありません。
 
-技術記事の画像生成で、最初に管理すべきなのはプロンプトではなく**説明責務**でした。
+### 代替案C：生成画像を人間が目視するだけ
 
-`10 images` を品質目標にすると、10枚の似た図や、1枚の巨大な合成図でも条件を満たせます。
+必要ですが、PR番号・URL・数値の実在確認を毎回目視だけにすると漏れます。artifactとURL/commit/CIの存在確認は機械へ寄せる方が再現できます。
 
-一方で、
+## 12. 読者が試せる再現方法
 
-```text
-role manifest
-→ one generation / one role
-→ slug + sequence
-→ explicit placement
-→ existence audit
-```
+手元の記事で、次の最小実験ができます。
 
-までを契約にすると、画像は「数」ではなく記事構造の一部になります。
+1. 技術記事から factual claim を1つだけ選ぶ
+2. ChatGPT Imagesでその概念図を1枚生成する
+3. 画像内に、入力していない数値・URL・成功状態・コード・PR表記がないか確認する
+4. factual claim を一覧化する
+5. 各claimへ一次情報URLまたは実行artifactを割り当てる
+6. 割り当てられないclaimは画像から削るか、`illustrative` として事実表現を外す
+7. 画像を `/images/{slug}/` に保存する
+8. Markdown参照・実在・拡張子・3MB上限を機械検査する
+9. PRで「見た目」と「証拠」を別項目としてレビューする
+10. merge後にmain上の画像・参照・一次情報URLを再確認する
 
-既存の `image_policy.objective = reader_comprehension` を実制作へ落とすなら、**1図1メッセージは実装しやすい境界**でした。
+今回の10枚は、まさに **「生成画像内の文字を証拠と誤認しない」ための失敗教材**として使いました。
+
+## 13. 失敗と学び
+
+今回の最大の失敗は、最初から「生成された画像は記事本文と同じ事実性を持つ」と暗黙に扱いかけたことです。
+
+10回実行してみると、生成物にはレビュー点数、CI成功、性能グラフ、改善率、ベンチ条件、URL、PR/commitなど、**技術記事でそのまま使うと危険な情報形式**が一通り現れました。
+
+一方で、ここから得た設計は単純です。
+
+> 画像生成の完了をpublication readyと呼ばない。
+
+`generated → audited → verified` を別状態にするだけで、生成図を一次情報と混同しにくくなります。
+
+## 14. まとめ
+
+技術記事でChatGPT Imagesを使うとき、品質ゲートは「画像が綺麗か」だけでは足りません。
+
+- **artifact gate**: 画像10枚が存在し、Markdown参照と一致する
+- **evidence gate**: 数値・因果・URL・PR・CIが一次情報と一致する
+- **editorial gate**: 1図1メッセージで、役割が重複しない
+
+この3つを分離すると、画像生成ツールを止めずに使いながら、生成物をそのまま証拠にはしない運用ができます。
 
 ## 一次情報・再現証拠
 
 - KAFKA2306/articles `pipeline/config.json`  
   https://github.com/KAFKA2306/articles/blob/main/pipeline/config.json
-- KAFKA2306/articles 既存の図配置例  
+- KAFKA2306/articles 既存の画像配置記事  
   https://github.com/KAFKA2306/articles/blob/main/articles/csv-migration-dry-run-before-write.md
+- OpenAI公式: 画像生成APIの紹介  
+  https://openai.com/index/image-generation-api/
 - Zenn公式: GitHubリポジトリ連携で画像をアップロードする方法  
   https://zenn.dev/zenn/articles/deploy-github-images
 - Zenn公式: Markdown記法一覧  
   https://zenn.dev/zenn/articles/markdown-guide
-- OpenAI公式: image generation API  
-  https://openai.com/index/image-generation-api/
