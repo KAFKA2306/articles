@@ -3,7 +3,7 @@ title: "private GitHub IssueをAI間キューにした。最初のsmokeで壊れ
 emoji: "🔁"
 type: "tech"
 topics: ["chatgpt", "codex", "github", "powershell", "automation"]
-published: true
+published: false
 published_at: 2026-08-12 17:02
 ---
 

@@ -496,7 +496,8 @@ def published_this_month() -> bool:
         return False
     needle = f"published_at: {now_jst():%Y-%m}"
     return any(
-        needle in path.read_text(encoding="utf-8", errors="ignore")
+        "published: true" in path.read_text(encoding="utf-8", errors="ignore")
+        and needle in path.read_text(encoding="utf-8", errors="ignore")
         for path in base.glob("*.md")
     )
 
@@ -531,7 +532,8 @@ def publish(
         'emoji: "🧭"\n'
         'type: "tech"\n'
         'topics: ["python", "github", "architecture", "ai"]\n'
-        "published: true\n"
+        # Fail-close: generation never grants publication approval.
+        "published: false\n"
         f"published_at: {now_jst():%Y-%m-%d %H:%M}\n"
         "---\n\n"
     )

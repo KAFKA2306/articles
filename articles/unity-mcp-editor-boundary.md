@@ -3,7 +3,7 @@ title: "AIがUnityを操作できても、VRChatアバターが完成したこ�
 emoji: "🛠️"
 type: "tech"
 topics: ["unity", "mcp", "codex", "vrchat", "ai"]
-published: true
+published: false
 published_at: 2026-08-12 16:03
 ---
 
