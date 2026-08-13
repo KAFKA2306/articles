@@ -3,7 +3,7 @@ title: "OSSが動いたのに、判定には使えない。互換性確認と妥
 emoji: "🧪"
 type: "tech"
 topics: ["python", "machinelearning", "testing", "opensource"]
-published: true
+published: false
 published_at: 2026-08-13 12:00
 ---
 

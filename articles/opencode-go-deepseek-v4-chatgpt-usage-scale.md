@@ -3,7 +3,7 @@ title: "月10ドルのAIコーディング枠は、本当に『ほぼ無限』�
 emoji: "♾️"
 type: "tech"
 topics: ["opencode", "deepseek", "chatgpt", "ai", "cost"]
-published: true
+published: false
 published_at: 2026-08-13 12:09
 ---
 

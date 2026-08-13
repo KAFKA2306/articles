@@ -3,7 +3,7 @@ title: "認証が合っていても、投稿先はまだ確定しない。3点�
 emoji: "🧭"
 type: "tech"
 topics: ["typescript", "youtube", "cicd", "security"]
-published: true
+published: false
 published_at: 2026-08-13 13:06
 ---
 

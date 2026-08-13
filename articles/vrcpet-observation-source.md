@@ -3,7 +3,7 @@ title: "ペットが聞いた会話を、そのまま『記憶』にしてはい
 emoji: "👂"
 type: "tech"
 topics: ["python", "dataengineering", "privacy", "architecture", "vrchat"]
-published: true
+published: false
 published_at: 2026-08-12 13:21
 ---
 

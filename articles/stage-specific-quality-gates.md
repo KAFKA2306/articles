@@ -3,7 +3,7 @@ title: "警告まで止めると、自動化は使えなくなる。品質ゲー
 emoji: "🚦"
 type: "tech"
 topics: ["typescript", "cicd", "automation", "quality"]
-published: true
+published: false
 published_at: 2026-08-13 14:08
 ---
 

@@ -3,7 +3,7 @@ title: "バラバラな記録を「使えるデータ」にするには？ 書�
 emoji: "🧪"
 type: "tech"
 topics: ["javascript", "dataengineering", "testing", "privacy"]
-published: true
+published: false
 published_at: 2026-08-12 12:30
 ---
 
@@ -326,7 +326,7 @@ function diagnoseMigration(rows, canonical) {
     mode: 'dry-run',
     catalog_mutated: false,
     results: precheck.results.map(toDiagnosticResult),
-  };
+  }
 }
 ```
 

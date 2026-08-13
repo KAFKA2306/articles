@@ -3,7 +3,7 @@ title: "生成AIの図に『CI成功』と書いてあった。画像の中の�
 emoji: "🔎"
 type: "tech"
 topics: ["chatgpt", "imagegeneration", "zenn", "testing", "automation"]
-published: true
+published: false
 published_at: 2026-08-13 09:21
 ---
 

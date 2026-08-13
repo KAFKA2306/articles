@@ -3,7 +3,7 @@ title: "「最初から分かっていた」を防ぐには？ 暴落で買っ�
 emoji: "📉"
 type: "idea"
 topics: ["意思決定", "LLM", "GitHub", "投資", "クオンツ"]
-published: true
+published: false
 published_at: 2026-08-13 12:33
 ---
 

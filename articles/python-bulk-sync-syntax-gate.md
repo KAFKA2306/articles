@@ -3,7 +3,7 @@ title: "一括同期でコードが壊れた。6ファイルだけ戻して「�
 emoji: "🧯"
 type: "tech"
 topics: ["python", "githubactions", "testing", "ci"]
-published: true
+published: false
 published_at: 2026-08-13 11:00
 ---
 

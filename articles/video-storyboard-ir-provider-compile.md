@@ -3,7 +3,7 @@ title: "同じ動画指示なのに、生成AIを変えると壊れる。仕様�
 emoji: "🎬"
 type: "tech"
 topics: ["python", "ai", "architecture", "videogeneration", "testing"]
-published: true
+published: false
 published_at: 2026-08-12 14:09
 ---
 

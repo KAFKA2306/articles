@@ -3,7 +3,7 @@ title: "AIに自分のPCを操作させるとき、何を止めるべき？ GitH
 emoji: "🔁"
 type: "tech"
 topics: ["chatgpt", "codex", "github", "security", "automation"]
-published: true
+published: false
 published_at: 2026-08-12 17:02
 ---
 
