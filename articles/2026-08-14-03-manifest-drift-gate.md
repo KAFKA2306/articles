@@ -1,92 +1,62 @@
 ---
-title: "再生成できるmanifestほど差分で守る"
+title: "CIが自分で直してからgreenになる。manifestの「更新忘れ」を差分で止める"
 emoji: "🧾"
 type: "tech"
 topics: ["python", "githubactions", "dataengineering", "testing", "ci"]
 published: false
 ---
 
-生成物をGit管理していると、CIで「もう一度生成して成功した」だけで安心したくなります。
+元データだけ更新して、manifestの更新を忘れた。
 
-しかし、manifestのような**生成物そのものが契約**になっている場合、それでは不十分です。元データだけ更新してmanifestを更新し忘れても、CIが最初にmanifestを再生成してしまえば、その不整合を自分で消してから検証できてしまうからです。
+本来ならCIに止めてほしい。
 
-この記事では、公開GitHub上の実装を題材に、次の2つを分離する設計を整理します。
-
-1. **artifactの内容がmanifestに記録されたSHA-256・byte sizeと一致するか**
-2. **PRにcommitされたmanifestが、現在の入力から再生成した結果と一致するか**
-
-結論は単純です。
-
-> **生成物の正しさと、生成物をcommitし忘れていないことは別の性質なので、別々にfail-closeで検証する。**
-
-## 問題：再生成が「古いmanifest」を隠してしまう
-
-たとえば、次の3ファイルを1つのmanifestで束ねるとします。
+しかしCIが最初にmanifestを再生成すると、古かったmanifestを自分で最新へ直してから検証できてしまう。
 
 ```text
-data/events.ndjson
-data/audit.json
-data/state.json
-```
+checkout時点
+artifact = new
+manifest = old
 
-manifestには各artifactのpath、SHA-256、byte sizeを保存します。
-
-```json
-{
-  "status": "PASS",
-  "artifacts": [
-    {
-      "path": "data/events.ndjson",
-      "sha256": "...",
-      "size_bytes": 1234
-    }
-  ]
-}
-```
-
-ここで `events.ndjson` だけ更新し、manifestの更新を忘れたとします。
-
-壊れたCIは次の順です。
-
-```text
-checkout
-  ↓
-manifestを再生成
-  ↓
-再生成後manifestを検証
-  ↓
+CI
+  ↓ manifestを再生成
+artifact = new
+manifest = new
+  ↓ verify
 PASS
 ```
 
-この流れでは、checkout直後に存在した「artifactは新しいのにmanifestは古い」という状態が消えています。
+結果はgreen。
 
-実際の公開実装 `KAFKA2306/semiconductor-earnings-model` では、`build_earnings_lineage_manifest.py` が複数artifactからSHA-256とbyte sizeを計算して `lineage_latest.json` を生成し、workflowはその後にmanifestを検証します。PRでは最後に `git diff --exit-code -- data/earnings_ledger/lineage_latest.json` を実行し、再生成によって差分が出た場合を失敗にします。
+でも、PRにcommitされていた状態は不完全だった。
 
-一次情報:
+`KAFKA2306/semiconductor-earnings-model` では、この「勝手に直してからgreen」を防ぐため、manifestの正しさと**commit漏れがないこと**を別々に検証している。
 
-- https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/scripts/build_earnings_lineage_manifest.py
-- https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/.github/workflows/earnings-lineage.yml
+- builder: https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/scripts/build_earnings_lineage_manifest.py
+- workflow: https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/.github/workflows/earnings-lineage.yml
+- verifier: https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/scripts/verify_earnings_lineage_manifest.py
 
-## 原因：2種類の不整合を1つの検査だと思ってしまう
+この記事で扱うのはmanifest formatではない。
 
-manifest運用には、少なくとも2種類の失敗があります。
+**green CIを見たとき、「そのcommit自身が必要な生成物を全部含んでいる」と信頼できるようにする設計**について書く。
 
-### 1. manifestとartifactの不整合
+## 2種類の「正しい」を分ける
 
-manifestに記録されたdigestやsizeと、実ファイルが一致しない状態です。
+manifest運用には、似ているが別の整合性がある。
 
-これはverifierで検出できます。
+### artifact integrity
+
+manifestに書かれたSHA-256やbyte sizeと、実fileが一致するか。
 
 ```text
-manifest.sha256 != sha256(file bytes)
-manifest.size_bytes != len(file bytes)
+manifest.sha256 == sha256(file bytes)
+manifest.size_bytes == len(file bytes)
 ```
 
-### 2. repository stateと再生成結果の不整合
+これはverifierで確認できる。
 
-manifest自体は構文的に正しくても、現在の入力から作り直すと内容が変わる状態です。
+### repository freshness
 
-これは「manifestを検証する」だけではなく、**再生成後にGit差分を見る**ことで検出できます。
+PRへcommitされたmanifestが、現在の入力から再生成した結果と一致するか。
 
 ```text
 committed manifest
@@ -96,292 +66,217 @@ rebuild from current inputs
 git diff --exit-code
 ```
 
-この2つは似ていますが、守っている対象が違います。
+こちらはhash verificationだけでは分からない。
 
-- verifier: **manifestが指しているbytesは本当にそのbytesか**
-- diff gate: **PRは現在のbytesに対応するmanifestまでcommitしたか**
+**正しいmanifestを生成できることと、そのmanifestがPRへ入っていることは別である。**
 
-## 設計判断：builder、verifier、repository diffを分離する
+## builderが成功したことを完成条件にしない
 
-公開実装では役割が3つに分かれています。
+`build_earnings_lineage_manifest.py` はartifactを読み、SHA-256とsizeを計算し、lineage manifestを生成する。
 
-### builder
+このbuilder自体が正しくても、CIの順序を間違えると stale manifest を隠せる。
 
-`build_earnings_lineage_manifest.py` はrequired artifactを列挙し、欠損を拒否したうえで、それぞれのSHA-256とbyte sizeを計算します。
+悪い順序:
 
-さらに、単にhashを作るだけではなく、複数のaudit artifactが同じrunに結びついていることや、audit statusが `PASS` であることも確認します。
+```text
+checkout
+→ build manifest
+→ verify manifest
+→ PASS
+```
 
-つまりbuilderは、**どのartifact集合を1つのlineageとして認めるか**を定義しています。
+改善後:
 
-### verifier
+```text
+checkout
+→ tests
+→ build manifest
+→ verify manifest
+→ git diff --exit-code -- manifest
+```
 
-`verify_earnings_lineage_manifest.py` はmanifestを入力として読み、各artifactをrepository bytesから再計算します。
+再生成はする。
 
-公開実装で拒否される条件には次が含まれます。
+しかし、**再生成した結果がcheckout時点と違えば失敗させる。**
 
-- manifestのstatusが `PASS` ではない
-- artifactsが空
-- 同じpathが重複
-- SHA-256が64桁の小文字hexではない
-- `size_bytes` が非整数または負数
-- artifact pathがrepository rootの外へ出る
-- manifest自身をartifactとしてbindする
-- artifactが存在しない
-- SHA-256 mismatch
-- byte size mismatch
+これで「CIが直せた」は成功条件にならない。
 
-一次情報:
+## verifierとdiff gateは守る対象が違う
 
-- https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/scripts/verify_earnings_lineage_manifest.py
+verifierは、manifest内の各artifactについて、
 
-Python標準ライブラリの `hashlib` は `sha256()` にbytesを渡してdigestまたはhex digestを得るインターフェイスを提供しています。上記実装もartifactをbytesとして読み、`hashlib.sha256(payload).hexdigest()` で再計算しています。
+- path
+- SHA-256
+- byte size
+- file existence
+- duplicate path
+- path traversal
+- status
 
-一次情報:
+などを確認する。
 
-- https://docs.python.org/3/library/hashlib.html
+これは「manifestが指している実体」を守る。
 
-### repository diff gate
-
-workflowはmanifestを再生成・検証したあと、pull requestでのみ次を実行します。
+一方、
 
 ```bash
 git diff --exit-code -- data/earnings_ledger/lineage_latest.json
 ```
 
-ここで差分があれば、builderが生成した正しいmanifestをまだPRへcommitしていないことになります。
-
-重要なのは、**再生成を禁止するのではなく、再生成して差分が出ないことを契約にする**点です。
-
-## 代替案と落とし穴
-
-### 代替案A：CIで毎回生成してartifactとしてだけ保存する
-
-repositoryにmanifestをcommitしない設計なら成立します。
-
-ただし、manifestをcode reviewの対象にしたい、commit単位でlineageを追いたい、repository checkoutだけで状態を復元したい場合は別です。その場合、commitされたmanifestと生成結果の一致が必要になります。
-
-### 代替案B：manifestのschemaだけ検証する
-
-path、digest、sizeの型が正しいことは確認できますが、実ファイルとの一致は確認できません。
-
-```json
-{
-  "sha256": "0000...0000",
-  "size_bytes": 1234
-}
-```
-
-のような値でも形式だけなら通ります。
-
-### 代替案C：hashだけ確認する
-
-内容同一性の主検査としてSHA-256は有効ですが、公開実装はbyte sizeも別に保持して照合しています。これはmanifestの可読な整合性情報を増やし、hash mismatchとsize mismatchを別の診断として出せます。
-
-### 採用する形：3層にする
+は、「PRが必要なmanifest更新まで含んでいるか」を守る。
 
 ```text
-入力artifactの意味的条件
-        ↓ builder
-manifest生成
-        ↓ verifier
-bytesとのbinding確認
-        ↓ diff gate
-commit漏れ確認
+verifier
+→ bytes bindingの正しさ
+
+diff gate
+→ commit completenessの正しさ
 ```
 
-1つの巨大なscriptへまとめるより、「何が壊れたか」が分かりやすくなります。
+一つの巨大な `verified: true` へ押し込まない。
 
-## 実装：最小構成を作る
+## PR reviewで見たいものをrepositoryへ残すなら、drift gateが必要になる
 
-以下は考え方を再現する最小例です。
+manifestをCI artifactとして毎回作るだけなら、repositoryへcommitしなくてもよい。
 
-### builder
+しかし、
 
-```python
-import hashlib
-import json
-from pathlib import Path
+- code reviewでmanifest差分を見たい
+- commit単位でlineageを残したい
+- checkoutだけで状態を復元したい
 
-ROOT = Path(".")
-TARGETS = [Path("data/a.txt"), Path("data/b.txt")]
+なら、manifest自体がrepository stateの一部になる。
 
-
-def sha256_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-manifest = {
-    "status": "PASS",
-    "artifacts": [
-        {
-            "path": path.as_posix(),
-            "sha256": sha256_file(path),
-            "size_bytes": path.stat().st_size,
-        }
-        for path in TARGETS
-    ],
-}
-
-Path("data/manifest.json").write_text(
-    json.dumps(manifest, indent=2) + "\n",
-    encoding="utf-8",
-)
-```
-
-### verifier
-
-```python
-import hashlib
-import json
-from pathlib import Path
-
-manifest = json.loads(Path("data/manifest.json").read_text())
-
-for item in manifest["artifacts"]:
-    path = Path(item["path"])
-    payload = path.read_bytes()
-    assert hashlib.sha256(payload).hexdigest() == item["sha256"]
-    assert len(payload) == item["size_bytes"]
-```
-
-### CI
-
-説明用workflow stagesとしては次の順です。
+その場合、
 
 ```text
-1. test builder / verifier
-2. rebuild manifest
-3. verify rebuilt manifest against repository bytes
-4. on pull request, require git diff to be empty for manifest
+生成可能
 ```
 
-GitHub上の公開実装もこの順で、test → build → verify → artifact upload → PRでmanifest差分確認、というstageを持っています。
+だけでは足りない。
 
-## 検証：壊れた失敗例を作る
+```text
+そのcommitに生成結果が含まれている
+```
 
-最小例で `data/a.txt` とmanifestを生成したあと、`a.txt` だけ変更します。
+ことまで必要になる。
+
+## 最小例は4ファイルで再現できる
+
+```text
+data/a.txt
+data/manifest.json
+build_manifest.py
+verify_manifest.py
+```
+
+最初に、
 
 ```bash
 printf 'v1\n' > data/a.txt
 python build_manifest.py
-git add data/a.txt data/manifest.json
+git add .
 git commit -m 'initial'
+```
 
+とする。
+
+次にsourceだけ変える。
+
+```bash
 printf 'v2\n' > data/a.txt
 ```
 
-### verifierを先に実行する場合
-
-古いmanifestをそのまま検証すれば、SHA-256 mismatchで停止します。
-
-### builderを先に実行する場合
+この状態で、
 
 ```bash
 python build_manifest.py
 python verify_manifest.py
 ```
 
-ここだけを見るとPASSします。builderが新しい `a.txt` に対応するhashへmanifestを書き換えたからです。
+だけ実行するとPASSできる。
 
-しかし続けて、
+builderがmanifestを新しいhashへ更新したからだ。
 
-```bash
-git diff --exit-code -- data/manifest.json
-```
-
-を実行すれば差分があるため失敗します。
-
-これが今回の中心です。
-
-> **再生成後の検証が成功したことと、PRが必要な生成物をcommit済みであることは同義ではない。**
-
-## 改善後の例
-
-正しい変更では、入力artifactとmanifestを一緒に更新します。
-
-```bash
-printf 'v2\n' > data/a.txt
-python build_manifest.py
-python verify_manifest.py
-git add data/a.txt data/manifest.json
-git commit -m 'update data and manifest'
-```
-
-CIで再度builderを実行してもmanifestは変わらないため、
+しかし、
 
 ```bash
 git diff --exit-code -- data/manifest.json
 ```
 
-は0で終了します。
+を続ければ失敗する。
 
-この状態なら、少なくとも次の3条件が揃っています。
+**「正しいmanifestを作れた」ではなく「最初から正しいmanifestをcommitしていたか」を観測できる。**
 
-- artifact bytesとmanifest bindingが一致する
-- manifestを現在の入力から決定的に再生成できる
-- PRに必要なmanifest更新が含まれている
+## generated artifactをcommitするなら、3つのstateを見る
 
-## 失敗と学び：生成物は「CIで作れた」だけでは管理できない
-
-生成物には2種類あります。
-
-1. repositoryに残さず、CI artifactとして毎回作ればよいもの
-2. repository stateの一部としてcommitし、review・履歴・再現性に使うもの
-
-後者を選んだなら、生成scriptが成功することだけでは品質条件になりません。
-
-必要なのは、**checkoutされたcommitが自己完結していること**です。
-
-そのため、commit管理するmanifestでは次を分けて考えると設計しやすくなります。
+設計を一般化すると次の3つになる。
 
 ```text
-生成可能性
+GENERATABLE
   builderが成功する
 
-内容整合性
-  verifierが実bytesとのbindingを確認する
+INTERNALLY_VALID
+  manifestと実artifactが一致する
 
-repository整合性
-  rebuildしてもgit diffが出ない
+COMMITTED_FRESH
+  再生成してもgit diffが出ない
 ```
 
-## 読者が試せる再現方法
+この3つを別々に持つと、失敗理由が分かりやすい。
 
-小さなrepositoryで次の4ファイルを作ります。
+例えば、
 
 ```text
-data/a.txt
-build_manifest.py
-verify_manifest.py
-data/manifest.json
+GENERATABLE = true
+INTERNALLY_VALID = true
+COMMITTED_FRESH = false
 ```
 
-1. `a.txt` を作る
-2. builderでmanifest生成
-3. 全ファイルをcommit
-4. `a.txt` だけ変更
-5. builder → verifierを実行してPASSすることを確認
-6. `git diff --exit-code -- data/manifest.json` が失敗することを確認
-7. manifestもcommitする
-8. 同じCIを再実行し、diffが空になることを確認
+なら、ロジックではなくcommit漏れが問題だとすぐ分かる。
 
-これで「生成結果の正しさ」と「commitの完全性」が別問題であることを数分で再現できます。
+## green CIの価値は「何を検査したか」で決まる
 
-## まとめ
+CIがgreenであること自体は証拠にならない。
 
-manifestを生成できることは重要ですが、生成できるからこそCIが不整合を消してしまうことがあります。
+CIが、checkout時点の不整合を上書きしてから検査していれば、greenは弱い。
 
-commit管理するmanifestでは、少なくとも次の3層を分けます。
+今回の設計では、
 
-- builderで正準manifestを決定的に生成する
-- verifierでmanifestと実artifact bytesを照合する
-- PRでは再生成後にGit差分がないことを確認する
+- builder
+- verifier
+- repository diff
 
-特に最後のdiff gateは地味ですが、**「入力は更新したのに生成物をcommitし忘れた」**という実務で頻出する失敗を、レビュー前に機械的に止められます。
+を分けることで、greenの意味を強くした。
 
-### 主要一次情報
+**PRを開いた人が追加作業をしなくても、そのcommitだけで再現できる状態か**を最後に見る。
 
-- https://github.com/KAFKA2306/semiconductor-earnings-model/pull/101
-- https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/scripts/build_earnings_lineage_manifest.py
-- https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/scripts/verify_earnings_lineage_manifest.py
-- https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/.github/workflows/earnings-lineage.yml
-- https://docs.python.org/3/library/hashlib.html
+## このpatternはmanifest以外にも使える
+
+同じ問題は、commit管理するgenerated fileで起こる。
+
+- API schema
+- lock file
+- generated docs
+- index
+- catalog
+- snapshot metadata
+- codegen output
+
+CIが先に再生成すると、更新忘れを隠せる。
+
+だから、
+
+```text
+rebuild
+→ validate
+→ diff must be empty
+```
+
+という順序を使う。
+
+生成物をGitへ入れるなら、**「再生成できる」を「更新不要」と取り違えないこと**が重要だった。
+
+manifestが古いままのPRを、CI自身が直してgreenにする。
+
+その偽の安心を止めるために、最後の `git diff` が効いた。
