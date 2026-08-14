@@ -55,67 +55,81 @@ jobs:
         run: |
           python - <<'PY'
           import json, subprocess, sys
-          root='benchmarks/verification-stack-v2/candidate-versions.json'
-          c=json.load(open(root, encoding='utf-8'))['candidates']
+          c=json.load(open('benchmarks/verification-stack-v2/candidate-versions.json', encoding='utf-8'))['candidates']
           names=['ruff','black','isort','flake8','pyrefly','ty','mypy','pydantic','pre-commit','prek']
-          specs=[f"{name}=={c[name]['version']}" for name in names]
-          subprocess.check_call([sys.executable,'-m','pip','install','--disable-pip-version-check',*specs])
+          subprocess.check_call([sys.executable,'-m','pip','install','--disable-pip-version-check',*[f"{name}=={c[name]['version']}" for name in names]])
           PY
 
-      - name: Install exact pinned Node candidates in shared benchmark tool root
+      - name: Install TS7-compatible and compiler-independent Node candidates
         working-directory: benchmarks/verification-stack-v2
         run: |
           npm init -y >/dev/null 2>&1
-          node - <<'JS' > /tmp/npm-specs.txt
+          node - <<'JS' > /tmp/npm-ts7-specs.txt
           const c=require('./candidate-versions.json').candidates;
-          const specs=[
+          console.log([
             `pyright@${c.pyright.version}`,
             `@biomejs/biome@${c.biome.version}`,
             `prettier@${c.prettier.version}`,
             `oxlint@${c.oxlint.version}`,
             `oxlint-tsgolint@${c['oxlint-tsgolint'].version}`,
-            `eslint@${c.eslint.version}`,
-            `typescript-eslint@${c['typescript-eslint'].version}`,
             `typescript@${c.typescript.version}`,
             `zod@${c.zod.version}`,
             `nx@${c.nx.version}`,
             `turbo@${c.turbo.version}`,
-          ];
-          console.log(specs.join(' '));
+          ].join(' '));
           JS
-          npm install --ignore-scripts --no-save $(cat /tmp/npm-specs.txt)
+          npm install --ignore-scripts --no-save $(cat /tmp/npm-ts7-specs.txt)
           echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Install ESLint plus typescript-eslint inside its official TypeScript support envelope
+        working-directory: benchmarks/verification-stack-v2
+        run: |
+          mkdir -p profiles/typescript-eslint
+          cd profiles/typescript-eslint
+          npm init -y >/dev/null 2>&1
+          node - <<'JS' > /tmp/npm-eslint-specs.txt
+          const manifest=require('../../candidate-versions.json');
+          const c=manifest.candidates;
+          const p=manifest.environment_profiles.typescript_eslint;
+          console.log([
+            `eslint@${c.eslint.version}`,
+            `typescript-eslint@${c['typescript-eslint'].version}`,
+            `typescript@${p.typescript}`,
+          ].join(' '));
+          JS
+          npm install --ignore-scripts --no-save $(cat /tmp/npm-eslint-specs.txt)
 
       - name: Prepare package-manager workspace metadata without changing frozen sources
         working-directory: benchmarks/verification-stack-v2/workspace
         run: npm install --package-lock-only --ignore-scripts
 
-      - name: Capture installed candidate versions
-        shell: bash
+      - name: Capture installed candidate versions and environment profiles
         run: |
           mkdir -p benchmarks/verification-stack-v2/results/controlled
           python - <<'PY'
           import json, subprocess
-          def cmd(*args):
-              return subprocess.check_output(args, text=True).strip()
+          from pathlib import Path
+          root=Path('benchmarks/verification-stack-v2')
+          def cmd(*args, cwd=None):
+              return subprocess.check_output(args, text=True, cwd=cwd).strip()
+          eslint_bin=root/'profiles/typescript-eslint/node_modules/.bin'
           value={
             'trigger_sha': cmd('git','rev-parse','HEAD'),
             'python': {
-              'ruff': cmd('ruff','--version'),
-              'black': cmd('black','--version').splitlines()[0],
-              'pyrefly': cmd('pyrefly','--version'),
-              'ty': cmd('ty','--version'),
-              'mypy': cmd('mypy','--version'),
-              'prek': cmd('prek','--version'),
+              'ruff': cmd('ruff','--version'), 'black': cmd('black','--version').splitlines()[0],
+              'pyrefly': cmd('pyrefly','--version'), 'ty': cmd('ty','--version'),
+              'mypy': cmd('mypy','--version'), 'prek': cmd('prek','--version')
             },
-            'node': {
-              'node': cmd('node','--version'),
-              'typescript': cmd('tsc','--version'),
-              'nx': cmd('nx','--version'),
-              'turbo': cmd('turbo','--version'),
+            'ts7_profile': {
+              'node': cmd('node','--version'), 'typescript': cmd('tsc','--version'),
+              'oxlint': cmd('oxlint','--version'), 'nx': cmd('nx','--version'), 'turbo': cmd('turbo','--version')
+            },
+            'typescript_eslint_profile': {
+              'typescript': cmd(str(eslint_bin/'tsc'),'--version'),
+              'eslint': cmd(str(eslint_bin/'eslint'),'--version')
             }
           }
-          with open('benchmarks/verification-stack-v2/results/controlled/installed-versions.json','w',encoding='utf-8') as f:
+          with open(root/'results/controlled/installed-versions.json','w',encoding='utf-8') as f:
               json.dump(value,f,indent=2,sort_keys=True); f.write('\n')
           PY
 
@@ -141,14 +155,12 @@ jobs:
           path: benchmarks/verification-stack-v2/results/controlled/
 
       - name: Refuse to attach evidence if canonical head moved
-        shell: bash
         run: |
           remote_head="$(git ls-remote origin refs/heads/experiment/verification-stack-v2-ground-truth | awk '{print $1}')"
           echo "trigger=$GITHUB_SHA remote=$remote_head"
           test "$remote_head" = "$GITHUB_SHA"
 
       - name: Commit exact-run evidence and state
-        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
