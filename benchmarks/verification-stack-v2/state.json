@@ -1,8 +1,8 @@
 {
-  "blocked_on": "fixture_amendment_v2.1_revalidation",
+  "blocked_on": "controlled_results_incomplete",
   "comparison_started": false,
-  "last_transition": "fixtures_frozen->design_frozen_for_v2.1_amendment",
-  "phase": "design_frozen",
+  "last_transition": "fixtures_frozen->harness_ready",
+  "phase": "harness_ready",
   "publication_authorized": false,
   "real_repo_sample_frozen": false,
   "schema_version": 1
