@@ -3,90 +3,105 @@
     {
       "candidate": "nx",
       "changed": "core",
-      "correct": false,
+      "correct": true,
       "expected": [
         "api",
         "core",
         "ui",
         "web"
       ],
-      "observed": [],
+      "observed": [
+        "api",
+        "core",
+        "ui",
+        "web"
+      ],
       "raw": {
         "command": [
           "nx",
           "show",
           "projects",
           "--affected",
-          "--base=5cd9e56a3d9646a9cfe730d085d50eea9bc1426e",
+          "--base=60e56aa9a481c72f58fd5ca8be8f0ba295a380d5",
           "--head=HEAD",
           "--json"
         ],
-        "elapsed_ms": 156.049038,
-        "exit_code": 1,
-        "stderr": "\n\u001b[7m\u001b[1m\u001b[31m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[31mCould not find Nx modules at \"/tmp/verification-v2-workspace-uarab6cq/affected-nx-core\".\u001b[39m\n\nHave you run \u001b[1m\u001b[37mnpm/yarn install\u001b[39m\u001b[22m?\n\n",
-        "stdout": ""
+        "elapsed_ms": 406.770414,
+        "exit_code": 0,
+        "stderr": "",
+        "stdout": "[\"@fixture/core\",\"@fixture/ui\",\"@fixture/web\",\"@fixture/api\"]\n"
       }
     },
     {
       "candidate": "nx",
       "changed": "ui",
-      "correct": false,
+      "correct": true,
       "expected": [
         "ui",
         "web"
       ],
-      "observed": [],
+      "observed": [
+        "ui",
+        "web"
+      ],
       "raw": {
         "command": [
           "nx",
           "show",
           "projects",
           "--affected",
-          "--base=fb88e002b69067a219533d4c852739f1b431f2c2",
+          "--base=60e56aa9a481c72f58fd5ca8be8f0ba295a380d5",
           "--head=HEAD",
           "--json"
         ],
-        "elapsed_ms": 268.846423,
-        "exit_code": 1,
-        "stderr": "\n\u001b[7m\u001b[1m\u001b[31m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[31mCould not find Nx modules at \"/tmp/verification-v2-workspace-uarab6cq/affected-nx-ui\".\u001b[39m\n\nHave you run \u001b[1m\u001b[37mnpm/yarn install\u001b[39m\u001b[22m?\n\n",
-        "stdout": ""
+        "elapsed_ms": 341.468262,
+        "exit_code": 0,
+        "stderr": "",
+        "stdout": "[\"@fixture/ui\",\"@fixture/web\"]\n"
       }
     },
     {
       "candidate": "nx",
       "changed": "docs",
-      "correct": false,
+      "correct": true,
       "expected": [
         "docs"
       ],
-      "observed": [],
+      "observed": [
+        "docs"
+      ],
       "raw": {
         "command": [
           "nx",
           "show",
           "projects",
           "--affected",
-          "--base=fb88e002b69067a219533d4c852739f1b431f2c2",
+          "--base=c1f184ca2d02c677aa7d95fe0e67cbe9b3092190",
           "--head=HEAD",
           "--json"
         ],
-        "elapsed_ms": 121.420161,
-        "exit_code": 1,
-        "stderr": "\n\u001b[7m\u001b[1m\u001b[31m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[31mCould not find Nx modules at \"/tmp/verification-v2-workspace-uarab6cq/affected-nx-docs\".\u001b[39m\n\nHave you run \u001b[1m\u001b[37mnpm/yarn install\u001b[39m\u001b[22m?\n\n",
-        "stdout": ""
+        "elapsed_ms": 355.004635,
+        "exit_code": 0,
+        "stderr": "",
+        "stdout": "[\"@fixture/docs\"]\n"
       }
     },
     {
       "candidate": "turbo",
       "changed": "core",
-      "correct": false,
+      "correct": true,
       "expected": [
         "api",
         "core",
         "ui",
         "web"
       ],
-      "observed": [],
+      "observed": [
+        "api",
+        "core",
+        "ui",
+        "web"
+      ],
       "raw": {
         "command": [
           "turbo",
@@ -95,10 +110,10 @@
           "--affected",
           "--dry=json"
         ],
-        "elapsed_ms": 43.48671,
+        "elapsed_ms": 47.994305,
         "exit_code": 0,
-        "stderr": "\nAttention:\nTurborepo now collects completely anonymous telemetry regarding usage.\nThis information is used to shape the Turborepo roadmap and prioritize features.\nYou can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:\nhttps://turborepo.dev/docs/telemetry\n\n WARNING  No locally installed `turbo` found in your repository. Using globally installed version (2.10.6). Using a specified version in your repository will result in more predictable behavior.\n",
-        "stdout": "{\n  \"id\": \"3HumFBDFOtOr0Pw87ggG1zQMtHu\",\n  \"version\": \"1\",\n  \"turboVersion\": \"2.10.6\",\n  \"monorepo\": false,\n  \"globalCacheInputs\": {\n    \"rootKey\": \"I can\u2019t see ya, but I know you\u2019re here\",\n    \"files\": {\n      \"package-lock.json\": \"ba851d284b916e916c4436b22866f0f43e4a7624\",\n      \"package.json\": \"c3b5617391b625b4290df2aaa1c6cfe401cdb8b7\"\n    },\n    \"hashOfExternalDependencies\": \"\",\n    \"hashOfInternalDependencies\": \"\",\n    \"environmentVariables\": {\n      \"specified\": {\n        \"env\": [],\n        \"passThroughEnv\": null\n      },\n      \"configured\": [],\n      \"inferred\": [],\n      \"passthrough\": null\n    },\n    \"engines\": null\n  },\n  \"envMode\": \"strict\",\n  \"frameworkInference\": true,\n  \"tasks\": [\n    {\n      \"taskId\": \"build\",\n      \"task\": \"build\",\n      \"hash\": \"0e6228983eebfdde\",\n      \"inputs\": {\n        \"apps/api/package.json\": \"85383efd19f1c0546a02b9caa25c1fc1c2450442\",\n        \"apps/api/src/value.ts\": \"b023a2d3e4f5dfb691a7b317045565fc130ad435\",\n        \"apps/web/package.json\": \"9f9cf4570c2f433ce0618bd5c8f74a44b65ad0d8\",\n        \"apps/web/src/value.ts\": \"b0e8f1c72a866ea7b6927b2b442b029798e981b8\",\n        \"build.mjs\": \"cc939ede8be7d2909930fe9b473720f44385bfe5\",\n        \"ground-truth.json\": \"a68f50532135f54b6117e4c03b4206aad76305e5\",\n        \"nx.json\": \"c3faa8a913e4c1b8be9553d1c8e2777d0ee3304e\",\n        \"package-lock.json\": \"ba851d284b916e916c4436b22866f0f43e4a7624\",\n        \"package.json\": \"c3b5617391b625b4290df2aaa1c6cfe401cdb8b7\",\n        \"packages/core/package.json\": \"45dc01527230ccd59670364ba9d80b92bd404819\",\n        \"packages/core/src/value.ts\": \"488af283186b03d444fecbba0615f3b364538951\",\n        \"packages/docs/package.json\": \"b05d06ff0f84a880e328f4007019ca3fcd665a7d\",\n        \"packages/docs/src/value.ts\": \"1d184e0843eb93eb278b6b33b7cba2f464de4219\",\n        \"packages/ui/package.json\": \"42c05de4425841cfda595ae7b980a45d1fa56459\",\n        \"packages/ui/src/value.ts\": \"4626cb81beb304e5bc6d2cd68e42c2f4f8a579a8\",\n        \"turbo.json\": \"9c951b4ed4011bd24bf5d70d4415ace6f83f8b73\"\n      },\n      \"hashOfExternalDependencies\": \"\",\n      \"cache\": {\n        \"local\": false,\n        \"remote\": false,\n        \"status\": \"MISS\",\n        \"timeSaved\": 0\n      },\n      \"command\": \"<NONEXISTENT>\",\n      \"cliArguments\": [],\n      \"outputs\": [\n        \"dist/**\"\n      ],\n      \"excludedOutputs\": null,\n      \"logFile\": \".turbo/turbo-build.log\",\n      \"dependencies\": [],\n      \"dependents\": [],\n      \"with\": [],\n      \"resolvedTaskDefinition\": {\n        \"outputs\": [\n          \"dist/**\"\n        ],\n        \"cache\": true,\n        \"dependsOn\": [\n          \"^build\"\n        ],\n        \"inputs\": [],\n        \"outputLogs\": \"full\",\n        \"persistent\": false,\n        \"interruptible\": false,\n        \"env\": [],\n        \"passThroughEnv\": null,\n        \"interactive\": false\n      },\n      \"expandedOutputs\": [],\n      \"framework\": \"\",\n      \"envMode\": \"strict\",\n      \"environmentVariables\": {\n        \"specified\": {\n          \"env\": [],\n          \"passThroughEnv\": null\n        },\n        \"configured\": [],\n        \"inferred\": [],\n        \"passthrough\": null\n      }\n    }\n  ],\n  \"user\": \"KAFKA2306\",\n  \"scm\": {\n    \"type\": \"git\",\n    \"sha\": \"143568b2d8e862a810bcc08edf22c7d75c0c9ad2\",\n    \"branch\": \"experiment/verification-stack-v2-ground-truth\"\n  }\n}\n\n"
+        "stderr": "",
+        "stdout": "{\n  \"id\": \"3Hut3e9d0mdMYSRKqefcrMHyMjy\",\n  \"version\": \"1\",\n  \"turboVersion\": \"2.10.6\",\n  \"monorepo\": true,\n  \"globalCacheInputs\": {\n    \"rootKey\": \"I can\u2019t see ya, but I know you\u2019re here\",\n    \"files\": {},\n    \"hashOfExternalDependencies\": \"459c029558afe716\",\n    \"hashOfInternalDependencies\": \"\",\n    \"environmentVariables\": {\n      \"specified\": {\n        \"env\": [],\n        \"passThroughEnv\": null\n      },\n      \"configured\": [],\n      \"inferred\": [],\n      \"passthrough\": null\n    },\n    \"engines\": null\n  },\n  \"packages\": [\n    \"//\",\n    \"@fixture/api\",\n    \"@fixture/core\",\n    \"@fixture/ui\",\n    \"@fixture/web\"\n  ],\n  \"envMode\": \"strict\",\n  \"frameworkInference\": true,\n  \"tasks\": [\n    {\n      \"taskId\": \"@fixture/api#build\",\n      \"task\": \"build\",\n      \"package\": \"@fixture/api\",\n      \"hash\": \"7da33729dbc28c11\",\n      \"inputs\": {\n        \"package.json\": \"85383efd19f1c0546a02b9caa25c1fc1c2450442\",\n        \"src/value.ts\": \"b023a2d3e4f5dfb691a7b317045565fc130ad435\"\n      },\n      \"hashOfExternalDependencies\": \"459c029558afe716\",\n      \"cache\": {\n        \"local\": false,\n        \"remote\": false,\n        \"status\": \"MISS\",\n        \"timeSaved\": 0\n      },\n      \"command\": \"node ../../build.mjs\",\n      \"cliArguments\": [],\n      \"outputs\": [\n        \"dist/**\"\n      ],\n      \"excludedOutputs\": null,\n      \"logFile\": \"apps/api/.turbo/turbo-build.log\",\n      \"directory\": \"apps/api\",\n      \"dependencies\": [\n        \"@fixture/core#build\"\n      ],\n      \"dependents\": [],\n      \"with\": [],\n      \"resolvedTaskDefinition\": {\n        \"outputs\": [\n          \"dist/**\"\n        ],\n        \"cache\": true,\n        \"dependsOn\": [\n          \"^build\"\n        ],\n        \"inputs\": [],\n        \"outputLogs\": \"full\",\n        \"persistent\": false,\n        \"interruptible\": false,\n        \"env\": [],\n        \"passThroughEnv\": null,\n        \"interactive\": false\n      },\n      \"expandedOutputs\": [],\n      \"framework\": \"\",\n      \"envMode\": \"strict\",\n      \"environmentVariables\": {\n        \"specified\": {\n          \"env\": [],\n          \"passThroughEnv\": null\n        },\n        \"configured\": [],\n        \"inferred\": [],\n        \"passthrough\": null\n      }\n    },\n    {\n      \"taskId\": \"@fixture/core#build\",\n      \"task\": \"build\",\n      \"package\": \"@fixture/core\",\n      \"hash\": \"03e38ca51a7c68d4\",\n      \"inputs\": {\n        \"package.json\": \"45dc01527230ccd59670364ba9d80b92bd404819\",\n        \"src/value.ts\": \"488af283186b03d444fecbba0615f3b364538951\"\n      },\n      \"hashOfExternalDependencies\": \"459c029558afe716\",\n      \"cache\": {\n        \"local\": false,\n        \"remote\": false,\n        \"status\": \"MISS\",\n        \"timeSaved\": 0\n      },\n      \"command\": \"node ../../build.mjs\",\n      \"cliArguments\": [],\n      \"outputs\": [\n        \"dist/**\"\n      ],\n      \"excludedOutputs\": null,\n      \"logFile\": \"packages/core/.turbo/turbo-build.log\",\n      \"directory\": \"packages/core\",\n      \"dependencies\": [],\n      \"dependents\": [\n        \"@fixture/api#build\",\n        \"@fixture/ui#build\"\n      ],\n      \"with\": [],\n      \"resolvedTaskDefinition\": {\n        \"outputs\": [\n          \"dist/**\"\n        ],\n        \"cache\": true,\n        \"dependsOn\": [\n          \"^build\"\n        ],\n        \"inputs\": [],\n        \"outputLogs\": \"full\",\n        \"persistent\": false,\n        \"interruptible\": false,\n        \"env\": [],\n        \"passThroughEnv\": null,\n        \"interactive\": false\n      },\n      \"expandedOutputs\": [],\n      \"framework\": \"\",\n      \"envMode\": \"strict\",\n      \"environmentVariables\": {\n        \"specified\": {\n          \"env\": [],\n          \"passThroughEnv\": null\n        },\n        \"configured\": [],\n        \"inferred\": [],\n        \"passthrough\": null\n      }\n    },\n    {\n      \"taskId\": \"@fixture/ui#build\",\n      \"task\": \"build\",\n      \"package\": \"@fixture/ui\",\n      \"hash\": \"ad2b8554f527dad1\",\n      \"inputs\": {\n        \"package.json\": \"42c05de4425841cfda595ae7b980a45d1fa56459\",\n        \"src/value.ts\": \"4626cb81beb304e5bc6d2cd68e42c2f4f8a579a8\"\n      },\n      \"hashOfExternalDependencies\": \"459c029558afe716\",\n      \"cache\": {\n        \"local\": false,\n        \"remote\": false,\n        \"status\": \"MISS\",\n        \"timeSaved\": 0\n      },\n      \"command\": \"node ../../build.mjs\",\n      \"cliArguments\": [],\n      \"outputs\": [\n        \"dist/**\"\n      ],\n      \"excludedOutputs\": null,\n      \"logFile\": \"packages/ui/.turbo/turbo-build.log\",\n      \"directory\": \"packages/ui\",\n      \"dependencies\": [\n        \"@fixture/core#build\"\n      ],\n      \"dependents\": [\n        \"@fixture/web#build\"\n      ],\n      \"with\": [],\n      \"resolvedTaskDefinition\": {\n        \"outputs\": [\n          \"dist/**\"\n        ],\n        \"cache\": true,\n        \"dependsOn\": [\n          \"^build\"\n        ],\n        \"inputs\": [],\n        \"outputLogs\": \"full\",\n        \"persistent\": false,\n        \"interruptible\": false,\n        \"env\": [],\n        \"passThroughEnv\": null,\n        \"interactive\": false\n      },\n      \"expandedOutputs\": [],\n      \"framework\": \"\",\n      \"envMode\": \"strict\",\n      \"environmentVariables\": {\n        \"specified\": {\n          \"env\": [],\n          \"passThroughEnv\": null\n        },\n        \"configured\": [],\n        \"inferred\": [],\n        \"passthrough\": null\n      }\n    },\n    {\n      \"taskId\": \"@fixture/web#build\",\n      \"task\": \"build\",\n      \"package\": \"@fixture/web\",\n      \"hash\": \"87d064a215d2a04a\",\n      \"inputs\": {\n        \"package.json\": \"9f9cf4570c2f433ce0618bd5c8f74a44b65ad0d8\",\n        \"src/value.ts\": \"b0e8f1c72a866ea7b6927b2b442b029798e981b8\"\n      },\n      \"hashOfExternalDependencies\": \"459c029558afe716\",\n      \"cache\": {\n        \"local\": false,\n        \"remote\": false,\n        \"status\": \"MISS\",\n        \"timeSaved\": 0\n      },\n      \"command\": \"node ../../build.mjs\",\n      \"cliArguments\": [],\n      \"outputs\": [\n        \"dist/**\"\n      ],\n      \"excludedOutputs\": null,\n      \"logFile\": \"apps/web/.turbo/turbo-build.log\",\n      \"directory\": \"apps/web\",\n      \"dependencies\": [\n        \"@fixture/ui#build\"\n      ],\n      \"dependents\": [],\n      \"with\": [],\n      \"resolvedTaskDefinition\": {\n        \"outputs\": [\n          \"dist/**\"\n        ],\n        \"cache\": true,\n        \"dependsOn\": [\n          \"^build\"\n        ],\n        \"inputs\": [],\n        \"outputLogs\": \"full\",\n        \"persistent\": false,\n        \"interruptible\": false,\n        \"env\": [],\n        \"passThroughEnv\": null,\n        \"interactive\": false\n      },\n      \"expandedOutputs\": [],\n      \"framework\": \"\",\n      \"envMode\": \"strict\",\n      \"environmentVariables\": {\n        \"specified\": {\n          \"env\": [],\n          \"passThroughEnv\": null\n        },\n        \"configured\": [],\n        \"inferred\": [],\n        \"passthrough\": null\n      }\n    }\n  ],\n  \"user\": \"KAFKA2306\",\n  \"scm\": {\n    \"type\": \"git\",\n    \"sha\": \"d465e8200a7073b4dab5128d5a97b19fb2f4401d\",\n    \"branch\": \"fix/verification-stack-v2-evidence-integrity\"\n  }\n}\n\n"
       }
     },
     {
@@ -109,7 +124,11 @@
         "ui",
         "web"
       ],
-      "observed": [],
+      "observed": [
+        "core",
+        "ui",
+        "web"
+      ],
       "raw": {
         "command": [
           "turbo",
@@ -118,20 +137,22 @@
           "--affected",
           "--dry=json"
         ],
-        "elapsed_ms": 43.721765,
+        "elapsed_ms": 44.103525,
         "exit_code": 0,
-        "stderr": " WARNING  No locally installed `turbo` found in your repository. Using globally installed version (2.10.6). Using a specified version in your repository will result in more predictable behavior.\n",
-        "stdout": "{\n  \"id\": \"3HumF9aIARfOHeItv00YKkQyMdM\",\n  \"version\": \"1\",\n  \"turboVersion\": \"2.10.6\",\n  \"monorepo\": false,\n  \"globalCacheInputs\": {\n    \"rootKey\": \"I can\u2019t see ya, but I know you\u2019re here\",\n    \"files\": {\n      \"package-lock.json\": \"ba851d284b916e916c4436b22866f0f43e4a7624\",\n      \"package.json\": \"c3b5617391b625b4290df2aaa1c6cfe401cdb8b7\"\n    },\n    \"hashOfExternalDependencies\": \"\",\n    \"hashOfInternalDependencies\": \"\",\n    \"environmentVariables\": {\n      \"specified\": {\n        \"env\": [],\n        \"passThroughEnv\": null\n      },\n      \"configured\": [],\n      \"inferred\": [],\n      \"passthrough\": null\n    },\n    \"engines\": null\n  },\n  \"envMode\": \"strict\",\n  \"frameworkInference\": true,\n  \"tasks\": [\n    {\n      \"taskId\": \"build\",\n      \"task\": \"build\",\n      \"hash\": \"02c3c196d757e6ce\",\n      \"inputs\": {\n        \"apps/api/package.json\": \"85383efd19f1c0546a02b9caa25c1fc1c2450442\",\n        \"apps/api/src/value.ts\": \"b023a2d3e4f5dfb691a7b317045565fc130ad435\",\n        \"apps/web/package.json\": \"9f9cf4570c2f433ce0618bd5c8f74a44b65ad0d8\",\n        \"apps/web/src/value.ts\": \"b0e8f1c72a866ea7b6927b2b442b029798e981b8\",\n        \"build.mjs\": \"cc939ede8be7d2909930fe9b473720f44385bfe5\",\n        \"ground-truth.json\": \"a68f50532135f54b6117e4c03b4206aad76305e5\",\n        \"nx.json\": \"c3faa8a913e4c1b8be9553d1c8e2777d0ee3304e\",\n        \"package-lock.json\": \"ba851d284b916e916c4436b22866f0f43e4a7624\",\n        \"package.json\": \"c3b5617391b625b4290df2aaa1c6cfe401cdb8b7\",\n        \"packages/core/package.json\": \"45dc01527230ccd59670364ba9d80b92bd404819\",\n        \"packages/core/src/value.ts\": \"23e46679c60ba10a860cb586e9ced2052777e265\",\n        \"packages/docs/package.json\": \"b05d06ff0f84a880e328f4007019ca3fcd665a7d\",\n        \"packages/docs/src/value.ts\": \"1d184e0843eb93eb278b6b33b7cba2f464de4219\",\n        \"packages/ui/package.json\": \"42c05de4425841cfda595ae7b980a45d1fa56459\",\n        \"packages/ui/src/value.ts\": \"f3173f5ee117f73d74ab721ae521acfcefbbfe7c\",\n        \"turbo.json\": \"9c951b4ed4011bd24bf5d70d4415ace6f83f8b73\"\n      },\n      \"hashOfExternalDependencies\": \"\",\n      \"cache\": {\n        \"local\": false,\n        \"remote\": false,\n        \"status\": \"MISS\",\n        \"timeSaved\": 0\n      },\n      \"command\": \"<NONEXISTENT>\",\n      \"cliArguments\": [],\n      \"outputs\": [\n        \"dist/**\"\n      ],\n      \"excludedOutputs\": null,\n      \"logFile\": \".turbo/turbo-build.log\",\n      \"dependencies\": [],\n      \"dependents\": [],\n      \"with\": [],\n      \"resolvedTaskDefinition\": {\n        \"outputs\": [\n          \"dist/**\"\n        ],\n        \"cache\": true,\n        \"dependsOn\": [\n          \"^build\"\n        ],\n        \"inputs\": [],\n        \"outputLogs\": \"full\",\n        \"persistent\": false,\n        \"interruptible\": false,\n        \"env\": [],\n        \"passThroughEnv\": null,\n        \"interactive\": false\n      },\n      \"expandedOutputs\": [],\n      \"framework\": \"\",\n      \"envMode\": \"strict\",\n      \"environmentVariables\": {\n        \"specified\": {\n          \"env\": [],\n          \"passThroughEnv\": null\n        },\n        \"configured\": [],\n        \"inferred\": [],\n        \"passthrough\": null\n      }\n    }\n  ],\n  \"user\": \"KAFKA2306\",\n  \"scm\": {\n    \"type\": \"git\",\n    \"sha\": \"143568b2d8e862a810bcc08edf22c7d75c0c9ad2\",\n    \"branch\": \"experiment/verification-stack-v2-ground-truth\"\n  }\n}\n\n"
+        "stderr": "",
+        "stdout": "{\n  \"id\": \"3Hut3diIdqjdbdxE8OIUtpgWmeu\",\n  \"version\": \"1\",\n  \"turboVersion\": \"2.10.6\",\n  \"monorepo\": true,\n  \"globalCacheInputs\": {\n    \"rootKey\": \"I can\u2019t see ya, but I know you\u2019re here\",\n    \"files\": {},\n    \"hashOfExternalDependencies\": \"459c029558afe716\",\n    \"hashOfInternalDependencies\": \"\",\n    \"environmentVariables\": {\n      \"specified\": {\n        \"env\": [],\n        \"passThroughEnv\": null\n      },\n      \"configured\": [],\n      \"inferred\": [],\n      \"passthrough\": null\n    },\n    \"engines\": null\n  },\n  \"packages\": [\n    \"//\",\n    \"@fixture/ui\",\n    \"@fixture/web\"\n  ],\n  \"envMode\": \"strict\",\n  \"frameworkInference\": true,\n  \"tasks\": [\n    {\n      \"taskId\": \"@fixture/core#build\",\n      \"task\": \"build\",\n      \"package\": \"@fixture/core\",\n      \"hash\": \"8f56a83e4a2aaf1b\",\n      \"inputs\": {\n        \"package.json\": \"45dc01527230ccd59670364ba9d80b92bd404819\",\n        \"src/value.ts\": \"23e46679c60ba10a860cb586e9ced2052777e265\"\n      },\n      \"hashOfExternalDependencies\": \"459c029558afe716\",\n      \"cache\": {\n        \"local\": false,\n        \"remote\": false,\n        \"status\": \"MISS\",\n        \"timeSaved\": 0\n      },\n      \"command\": \"node ../../build.mjs\",\n      \"cliArguments\": [],\n      \"outputs\": [\n        \"dist/**\"\n      ],\n      \"excludedOutputs\": null,\n      \"logFile\": \"packages/core/.turbo/turbo-build.log\",\n      \"directory\": \"packages/core\",\n      \"dependencies\": [],\n      \"dependents\": [\n        \"@fixture/ui#build\"\n      ],\n      \"with\": [],\n      \"resolvedTaskDefinition\": {\n        \"outputs\": [\n          \"dist/**\"\n        ],\n        \"cache\": true,\n        \"dependsOn\": [\n          \"^build\"\n        ],\n        \"inputs\": [],\n        \"outputLogs\": \"full\",\n        \"persistent\": false,\n        \"interruptible\": false,\n        \"env\": [],\n        \"passThroughEnv\": null,\n        \"interactive\": false\n      },\n      \"expandedOutputs\": [],\n      \"framework\": \"\",\n      \"envMode\": \"strict\",\n      \"environmentVariables\": {\n        \"specified\": {\n          \"env\": [],\n          \"passThroughEnv\": null\n        },\n        \"configured\": [],\n        \"inferred\": [],\n        \"passthrough\": null\n      }\n    },\n    {\n      \"taskId\": \"@fixture/ui#build\",\n      \"task\": \"build\",\n      \"package\": \"@fixture/ui\",\n      \"hash\": \"6b2441e38c1030e3\",\n      \"inputs\": {\n        \"package.json\": \"42c05de4425841cfda595ae7b980a45d1fa56459\",\n        \"src/value.ts\": \"f3173f5ee117f73d74ab721ae521acfcefbbfe7c\"\n      },\n      \"hashOfExternalDependencies\": \"459c029558afe716\",\n      \"cache\": {\n        \"local\": false,\n        \"remote\": false,\n        \"status\": \"MISS\",\n        \"timeSaved\": 0\n      },\n      \"command\": \"node ../../build.mjs\",\n      \"cliArguments\": [],\n      \"outputs\": [\n        \"dist/**\"\n      ],\n      \"excludedOutputs\": null,\n      \"logFile\": \"packages/ui/.turbo/turbo-build.log\",\n      \"directory\": \"packages/ui\",\n      \"dependencies\": [\n        \"@fixture/core#build\"\n      ],\n      \"dependents\": [\n        \"@fixture/web#build\"\n      ],\n      \"with\": [],\n      \"resolvedTaskDefinition\": {\n        \"outputs\": [\n          \"dist/**\"\n        ],\n        \"cache\": true,\n        \"dependsOn\": [\n          \"^build\"\n        ],\n        \"inputs\": [],\n        \"outputLogs\": \"full\",\n        \"persistent\": false,\n        \"interruptible\": false,\n        \"env\": [],\n        \"passThroughEnv\": null,\n        \"interactive\": false\n      },\n      \"expandedOutputs\": [],\n      \"framework\": \"\",\n      \"envMode\": \"strict\",\n      \"environmentVariables\": {\n        \"specified\": {\n          \"env\": [],\n          \"passThroughEnv\": null\n        },\n        \"configured\": [],\n        \"inferred\": [],\n        \"passthrough\": null\n      }\n    },\n    {\n      \"taskId\": \"@fixture/web#build\",\n      \"task\": \"build\",\n      \"package\": \"@fixture/web\",\n      \"hash\": \"edc79f8a4602234b\",\n      \"inputs\": {\n        \"package.json\": \"9f9cf4570c2f433ce0618bd5c8f74a44b65ad0d8\",\n        \"src/value.ts\": \"b0e8f1c72a866ea7b6927b2b442b029798e981b8\"\n      },\n      \"hashOfExternalDependencies\": \"459c029558afe716\",\n      \"cache\": {\n        \"local\": false,\n        \"remote\": false,\n        \"status\": \"MISS\",\n        \"timeSaved\": 0\n      },\n      \"command\": \"node ../../build.mjs\",\n      \"cliArguments\": [],\n      \"outputs\": [\n        \"dist/**\"\n      ],\n      \"excludedOutputs\": null,\n      \"logFile\": \"apps/web/.turbo/turbo-build.log\",\n      \"directory\": \"apps/web\",\n      \"dependencies\": [\n        \"@fixture/ui#build\"\n      ],\n      \"dependents\": [],\n      \"with\": [],\n      \"resolvedTaskDefinition\": {\n        \"outputs\": [\n          \"dist/**\"\n        ],\n        \"cache\": true,\n        \"dependsOn\": [\n          \"^build\"\n        ],\n        \"inputs\": [],\n        \"outputLogs\": \"full\",\n        \"persistent\": false,\n        \"interruptible\": false,\n        \"env\": [],\n        \"passThroughEnv\": null,\n        \"interactive\": false\n      },\n      \"expandedOutputs\": [],\n      \"framework\": \"\",\n      \"envMode\": \"strict\",\n      \"environmentVariables\": {\n        \"specified\": {\n          \"env\": [],\n          \"passThroughEnv\": null\n        },\n        \"configured\": [],\n        \"inferred\": [],\n        \"passthrough\": null\n      }\n    }\n  ],\n  \"user\": \"KAFKA2306\",\n  \"scm\": {\n    \"type\": \"git\",\n    \"sha\": \"d465e8200a7073b4dab5128d5a97b19fb2f4401d\",\n    \"branch\": \"fix/verification-stack-v2-evidence-integrity\"\n  }\n}\n\n"
       }
     },
     {
       "candidate": "turbo",
       "changed": "docs",
-      "correct": false,
+      "correct": true,
       "expected": [
         "docs"
       ],
-      "observed": [],
+      "observed": [
+        "docs"
+      ],
       "raw": {
         "command": [
           "turbo",
@@ -140,10 +161,10 @@
           "--affected",
           "--dry=json"
         ],
-        "elapsed_ms": 49.343215,
+        "elapsed_ms": 44.757421,
         "exit_code": 0,
-        "stderr": " WARNING  No locally installed `turbo` found in your repository. Using globally installed version (2.10.6). Using a specified version in your repository will result in more predictable behavior.\n",
-        "stdout": "{\n  \"id\": \"3HumFBSbLj8FSoZCbrOgfgbC0Yi\",\n  \"version\": \"1\",\n  \"turboVersion\": \"2.10.6\",\n  \"monorepo\": false,\n  \"globalCacheInputs\": {\n    \"rootKey\": \"I can\u2019t see ya, but I know you\u2019re here\",\n    \"files\": {\n      \"package-lock.json\": \"ba851d284b916e916c4436b22866f0f43e4a7624\",\n      \"package.json\": \"c3b5617391b625b4290df2aaa1c6cfe401cdb8b7\"\n    },\n    \"hashOfExternalDependencies\": \"\",\n    \"hashOfInternalDependencies\": \"\",\n    \"environmentVariables\": {\n      \"specified\": {\n        \"env\": [],\n        \"passThroughEnv\": null\n      },\n      \"configured\": [],\n      \"inferred\": [],\n      \"passthrough\": null\n    },\n    \"engines\": null\n  },\n  \"envMode\": \"strict\",\n  \"frameworkInference\": true,\n  \"tasks\": [\n    {\n      \"taskId\": \"build\",\n      \"task\": \"build\",\n      \"hash\": \"a7564a0093ddac06\",\n      \"inputs\": {\n        \"apps/api/package.json\": \"85383efd19f1c0546a02b9caa25c1fc1c2450442\",\n        \"apps/api/src/value.ts\": \"b023a2d3e4f5dfb691a7b317045565fc130ad435\",\n        \"apps/web/package.json\": \"9f9cf4570c2f433ce0618bd5c8f74a44b65ad0d8\",\n        \"apps/web/src/value.ts\": \"b0e8f1c72a866ea7b6927b2b442b029798e981b8\",\n        \"build.mjs\": \"cc939ede8be7d2909930fe9b473720f44385bfe5\",\n        \"ground-truth.json\": \"a68f50532135f54b6117e4c03b4206aad76305e5\",\n        \"nx.json\": \"c3faa8a913e4c1b8be9553d1c8e2777d0ee3304e\",\n        \"package-lock.json\": \"ba851d284b916e916c4436b22866f0f43e4a7624\",\n        \"package.json\": \"c3b5617391b625b4290df2aaa1c6cfe401cdb8b7\",\n        \"packages/core/package.json\": \"45dc01527230ccd59670364ba9d80b92bd404819\",\n        \"packages/core/src/value.ts\": \"23e46679c60ba10a860cb586e9ced2052777e265\",\n        \"packages/docs/package.json\": \"b05d06ff0f84a880e328f4007019ca3fcd665a7d\",\n        \"packages/docs/src/value.ts\": \"268febf1335a2b9b68b7e9283294a5fb9623f267\",\n        \"packages/ui/package.json\": \"42c05de4425841cfda595ae7b980a45d1fa56459\",\n        \"packages/ui/src/value.ts\": \"4626cb81beb304e5bc6d2cd68e42c2f4f8a579a8\",\n        \"turbo.json\": \"9c951b4ed4011bd24bf5d70d4415ace6f83f8b73\"\n      },\n      \"hashOfExternalDependencies\": \"\",\n      \"cache\": {\n        \"local\": false,\n        \"remote\": false,\n        \"status\": \"MISS\",\n        \"timeSaved\": 0\n      },\n      \"command\": \"<NONEXISTENT>\",\n      \"cliArguments\": [],\n      \"outputs\": [\n        \"dist/**\"\n      ],\n      \"excludedOutputs\": null,\n      \"logFile\": \".turbo/turbo-build.log\",\n      \"dependencies\": [],\n      \"dependents\": [],\n      \"with\": [],\n      \"resolvedTaskDefinition\": {\n        \"outputs\": [\n          \"dist/**\"\n        ],\n        \"cache\": true,\n        \"dependsOn\": [\n          \"^build\"\n        ],\n        \"inputs\": [],\n        \"outputLogs\": \"full\",\n        \"persistent\": false,\n        \"interruptible\": false,\n        \"env\": [],\n        \"passThroughEnv\": null,\n        \"interactive\": false\n      },\n      \"expandedOutputs\": [],\n      \"framework\": \"\",\n      \"envMode\": \"strict\",\n      \"environmentVariables\": {\n        \"specified\": {\n          \"env\": [],\n          \"passThroughEnv\": null\n        },\n        \"configured\": [],\n        \"inferred\": [],\n        \"passthrough\": null\n      }\n    }\n  ],\n  \"user\": \"KAFKA2306\",\n  \"scm\": {\n    \"type\": \"git\",\n    \"sha\": \"143568b2d8e862a810bcc08edf22c7d75c0c9ad2\",\n    \"branch\": \"experiment/verification-stack-v2-ground-truth\"\n  }\n}\n\n"
+        "stderr": "",
+        "stdout": "{\n  \"id\": \"3Hut3eLssv4F048ncDPAHSZhLEE\",\n  \"version\": \"1\",\n  \"turboVersion\": \"2.10.6\",\n  \"monorepo\": true,\n  \"globalCacheInputs\": {\n    \"rootKey\": \"I can\u2019t see ya, but I know you\u2019re here\",\n    \"files\": {},\n    \"hashOfExternalDependencies\": \"459c029558afe716\",\n    \"hashOfInternalDependencies\": \"\",\n    \"environmentVariables\": {\n      \"specified\": {\n        \"env\": [],\n        \"passThroughEnv\": null\n      },\n      \"configured\": [],\n      \"inferred\": [],\n      \"passthrough\": null\n    },\n    \"engines\": null\n  },\n  \"packages\": [\n    \"//\",\n    \"@fixture/docs\"\n  ],\n  \"envMode\": \"strict\",\n  \"frameworkInference\": true,\n  \"tasks\": [\n    {\n      \"taskId\": \"@fixture/docs#build\",\n      \"task\": \"build\",\n      \"package\": \"@fixture/docs\",\n      \"hash\": \"49686a0342e8e475\",\n      \"inputs\": {\n        \"package.json\": \"b05d06ff0f84a880e328f4007019ca3fcd665a7d\",\n        \"src/value.ts\": \"268febf1335a2b9b68b7e9283294a5fb9623f267\"\n      },\n      \"hashOfExternalDependencies\": \"459c029558afe716\",\n      \"cache\": {\n        \"local\": false,\n        \"remote\": false,\n        \"status\": \"MISS\",\n        \"timeSaved\": 0\n      },\n      \"command\": \"node ../../build.mjs\",\n      \"cliArguments\": [],\n      \"outputs\": [\n        \"dist/**\"\n      ],\n      \"excludedOutputs\": null,\n      \"logFile\": \"packages/docs/.turbo/turbo-build.log\",\n      \"directory\": \"packages/docs\",\n      \"dependencies\": [],\n      \"dependents\": [],\n      \"with\": [],\n      \"resolvedTaskDefinition\": {\n        \"outputs\": [\n          \"dist/**\"\n        ],\n        \"cache\": true,\n        \"dependsOn\": [\n          \"^build\"\n        ],\n        \"inputs\": [],\n        \"outputLogs\": \"full\",\n        \"persistent\": false,\n        \"interruptible\": false,\n        \"env\": [],\n        \"passThroughEnv\": null,\n        \"interactive\": false\n      },\n      \"expandedOutputs\": [],\n      \"framework\": \"\",\n      \"envMode\": \"strict\",\n      \"environmentVariables\": {\n        \"specified\": {\n          \"env\": [],\n          \"passThroughEnv\": null\n        },\n        \"configured\": [],\n        \"inferred\": [],\n        \"passthrough\": null\n      }\n    }\n  ],\n  \"user\": \"KAFKA2306\",\n  \"scm\": {\n    \"type\": \"git\",\n    \"sha\": \"d465e8200a7073b4dab5128d5a97b19fb2f4401d\",\n    \"branch\": \"fix/verification-stack-v2-evidence-integrity\"\n  }\n}\n\n"
       }
     }
   ],
@@ -161,10 +182,10 @@
   },
   "cache_hit": [
     {
-      "all_outputs_present": false,
+      "all_outputs_present": true,
       "byte_identical_restore": true,
       "candidate": "nx",
-      "correct": false,
+      "correct": true,
       "first": {
         "command": [
           "nx",
@@ -172,13 +193,25 @@
           "-t",
           "build"
         ],
-        "elapsed_ms": 65.787425,
-        "exit_code": 1,
-        "stderr": "\n\u001b[7m\u001b[1m\u001b[31m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[31mCould not find Nx modules at \"/tmp/verification-v2-workspace-uarab6cq/cache-hit-nx\".\u001b[39m\n\nHave you run \u001b[1m\u001b[37mnpm/yarn install\u001b[39m\u001b[22m?\n\n",
-        "stdout": ""
+        "elapsed_ms": 1378.905041,
+        "exit_code": 0,
+        "stderr": "",
+        "stdout": "\n\u001b[7m\u001b[1m\u001b[36m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[36mRunning target \u001b[1mbuild\u001b[22m for 5 projects:\u001b[39m\n\n\u001b[2m-\u001b[22m @fixture/core\n\u001b[2m-\u001b[22m @fixture/docs\n\u001b[2m-\u001b[22m @fixture/ui\n\u001b[2m-\u001b[22m @fixture/api\n\u001b[2m-\u001b[22m @fixture/web\n\n\u001b[2m\u001b[36m\u001b[39m\u001b[22m\n\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/core:build\n\n\n> @fixture/core@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/core 1b9e714734c5771be6cfafade80ced714d0d1ea0b1b57308ae042dd6a6a3a3a2\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/docs:build\n\n\n> @fixture/docs@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/docs 830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/api:build\n\n\n> @fixture/api@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/api 53bba40e1962248fcb2a46e14d017fddaaf52a0b438a4f6c6890ba53d1e1fc5e\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/ui:build\n\n\n> @fixture/ui@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/ui c43db5d76f8e7f3113418506029518d02b06f07bfd8d8526f956b0f507abe3e0\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/web:build\n\n\n> @fixture/web@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/web 7dc1bbf69b6943699f2646ebb6499ea41932864704b21738ce01dca084116263\n::endgroup::\n\u001b[2m\u001b[32m\u001b[39m\u001b[22m\n\n\u001b[7m\u001b[1m\u001b[32m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[32mSuccessfully ran target \u001b[1mbuild\u001b[22m for 5 projects\u001b[39m\n\n\n  Run duration:      957ms\n  Cache:             0/5 hit (0%)\n  Critical path:     881ms (3 tasks)\n  Recoverable time:  <1ms\n\n  Recommendations:\n    - Drastically reduce your run duration by sharing a cache across your team and CI \u2192 https://nx.dev/ci/features/remote-cache?utm_source=nx-cli&utm_medium=cli&utm_campaign=performance-report&utm_content=remote-cache.\n    - Speed up or split the longest tasks on the critical path:\n        @fixture/ui:build      348ms\n        @fixture/core:build    284ms\n        @fixture/web:build     249ms\n"
       },
-      "first_output_hashes": {},
-      "restored_output_hashes": {},
+      "first_output_hashes": {
+        "api": "53bba40e1962248fcb2a46e14d017fddaaf52a0b438a4f6c6890ba53d1e1fc5e",
+        "core": "1b9e714734c5771be6cfafade80ced714d0d1ea0b1b57308ae042dd6a6a3a3a2",
+        "docs": "830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d",
+        "ui": "c43db5d76f8e7f3113418506029518d02b06f07bfd8d8526f956b0f507abe3e0",
+        "web": "7dc1bbf69b6943699f2646ebb6499ea41932864704b21738ce01dca084116263"
+      },
+      "restored_output_hashes": {
+        "api": "53bba40e1962248fcb2a46e14d017fddaaf52a0b438a4f6c6890ba53d1e1fc5e",
+        "core": "1b9e714734c5771be6cfafade80ced714d0d1ea0b1b57308ae042dd6a6a3a3a2",
+        "docs": "830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d",
+        "ui": "c43db5d76f8e7f3113418506029518d02b06f07bfd8d8526f956b0f507abe3e0",
+        "web": "7dc1bbf69b6943699f2646ebb6499ea41932864704b21738ce01dca084116263"
+      },
       "second": {
         "command": [
           "nx",
@@ -186,40 +219,52 @@
           "-t",
           "build"
         ],
-        "elapsed_ms": 59.087412,
-        "exit_code": 1,
-        "stderr": "\n\u001b[7m\u001b[1m\u001b[31m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[31mCould not find Nx modules at \"/tmp/verification-v2-workspace-uarab6cq/cache-hit-nx\".\u001b[39m\n\nHave you run \u001b[1m\u001b[37mnpm/yarn install\u001b[39m\u001b[22m?\n\n",
-        "stdout": ""
+        "elapsed_ms": 373.074375,
+        "exit_code": 0,
+        "stderr": "",
+        "stdout": "\n\u001b[7m\u001b[1m\u001b[36m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[36mRunning target \u001b[1mbuild\u001b[22m for 5 projects:\u001b[39m\n\n\u001b[2m-\u001b[22m @fixture/core\n\u001b[2m-\u001b[22m @fixture/docs\n\u001b[2m-\u001b[22m @fixture/ui\n\u001b[2m-\u001b[22m @fixture/api\n\u001b[2m-\u001b[22m @fixture/web\n\n\u001b[2m\u001b[36m\u001b[39m\u001b[22m\n\n::group::\ud83d\udd01 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/core:build  \u001b[2m[local cache]\u001b[22m\n\n\n> @fixture/core@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/core 1b9e714734c5771be6cfafade80ced714d0d1ea0b1b57308ae042dd6a6a3a3a2\n::endgroup::\n::group::\ud83d\udd01 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/docs:build  \u001b[2m[local cache]\u001b[22m\n\n\n> @fixture/docs@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/docs 830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d\n::endgroup::\n::group::\ud83d\udd01 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/ui:build  \u001b[2m[local cache]\u001b[22m\n\n\n> @fixture/ui@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/ui c43db5d76f8e7f3113418506029518d02b06f07bfd8d8526f956b0f507abe3e0\n::endgroup::\n::group::\ud83d\udd01 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/api:build  \u001b[2m[local cache]\u001b[22m\n\n\n> @fixture/api@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/api 53bba40e1962248fcb2a46e14d017fddaaf52a0b438a4f6c6890ba53d1e1fc5e\n::endgroup::\n::group::\ud83d\udd01 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/web:build  \u001b[2m[local cache]\u001b[22m\n\n\n> @fixture/web@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/web 7dc1bbf69b6943699f2646ebb6499ea41932864704b21738ce01dca084116263\n::endgroup::\n\u001b[2m\u001b[32m\u001b[39m\u001b[22m\n\n\u001b[7m\u001b[1m\u001b[32m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[32mSuccessfully ran target \u001b[1mbuild\u001b[22m for 5 projects\u001b[39m\n\n\u001b[2mNx read the output from the cache instead of running the command for 5 out of 5 tasks.\u001b[22m\n\n  Run duration:      8ms\n  Cache:             5/5 hit (100%)\n  Critical path:     1ms (1 task)\n  Recoverable time:  <1ms\n"
       }
     },
     {
-      "all_outputs_present": false,
+      "all_outputs_present": true,
       "byte_identical_restore": true,
       "candidate": "turbo",
-      "correct": false,
+      "correct": true,
       "first": {
         "command": [
           "turbo",
           "run",
           "build"
         ],
-        "elapsed_ms": 40.444818,
+        "elapsed_ms": 443.033422,
         "exit_code": 0,
-        "stderr": " WARNING  No locally installed `turbo` found in your repository. Using globally installed version (2.10.6). Using a specified version in your repository will result in more predictable behavior.\n WARNING  No tasks were executed as part of this run.\n",
-        "stdout": "\n   \u2022 Running build\n   \u2022 Remote caching disabled\n\n\n Tasks:    0 successful, 0 total\nCached:    0 cached, 0 total\n  Time:    5ms \n\n"
+        "stderr": "",
+        "stdout": "\n   \u2022 Packages in scope: @fixture/api, @fixture/core, @fixture/docs, @fixture/ui, @fixture/web\n   \u2022 Running build in 5 packages\n   \u2022 Remote caching disabled\n\n::group::@fixture/docs:build\ncache miss, executing a550c4a238526463\n\n> @fixture/docs@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/docs 830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d\n::endgroup::\n::group::@fixture/core:build\ncache miss, executing 8f56a83e4a2aaf1b\n\n> @fixture/core@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/core 1b9e714734c5771be6cfafade80ced714d0d1ea0b1b57308ae042dd6a6a3a3a2\n::endgroup::\n::group::@fixture/ui:build\ncache miss, executing 5323d47cd5014939\n\n> @fixture/ui@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/ui c43db5d76f8e7f3113418506029518d02b06f07bfd8d8526f956b0f507abe3e0\n::endgroup::\n::group::@fixture/api:build\ncache miss, executing e889b16d2215e219\n\n> @fixture/api@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/api 53bba40e1962248fcb2a46e14d017fddaaf52a0b438a4f6c6890ba53d1e1fc5e\n::endgroup::\n::group::@fixture/web:build\ncache miss, executing 9ba75c9c784bcf9a\n\n> @fixture/web@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/web 7dc1bbf69b6943699f2646ebb6499ea41932864704b21738ce01dca084116263\n::endgroup::\n\n Tasks:    5 successful, 5 total\nCached:    0 cached, 5 total\n  Time:    406ms \n\n"
       },
-      "first_output_hashes": {},
-      "restored_output_hashes": {},
+      "first_output_hashes": {
+        "api": "53bba40e1962248fcb2a46e14d017fddaaf52a0b438a4f6c6890ba53d1e1fc5e",
+        "core": "1b9e714734c5771be6cfafade80ced714d0d1ea0b1b57308ae042dd6a6a3a3a2",
+        "docs": "830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d",
+        "ui": "c43db5d76f8e7f3113418506029518d02b06f07bfd8d8526f956b0f507abe3e0",
+        "web": "7dc1bbf69b6943699f2646ebb6499ea41932864704b21738ce01dca084116263"
+      },
+      "restored_output_hashes": {
+        "api": "53bba40e1962248fcb2a46e14d017fddaaf52a0b438a4f6c6890ba53d1e1fc5e",
+        "core": "1b9e714734c5771be6cfafade80ced714d0d1ea0b1b57308ae042dd6a6a3a3a2",
+        "docs": "830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d",
+        "ui": "c43db5d76f8e7f3113418506029518d02b06f07bfd8d8526f956b0f507abe3e0",
+        "web": "7dc1bbf69b6943699f2646ebb6499ea41932864704b21738ce01dca084116263"
+      },
       "second": {
         "command": [
           "turbo",
           "run",
           "build"
         ],
-        "elapsed_ms": 42.033571,
+        "elapsed_ms": 436.566223,
         "exit_code": 0,
-        "stderr": " WARNING  No locally installed `turbo` found in your repository. Using globally installed version (2.10.6). Using a specified version in your repository will result in more predictable behavior.\n WARNING  No tasks were executed as part of this run.\n",
-        "stdout": "\n   \u2022 Running build\n   \u2022 Remote caching disabled\n\n\n Tasks:    0 successful, 0 total\nCached:    0 cached, 0 total\n  Time:    6ms \n\n"
+        "stderr": "",
+        "stdout": "\n   \u2022 Packages in scope: @fixture/api, @fixture/core, @fixture/docs, @fixture/ui, @fixture/web\n   \u2022 Running build in 5 packages\n   \u2022 Remote caching disabled\n\n::group::@fixture/core:build\ncache miss, executing f03a6ab4115ddcc9\n\n> @fixture/core@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/core 1b9e714734c5771be6cfafade80ced714d0d1ea0b1b57308ae042dd6a6a3a3a2\n::endgroup::\n::group::@fixture/docs:build\ncache miss, executing b51d29457f350bd9\n\n> @fixture/docs@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/docs 830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d\n::endgroup::\n::group::@fixture/ui:build\ncache miss, executing e808a51988327c44\n\n> @fixture/ui@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/ui c43db5d76f8e7f3113418506029518d02b06f07bfd8d8526f956b0f507abe3e0\n::endgroup::\n::group::@fixture/api:build\ncache miss, executing 234874df87329668\n\n> @fixture/api@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/api 53bba40e1962248fcb2a46e14d017fddaaf52a0b438a4f6c6890ba53d1e1fc5e\n::endgroup::\n::group::@fixture/web:build\ncache miss, executing 1c420a2547605491\n\n> @fixture/web@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/web 7dc1bbf69b6943699f2646ebb6499ea41932864704b21738ce01dca084116263\n::endgroup::\n\n Tasks:    5 successful, 5 total\nCached:    0 cached, 5 total\n  Time:    396ms \n\n"
       }
     }
   ],
@@ -233,12 +278,18 @@
           "build",
           "--skip-nx-cache"
         ],
-        "elapsed_ms": 65.682256,
-        "exit_code": 1,
-        "stderr": "\n\u001b[7m\u001b[1m\u001b[31m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[31mCould not find Nx modules at \"/tmp/verification-v2-workspace-uarab6cq/invalidate-baseline-nx\".\u001b[39m\n\nHave you run \u001b[1m\u001b[37mnpm/yarn install\u001b[39m\u001b[22m?\n\n",
-        "stdout": ""
+        "elapsed_ms": 1232.304302,
+        "exit_code": 0,
+        "stderr": "",
+        "stdout": "\n\u001b[7m\u001b[1m\u001b[36m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[36mRunning target \u001b[1mbuild\u001b[22m for 5 projects:\u001b[39m\n\n\u001b[2m-\u001b[22m @fixture/core\n\u001b[2m-\u001b[22m @fixture/docs\n\u001b[2m-\u001b[22m @fixture/ui\n\u001b[2m-\u001b[22m @fixture/api\n\u001b[2m-\u001b[22m @fixture/web\n\n\u001b[2m\u001b[36m\u001b[39m\u001b[22m\n\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/core:build\n\n\n> @fixture/core@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/core 1b9e714734c5771be6cfafade80ced714d0d1ea0b1b57308ae042dd6a6a3a3a2\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/docs:build\n\n\n> @fixture/docs@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/docs 830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/ui:build\n\n\n> @fixture/ui@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/ui c43db5d76f8e7f3113418506029518d02b06f07bfd8d8526f956b0f507abe3e0\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/api:build\n\n\n> @fixture/api@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/api 53bba40e1962248fcb2a46e14d017fddaaf52a0b438a4f6c6890ba53d1e1fc5e\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/web:build\n\n\n> @fixture/web@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/web 7dc1bbf69b6943699f2646ebb6499ea41932864704b21738ce01dca084116263\n::endgroup::\n\u001b[2m\u001b[32m\u001b[39m\u001b[22m\n\n\u001b[7m\u001b[1m\u001b[32m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[32mSuccessfully ran target \u001b[1mbuild\u001b[22m for 5 projects\u001b[39m\n\n\n  Run duration:      828ms\n  Cache:             Skipped (--skip-nx-cache)\n  Critical path:     822ms (3 tasks)\n  Recoverable time:  <1ms\n\n  Recommendations:\n    - Cache: drop --skip-nx-cache to restore unchanged tasks instantly.\n    - Speed up or split the longest tasks on the critical path:\n        @fixture/ui:build      288ms\n        @fixture/core:build    277ms\n        @fixture/web:build     257ms\n"
       },
-      "baseline_output_hashes": {},
+      "baseline_output_hashes": {
+        "api": "53bba40e1962248fcb2a46e14d017fddaaf52a0b438a4f6c6890ba53d1e1fc5e",
+        "core": "1b9e714734c5771be6cfafade80ced714d0d1ea0b1b57308ae042dd6a6a3a3a2",
+        "docs": "830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d",
+        "ui": "c43db5d76f8e7f3113418506029518d02b06f07bfd8d8526f956b0f507abe3e0",
+        "web": "7dc1bbf69b6943699f2646ebb6499ea41932864704b21738ce01dca084116263"
+      },
       "cached_after_change": {
         "command": [
           "nx",
@@ -246,14 +297,20 @@
           "-t",
           "build"
         ],
-        "elapsed_ms": 61.757113,
-        "exit_code": 1,
-        "stderr": "\n\u001b[7m\u001b[1m\u001b[31m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[31mCould not find Nx modules at \"/tmp/verification-v2-workspace-uarab6cq/invalidate-cached-nx\".\u001b[39m\n\nHave you run \u001b[1m\u001b[37mnpm/yarn install\u001b[39m\u001b[22m?\n\n",
-        "stdout": ""
+        "elapsed_ms": 2022.182691,
+        "exit_code": 0,
+        "stderr": "",
+        "stdout": "\n\u001b[7m\u001b[1m\u001b[36m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[36mRunning target \u001b[1mbuild\u001b[22m for 5 projects:\u001b[39m\n\n\u001b[2m-\u001b[22m @fixture/core\n\u001b[2m-\u001b[22m @fixture/docs\n\u001b[2m-\u001b[22m @fixture/ui\n\u001b[2m-\u001b[22m @fixture/api\n\u001b[2m-\u001b[22m @fixture/web\n\n\u001b[2m\u001b[36m\u001b[39m\u001b[22m\n\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/core:build\n\n\n> @fixture/core@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/core 7663626b05f7c5859b141d63861c4ba1c9a629034152d90a4e683ad0742f5d8e\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/docs:build\n\n\n> @fixture/docs@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/docs 830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/api:build\n\n\n> @fixture/api@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/api 3dc0fc7183dc81d35d7f85d77071401c39584cf618ac3d4a3341c4f263c6485b\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/ui:build\n\n\n> @fixture/ui@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/ui f06cb4ad5d42073a39a6d138ac658c2ca9f491e53bf7c6c952b22604a5c104a3\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/web:build\n\n\n> @fixture/web@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/web c397a6a8fb1c6941b397700a6db19457cfea2bd1cd9e05fd88a30b030991b48d\n::endgroup::\n\u001b[2m\u001b[32m\u001b[39m\u001b[22m\n\n\u001b[7m\u001b[1m\u001b[32m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[32mSuccessfully ran target \u001b[1mbuild\u001b[22m for 5 projects\u001b[39m\n\n\n  Run duration:      1.6s\n  Cache:             0/5 hit (0%)\n  Critical path:     1.1s (3 tasks)\n  Recoverable time:  <1ms\n\n  Recommendations:\n    - Drastically reduce your run duration by sharing a cache across your team and CI \u2192 https://nx.dev/ci/features/remote-cache?utm_source=nx-cli&utm_medium=cli&utm_campaign=performance-report&utm_content=remote-cache.\n    - Speed up or split the longest tasks on the critical path:\n        @fixture/core:build    512ms\n        @fixture/ui:build      293ms\n        @fixture/web:build     252ms\n"
       },
-      "cached_output_hashes": {},
+      "cached_output_hashes": {
+        "api": "3dc0fc7183dc81d35d7f85d77071401c39584cf618ac3d4a3341c4f263c6485b",
+        "core": "7663626b05f7c5859b141d63861c4ba1c9a629034152d90a4e683ad0742f5d8e",
+        "docs": "830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d",
+        "ui": "f06cb4ad5d42073a39a6d138ac658c2ca9f491e53bf7c6c952b22604a5c104a3",
+        "web": "c397a6a8fb1c6941b397700a6db19457cfea2bd1cd9e05fd88a30b030991b48d"
+      },
       "candidate": "nx",
-      "correct": false,
+      "correct": true,
       "expected_changed_outputs": [
         "api",
         "core",
@@ -267,13 +324,18 @@
           "-t",
           "build"
         ],
-        "elapsed_ms": 71.44673,
-        "exit_code": 1,
-        "stderr": "\n\u001b[7m\u001b[1m\u001b[31m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[31mCould not find Nx modules at \"/tmp/verification-v2-workspace-uarab6cq/invalidate-cached-nx\".\u001b[39m\n\nHave you run \u001b[1m\u001b[37mnpm/yarn install\u001b[39m\u001b[22m?\n\n",
-        "stdout": ""
+        "elapsed_ms": 1344.293955,
+        "exit_code": 0,
+        "stderr": "",
+        "stdout": "\n\u001b[7m\u001b[1m\u001b[36m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[36mRunning target \u001b[1mbuild\u001b[22m for 5 projects:\u001b[39m\n\n\u001b[2m-\u001b[22m @fixture/core\n\u001b[2m-\u001b[22m @fixture/docs\n\u001b[2m-\u001b[22m @fixture/ui\n\u001b[2m-\u001b[22m @fixture/api\n\u001b[2m-\u001b[22m @fixture/web\n\n\u001b[2m\u001b[36m\u001b[39m\u001b[22m\n\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/core:build\n\n\n> @fixture/core@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/core 1b9e714734c5771be6cfafade80ced714d0d1ea0b1b57308ae042dd6a6a3a3a2\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/docs:build\n\n\n> @fixture/docs@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/docs 830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/api:build\n\n\n> @fixture/api@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/api 53bba40e1962248fcb2a46e14d017fddaaf52a0b438a4f6c6890ba53d1e1fc5e\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/ui:build\n\n\n> @fixture/ui@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/ui c43db5d76f8e7f3113418506029518d02b06f07bfd8d8526f956b0f507abe3e0\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/web:build\n\n\n> @fixture/web@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/web 7dc1bbf69b6943699f2646ebb6499ea41932864704b21738ce01dca084116263\n::endgroup::\n\u001b[2m\u001b[32m\u001b[39m\u001b[22m\n\n\u001b[7m\u001b[1m\u001b[32m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[32mSuccessfully ran target \u001b[1mbuild\u001b[22m for 5 projects\u001b[39m\n\n\n  Run duration:      824ms\n  Cache:             0/5 hit (0%)\n  Critical path:     816ms (3 tasks)\n  Recoverable time:  <1ms\n\n  Recommendations:\n    - Drastically reduce your run duration by sharing a cache across your team and CI \u2192 https://nx.dev/ci/features/remote-cache?utm_source=nx-cli&utm_medium=cli&utm_campaign=performance-report&utm_content=remote-cache.\n    - Speed up or split the longest tasks on the critical path:\n        @fixture/ui:build      294ms\n        @fixture/core:build    268ms\n        @fixture/web:build     254ms\n"
       },
       "matches_cache_free_reference": true,
-      "observed_changed_outputs": [],
+      "observed_changed_outputs": [
+        "api",
+        "core",
+        "ui",
+        "web"
+      ],
       "reference_force_run": {
         "command": [
           "nx",
@@ -282,12 +344,18 @@
           "build",
           "--skip-nx-cache"
         ],
-        "elapsed_ms": 68.443726,
-        "exit_code": 1,
-        "stderr": "\n\u001b[7m\u001b[1m\u001b[31m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[31mCould not find Nx modules at \"/tmp/verification-v2-workspace-uarab6cq/invalidate-reference-nx\".\u001b[39m\n\nHave you run \u001b[1m\u001b[37mnpm/yarn install\u001b[39m\u001b[22m?\n\n",
-        "stdout": ""
+        "elapsed_ms": 1190.298326,
+        "exit_code": 0,
+        "stderr": "",
+        "stdout": "\n\u001b[7m\u001b[1m\u001b[36m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[36mRunning target \u001b[1mbuild\u001b[22m for 5 projects:\u001b[39m\n\n\u001b[2m-\u001b[22m @fixture/core\n\u001b[2m-\u001b[22m @fixture/docs\n\u001b[2m-\u001b[22m @fixture/ui\n\u001b[2m-\u001b[22m @fixture/api\n\u001b[2m-\u001b[22m @fixture/web\n\n\u001b[2m\u001b[36m\u001b[39m\u001b[22m\n\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/core:build\n\n\n> @fixture/core@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/core 7663626b05f7c5859b141d63861c4ba1c9a629034152d90a4e683ad0742f5d8e\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/docs:build\n\n\n> @fixture/docs@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/docs 830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/ui:build\n\n\n> @fixture/ui@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/ui f06cb4ad5d42073a39a6d138ac658c2ca9f491e53bf7c6c952b22604a5c104a3\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/api:build\n\n\n> @fixture/api@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/api 3dc0fc7183dc81d35d7f85d77071401c39584cf618ac3d4a3341c4f263c6485b\n::endgroup::\n::group::\u2705 \u001b[2m> \u001b[22m\u001b[2mnx run\u001b[22m @fixture/web:build\n\n\n> @fixture/web@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/web c397a6a8fb1c6941b397700a6db19457cfea2bd1cd9e05fd88a30b030991b48d\n::endgroup::\n\u001b[2m\u001b[32m\u001b[39m\u001b[22m\n\n\u001b[7m\u001b[1m\u001b[32m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[32mSuccessfully ran target \u001b[1mbuild\u001b[22m for 5 projects\u001b[39m\n\n\n  Run duration:      809ms\n  Cache:             Skipped (--skip-nx-cache)\n  Critical path:     802ms (3 tasks)\n  Recoverable time:  <1ms\n\n  Recommendations:\n    - Cache: drop --skip-nx-cache to restore unchanged tasks instantly.\n    - Speed up or split the longest tasks on the critical path:\n        @fixture/core:build    287ms\n        @fixture/ui:build      265ms\n        @fixture/web:build     250ms\n"
       },
-      "reference_output_hashes": {}
+      "reference_output_hashes": {
+        "api": "3dc0fc7183dc81d35d7f85d77071401c39584cf618ac3d4a3341c4f263c6485b",
+        "core": "7663626b05f7c5859b141d63861c4ba1c9a629034152d90a4e683ad0742f5d8e",
+        "docs": "830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d",
+        "ui": "f06cb4ad5d42073a39a6d138ac658c2ca9f491e53bf7c6c952b22604a5c104a3",
+        "web": "c397a6a8fb1c6941b397700a6db19457cfea2bd1cd9e05fd88a30b030991b48d"
+      }
     },
     {
       "baseline_force_run": {
@@ -297,26 +365,38 @@
           "build",
           "--force"
         ],
-        "elapsed_ms": 41.324553,
+        "elapsed_ms": 422.970239,
         "exit_code": 0,
-        "stderr": " WARNING  No locally installed `turbo` found in your repository. Using globally installed version (2.10.6). Using a specified version in your repository will result in more predictable behavior.\n WARNING  No tasks were executed as part of this run.\n",
-        "stdout": "\n   \u2022 Running build\n   \u2022 Remote caching disabled\n\n\n Tasks:    0 successful, 0 total\nCached:    0 cached, 0 total\n  Time:    5ms \n\n"
+        "stderr": "",
+        "stdout": "\n   \u2022 Packages in scope: @fixture/api, @fixture/core, @fixture/docs, @fixture/ui, @fixture/web\n   \u2022 Running build in 5 packages\n   \u2022 Remote caching disabled\n\n::group::@fixture/docs:build\ncache bypass, force executing a550c4a238526463\n\n> @fixture/docs@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/docs 830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d\n::endgroup::\n::group::@fixture/core:build\ncache bypass, force executing 8f56a83e4a2aaf1b\n\n> @fixture/core@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/core 1b9e714734c5771be6cfafade80ced714d0d1ea0b1b57308ae042dd6a6a3a3a2\n::endgroup::\n::group::@fixture/ui:build\ncache bypass, force executing 5323d47cd5014939\n\n> @fixture/ui@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/ui c43db5d76f8e7f3113418506029518d02b06f07bfd8d8526f956b0f507abe3e0\n::endgroup::\n::group::@fixture/api:build\ncache bypass, force executing e889b16d2215e219\n\n> @fixture/api@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/api 53bba40e1962248fcb2a46e14d017fddaaf52a0b438a4f6c6890ba53d1e1fc5e\n::endgroup::\n::group::@fixture/web:build\ncache bypass, force executing 9ba75c9c784bcf9a\n\n> @fixture/web@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/web 7dc1bbf69b6943699f2646ebb6499ea41932864704b21738ce01dca084116263\n::endgroup::\n\n Tasks:    5 successful, 5 total\nCached:    0 cached, 5 total\n  Time:    387ms \n\n"
       },
-      "baseline_output_hashes": {},
+      "baseline_output_hashes": {
+        "api": "53bba40e1962248fcb2a46e14d017fddaaf52a0b438a4f6c6890ba53d1e1fc5e",
+        "core": "1b9e714734c5771be6cfafade80ced714d0d1ea0b1b57308ae042dd6a6a3a3a2",
+        "docs": "830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d",
+        "ui": "c43db5d76f8e7f3113418506029518d02b06f07bfd8d8526f956b0f507abe3e0",
+        "web": "7dc1bbf69b6943699f2646ebb6499ea41932864704b21738ce01dca084116263"
+      },
       "cached_after_change": {
         "command": [
           "turbo",
           "run",
           "build"
         ],
-        "elapsed_ms": 38.538195,
+        "elapsed_ms": 430.671285,
         "exit_code": 0,
-        "stderr": " WARNING  No locally installed `turbo` found in your repository. Using globally installed version (2.10.6). Using a specified version in your repository will result in more predictable behavior.\n WARNING  No tasks were executed as part of this run.\n",
-        "stdout": "\n   \u2022 Running build\n   \u2022 Remote caching disabled\n\n\n Tasks:    0 successful, 0 total\nCached:    0 cached, 0 total\n  Time:    4ms \n\n"
+        "stderr": "",
+        "stdout": "\n   \u2022 Packages in scope: @fixture/api, @fixture/core, @fixture/docs, @fixture/ui, @fixture/web\n   \u2022 Running build in 5 packages\n   \u2022 Remote caching disabled\n\n::group::@fixture/core:build\ncache miss, executing 3ca693e2ef3bda2b\n\n> @fixture/core@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/core 7663626b05f7c5859b141d63861c4ba1c9a629034152d90a4e683ad0742f5d8e\n::endgroup::\n::group::@fixture/docs:build\ncache miss, executing 3b8b7b76ebf424df\n\n> @fixture/docs@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/docs 830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d\n::endgroup::\n::group::@fixture/api:build\ncache miss, executing c2a6c274c8394884\n\n> @fixture/api@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/api 3dc0fc7183dc81d35d7f85d77071401c39584cf618ac3d4a3341c4f263c6485b\n::endgroup::\n::group::@fixture/ui:build\ncache miss, executing 06af4959764b8046\n\n> @fixture/ui@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/ui f06cb4ad5d42073a39a6d138ac658c2ca9f491e53bf7c6c952b22604a5c104a3\n::endgroup::\n::group::@fixture/web:build\ncache miss, executing 590ebe93e236d68c\n\n> @fixture/web@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/web c397a6a8fb1c6941b397700a6db19457cfea2bd1cd9e05fd88a30b030991b48d\n::endgroup::\n\n Tasks:    5 successful, 5 total\nCached:    0 cached, 5 total\n  Time:    399ms \n\n"
       },
-      "cached_output_hashes": {},
+      "cached_output_hashes": {
+        "api": "3dc0fc7183dc81d35d7f85d77071401c39584cf618ac3d4a3341c4f263c6485b",
+        "core": "7663626b05f7c5859b141d63861c4ba1c9a629034152d90a4e683ad0742f5d8e",
+        "docs": "830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d",
+        "ui": "f06cb4ad5d42073a39a6d138ac658c2ca9f491e53bf7c6c952b22604a5c104a3",
+        "web": "c397a6a8fb1c6941b397700a6db19457cfea2bd1cd9e05fd88a30b030991b48d"
+      },
       "candidate": "turbo",
-      "correct": false,
+      "correct": true,
       "expected_changed_outputs": [
         "api",
         "core",
@@ -329,13 +409,18 @@
           "run",
           "build"
         ],
-        "elapsed_ms": 40.046628,
+        "elapsed_ms": 435.463702,
         "exit_code": 0,
-        "stderr": " WARNING  No locally installed `turbo` found in your repository. Using globally installed version (2.10.6). Using a specified version in your repository will result in more predictable behavior.\n WARNING  No tasks were executed as part of this run.\n",
-        "stdout": "\n   \u2022 Running build\n   \u2022 Remote caching disabled\n\n\n Tasks:    0 successful, 0 total\nCached:    0 cached, 0 total\n  Time:    7ms \n\n"
+        "stderr": "",
+        "stdout": "\n   \u2022 Packages in scope: @fixture/api, @fixture/core, @fixture/docs, @fixture/ui, @fixture/web\n   \u2022 Running build in 5 packages\n   \u2022 Remote caching disabled\n\n::group::@fixture/docs:build\ncache miss, executing a550c4a238526463\n\n> @fixture/docs@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/docs 830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d\n::endgroup::\n::group::@fixture/core:build\ncache miss, executing 8f56a83e4a2aaf1b\n\n> @fixture/core@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/core 1b9e714734c5771be6cfafade80ced714d0d1ea0b1b57308ae042dd6a6a3a3a2\n::endgroup::\n::group::@fixture/api:build\ncache miss, executing e889b16d2215e219\n\n> @fixture/api@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/api 53bba40e1962248fcb2a46e14d017fddaaf52a0b438a4f6c6890ba53d1e1fc5e\n::endgroup::\n::group::@fixture/ui:build\ncache miss, executing 5323d47cd5014939\n\n> @fixture/ui@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/ui c43db5d76f8e7f3113418506029518d02b06f07bfd8d8526f956b0f507abe3e0\n::endgroup::\n::group::@fixture/web:build\ncache miss, executing 9ba75c9c784bcf9a\n\n> @fixture/web@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/web 7dc1bbf69b6943699f2646ebb6499ea41932864704b21738ce01dca084116263\n::endgroup::\n\n Tasks:    5 successful, 5 total\nCached:    0 cached, 5 total\n  Time:    402ms \n\n"
       },
       "matches_cache_free_reference": true,
-      "observed_changed_outputs": [],
+      "observed_changed_outputs": [
+        "api",
+        "core",
+        "ui",
+        "web"
+      ],
       "reference_force_run": {
         "command": [
           "turbo",
@@ -343,13 +428,81 @@
           "build",
           "--force"
         ],
-        "elapsed_ms": 40.865922,
+        "elapsed_ms": 426.444572,
         "exit_code": 0,
-        "stderr": " WARNING  No locally installed `turbo` found in your repository. Using globally installed version (2.10.6). Using a specified version in your repository will result in more predictable behavior.\n WARNING  No tasks were executed as part of this run.\n",
-        "stdout": "\n   \u2022 Running build\n   \u2022 Remote caching disabled\n\n\n Tasks:    0 successful, 0 total\nCached:    0 cached, 0 total\n  Time:    7ms \n\n"
+        "stderr": "",
+        "stdout": "\n   \u2022 Packages in scope: @fixture/api, @fixture/core, @fixture/docs, @fixture/ui, @fixture/web\n   \u2022 Running build in 5 packages\n   \u2022 Remote caching disabled\n\n::group::@fixture/core:build\ncache bypass, force executing c130c1dfd87471e3\n\n> @fixture/core@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/core 7663626b05f7c5859b141d63861c4ba1c9a629034152d90a4e683ad0742f5d8e\n::endgroup::\n::group::@fixture/docs:build\ncache bypass, force executing a550c4a238526463\n\n> @fixture/docs@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/docs 830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d\n::endgroup::\n::group::@fixture/api:build\ncache bypass, force executing 50c451b57df7e3c5\n\n> @fixture/api@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/api 3dc0fc7183dc81d35d7f85d77071401c39584cf618ac3d4a3341c4f263c6485b\n::endgroup::\n::group::@fixture/ui:build\ncache bypass, force executing 64fcb6afc5062698\n\n> @fixture/ui@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/ui f06cb4ad5d42073a39a6d138ac658c2ca9f491e53bf7c6c952b22604a5c104a3\n::endgroup::\n::group::@fixture/web:build\ncache bypass, force executing f8d5322bd193b160\n\n> @fixture/web@0.0.0 build\n> node ../../build.mjs\n\nEXECUTED @fixture/web c397a6a8fb1c6941b397700a6db19457cfea2bd1cd9e05fd88a30b030991b48d\n::endgroup::\n\n Tasks:    5 successful, 5 total\nCached:    0 cached, 5 total\n  Time:    392ms \n\n"
       },
-      "reference_output_hashes": {}
+      "reference_output_hashes": {
+        "api": "3dc0fc7183dc81d35d7f85d77071401c39584cf618ac3d4a3341c4f263c6485b",
+        "core": "7663626b05f7c5859b141d63861c4ba1c9a629034152d90a4e683ad0742f5d8e",
+        "docs": "830ae6cb9abcd182176bf44b51d392922266f083630d5e0071c8224145d1e95d",
+        "ui": "f06cb4ad5d42073a39a6d138ac658c2ca9f491e53bf7c6c952b22604a5c104a3",
+        "web": "c397a6a8fb1c6941b397700a6db19457cfea2bd1cd9e05fd88a30b030991b48d"
+      }
     }
   ],
-  "schema_version": 1
+  "discovery": [
+    {
+      "candidate": "nx",
+      "correct": true,
+      "expected": [
+        "api",
+        "core",
+        "docs",
+        "ui",
+        "web"
+      ],
+      "observed": [
+        "api",
+        "core",
+        "docs",
+        "ui",
+        "web"
+      ],
+      "raw": {
+        "command": [
+          "nx",
+          "show",
+          "projects",
+          "--json"
+        ],
+        "elapsed_ms": 550.119107,
+        "exit_code": 0,
+        "stderr": "",
+        "stdout": "[\"@fixture/core\",\"@fixture/docs\",\"@fixture/ui\",\"@fixture/api\",\"@fixture/web\"]\n"
+      }
+    },
+    {
+      "candidate": "turbo",
+      "correct": true,
+      "expected": [
+        "api",
+        "core",
+        "docs",
+        "ui",
+        "web"
+      ],
+      "observed": [
+        "api",
+        "core",
+        "docs",
+        "ui",
+        "web"
+      ],
+      "raw": {
+        "command": [
+          "turbo",
+          "ls",
+          "--output=json"
+        ],
+        "elapsed_ms": 40.568555,
+        "exit_code": 0,
+        "stderr": "\nAttention:\nTurborepo now collects completely anonymous telemetry regarding usage.\nThis information is used to shape the Turborepo roadmap and prioritize features.\nYou can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:\nhttps://turborepo.dev/docs/telemetry\n\n",
+        "stdout": "{\n  \"packageManager\": \"npm\",\n  \"packages\": {\n    \"count\": 5,\n    \"items\": [\n      {\n        \"name\": \"@fixture/api\",\n        \"path\": \"apps/api\"\n      },\n      {\n        \"name\": \"@fixture/core\",\n        \"path\": \"packages/core\"\n      },\n      {\n        \"name\": \"@fixture/docs\",\n        \"path\": \"packages/docs\"\n      },\n      {\n        \"name\": \"@fixture/ui\",\n        \"path\": \"packages/ui\"\n      },\n      {\n        \"name\": \"@fixture/web\",\n        \"path\": \"apps/web\"\n      }\n    ]\n  }\n}\n"
+      }
+    }
+  ],
+  "protocol_revision": "v2.4",
+  "schema_version": 2
 }

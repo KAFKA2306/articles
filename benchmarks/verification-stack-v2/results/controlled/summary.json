@@ -1,127 +1,152 @@
 {
+  "baseline_calibration": {
+    "failures": [],
+    "rule": "No controlled result is recommendation-eligible unless every declared clean baseline and both workspace discovery gates pass. A blocked mutant never receives detection credit when its clean baseline also blocks.",
+    "status": "pass"
+  },
   "candidate_stats": {
     "biome": {
-      "baseline_blocking_false_positives": 2,
-      "detected": 2,
-      "in_scope_records": 2
+      "baseline_blocking_false_positives": 0,
+      "detected": 1,
+      "in_scope_records": 1,
+      "raw_mutant_blocking_outputs": 1
     },
     "black": {
-      "baseline_blocking_false_positives": 2,
-      "detected": 2,
-      "in_scope_records": 2
+      "baseline_blocking_false_positives": 0,
+      "detected": 1,
+      "in_scope_records": 1,
+      "raw_mutant_blocking_outputs": 1
     },
     "eslint": {
-      "baseline_blocking_false_positives": 3,
+      "baseline_blocking_false_positives": 0,
       "detected": 3,
-      "in_scope_records": 3
+      "in_scope_records": 3,
+      "raw_mutant_blocking_outputs": 3
     },
     "flake8": {
-      "baseline_blocking_false_positives": 1,
+      "baseline_blocking_false_positives": 0,
       "detected": 1,
-      "in_scope_records": 1
+      "in_scope_records": 1,
+      "raw_mutant_blocking_outputs": 1
     },
     "mypy": {
       "baseline_blocking_false_positives": 0,
       "detected": 5,
-      "in_scope_records": 5
+      "in_scope_records": 5,
+      "raw_mutant_blocking_outputs": 5
     },
     "oxlint": {
-      "baseline_blocking_false_positives": 3,
+      "baseline_blocking_false_positives": 0,
       "detected": 3,
-      "in_scope_records": 3
+      "in_scope_records": 3,
+      "raw_mutant_blocking_outputs": 3
     },
     "oxlint_type_check": {
-      "baseline_blocking_false_positives": 2,
+      "baseline_blocking_false_positives": 0,
       "detected": 2,
-      "in_scope_records": 2
+      "in_scope_records": 2,
+      "raw_mutant_blocking_outputs": 2
     },
     "prettier": {
       "baseline_blocking_false_positives": 0,
-      "detected": 2,
-      "in_scope_records": 2
+      "detected": 1,
+      "in_scope_records": 1,
+      "raw_mutant_blocking_outputs": 1
     },
     "pydantic": {
       "baseline_blocking_false_positives": 0,
       "detected": 1,
-      "in_scope_records": 1
+      "in_scope_records": 1,
+      "raw_mutant_blocking_outputs": 1
     },
     "pyrefly": {
       "baseline_blocking_false_positives": 0,
-      "detected": 2,
-      "in_scope_records": 5
+      "detected": 5,
+      "in_scope_records": 5,
+      "raw_mutant_blocking_outputs": 5
     },
     "pyright": {
       "baseline_blocking_false_positives": 0,
       "detected": 5,
-      "in_scope_records": 5
+      "in_scope_records": 5,
+      "raw_mutant_blocking_outputs": 5
     },
     "ruff_format": {
-      "baseline_blocking_false_positives": 1,
+      "baseline_blocking_false_positives": 0,
       "detected": 1,
-      "in_scope_records": 1
+      "in_scope_records": 1,
+      "raw_mutant_blocking_outputs": 1
     },
     "ruff_lint": {
       "baseline_blocking_false_positives": 0,
       "detected": 2,
-      "in_scope_records": 2
+      "in_scope_records": 2,
+      "raw_mutant_blocking_outputs": 2
     },
     "tsc": {
       "baseline_blocking_false_positives": 0,
       "detected": 3,
-      "in_scope_records": 3
+      "in_scope_records": 3,
+      "raw_mutant_blocking_outputs": 3
     },
     "ty": {
       "baseline_blocking_false_positives": 0,
       "detected": 5,
-      "in_scope_records": 5
+      "in_scope_records": 5,
+      "raw_mutant_blocking_outputs": 5
     },
     "unvalidated_python": {
       "baseline_blocking_false_positives": 0,
       "detected": 0,
-      "in_scope_records": 1
+      "in_scope_records": 1,
+      "raw_mutant_blocking_outputs": 0
     },
     "unvalidated_typescript": {
       "baseline_blocking_false_positives": 0,
       "detected": 0,
-      "in_scope_records": 1
+      "in_scope_records": 1,
+      "raw_mutant_blocking_outputs": 0
     },
     "zod": {
       "baseline_blocking_false_positives": 0,
       "detected": 1,
-      "in_scope_records": 1
+      "in_scope_records": 1,
+      "raw_mutant_blocking_outputs": 1
     }
   },
   "format_quality": {
     "PY-FORMAT-001::black": {
       "idempotent": true,
-      "matches_clean_target": true,
+      "matches_candidate_normalized_baseline": true,
       "patch_sha256": "9499e76acfcf3af98b26f5e0217245515ae583b62cb1c37894ec35e4e008cd55",
       "smoke_pass": true
     },
     "PY-FORMAT-001::ruff_format": {
       "idempotent": true,
-      "matches_clean_target": true,
+      "matches_candidate_normalized_baseline": true,
       "patch_sha256": "9499e76acfcf3af98b26f5e0217245515ae583b62cb1c37894ec35e4e008cd55",
       "smoke_pass": true
     },
     "TS-FORMAT-001::biome": {
       "idempotent": true,
-      "matches_clean_target": false,
+      "matches_candidate_normalized_baseline": true,
       "patch_sha256": "be56e2e662b7ad80ff15712710fd43d38426256d8a4cc2423d67a00fdcc95d13",
       "smoke_pass": true
     },
     "TS-FORMAT-001::prettier": {
       "idempotent": true,
-      "matches_clean_target": true,
+      "matches_candidate_normalized_baseline": true,
       "patch_sha256": "857542547708577d731c153beedff8c4feafe1039f2dcf0f9205682d8b54264a",
       "smoke_pass": true
     }
   },
   "guardrails": [
-    "complete means evidence collection completed, not that any candidate passed",
+    "complete means the calibrated evidence corpus finished with valid clean baselines; it does not mean every candidate passed every mutant",
+    "a mutant failure receives detection credit only when the corresponding clean baseline passes",
     "raw diagnostic counts are not defect counts",
     "candidate_stats do not rank responsibilities against each other",
     "runtime unvalidated controls are negative controls, not candidate authorities",
+    "formatter outputs are compared to their own normalized baseline because opinionated canonical styles may differ",
     "boundary capability is not a scored Nx/Turbo head-to-head because official enforcement surfaces differ in maturity and dependencies",
     "no recommendation or article thesis is authorized by this summary"
   ],
@@ -135,7 +160,7 @@
   "mutant_detection_matrix": {
     "PY-ASYNC-001": {
       "mypy": true,
-      "pyrefly": false,
+      "pyrefly": true,
       "pyright": true,
       "ty": true
     },
@@ -158,7 +183,6 @@
       "unvalidated_python": false
     },
     "PY-SYNTAX-001": {
-      "black": true,
       "mypy": true,
       "pyrefly": true,
       "pyright": true,
@@ -167,13 +191,13 @@
     },
     "PY-TYPE-ARG-001": {
       "mypy": true,
-      "pyrefly": false,
+      "pyrefly": true,
       "pyright": true,
       "ty": true
     },
     "PY-TYPE-RETURN-001": {
       "mypy": true,
-      "pyrefly": false,
+      "pyrefly": true,
       "pyright": true,
       "ty": true
     },
@@ -194,10 +218,8 @@
       "zod": true
     },
     "TS-SYNTAX-001": {
-      "biome": true,
       "eslint": true,
       "oxlint": true,
-      "prettier": true,
       "tsc": true
     },
     "TS-TYPE-ARG-001": {
@@ -209,10 +231,11 @@
       "tsc": true
     }
   },
-  "schema_version": 1,
+  "protocol_revision": "v2.4-integrity-reaudit",
+  "schema_version": 3,
   "status": "complete",
   "workspace": {
-    "affected_correct": 0,
+    "affected_correct": 5,
     "affected_total": 6,
     "boundary_capability": {
       "mutant_id": "WS-BOUNDARY-001",
@@ -227,12 +250,16 @@
       }
     },
     "cache_hit_correct": {
-      "nx": false,
-      "turbo": false
+      "nx": true,
+      "turbo": true
     },
     "cache_invalidation_correct": {
-      "nx": false,
-      "turbo": false
+      "nx": true,
+      "turbo": true
+    },
+    "discovery": {
+      "nx": true,
+      "turbo": true
     }
   }
 }

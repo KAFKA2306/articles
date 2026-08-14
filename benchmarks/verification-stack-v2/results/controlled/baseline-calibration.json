@@ -1,0 +1,5 @@
+{
+  "failures": [],
+  "rule": "No controlled result is recommendation-eligible unless every declared clean baseline and both workspace discovery gates pass. A blocked mutant never receives detection credit when its clean baseline also blocks.",
+  "status": "pass"
+}
