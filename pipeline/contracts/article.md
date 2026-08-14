@@ -98,6 +98,73 @@ LAPRAS公式はAI Reviewを「他のエンジニアにとってどれくらい�
 
 **弱い問いを、長文・図・引用・丁寧な説明で補強しない。テーマ選定へ戻す。**
 
+## UX-first / sales-first reader value contract
+
+記事は技術更新ログではなく、**公開証拠から「この仕組み・判断・能力を自分でも使いたい」と合理的に判断できる営業資産**として設計する。
+
+ここでいうsales-firstは、問い合わせ文や契約CTAを増やすことではない。
+読者が本文だけで、
+
+1. 自分のどの摩擦が減るか
+2. 読後に何を判断・実行・運用できるか
+3. なぜその設計判断を採ったのか
+4. 一般tutorialや公式docsではなく、この実測・失敗・比較を読む理由は何か
+5. 実際にどこまで動いており、どこから先は未実証か
+
+を説明できる状態を指す。
+
+候補生成時点で、story fieldsに加えて次の7項目を必須とする。
+
+- `reader_before`: 読む前の具体的な摩擦・損失・不確実性。技術名ではなく利用者の状態を書く。
+- `reader_after`: 読後に可能になる具体的な判断・行動・運用。「Xを理解する」「Yを学ぶ」だけでは不合格。
+- `design_philosophy`: 読者価値を守るため、何を優先し何を捨て、どのtrade-offを受け入れたか。技術stack列挙は禁止。
+- `why_this_article`: 一般tutorial / 公式docs / AI要約では代替できない固有価値。実測、失敗、比較、制約、判断変更の最低1つへ接地する。
+- `proof_of_value`: 実績・実測・運用結果・比較・失敗fixture・production evidenceなど「本当に使える範囲」を示す公開証拠。空欄の候補はpublish不可。
+- `desired_reader_action`: 読後に自然に起こせる次action。試す、監査する、導入候補にする、関連成果物を見る等。本文から導けない問い合わせ・契約を強制しない。
+- `non_goal`: 記事が証明しないこと、未実証範囲、解決しない問題。
+
+### Candidate blocking rules
+
+次は候補段階で不合格にする。
+
+- `reader_after` が「理解できる」「学べる」の抽象表現だけ
+- `why_this_article` が「詳しく説明する」「分かりやすく解説する」の言い換えだけ
+- `proof_of_value` が空、または公開証拠へ接続できない
+- FastAPI / GitHub Actions / MCP / Pyodide / API統合 / repository等の技術名・実装行為を価値そのものとしている
+- reader problemが存在せず、実装変更そのものが記事化理由になっている
+- CTAだけを足してcommercial pullを作ろうとしている
+
+### Article blocking rules
+
+本文査読では、次をblocking issueとして扱う。
+
+- `weak_reader_value`: 本文だけでbefore→afterの状態変化を説明できない
+- `weak_differentiation`: 固有の実測・失敗・比較・制約・判断変更がなく、一般解説で代替できる
+- `missing_proof_of_value`: 価値主張と公開証拠・実績境界が接続していない
+- `forced_commercial_cta`: 本文から自然に導けない営業行動を要求している
+- `technical_value_as_product`: 技術名・実装行為をそのまま読者価値としている
+
+このblocking issueが1つでも残る記事は、technical/story scoreが合格でもpublish不可とする。
+
+### 見出しをテンプレート化しない
+
+`## Vision`、`## Design philosophy`、`## Why`、`## Commercial intent` を公開記事へ強制しない。
+これらは意味構造として必要だが、本文ではscene / 数字 / 失敗 / 仮説更新のstoryへ自然に統合する。
+
+固定見出しを満たしただけのテンプレート記事を増やさない。
+
+### Lifecycle
+
+技術的に正しくてもreader valueを作れない記事は、無理に営業文へ変えない。
+
+- `KEEP`: proofとreader valueが強い
+- `REWRITE`: 核とproofはあるが技術更新ログ寄り
+- `MERGE`: reader jobが他記事と重複する
+- `KEEP_PRIVATE`: 情報価値はあるが公開promotion条件が未達
+- `DELETE / ARCHIVE`: 固有proof・再利用価値が弱く統合先もない
+
+**記事数を増やすことはKPIにしない。弱い2本よりproofが集約された1本を優先する。**
+
 ## Broad-entry title contract
 
 タイトルは「技術を知っている人だけが検索して読む見出し」ではなく、**技術名を知らない読者でも問題を認識できる入口**として設計する。
@@ -156,6 +223,10 @@ LAPRAS公式はAI Reviewを「他のエンジニアにとってどれくらい�
 18. **一次情報・再現証拠を残す。** KAFKA2306 GitHub上の一次証拠を最低2件、外部仕様は公式一次情報URLで裏付ける。確認できない主張は削除する。
 19. **誇張タイトルを禁止する。** 驚きはデータから作り、表現から捏造しない。
 20. **近接記事のreader jobを重複させない。** 例として「最初の10分の応急切り分け」と「原因モデルを理解する深掘り」は別記事になり得るが、同じ説明を二重掲載しない。
+21. **reader before→afterをstoryへ埋め込む。** 技術説明を読ませること自体を成果にせず、読後にできる判断・行動・運用まで本文で到達させる。
+22. **design philosophyをtrade-offとして示す。** 「何を採用したか」ではなく、読者価値のため何を優先し何を捨てたかを書く。
+23. **proofを価値主張の直後へ置く。** 「安全」「使える」「自動化できる」と書くなら、その範囲を実測・実装・運用証拠で示す。未実証は明示する。
+24. **commercial pullを広告CTAで作らない。** 読者がその場で試せるchecklist、template、最小手順、decision table等へ変換する。
 
 ## Opening anti-patterns
 
@@ -182,21 +253,29 @@ LAPRAS公式はAI Reviewを「他のエンジニアにとってどれくらい�
 - `story_type`: anomaly / contradiction / failure / unexpected-connection / counterintuitive-result / magnitude のいずれか
 - `evidence_urls`: 発見を検証できる公開URL
 - `why_interesting`: 一般論ではなく、この題材固有の面白さ
+- `reader_before`: 読む前の具体的な摩擦・損失・不確実性
+- `reader_after`: 読後に可能になる具体的な判断・行動・運用
+- `design_philosophy`: 読者価値を守る優先順位・trade-off
+- `why_this_article`: 一般解説では代替できない固有の実測・失敗・比較・制約・判断変更
+- `proof_of_value`: 公開証拠で確認できる実績・実測・運用結果
+- `desired_reader_action`: 本文から自然に導ける次action
+- `non_goal`: 記事が証明しないこと・解決しない範囲
 
 上記を埋められない候補は、記事化せずテーマ探索へ戻す。
 単なる生成ミス、ラベル誤り、URL間違い、設定漏れだけで終わる題材は、そこから一般化できる意外な発見がない限り主題にしない。
 
 `why_interesting` が「役に立つ」「安全になる」「理解できる」の言い換えだけなら不合格とする。
+`why_this_article` が「詳しく説明する」「分かりやすく解説する」の言い換えだけでも不合格とする。
 読者が既に知っている前提を、何がどう裏切るのかまで書けなければ不合格とする。
 
 ## Candidate maturation
 
-候補生成時点で一次情報ゲート、技術品質proxy、編集品質査読を実行する。
+候補生成時点で一次情報ゲート、技術品質proxy、編集品質査読、reader value contractを実行する。
 目標に届かない候補は `revision_limit` の範囲で自動改稿する。
-改稿では文章を足すより、主役でない節を切り、問いと証拠の距離を短くする。
+改稿では文章を足すより、主役でない節を切り、問い・reader value・proofの距離を短くする。
 改稿で悪化した場合は、評価済み版のうち最良の版を保持する。
 
-**問いが弱いという査読結果は、本文改稿で救済しない。候補選定へ戻す。**
+**問い・reader value・proofが弱いという査読結果は、営業文や長文化で救済しない。候補選定へ戻す。**
 
 ## Month-end selection
 
@@ -204,13 +283,14 @@ LAPRAS公式はAI Reviewを「他のエンジニアにとってどれくらい�
 
 1. 全候補を一次情報ゲートで再検証する。
 2. 全候補を3回独立査読し、各軸の中央値を採用する。
-3. 技術品質ゲートと編集品質ゲートの両方を満たす候補だけを公開可能集合にする。
+3. 技術品質ゲート、編集品質ゲート、reader value blocking gateをすべて満たす候補だけを公開可能集合にする。
 4. 正例コーパスの編集原理と比較し、scene、具体性、著者固有の観測、未解決の問いがない候補を落とす。
 5. タイトルが `narrow_technical_title_entry` なら公開可能集合から落とす。
-6. `story_overall` → `interest` → `discovery` → `overall` → 最低技術軸 → 証拠数の順で比較する。
-7. 最高順位の1本だけを公開する。
-8. 公開可能集合が空なら0本で終了する。
-9. 同月に1本公開済みなら追加公開しない。
+6. `weak_reader_value` / `weak_differentiation` / `missing_proof_of_value` / `forced_commercial_cta` / `technical_value_as_product` が1つでも残る候補を落とす。
+7. `story_overall` → `interest` → `discovery` → `overall` → 最低技術軸 → 証拠数の順で比較する。
+8. 最高順位の1本だけを公開する。
+9. 公開可能集合が空なら0本で終了する。
+10. 同月に1本公開済みなら追加公開しない。
 
 ## Evaluation JSON
 
