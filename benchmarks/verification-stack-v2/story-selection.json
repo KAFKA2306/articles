@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "outcome": "article_candidate_ready",
+  "selected_candidate": "release-status-is-not-correctness-proof",
+  "candidate_path": "articles/2026-08-15-stable-is-not-correctness-proof.md",
+  "selection_reason": "It is the only proposition that survives the preregistered story gate without turning a small controlled corpus or unknown-ground-truth real repository into a universal product ranking.",
+  "counterfactual": "If the stable candidate had covered the frozen ground truth while the Beta challenger missed required mutants, the article would not argue that release status and semantic authority must be separated on this evidence."
+}

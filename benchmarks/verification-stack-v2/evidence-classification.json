@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "status": "complete",
+  "evidence_head": "3bf9406308e96c4a9131a54792abdb287a15dba0",
+  "controlled": {
+    "python_static_type": {
+      "in_scope_mutants": ["PY-SYNTAX-001", "PY-TYPE-ARG-001", "PY-TYPE-RETURN-001", "PY-NAME-001", "PY-ASYNC-001"],
+      "mypy": {"detected": 5, "total": 5, "clean_blocking_false_positives": 0},
+      "pyright": {"detected": 5, "total": 5, "clean_blocking_false_positives": 0},
+      "ty": {"detected": 5, "total": 5, "clean_blocking_false_positives": 0},
+      "pyrefly": {"detected": 2, "total": 5, "clean_blocking_false_positives": 0, "missed": ["PY-TYPE-ARG-001", "PY-TYPE-RETURN-001", "PY-ASYNC-001"]}
+    },
+    "runtime_boundary": {
+      "pydantic": {"detected": 1, "total": 1},
+      "unvalidated_python": {"detected": 0, "total": 1},
+      "zod": {"detected": 1, "total": 1},
+      "unvalidated_typescript": {"detected": 0, "total": 1}
+    },
+    "formatting": {
+      "python": "Black and Ruff formatter produced the same patch SHA-256 and both matched the clean target for the frozen formatter mutant.",
+      "typescript": "Prettier matched the clean target; Biome was idempotent and smoke-passed but did not match the preregistered clean target under the tested configuration."
+    },
+    "hooks": "pre-commit and prek produced the same changed files, content SHA-256, and diff SHA-256 for the frozen parity fixture."
+  },
+  "external_validity": {
+    "python_sample": "KAFKA2306/2511youtuber@95a0f6b4f5270d1463c15f301a2bd4f0d709c109",
+    "typescript_sample": "KAFKA2306/investor2@9a45de93437456f215f1a251666f322254aac6b4",
+    "python_type_tools_executed": ["pyrefly", "ty", "pyright", "mypy"],
+    "typescript_tools_executed": ["tsc", "oxlint"],
+    "boundary": "Unknown real-repository defect ground truth means nonzero exits and output volume are operational observations only, not recall or quality rankings."
+  },
+  "official_status_evidence": {
+    "pyrefly": {
+      "status": "stable_v1_production_ready_claim_by_project",
+      "url": "https://pyrefly.org/blog/v1.0/",
+      "date": "2026-05-12"
+    },
+    "ty": {
+      "status": "beta_with_project_recommendation_for_motivated_production_users",
+      "url": "https://astral.sh/blog/ty",
+      "date": "2025-12-16"
+    }
+  },
+  "classification": [
+    "Release-channel maturity and controlled semantic detection are separate evidence dimensions.",
+    "The frozen fixture falsifies any rule that treats stable status alone as sufficient evidence for default static-type authority.",
+    "The study does not establish universal checker accuracy, because the controlled corpus is deliberately small and real repositories lack complete defect ground truth.",
+    "The externally valid decision is procedural: promote a blocking authority only after repository-relevant ground-truth checks, while using release status separately for operational maturity risk."
+  ]
+}

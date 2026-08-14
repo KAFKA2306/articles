@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "candidates": [
+    {
+      "id": "release-status-is-not-correctness-proof",
+      "proposition": "A stable release label is evidence of product maturity, not proof that a type checker is the right blocking authority for your repository.",
+      "falsification_attempt": "This would be weakened if the stable candidate dominated the preregistered controlled ground truth while Beta challengers missed required mutants, or if the external sample made the controlled result operationally implausible.",
+      "evidence": [
+        "Pyrefly 1.2.0 detected 2/5 frozen Python static-type mutants with zero clean blocking false positives.",
+        "mypy 2.3.0, Pyright 1.1.411, and ty 0.0.71 each detected 5/5 with zero clean blocking false positives.",
+        "Pyrefly's project calls v1 stable and production ready; Astral calls ty Beta while recommending it to motivated production users.",
+        "All four Python type candidates executed on the preregistered real repository; that sample has unknown ground truth and therefore does not reverse the controlled correctness result."
+      ],
+      "gate": {"falsifiable": true, "measured": true, "externally_plausible": true, "decision_changing": true, "non_obvious": true, "bounded": true},
+      "survives": true
+    },
+    {
+      "id": "beta-should-replace-stable",
+      "proposition": "Because a Beta checker caught more frozen mutants here, teams should replace stable checkers with the Beta challenger by default.",
+      "falsification_attempt": "The proposition requires a universal replacement claim, but this experiment measures five controlled static-type mutants and one unknown-ground-truth real repository only. Release maturity and third-party compatibility remain separate dimensions.",
+      "gate": {"falsifiable": true, "measured": true, "externally_plausible": true, "decision_changing": true, "non_obvious": true, "bounded": false},
+      "survives": false,
+      "reason": "Overgeneralizes beyond the controlled corpus and collapses semantic coverage with operational maturity."
+    },
+    {
+      "id": "more-output-means-better",
+      "proposition": "The checker that emits the most diagnostics on a real repository provides the strongest verification signal.",
+      "falsification_attempt": "The real-repository sample has no complete defect ground truth, and the preregistered protocol explicitly forbids treating raw diagnostics as defect count.",
+      "gate": {"falsifiable": true, "measured": true, "externally_plausible": false, "decision_changing": true, "non_obvious": false, "bounded": false},
+      "survives": false,
+      "reason": "Output volume is not recall or root-cause quality; setup/import diagnostics can dominate real-repository output."
+    }
+  ]
+}

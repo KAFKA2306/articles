@@ -1,8 +1,8 @@
 {
-  "blocked_on": "external_results_incomplete",
+  "blocked_on": null,
   "comparison_started": true,
-  "last_transition": "controlled_results_ready->real_repo_sample_frozen",
-  "phase": "real_repo_sample_frozen",
+  "last_transition": "story_candidates_ready->article_candidate_ready",
+  "phase": "article_candidate_ready",
   "publication_authorized": false,
   "real_repo_sample_frozen": true,
   "schema_version": 1
