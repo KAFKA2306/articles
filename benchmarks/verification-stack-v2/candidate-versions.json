@@ -15,6 +15,7 @@
     "biome": {"version": "2.5.6", "channel": "stable", "package": "@biomejs/biome", "source": "https://www.npmjs.com/package/@biomejs/biome"},
     "prettier": {"version": "3.9.6", "channel": "stable", "source": "https://www.npmjs.com/package/prettier"},
     "oxlint": {"version": "1.76.0", "channel": "stable", "source": "https://www.npmjs.com/package/oxlint"},
+    "oxlint-tsgolint": {"version": "7.0.2001", "channel": "stable", "source": "https://www.npmjs.com/package/oxlint-tsgolint"},
     "eslint": {"version": "10.8.0", "channel": "stable", "source": "https://www.npmjs.com/package/eslint"},
     "typescript-eslint": {"version": "8.65.0", "channel": "stable", "source": "https://www.npmjs.com/package/typescript-eslint"},
     "typescript": {"version": "7.0.2", "channel": "stable", "source": "https://www.npmjs.com/package/typescript"},
@@ -29,6 +30,7 @@
       "candidate": "oxlint",
       "version": "1.76.0",
       "status": "experimental",
+      "requires": {"oxlint-tsgolint": "7.0.2001", "typescript": "7.0.2"},
       "source": "https://oxc.rs/docs/guide/usage/linter/config-file-reference",
       "note": "Protocol permits this only as an Experimental challenger; it cannot become the default compiler/type authority under the preregistered disqualifier while this role remains experimental."
     }
