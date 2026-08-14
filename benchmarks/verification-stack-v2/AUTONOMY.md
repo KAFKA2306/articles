@@ -1,6 +1,8 @@
 # Verification Stack v2 — Autonomous Execution Contract
 
-The autonomous controller may advance this benchmark only through preregistered gates. It is an executor, not an editor of the hypothesis.
+The autonomous controller exists to produce the strongest evidence-backed article this investigation can support. **Benchmark completion is an intermediate state, not the objective.**
+
+The controller may execute and extend the investigation, but it may not change a preregistered metric or defect after seeing results merely to make a preferred tool look better.
 
 ## State machine
 
@@ -12,10 +14,39 @@ design_frozen
   -> real_repo_sample_frozen
   -> external_validity_ready
   -> evidence_classified
-  -> article_gate_ready
+  -> story_candidates_ready
+  -> article_candidate_ready OR no_article
 ```
 
-The controller must stop at the first unmet gate. A blocked gate is a valid outcome.
+The current phase is stored in `state.json`. The controller advances only through explicit gates.
+
+## Terminal objective
+
+Use `EDITORIAL_GOAL.md` as the terminal contract.
+
+A successful run is not `all tools executed`. A successful investigation ends in one of two states:
+
+1. **article_candidate_ready** — one decision-changing, non-obvious proposition survives the evidence gates and a candidate article can be written around it; or
+2. **no_article** — the evidence is useful but does not justify a strong article.
+
+Never manufacture a story to avoid `no_article`.
+
+## Evidence autonomy
+
+The controller may autonomously:
+
+- implement already-frozen fixtures and mutant generators;
+- build neutral result collectors;
+- pin current tool versions with provenance;
+- run clean baselines and controlled mutants;
+- rerun contaminated/flaky measurements according to the protocol;
+- freeze the real-repository sample using the preregistered deterministic selection rule;
+- execute external-validity checks;
+- classify evidence against `RESULTS_SCHEMA.md`;
+- generate multiple competing story propositions after evidence classification;
+- add a versioned protocol amendment when the existing experiment cannot answer an important newly exposed question.
+
+A protocol amendment must state the reason before collecting the new data. Old results remain visible and are not rewritten.
 
 ## Non-negotiable constraints
 
@@ -23,21 +54,37 @@ The controller must stop at the first unmet gate. A blocked gate is a valid outc
 - Never treat raw diagnostic counts as defect counts.
 - Never choose a real repository after reading candidate output.
 - Never convert timing wins into correctness wins.
-- Never publish an article. `publication_authorized` remains `false` unless an explicit human task changes it.
-- Never create a second canonical branch or PR for the same benchmark.
+- Never use vendor positioning as the article's discovery.
+- Never choose a title before the evidence-classification phase.
+- Never create a product-list article when no single proposition passes `EDITORIAL_GOAL.md`.
+- Never publish an article. Publication remains a separate explicit authorization.
+- Never create a second canonical branch or PR for the same investigation.
 - Never silently suppress a required mutant.
+
+## Editorial search loop
+
+After controlled and external-validity evidence exists:
+
+```text
+classify evidence
+  -> generate >= 3 competing propositions
+  -> try to falsify each proposition with the same evidence
+  -> reject generic/vendor-obvious propositions
+  -> test decision impact
+  -> select one surviving proposition
+  -> draft one article around that proposition
+```
+
+If all propositions fail, the controller may propose a versioned follow-up experiment only when a precise unresolved question would materially change the reader's decision. Otherwise terminate as `no_article`.
 
 ## Autonomous trigger
 
-`.github/workflows/verification-stack-v2-autonomous.yml` runs the deterministic controller on pushes to the canonical experiment branch and on manual dispatch. The controller advances through all currently satisfied gates, writes the machine-readable state, and stops when the next prerequisite is absent.
+The repository workflow may run the deterministic controller on the canonical experiment branch and on manual dispatch. It should execute the next eligible phase and stop at a missing prerequisite rather than bypassing it.
 
-A GitHub Actions run succeeding means the controller itself behaved correctly. It does not mean any candidate tool won.
+A green GitHub Actions run means the controller obeyed its contract. It does not mean a candidate tool won or an article is publishable.
 
 ## Fixed point
 
-Autonomous execution stops when either:
+Stop when either `article_candidate_ready` or `no_article` is reached.
 
-1. the next preregistered gate is not satisfied; or
-2. `article_gate_ready` is reached.
-
-At `article_gate_ready`, evidence may support drafting a candidate article, but publication still requires a separate explicit authorization.
+Even at `article_candidate_ready`, keep the candidate unpublished until explicit publication authorization exists.
