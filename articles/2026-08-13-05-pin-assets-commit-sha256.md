@@ -1,5 +1,5 @@
 ---
-title: "同じ画像URLなのに中身が変わる。共有アセットを固定する"
+title: "中央の画像を更新しても、公開サイトが勝手に変わらない。共有assetをcommitとhashで固定する"
 emoji: "📌"
 type: "tech"
 topics: ["github", "ci", "frontend", "architecture"]
@@ -7,39 +7,102 @@ published: false
 published_at: 2026-08-13 23:40
 ---
 
-複数のGitHub Pagesで同じ画像やアイコンを使いたいとき、いちばん簡単なのは中央repoの `main` を直接参照することだ。しかし、`main` は更新される。URLが同じでも、その先のファイルは将来変わり得る。
+複数のサイトで同じ画像やアイコンを使いたい。
 
-GitHub公式ドキュメントも、branch名を含む通常のファイルURLはbranch headの更新に合わせて内容が変わり得るため、特定versionを共有したい場合はcommit IDを使ったpermalinkにするよう説明している。
-
-この問題に対して `KAFKA2306/prompt-vault` と `KAFKA2306/travel` では、共有アセットを **asset IDで選ぶ → Prompt Vaultのcommitを固定する → SHA-256を照合する → consumer repoへvendorする → build後とdeploy後にも同じhashを再確認する** という境界を実装した。
-
-一次情報:
-
-- https://github.com/KAFKA2306/prompt-vault/commit/f96a2d6b5bb257080f235f04cdfb5745e8700ed3
-- https://github.com/KAFKA2306/prompt-vault/commit/a6ef582f7112b0f504bea3d535b9c45437c107f9
-- https://github.com/KAFKA2306/travel/commit/cbc7aeae37398a0f50b76c6de6e85319653dfbfe
-- https://docs.github.com/en/repositories/working-with-files/using-files/getting-permanent-links-to-files?apiVersion=2022-11-28
-- https://docs.github.com/en/rest/git/blobs
-
-## 1. 問題
-
-たとえば、複数siteから次のようなURLを参照するとする。
+一番簡単なのは、中央repositoryの `main` を直接参照することだ。
 
 ```text
 https://raw.githubusercontent.com/example/assets/main/hero.webp
 ```
 
-初日は正しい画像が出る。だが中央repoの `main` で `hero.webp` が差し替えられると、consumer側のcommitを1行も変更していないのに、表示結果だけが変わる。
+しかし、このURLは同じままでも中身は変わる。
 
-ここで壊れているのはHTTPではない。404にもならず、buildも通り得る。**consumerが「どのbytesを採用したのか」を後から再現できない**ことが問題になる。
+中央repoで `hero.webp` を差し替えれば、consumer側は1行も変更していないのに公開サイトの見た目が変わる。
 
-GitHub公式のpermalink説明では、branch head上のファイルは新しいcommitによって変わり得る一方、URL中のbranch名を特定commit IDへ置き換えると、そのcommit内の正確なversionへ固定できる。
+404にもならない。buildも通る。
 
-### 実際の状況
+**reviewしていない変更が、正常な配信として利用者へ届く。**
 
-`prompt-vault` の2026年8月13日の実装では、Pages共有アセットを `assets/registry.json` とcollection manifestで管理し、consumerはasset IDと配置先だけを宣言する構造を追加した。さらに `vendor_assets.py` はPrompt Vaultのcommitを引数で受け取り、canonical sourceのSHA-256を確認してからconsumerへコピーする。
+`KAFKA2306/prompt-vault` と `KAFKA2306/travel` では、ここを次の境界へ変えた。
 
-同日の `travel` では `travel-basic` を実consumerとして導入し、lock fileへ次の4点を固定した。
+```text
+asset IDを選ぶ
+  ↓
+canonical commitを固定
+  ↓
+SHA-256を照合
+  ↓
+consumerへvendor
+  ↓
+build後も同じhashか確認
+  ↓
+deploy後も同じhashか確認
+```
+
+この記事で扱うのはhashの計算方法ではない。
+
+**中央管理の便利さを残しながら、consumerの公開物が知らない間に変わらない運用UX**について書く。
+
+一次情報:
+
+- Prompt Vault: https://github.com/KAFKA2306/prompt-vault/commit/f96a2d6b5bb257080f235f04cdfb5745e8700ed3
+- Prompt Vault: https://github.com/KAFKA2306/prompt-vault/commit/a6ef582f7112b0f504bea3d535b9c45437c107f9
+- travel consumer: https://github.com/KAFKA2306/travel/commit/cbc7aeae37398a0f50b76c6de6e85319653dfbfe
+- GitHub permalink: https://docs.github.com/en/repositories/working-with-files/using-files/getting-permanent-links-to-files?apiVersion=2022-11-28
+
+## `main` URLは場所を示すが、採用versionは示さない
+
+branch URLは便利である。
+
+常に最新のassetへ追従できる。
+
+しかしconsumerに必要なのは、
+
+> 今どこにassetがあるか
+
+だけではない。
+
+> **このサイトは、どのversionのどのbytesを採用したのか**
+
+も必要である。
+
+そこで識別を2段階に分ける。
+
+1. commit ID — どのrepository snapshotを採用したか
+2. SHA-256 — そのsnapshotから取り出したbytesが期待値と同じか
+
+commitはsource versionを固定する。
+
+hashはconsumerへ入った実体まで照合する。
+
+## consumerはasset pathではなくIDを選ぶ
+
+中央manifestでは、共有assetをIDで管理する。
+
+```json
+{
+  "id": "travel-basic",
+  "file": "travel-basic-illustration.webp",
+  "sha256": "8c45dfb3c32aa5d2991b9d3b9d710b66722f0ef10fb62a0b5dea2582f36ea383"
+}
+```
+
+consumer側はsource pathを自由記述せず、
+
+```json
+{
+  "id": "travel-basic",
+  "destination": "public/assets/kafka-signal/travel-basic-illustration.webp"
+}
+```
+
+のように採用対象と配置先を宣言する。
+
+これにより、source側のdirectory構造より**assetの意味的なID**をcontractにできる。
+
+## vendorした時点でlockを残す
+
+`travel` では、採用したsourceをlockへ残した。
 
 ```json
 {
@@ -50,215 +113,146 @@ GitHub公式のpermalink説明では、branch head上のファイルは新しい
 }
 ```
 
-commitだけでなく、採用したbytesのdigestまでconsumer側に残している。
-
-## 2. 原因
-
-原因は、**「どこにあるか」と「何を採用したか」を同じURLで表現しようとしたこと**にある。
-
-branch URLは場所を示すには便利だが、branch headは動く。対してconsumerが必要なのは、レビュー時に確認したものとdeploy時に配信するものが同じだと検証できる識別子である。
-
-ここでは識別子を2層に分ける。
-
-1. **commit ID**: どのrepository snapshotを参照したか
-2. **SHA-256**: そのsnapshotから取り出したasset bytesが期待値と一致するか
-
-GitHubのGit blob APIも、repository内のファイル内容をGit blobとして扱い、blobにhash識別子を持つことを公式に説明している。今回のconsumer contractではそれとは別にSHA-256をmanifestへ記録し、vendored file・build artifact・deploy後のfileを同じdigestで照合している。
-
-## 3. 設計判断と代替案
-
-### 案A: `main` をruntime hotlinkする
-
-実装は最小になる。しかしconsumer repoのcommitと実際に表示されるasset versionが分離する。
-
-`prompt-vault` のAgent World asset manifestでも、default policyとして mutable `main` URLをruntime hotlinkしないことを明記している。
-
-### 案B: commit permalinkだけを使う
-
-GitHub上の参照先versionは固定できる。単一fileを読むだけなら有効である。
-
-一方、consumer側にコピーしたfileやbuild後のfileまで同一bytesか確認したい場合、commit IDだけではconsumer filesystem上の実体を直接検査できない。そこで今回の実装ではSHA-256もlockへ残す。
-
-### 案C: tagだけを固定する
-
-release単位で扱いやすい。しかしconsumerが最終的にどのcommitを採ったかまでlockに残す設計のほうが、再現時の参照点が明示的になる。
-
-### 案D: commit＋SHA-256＋vendor
-
-今回の採用案である。
-
-consumerは中央repoをruntime dependencyにせず、自分のbuild対象へassetを保持する。その代わり、コピー元commitとdigestをlockへ記録し、CIで一致を検証する。
-
-重要なのは「中央管理だからconsumerはassetを持たない」ではない。**中央repoは正準sourceとdistribution metadataを持ち、consumerは採用versionを自分のrepositoryに固定する**という責務分離である。
-
-## 4. 実装
-
-最小構成は3ファイルで作れる。
-
-### 4.1 中央manifest
-
-```json
-{
-  "id": "travel-basic",
-  "file": "travel-basic-illustration.webp",
-  "sha256": "8c45dfb3c32aa5d2991b9d3b9d710b66722f0ef10fb62a0b5dea2582f36ea383"
-}
-```
-
-`prompt-vault` のcollection manifestは実際にasset ID、file、size、SHA-256、生成由来、用途制約を記録している。
-
-### 4.2 consumer manifest
-
-```json
-{
-  "schema_version": "1.0.0",
-  "repository": "KAFKA2306/travel",
-  "assets": [
-    {
-      "collection": "site-basics",
-      "id": "travel-basic",
-      "destination": "public/assets/kafka-signal/travel-basic-illustration.webp"
-    }
-  ]
-}
-```
-
-consumerはsource pathを自由記述せず、asset IDを選択する。配置先だけをconsumer責務として宣言する。
-
-### 4.3 lock file
-
-vendor後に、commitとsource/destination digestを保存する。
-
-```json
-{
-  "canonical_commit": "90111f8953dd2a45aca2da7053bfdeef57459b41",
-  "assets": [
-    {
-      "id": "travel-basic",
-      "destination": "public/assets/kafka-signal/travel-basic-illustration.webp",
-      "source_sha256": "8c45dfb3c32aa5d2991b9d3b9d710b66722f0ef10fb62a0b5dea2582f36ea383",
-      "destination_sha256": "8c45dfb3c32aa5d2991b9d3b9d710b66722f0ef10fb62a0b5dea2582f36ea383"
-    }
-  ]
-}
-```
-
-### 最小verification
-
-Python標準libraryだけでも確認できる。
-
-```python
-from hashlib import sha256
-from pathlib import Path
-
-EXPECTED = "8c45dfb3c32aa5d2991b9d3b9d710b66722f0ef10fb62a0b5dea2582f36ea383"
-path = Path("public/assets/kafka-signal/travel-basic-illustration.webp")
-
-actual = sha256(path.read_bytes()).hexdigest()
-if actual != EXPECTED:
-    raise SystemExit(f"asset drift: {actual}")
-```
-
-`travel` のCIでは、source/destination digestのlock値だけでなく、vendored fileと `dist/` のbuild後fileを実際に読み直して同じSHA-256になることを確認している。
-
-## 5. 検証
-
-この設計で見るべき境界は4つある。
-
-### 1. 正準source
-
-registryに記録されたSHA-256と中央repoの実fileが一致するか。
-
-`prompt-vault` のvendoring実装はcanonical source SHA-256を確認してからcopyする。さらに、既存destinationがlocalで変更済み、または未管理fileを別内容で上書きしようとする場合はsilent overwriteせず失敗する。
-
-### 2. consumer checkout
-
-lock fileの `canonical_commit` とasset digestが期待値どおりか。
-
-### 3. build artifact
-
-source treeで合っていてもbuild工程で別fileに置換される可能性があるので、`dist/` 側もhashを再計算する。
-
-`travel` のworkflowは `public/assets/...` と `dist/assets/...` の両方を検証している。
-
-### 4. deploy後
-
-最後に公開URLからfileを再取得してSHA-256を確認する。
-
-`travel` のworkflowはGitHub Pages deploy成功後、公開された `travel-basic-illustration.webp` を `curl` で取得し、同じ `8c45...ea383` と一致することを検証する。
-
-つまり検証chainは次のようになる。
+これでasset更新は、
 
 ```text
-canonical asset
-  -> vendor後のconsumer file
-  -> build artifact
-  -> deployed file
+中央repoで差し替えた
 ```
 
-各段階で同じdigestを要求する。
+だけではconsumerへ届かない。
 
-## 6. 失敗と学び
+consumer側でも、新commitと新hashを採用する変更としてreviewされる。
 
-### 壊れた例: URLだけを信じる
+**共有assetの更新を、review可能なversion changeへ変える。**
 
-```html
-<img src="https://raw.githubusercontent.com/example/assets/main/hero.webp">
-```
+## commit pinだけではconsumer内の実fileまでは確認できない
 
-この方式では、consumerのPRで確認したあとに中央repoの `main` が進めば、consumerのcode review外で表示内容が変わる。
+commit permalinkでsource versionは固定できる。
 
-### 改善後: 採用versionをconsumerで固定する
+しかしcopy後のfileが本当に同じbytesかは別である。
+
+例えば、
+
+- vendor scriptのbug
+- local edit
+- build processでの置換
+- deploy時の別asset混入
+
+があれば、source commitは正しくても公開物は違う。
+
+そこで各段階でhashを取り直す。
 
 ```text
-asset ID       = travel-basic
-source repo    = KAFKA2306/prompt-vault
-source commit  = 90111f8...
-SHA-256        = 8c45dfb3...ea383
-destination    = public/assets/kafka-signal/travel-basic-illustration.webp
+canonical source
+  ↓ SHA-256
+consumer checkout
+  ↓ SHA-256
+build artifact
+  ↓ SHA-256
+deployed file
 ```
 
-これならasset更新は「中央repoの変更」だけでは完了しない。consumer側で新commit・新hashをlockへ反映する変更としてreviewできる。
+すべて同じdigestを要求する。
 
-もう1つ重要なのは、**hashをmanifestへ書くだけでは検証にならない**ことである。`travel` の実装が強いのは、PR buildとdeploy後の両方で実fileからdigestを再計算している点にある。
+## `travel` ではdeploy後までread-backする
 
-## 7. 再現方法
+consumer側では、source treeだけでなく `dist/` のbuild後fileもhash確認する。
 
-GitHub Pagesや画像生成環境がなくても、2つのdirectoryだけで再現できる。
+さらにPages deploy後、公開URLからassetを取得し、同じSHA-256になることを検証する。
 
-1. `source/hero.txt` に `version-1` と書く。
-2. SHA-256を計算して `manifest.json` に保存する。
-3. `source/hero.txt` を `consumer/public/hero.txt` へcopyする。
-4. `lock.json` へsource commit相当の識別子とSHA-256を書く。
-5. consumer側でfileを読み直し、lockのSHA-256と一致することを確認する。
-6. sourceだけ `version-2` に変更し、manifestのhashを更新せずvendorを試す。
-7. source hash mismatchで停止することを確認する。
-8. 次にconsumer側だけ手編集し、destination hash mismatchで停止することを確認する。
+つまり、
 
-最小scriptは次の形でよい。
-
-```python
-from hashlib import sha256
-from pathlib import Path
-
-expected = Path("manifest.sha256").read_text().strip()
-actual = sha256(Path("source/hero.txt").read_bytes()).hexdigest()
-assert actual == expected, (expected, actual)
+```text
+正しいsourceを選んだ
 ```
 
-ここで確かめたいのはcopy処理そのものではない。**更新がreview可能なversion changeとして現れ、期待していないbytesが黙ってconsumerへ入らないこと**である。
+だけで終わらず、
 
-## まとめ
+```text
+利用者へ配られたbytesも同じだった
+```
 
-共有アセットを中央管理するとき、`main` URLを共通化するだけではversion管理にならない。
+まで確認する。
 
-今回の実装から再利用できる最小contractは次の4点だった。
+ここまで追うと、asset更新の責任範囲が明確になる。
 
-1. consumerはpathではなくcanonical asset IDを選ぶ
-2. source repositoryのcommit IDを固定する
-3. sourceとdestinationのSHA-256をlockへ残す
-4. PR buildとdeploy後に実bytesからdigestを再計算する
+## 中央管理と自動追従は同じではない
 
-GitHubのcommit permalinkは「どのversionを指したか」を固定する。consumer lockのSHA-256は「実際に配ったbytesがそのversionの期待値と一致したか」を検証する。
+共有asset基盤を作ると、全consumerを常に最新版へ自動追従させたくなる。
 
-この2つを分けると、共有assetを増やしても「中央repoの更新だけで全siteの見た目が暗黙に変わる」状態を避けながら、各consumerの変更を小さなreview可能単位にできる。
+しかし、ブランド画像やhero imageのように公開UXへ直接効くassetでは、それが望ましいとは限らない。
+
+```text
+central source = 1か所で管理
+```
+
+と、
+
+```text
+automatic adoption = 全consumerへ即反映
+```
+
+は別の設計判断である。
+
+今回の構成は、中央sourceを持ちながらconsumer adoptionを明示的な更新にした。
+
+速度より、**consumerがいつ何を採用したかを説明できること**を優先した。
+
+## silent overwriteも止める
+
+vendor先に既存fileがあり、期待hashと違う場合に、そのまま上書きするとlocal changeを消す可能性がある。
+
+そのため、
+
+```text
+managed file + expected old hash
+→ update可能
+
+unknown file / locally modified bytes
+→ fail
+```
+
+のように扱う。
+
+共有基盤だから強制的に上書きするのではなく、consumer側の状態も尊重する。
+
+## このpatternが向く場面
+
+特に効くのは、
+
+- 複数GitHub Pagesで共通画像を使う
+- design system assetを複数repoへ配る
+- ロゴやiconのversionを固定したい
+- build/releaseの再現性が必要
+- 中央更新をconsumer reviewなしで反映したくない
+
+といった場合である。
+
+逆に、常に最新を表示すること自体が要件ならruntime hotlinkも合理的である。
+
+大事なのは、**変更追従を意図しているのか、偶然そうなっているのか**を区別することだ。
+
+## 最小導入はcommit + hashだけでもよい
+
+大きなregistryを最初から作る必要はない。
+
+1つの共有fileについて、
+
+```yaml
+source_repo: KAFKA2306/prompt-vault
+source_commit: 90111f8...
+source_sha256: 8c45dfb3...
+destination: public/assets/hero.webp
+```
+
+をlockへ置く。
+
+CIでdestinationのSHA-256を再計算する。
+
+それだけでも、`main` hotlinkよりかなり説明可能になる。
+
+中央assetを更新しても、consumerが勝手に変わらない。
+
+consumerが更新するときは、その差分がPRとして見える。
+
+**中央管理と公開安定性を両立するには、「最新を共有する」のではなく「採用versionを共有する」方が扱いやすかった。**
