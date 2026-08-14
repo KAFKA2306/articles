@@ -86,8 +86,28 @@ def main() -> None:
     if "boundary_capability" not in workspace:
         raise SystemExit("workspace boundary-capability evidence is missing")
 
-    if set(hooks.get("tools", {})) != {"pre-commit", "prek"}:
-        raise SystemExit("hook parity evidence is incomplete")
+    # hook-parity.json schema v1 stores each runner at the top level.
+    # The previous validator incorrectly expected a non-existent `tools` map,
+    # which caused a valid v2.4 repaired run to be discarded before commit.
+    expected_hook_keys = {"pre_commit", "prek"}
+    if not expected_hook_keys.issubset(hooks):
+        raise SystemExit(
+            f"hook parity evidence is incomplete: expected={sorted(expected_hook_keys)} "
+            f"observed={sorted(hooks)}"
+        )
+    if hooks["pre_commit"].get("runner") != "pre-commit":
+        raise SystemExit("pre-commit hook evidence has unexpected runner identity")
+    if hooks["prek"].get("runner") != "prek":
+        raise SystemExit("prek hook evidence has unexpected runner identity")
+    parity = hooks.get("parity", {})
+    required_parity_fields = {
+        "both_idempotent",
+        "same_changed_files",
+        "same_content_sha256",
+        "same_diff_sha256",
+    }
+    if not required_parity_fields.issubset(parity):
+        raise SystemExit("hook parity evidence is missing required parity fields")
 
     # Deliberately do not assert recall, affected-set equality, patch identity,
     # cache correctness, or a winner. Those are measured outcomes, not harness
@@ -100,6 +120,7 @@ def main() -> None:
                 "affected_commands_executed": len(workspace["affected"]),
                 "cache_candidates_executed": len(workspace["cache_hit"]),
                 "frozen_root_faults": len(frozen),
+                "hook_schema_valid": True,
                 "repair_valid": True,
             },
             indent=2,
