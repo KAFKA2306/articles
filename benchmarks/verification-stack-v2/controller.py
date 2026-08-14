@@ -22,6 +22,7 @@ PHASES = [
 
 EXPECTED_MUTANTS = {
     "PY-SYNTAX-001",
+    "PY-FORMAT-001",
     "PY-LINT-001",
     "PY-TYPE-ARG-001",
     "PY-TYPE-RETURN-001",
@@ -29,6 +30,7 @@ EXPECTED_MUTANTS = {
     "PY-ASYNC-001",
     "PY-RUNTIME-001",
     "TS-SYNTAX-001",
+    "TS-FORMAT-001",
     "TS-LINT-001",
     "TS-TYPE-ARG-001",
     "TS-TYPE-RETURN-001",
@@ -40,6 +42,7 @@ EXPECTED_MUTANTS = {
     "WS-CACHE-HIT-001",
     "WS-CACHE-INVALIDATE-001",
     "WS-BOUNDARY-001",
+    "HOOK-PATCH-PARITY-001",
 }
 
 REQUIRED_FIXTURE_FILES = [
@@ -48,6 +51,7 @@ REQUIRED_FIXTURE_FILES = [
     "RESULTS_SCHEMA.md",
     "EDITORIAL_GOAL.md",
     "AUTONOMY.md",
+    "AMENDMENT-v2.1-before-comparison.md",
     "mutants.json",
     "python/pyproject.toml",
     "python/src/verification_fixture/models.py",
@@ -73,6 +77,9 @@ REQUIRED_FIXTURE_FILES = [
     "workspace/apps/web/src/value.ts",
     "workspace/apps/api/package.json",
     "workspace/apps/api/src/value.ts",
+    "hooks/.pre-commit-config.yaml",
+    "hooks/fixer.py",
+    "hooks/fixtures/input.txt",
 ]
 
 
