@@ -1,5 +1,5 @@
 ---
-title: "見た目を直したらアクセシビリティが消えた。UI要件をCIで壊れにくくする"
+title: "UIを速く作り直しても、利用者を置き去りにしない。アクセシビリティ退行をCIで止める"
 emoji: "♿"
 type: "tech"
 topics: ["accessibility", "css", "html", "githubactions"]
@@ -7,27 +7,69 @@ published: false
 published_at: 2026-08-13 16:58
 ---
 
-画面をきれいに作り直したあと、アニメーション軽減や動的更新の通知だけが消えていた。
+画面を大きく作り直した。見た目は良くなった。JavaScriptも動く。テストもgreenだった。
 
-この種の退行は、機能テストが通っていても見逃しやすい。アクセシビリティ要件が「実装者が覚えておく注意事項」のままだからだ。
+それでも、昨日まで使えていた人が今日から使いにくくなることがある。
 
-`KAFKA2306/finBI` の2026年8月13日の公開commitでは、静的Web UIの再構築と同時に、CIが `prefers-reduced-motion`、`aria-live="polite"`、`role="status"` の存在を検査するようになった。この記事では、この実装を題材に、**UI要件をレビュー項目だけでなく実行可能な契約へ落とす方法**を整理する。
+`KAFKA2306/finBI` の静的Web UIを再構築したとき、私はこの種類の退行を「レビューで気をつけること」ではなく、**次のUI改修でも消えてはいけない最低限の利用体験**としてCIへ残した。
 
-一次情報:
+対象にしたのは小さい。
+
+- motionを減らしたい利用者向けの分岐を残す
+- 動的なstatus更新を支援技術へ伝えるためのsemantic markerを残す
+- それらがHTML/CSSの全面改稿で消えたら、通常の機能テストが通っていてもmergeを止める
+
+実装証拠:
 
 - finBI commit: https://github.com/KAFKA2306/finBI/commit/bc928ab7806c727086992df838f8ccae62f58040
 - workflow: https://github.com/KAFKA2306/finBI/blob/bc928ab7806c727086992df838f8ccae62f58040/.github/workflows/static-bi.yml
 - HTML: https://github.com/KAFKA2306/finBI/blob/bc928ab7806c727086992df838f8ccae62f58040/web/index.html
 - CSS: https://github.com/KAFKA2306/finBI/blob/bc928ab7806c727086992df838f8ccae62f58040/web/styles.css
-- MDN `prefers-reduced-motion`: https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/%40media/prefers-reduced-motion
-- MDN `aria-live`: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-live
-- MDN live regions: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Guides/Live_regions
 
-## 1. 問題：アクセシビリティ要件だけがリファクタリングで消える
+この記事で売りたいのは `grep` の書き方ではない。
 
-### 実際の入力・状況
+**UIを速く変え続けても、「以前はできた」を壊しにくい開発プロセスへ変えられること**である。
 
-対象commitのCIには次の検査がある。
+## UI刷新で失われやすいのは、目立たない要件だった
+
+一般的な機能テストは、ボタンが押せる、計算できる、routeが開く、といった主要機能をよく守ってくれる。
+
+一方で、次のような要件はHTML/CSSの大きな書き換えで静かに消えやすい。
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+}
+```
+
+```html
+<div id="result" role="status">計算中...</div>
+```
+
+MDNは `prefers-reduced-motion` を、利用者が端末側で非本質的なmotionを減らす設定を有効にしているか検出するmedia featureとして説明している。
+
+- https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/%40media/prefers-reduced-motion
+
+WAI-ARIA 1.2では `role="status"` はlive regionで、`aria-live="polite"` と `aria-atomic="true"` を暗黙に持つと定義されている。したがって、一般論として `role="status"` と明示的な `aria-live="polite"` の両方を常に要求する必要はない。
+
+- https://www.w3.org/TR/wai-aria/#status
+- https://www.w3.org/WAI/WCAG21/Techniques/aria/ARIA22
+
+`finBI` の対象commitでは、実装上 `role="status"` と `aria-live="polite"` の両方を置いているため、CIもその実装契約をそのまま確認している。
+
+ここで守りたいものは属性名そのものではない。
+
+**UIを作り直した人が、意図せず利用体験の一部を削除しても、reviewerの記憶に頼らず気づけること**だ。
+
+## 最初から重いE2Eを作らなかった
+
+アクセシビリティを自動検証しようとすると、いきなり「すべてをbrowser testや支援技術testで証明したい」と考えやすい。
+
+しかし、それを最初の一歩にすると導入コストが上がる。
+
+今回の `finBI` では、まず「消えたことなら安く検出できる」要件をCIへ置いた。
 
 ```sh
 node --check web/app.js
@@ -38,151 +80,100 @@ grep -q 'aria-live="polite"' web/index.html
 grep -q 'role="status"' web/index.html
 ```
 
-JavaScriptの構文だけでなく、アクセシビリティ上必要としたマーカーも検査対象になっている。
+これなら、HTML/CSSを全面改稿して必要なmarkerを消した変更は、その場で止められる。
 
-MDNによれば、`prefers-reduced-motion` は端末側で非本質的な動きを減らす設定が有効かを検出するCSS media featureである。また `aria-live` は、初期表示後に変化する内容を支援技術へ通知する優先度を表す。したがって、どちらも単なる装飾ではない。
+この設計で優先したのは、**完全性より「安く、毎回、確実に実行される防波堤」**だった。
 
-## 2. 原因：仕様が文章にしかない
+## `grep` が証明しないものを、はっきり分ける
 
-壊れた失敗例を最小化するとこうなる。
+ここは重要である。
 
-```html
-<div id="result">計算中...</div>
-```
-
-```css
-.card {
-  animation: float 1s ease-in-out infinite;
-}
-```
-
-見た目もJavaScriptも動く。しかし、動的に結果が変わる領域にlive regionの意味付けがなく、motionを減らしたい利用者への分岐もない。
-
-問題は「担当者がアクセシビリティを知らない」ことに限定されない。レビューで一度正しく実装しても、HTML/CSSを全面改稿すれば消せるのに、通常のsyntax testはそれを失敗として扱わないことが原因になる。
-
-## 3. 設計判断と代替案：まず存在契約をCIへ置く
-
-今回の設計判断は、重要なUI要件を静的な存在契約としてCIに置くことだ。
-
-代替案は3つある。
-
-1. **レビューだけで守る**: 導入コストは低いが、自動検出できない。
-2. **ブラウザE2Eだけで守る**: 実挙動に近いが、環境構築とテスト設計が重くなる。
-3. **静的契約 + 必要なE2E**: 単純な欠落は数秒の検査で止め、支援技術との実挙動など静的検査で証明できない部分だけを別テストへ任せる。
-
-ここで重要なのは、`grep` をアクセシビリティ検証の完成形と誤解しないことだ。文字列の存在は「意図した仕組みが消えていない」ことしか保証しない。正しい位置、実際の読み上げ、十分なコントラスト、キーボード操作などは別問題である。
-
-## 4. 実装：要件を小さな失敗条件に変換する
-
-改善後の最小例は次のようになる。
+次のHTMLでも文字列検査は通る。
 
 ```html
-<div id="result" role="status" aria-live="polite">計算中...</div>
+<div role="status"></div>
+<div id="actual-result">計算結果</div>
 ```
 
-```css
-.card {
-  animation: float 1s ease-in-out infinite;
-}
+`role="status"` が存在しても、実際の更新内容と正しく接続されているとは限らない。
 
-@media (prefers-reduced-motion: reduce) {
-  .card {
-    animation: none;
-  }
-}
-```
+同様に `prefers-reduced-motion` がCSSにあるだけでは、ページ内のすべての問題あるmotionが適切に扱われているとは証明できない。
 
-そしてCIに存在契約を追加する。
+だから検証責務を分ける。
 
-```sh
-set -eu
-grep -q 'role="status"' web/index.html
-grep -q 'aria-live="polite"' web/index.html
-grep -q 'prefers-reduced-motion' web/styles.css
-```
+| Gate | 守るもの | 守らないもの |
+|---|---|---|
+| static contract | 必須markerが消えていない | 実際の読み上げ、keyboard操作、contrast |
+| browser/DOM test | DOM更新と対象要素の接続 | assistive technologyごとの最終体験 |
+| manual / AT test | 実際の利用体験 | 将来の改修時の自動回帰 |
 
-MDNは `aria-live="polite"` について、更新を通知するが一般に現在の作業を中断しない低優先度の通知として説明している。`prefers-reduced-motion: reduce` は、利用者が動きを減らす設定を有効にした場合に真になる。
+**一つのテストへ「アクセシビリティ合格証」を背負わせない。**
 
-## 5. 検証：壊してからCIが落ちることを確認する
+安い退行検出を毎回走らせ、より重い検証は必要な層へ置く。
 
-存在契約は、正常系だけでは弱い。意図的に1要件ずつ削除し、検査が失敗するかを見る。
+## 既存UIへ入れるなら、まず3つだけ選ぶ
+
+この方法は大規模なaccessibility programがなくても始められる。
+
+最初に、自分のUIで「次のリファクタリングで消えたら困る体験」を3つ選ぶ。
+
+たとえば:
+
+1. reduced motionへの対応
+2. status messageのsemantic role
+3. keyboard操作に必要なfocusable control
+
+そのうち、**静的に存在を確認できるものだけ**を最初のCI contractにする。
+
+そして1つずつ意図的に壊して、CIが落ちることを確認する。
 
 ```sh
 cp web/index.html /tmp/index.html
-sed -i 's/ aria-live="polite"//' web/index.html
-! grep -q 'aria-live="polite"' web/index.html
+sed -i 's/ role="status"//' web/index.html
+! grep -q 'role="status"' web/index.html
 mv /tmp/index.html web/index.html
 ```
 
-同様に `role="status"` と `prefers-reduced-motion` も削除してfailすることを確認する。
+このnegative testが通れば、「正しい状態ではgreen」だけでなく「守りたい要件が消えればred」まで確認できる。
 
-`finBI` の公開workflowでは、これらの検査に加えてPython compile、unit tests、JavaScript syntax、静的サイトのHTTP smoke test、最後のclean checkout確認を同じ `validate` jobで実行している。アクセシビリティ契約だけを特別扱いせず、成果物の検証項目の1つにしている点が再利用しやすい。
+## このやり方が向いているチーム
 
-## 6. 失敗と学び：文字列検査を「アクセシビリティ合格証」にしない
+特に効くのは、次のような環境だと思う。
 
-この方式の典型的な失敗は、CIが通ったことをもって「アクセシブル」と宣言することだ。
+- UI改修頻度が高い
+- 少人数でfrontendを触る人が入れ替わる
+- AI coding agentや大規模refactorでHTML/CSSを一気に書き換える
+- accessibility専門担当が毎PRを見る体制ではない
+- それでも最低限の利用体験を「善意」だけに依存させたくない
 
-たとえば次でも文字列検査は通る。
+`finBI` でやったこと自体は数行の検査でしかない。
 
-```html
-<div aria-live="polite"></div>
-<div id="actual-result">更新結果</div>
-```
+しかし価値は、**「覚えていた人がいたから守れた」状態を、「消したら自動で失敗する」状態へ変えたこと**にある。
 
-live regionと実際に更新される要素が分離しており、期待した通知になるとは限らない。
+## 何を提供できるか
 
-学びは、静的契約の責務を狭く定義することにある。
+この考え方はaccessibilityだけに限定されない。
 
-- 静的契約: 必須マーカーの欠落を止める
-- DOM/ブラウザテスト: 更新対象との接続を確認する
-- 手動・支援技術テスト: 実際の利用体験を確認する
+既存Web UIを見て、
 
-1つのgateに万能性を持たせるのではなく、安い検査を前段に置いて明白な退行を早く止める。
+1. 利用者が失うと困る体験を特定する
+2. static / browser / manualのどこで検証するか分ける
+3. 最も安い自動gateからCIへ入れる
+4. 意図的に壊すnegative testで検出能力を確認する
+5. UI刷新後も同じ契約が残るようにする
 
-## 7. 再現方法：3ファイルで試す
+という形で、**変更速度を落としすぎずに回帰を減らす設計**へ変えられる。
 
-読者が試せる最小構成は `web/index.html`、`web/styles.css`、`check.sh` の3ファイルだけでよい。
-
-`web/index.html`:
-
-```html
-<!doctype html>
-<meta charset="utf-8">
-<div id="result" role="status" aria-live="polite">ready</div>
-```
-
-`web/styles.css`:
-
-```css
-#result { transition: transform 200ms; }
-@media (prefers-reduced-motion: reduce) {
-  #result { transition: none; }
-}
-```
-
-`check.sh`:
-
-```sh
-#!/bin/sh
-set -eu
-test -s web/styles.css
-grep -q 'prefers-reduced-motion' web/styles.css
-grep -q 'aria-live="polite"' web/index.html
-grep -q 'role="status"' web/index.html
-```
-
-実行する。
-
-```sh
-sh check.sh
-```
-
-次に3つの必須文字列を1つずつ消して再実行する。削除した要件に対応して終了コードが非0になれば、最小の退行防止契約として機能している。
+ただし、static marker checkだけでWCAG適合や支援技術上の正しさを保証することはできない。必要な品質水準に応じてbrowser test、accessibility testing tool、実際の支援技術確認へ広げる必要がある。
 
 ## まとめ
 
-アクセシビリティ要件は、レビュー時に一度確認して終わりにするとUI刷新で抜け落ちる。
+UIをきれいにすることと、利用者が使い続けられることは別である。
 
-`finBI` の実装から一般化できるのは、**重要なUI要件を、まず安価で明示的なCI契約へ変換する**という方法だ。`grep` は完成したアクセシビリティ試験ではない。しかし「昨日まであった最低限の仕組みが今日消えた」を即座に止める用途には明確な価値がある。
+`finBI` では、motion軽減と動的status通知に関する実装をCIの失敗条件へ変えた。これは小さな仕組みだが、**UI刷新のたびに人が思い出さなくても、最低限の利用体験を残す**方向へ開発プロセスを変えられた。
 
-その上で、静的検査では証明できない実挙動をブラウザテストや支援技術による確認へ段階的に委ねる。これなら、品質ゲートを重くしすぎず、UIの作り直しにも耐えやすい。
+私がこの実装から再利用したいのは `grep` ではない。
+
+**重要なUX要件を「注意事項」から「壊したら止まる契約」へ変えること。**
+
+その境界を小さく始めれば、改修速度と退行防止を両立しやすい。
