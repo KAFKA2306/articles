@@ -14,7 +14,7 @@ permissions:
 
 concurrency:
   group: verification-stack-v2-controlled
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   controlled:
