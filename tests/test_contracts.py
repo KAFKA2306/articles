@@ -53,6 +53,33 @@ class PipelineContractTests(unittest.TestCase):
             "narrow_technical_title_entry",
         )
 
+    def test_reader_value_policy_is_canonical(self) -> None:
+        policy = core.CONFIG["reader_value_policy"]
+        self.assertEqual(
+            policy["required_fields"],
+            [
+                "reader_before",
+                "reader_after",
+                "design_philosophy",
+                "why_this_article",
+                "proof_of_value",
+                "desired_reader_action",
+                "non_goal",
+            ],
+        )
+        self.assertTrue(policy["require_actionable_reader_after"])
+        self.assertTrue(policy["forbid_generic_why"])
+        self.assertEqual(
+            set(policy["blocking_issues"]),
+            {
+                "weak_reader_value",
+                "weak_differentiation",
+                "missing_proof_of_value",
+                "forced_commercial_cta",
+                "technical_value_as_product",
+            },
+        )
+
     def test_popularity_benchmark_is_not_a_low_engagement_training_set(self) -> None:
         policy = core.CONFIG["benchmark_policy"]
         self.assertEqual(policy["positive_min_likes"], 100)
@@ -128,6 +155,28 @@ class PipelineContractTests(unittest.TestCase):
             editorial.passes_quality(otherwise_passing, sources_ok=True)
         )
 
+    def test_reader_value_blockers_are_publication_blockers(self) -> None:
+        otherwise_passing = {
+            "logic": 5.0,
+            "utility": 5.0,
+            "readability": 5.0,
+            "originality": 5.0,
+            "clarity": 5.0,
+            "overall": 5.0,
+            "interest": 5.0,
+            "discovery": 5.0,
+            "narrative": 5.0,
+            "context": 5.0,
+            "story_overall": 5.0,
+        }
+        for issue in core.CONFIG["reader_value_policy"]["blocking_issues"]:
+            review = dict(otherwise_passing)
+            review["blocking_issues"] = [issue]
+            with self.subTest(issue=issue):
+                self.assertFalse(
+                    editorial.passes_quality(review, sources_ok=True)
+                )
+
     def test_story_gate_is_stricter_than_technical_gate(self) -> None:
         review = {
             "logic": 5.0,
@@ -162,7 +211,31 @@ class PipelineContractTests(unittest.TestCase):
         topic["title"] = "3案にないタイトル"
         self.assertFalse(editorial.title_options_ready(topic))
 
-    def test_story_ready_requires_one_complete_discovery(self) -> None:
+    def test_reader_value_contract_requires_action_proof_and_specific_why(self) -> None:
+        topic = {
+            "reader_before": "CSVを書き込むまで既存データと衝突する行が分からない",
+            "reader_after": "書き込み前に各行の予定actionを確認し、人間確認が必要な行だけ止められる",
+            "design_philosophy": "一括適用の速さより非破壊性を優先し、diagnoseとwriteを分離する",
+            "why_this_article": "booksの実migrationでCLIとbrowserが同じ診断coreへ収束した判断変更を追う",
+            "proof_of_value": "公開commitのfixtureでexisting_holding / review / invalidを判定し、catalog非変更をtestしている",
+            "desired_reader_action": "既存importerへno-writeのdiagnose stepを追加する",
+            "non_goal": "実書き込み時のtransaction競合までは解決しない",
+        }
+        self.assertTrue(editorial.value_contract_ready(topic))
+
+        weak_after = dict(topic)
+        weak_after["reader_after"] = "dry-runについて理解する"
+        self.assertFalse(editorial.value_contract_ready(weak_after))
+
+        generic_why = dict(topic)
+        generic_why["why_this_article"] = "分かりやすく解説する"
+        self.assertFalse(editorial.value_contract_ready(generic_why))
+
+        missing_proof = dict(topic)
+        missing_proof["proof_of_value"] = ""
+        self.assertFalse(editorial.value_contract_ready(missing_proof))
+
+    def test_story_ready_requires_one_complete_discovery_and_reader_value(self) -> None:
         topic = {
             "title": "856件が7,699件になった。でも計算ミスではなかった",
             "title_options": {
@@ -181,6 +254,13 @@ class PipelineContractTests(unittest.TestCase):
                 "https://github.com/KAFKA2306/investor2/b",
             ],
             "why_interesting": "データ量と推定可能性が同じ方向に動かない",
+            "reader_before": "同じKPIが更新されると前の値が誤りだったのかscope差なのか分からない",
+            "reader_after": "source / scope / methodを比較し、数字が変わった理由を説明できる",
+            "design_philosophy": "単一のverified flagより変更理由の追跡可能性を優先し、一次資料と派生集計を分離する",
+            "why_this_article": "856→7,699という実数の反転を、17文書の公開evidenceで復元したcaseを扱う",
+            "proof_of_value": "17文書と5,026 purchases + 2,673 salesの公開snapshotがある",
+            "desired_reader_action": "重要KPIへsource / scope / methodを追加する",
+            "non_goal": "7,699をOGE公式合計とは扱わない",
         }
         self.assertTrue(editorial.story_ready(topic))
         topic.pop("hypothesis_update")

@@ -46,6 +46,26 @@
     "require_selected_from_candidates": true,
     "blocking_issue": "narrow_technical_title_entry"
   },
+  "reader_value_policy": {
+    "required_fields": [
+      "reader_before",
+      "reader_after",
+      "design_philosophy",
+      "why_this_article",
+      "proof_of_value",
+      "desired_reader_action",
+      "non_goal"
+    ],
+    "require_actionable_reader_after": true,
+    "forbid_generic_why": true,
+    "blocking_issues": [
+      "weak_reader_value",
+      "weak_differentiation",
+      "missing_proof_of_value",
+      "forced_commercial_cta",
+      "technical_value_as_product"
+    ]
+  },
   "benchmark_policy": {
     "positive_min_likes": 100,
     "positive_requires_confirmed_like_count": true,
