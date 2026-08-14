@@ -4,7 +4,7 @@
 
 この文書は、記事生成器の編集判断を固定するための設計資料です。
 目標は、正確な記事を大量に作ることではありません。
-**検証できる一つの発見を、最後まで読みたくなる形で届けること**です。
+**検証できる一つの発見を、最後まで読みたくなり、読後に具体的な判断・行動・運用へつながる形で届けること**です。
 
 本文は単独で意味が通ることを前提にし、過去のrepository履歴や既存記事を読んでいることへ依存しません。
 
@@ -48,6 +48,8 @@ https://zenn.dev/aircloset/articles/d416342f46f16b
 実測・実装証拠
   ↓
 成立条件と限界
+  ↓
+読者がそのまま使える判断・手順
 ```
 
 ## Zennfes Spring 2026受賞例を観察する
@@ -128,21 +130,111 @@ technical_payoff
 強いタイトルは必要ですが、誇張は不要です。
 数字、失敗、矛盾、実測結果など、本文で検証できるものだけをタイトルの引きに使います。
 
-## 旧記事を回帰ケースとして扱う
+### 6. Reader before → afterを候補段階で決める
 
-`articles/primary-source-derived-data-provenance.md` は、一次情報の扱いとしては有用ですが、冒頭から制度名と設計語が並び、題材そのものの意外性よりデータ設計の説明が前に出ています。
+実装テーマが見つかっても、すぐ記事にしません。
+先に次を埋めます。
 
-https://github.com/KAFKA2306/articles/blob/main/articles/primary-source-derived-data-provenance.md
+```text
+reader_before
+  ↓
+reader_after
+```
 
-このケースから固定する回帰条件は次です。
+`reader_before` は「MCPを知らない」のような知識不足ではなく、
 
-- 強い題材を抽象概念の解説へ縮退させない
-- 単なる生成ミスを記事の中心的発見にしない
-- 数字が大きいだけで満足せず、その数字から何が意外に分かったかまで探索する
-- 一つの発見が見つからない場合は、記事を書くのではなくテーマ探索を続ける
+```text
+AIへPC作業を任せたいが、どこまで触るか分からず怖い
+```
 
-この旧記事を直すこと自体が目的ではありません。
-今後、同じ失敗構造の記事を自動生成しないことが目的です。
+のような利用者の摩擦です。
+
+`reader_after` は、
+
+```text
+MCPを理解できる
+```
+
+ではなく、
+
+```text
+低risk taskへAllowedRoot / read-only / result evidenceを置き、どこまで委任するか判断できる
+```
+
+のように具体的な判断・行動・運用へします。
+
+### 7. Design philosophyは技術選定ではなくtrade-offを書く
+
+`FastAPIを使った`、`GitHub Actionsを追加した` はdesign philosophyではありません。
+
+読者価値のため、何を優先し何を捨てたかを書きます。
+
+例:
+
+```text
+自動化率より誤投稿を防ぐことを優先し、remote identityを確認できないrunはpublishしない
+```
+
+これなら、別のtool stackでも同じ判断を再利用できます。
+
+### 8. Commercial pullはproofから作る
+
+sales-firstは広告文を足すことではありません。
+
+```text
+実際にどこまで動いているか
+何を止めたか
+どの規模で使ったか
+何が未実証か
+```
+
+を証拠付きで見せ、読者自身が「自分でも使えそう」「この種類の問題なら任せられそう」と判断できる状態を作ります。
+
+`お問い合わせください` を足してもproofは増えません。
+読者の次actionは、checklist、template、最小導入手順、decision tableなど本文から自然に導きます。
+
+### 9. 弱い記事は公開せず、統合・退役できる
+
+技術的に正しいから残す、という判断はしません。
+
+- 同じreader jobなら強い1本へ統合する
+- 固有proofがなければarchiveへ落とす
+- runtime証拠が不足するなら`published:false`を維持する
+- article countをKPIにしない
+
+2026-08-14の棚卸しでは、同じreader jobを扱う旧稿を統合し、固有incidentを証明できなかったfail-close稿をarchiveへ移しました。
+
+- `docs/article-portfolio-audit-2026-08-14.md`
+
+## Reader value blocking gate
+
+技術品質・story品質が基準を満たしても、次が残る記事は公開しません。
+
+- `weak_reader_value`: before→afterが本文だけで説明できない
+- `weak_differentiation`: 一般tutorial / docs / AI要約で代替できる
+- `missing_proof_of_value`: 価値主張とpublic evidenceが接続していない
+- `forced_commercial_cta`: 本文から自然に導けない問い合わせ・契約等を要求する
+- `technical_value_as_product`: 技術名・repository名・実装行為を価値そのものにしている
+
+これらはscore低下ではなくblocking issueです。
+
+## 固定見出しを強制しない
+
+候補dataには `reader_before` / `reader_after` / `design_philosophy` / `why_this_article` / `proof_of_value` / `desired_reader_action` / `non_goal` を必須化します。
+
+一方、公開本文に、
+
+```text
+## Vision
+## Design philosophy
+## Why
+## Commercial intent
+```
+
+を強制しません。
+
+意味構造は必要ですが、scene→問い→観測→仮説更新→proof→持ち帰りのstoryへ自然に統合します。
+テンプレート見出しを埋めただけの記事を増やさないためです。
 
 ## Publication gate
 
@@ -153,6 +245,8 @@ https://github.com/KAFKA2306/articles/blob/main/articles/primary-source-derived-
 - `story_overall >= 4.0`
 - editorial 全軸 `>= 3.8`
 - `interest >= 4.1`
+- reader value blocking issueが0件
+- `proof_of_value` と本文の実証範囲が一致する
 
 月末の候補比較では、技術品質より先に `story_overall`、`interest`、`discovery` を比較します。
-これにより、正確さが同程度なら、より強い発見と読ませる構造を持つ記事が選ばれます。
+これにより、正確さが同程度なら、より強い発見、読ませる構造、具体的なreader outcomeを持つ記事が選ばれます。
