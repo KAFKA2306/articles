@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 1,
   "checked_at": "2026-08-15",
   "selection_rule": "Current stable registry release at execution time, except explicitly preregistered Beta/Experimental challengers. Registry/package metadata is provenance only, not evidence of benchmark quality.",
   "candidates": {
