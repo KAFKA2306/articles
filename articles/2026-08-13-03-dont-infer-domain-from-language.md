@@ -1,5 +1,5 @@
 ---
-title: "PythonだからAI、TypeScriptだからWeb、をやめる。分類不能をunclassifiedで残す"
+title: "分類できないなら、無理に埋めない。unclassifiedを残した方がUIは信頼できた"
 emoji: "🗂️"
 type: "tech"
 topics: ["github", "metadata", "python", "architecture"]
@@ -7,48 +7,46 @@ published: false
 published_at: 2026-08-13 20:01
 ---
 
-GitHub上のリポジトリを自動分類するとき、情報不足を「PythonだからAI系」「TypeScriptだからWeb系」のような推測で埋めると、UIは整っても分類へ根拠のない意味が混ざる。
+GitHubのrepository一覧を分類するとき、空欄は気になる。
 
-`KAFKA2306/agent-resources` の現在の `main` では、project zone は明示的な `agent-zone-*` topic がある場合だけ採用し、それ以外は `unclassified` に送る。GitHub公式でもtopicsはprojectの目的やsubject areaなどを表すmetadataとして説明され、repository languagesはfiles/directoriesからGitHub Linguistが算出する言語統計として説明されている。
+PythonならAI。
 
-一次情報:
+TypeScriptならWeb。
 
-- https://github.com/KAFKA2306/agent-resources/blob/main/dashboard/collectors/repositories.py
-- https://github.com/KAFKA2306/agent-resources/blob/main/dashboard/tests/test_repository_collector.py
-- https://github.com/KAFKA2306/agent-resources/pull/60
-- https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/classifying-your-repository-with-topics
-- https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-repository-languages
+そう埋めれば、一覧はすぐ整う。
 
-## 1. 問題
+しかし、その瞬間からUIは**分かっていないことまで分かった顔をする**。
 
-実際の入力を2件考える。
+`KAFKA2306/agent-resources` では、project zoneを明示的な `agent-zone-*` topicがある場合だけ採用し、それ以外は `unclassified` にするよう変更した。
+
+- collector: https://github.com/KAFKA2306/agent-resources/blob/main/dashboard/collectors/repositories.py
+- tests: https://github.com/KAFKA2306/agent-resources/blob/main/dashboard/tests/test_repository_collector.py
+- PR #60: https://github.com/KAFKA2306/agent-resources/pull/60
+
+この記事で扱うのはtaxonomyの作り方ではない。
+
+**情報不足をそれらしい推測で埋めず、「まだ分からない」を利用者へ正しく見せる設計**について書く。
+
+## languageは分かっても、domainは分からない
+
+例えば次の2repoがある。
 
 ```json
 {"name":"market-research","topics":["agent-zone-investing","python"],"language":"Python"}
 {"name":"photo-indexer","topics":[],"language":"Python"}
 ```
 
-前者には `agent-zone-investing` という明示的な意味metadataがある。後者から確定できるのは主言語がPythonであることだけで、投資、画像、科学計算、CLIなどのdomainは確定しない。
+1件目には `agent-zone-investing` という明示的な意味metadataがある。
 
-壊れた例は、明示topicがないとき `language-python` のようなgroupを作るfallbackである。欠損は消えるが、domain taxonomyとimplementation taxonomyが混ざる。
+2件目から分かるのは、主言語がPythonであることまでだ。
 
-## 2. 原因
+AI、画像、投資、科学計算、CLIのどれかは確定しない。
 
-原因は「欠損値を埋めること」と「意味を推論すること」を同一視したことにある。
+それでも `language-python → AI` のようなfallbackを置けば、UI上の空欄は消える。
 
-GitHub topicsとlanguagesは同じrepository metadataに見えるが役割が違う。topicsは目的・subject areaなどを明示できる。一方languagesはrepositoryのコード構成から算出される。Pythonで書かれたprojectが何を目的にしているかは、languageだけでは決まらない。
+代わりに、**根拠のない意味が増える。**
 
-## 3. 設計判断と代替案
-
-代替案は3つある。
-
-1. primary languageをfallbackにする。ほぼ全repoへラベルを付けられるが、domainとしての意味は弱い。
-2. READMEやrepo名からLLMで推論する。自然な分類を作れる可能性はあるが、model・prompt・文章変更で結果が揺れ、GitHub metadataだけでは説明できなくなる。
-3. explicit semantic metadataだけを採用し、不明は `unclassified` にする。
-
-`agent-resources` は3を採用している。PR #60でもlanguage fallbackを外し、LLM/domain inferenceをnon-goalとしている。現在の `main` の `infer_group()` も `agent-zone-*` topicがなければ `UNCLASSIFIED_GROUP` を返す。
-
-## 4. 実装
+## `unclassified` は失敗ではなく、情報の状態にする
 
 改善後の核は小さい。
 
@@ -61,19 +59,76 @@ def classify(repo):
     zones = sorted(
         t[len(ZONE_PREFIX):]
         for t in topics
-        if isinstance(t, str) and t.startswith(ZONE_PREFIX)
+        if isinstance(t, str)
+        and t.startswith(ZONE_PREFIX)
         and t[len(ZONE_PREFIX):]
     )
     return zones[0] if zones else UNCLASSIFIED
 ```
 
-`language` を削除する必要はない。別軸のmetadataとして保存してよい。ただしdomain分類関数のfallbackには使わない。
+ここで `language` を捨てる必要はない。
 
-改善後の例では、`agent-zone-investing` があれば `investing`、topicsが空でlanguageだけPythonなら `unclassified` になる。
+言語は言語として表示する。
 
-## 5. 検証
+ただしdomainの根拠には使わない。
 
-守りたいcontractは「正しいzoneが付く」だけではなく「根拠なしにzoneを作らない」ことなので、negative testを置く。
+```text
+Domain: unclassified
+Language: Python
+```
+
+この表示なら、利用者は何が分かっていて何が分かっていないかを区別できる。
+
+## 見栄えの100%より、意味のcoverageを測る
+
+unknownを許さない設計では、推測ruleを足すほど「分類済み率」を100%へ近づけられる。
+
+しかし、それでは本当に足りないmetadataが見えなくなる。
+
+例えば100repo中40repoに意味topicがなければ、
+
+```text
+semantic metadata coverage = 60%
+```
+
+と観測できる。
+
+この40件をlanguage fallbackで埋めると、UI上は100%にできても、意味metadataが不足している事実は消える。
+
+**unknownを残すと、改善対象が見える。**
+
+これは欠点ではなく、運用上の価値である。
+
+## classifierを賢くするより、昇格条件を明確にする
+
+`unclassified` から正式なzoneへ移す条件を決める。
+
+例えば、
+
+```text
+明示topicが付いた
+→ canonical zoneへ昇格
+```
+
+とする。
+
+READMEやrepo名からLLMで推論する案もあるが、それをcanonicalにするなら、少なくとも推論結果と明示metadataを同じstateにしない方がよい。
+
+```text
+explicit
+inferred
+unclassified
+```
+
+のようにprovenanceを分ける。
+
+今回の `agent-resources` は、より単純にexplicitだけを採用した。
+
+## negative testで「勝手に分類しない」を守る
+
+守りたいのは正しい分類だけではない。
+
+**根拠がないときに分類しないこと**もcontractである。
 
 ```python
 assert classify({"topics":["agent-zone-investing"],"language":"Python"}) == "investing"
@@ -81,32 +136,85 @@ assert classify({"topics":[],"language":"Python"}) == "unclassified"
 assert classify({"topics":[],"language":"JavaScript"}) == "unclassified"
 ```
 
-`agent-resources/main` の回帰testにも、PythonとJavaScriptのどちらでも明示zoneがなければ `unclassified` になる検証がある。
+このtestがあると、後から誰かが便利なfallbackを追加しても、意味境界を壊した時点で気づける。
 
-## 6. 失敗と学び
+## UIではunknownを隠さず、次のactionにつなげる
 
-`unclassified` が増えるとdashboardが未完成に見える。しかし推測で埋めると、本当に不足しているsemantic metadataの量が見えなくなる。
+`unclassified` をただ灰色で並べるだけでは使いにくい。
 
-例えば100 repo中40 repoが `unclassified` なら、「semantic metadata coverageが60%」という改善対象を観測できる。これをlanguage由来のgroupで埋めると、見かけ上は100%にできてもdomain metadataが不足している事実は消える。
+そこでUI上は、
 
-学びは、unknown stateを有効な状態として残すこと、そしてdomain・language・runtimeなど別taxonomyを1つのgroupへ押し込まないことである。
+- unclassified件数
+- explicit metadata coverage
+- metadata追加が必要なrepo
 
-## 7. 再現方法
+を見えるようにする方がよい。
 
-読者は上の `classify()` と3つのassertだけで再現できる。
+つまりunknownを、
 
-まずassertが通ることを確認する。次に、topicsが空の場合に `language-python` を返すfallbackを追加する。するとPython/JavaScriptの2つのassertが失敗する。
+```text
+見せたくない欠損
+```
 
-これで「分類できること」ではなく、**根拠なしに分類しないこと**をtestで固定できる。
+ではなく、
 
-さらに実務では `unclassified` の比率をcoverageとして別に計測する。coverageが低ければtopicなど正準metadataを改善し、classifierへ推測規則を足して数字だけ改善しない。
+```text
+次に整備すべきqueue
+```
 
-## まとめ
+として扱う。
 
-自動分類では、空欄を埋めることより、出力した意味を説明できることの方が重要である。
+これなら「未分類がある」ことが運用を前へ進める。
 
-GitHub topicsは目的やsubject areaを表す明示metadataとして使える。repository languageはコードから算出された別軸の情報で、それだけではproject domainを確定できない。
+## この考え方はrepository分類以外でも使える
 
-だから意味カテゴリの根拠がなければ `unclassified` にする。unknownを残すことで誤分類を避け、metadata不足そのものを観測できる。
+同じ問題は、
 
-**分からないときに、賢そうな分類を作らない。** これが再利用しやすいtaxonomyの最小契約になる。
+- 顧客segment
+- 文書category
+- 製品taxonomy
+- 工場domain
+- AI-generated label
+- データ品質status
+
+でも起きる。
+
+根拠が弱いのに一番近そうなcategoryへ押し込むと、見た目は整う。
+
+しかし利用者は、そのlabelを事実として使い始める。
+
+だから、
+
+```text
+known
+inferred
+unknown
+```
+
+を必要に応じて分ける。
+
+**分類精度だけでなく、分類根拠の透明性をUXにする。**
+
+## まず1つ見直すなら
+
+既存のclassifierでfallback ruleを探す。
+
+例えば、
+
+```text
+値がなければA
+languageがPythonならB
+名前にdataがあればC
+```
+
+のようなruleが、意味を本当に保証しているか確認する。
+
+保証できないなら、いったん `unclassified` へ戻す。
+
+そしてcoverageを測る。
+
+それだけで、**綺麗だが嘘を含む一覧**から、**不足も含めて信頼できる一覧**へ近づける。
+
+分からないときに、賢そうな答えを作らない。
+
+それがこの分類UIで一番守りたかったことだった。
