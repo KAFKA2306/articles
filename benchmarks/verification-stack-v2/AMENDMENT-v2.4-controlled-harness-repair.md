@@ -2,40 +2,101 @@
 
 Date: 2026-08-15
 
+Status: **canonical repair amendment; all affected controlled evidence must be rerun**
+
 ## Why this amendment exists
 
-Controlled run `31820990784` completed collection at trigger SHA `143568b2d8e862a810bcc08edf22c7d75c0c9ad2` and was committed as evidence at `b25a748336e8946f78cc174325a3095aac1ef797`. Read-back of the raw records showed that part of that collection violated the benchmark's clean-baseline and executable-workspace preconditions.
+Controlled run `31820990784` completed collection at trigger SHA `143568b2d8e862a810bcc08edf22c7d75c0c9ad2`. Raw read-back showed that part of that collection violated the experiment's own clean-baseline and executable-workspace preconditions.
 
-The invalid attempt remains auditable at the fixed commit above. It must not be used as product-performance evidence for the affected scopes.
+The invalid attempt remains auditable but MUST NOT contribute to recall, false-positive, latency, recommendation, story, or title selection for affected scopes.
 
-Observed harness failures in that attempt:
+Observed harness/configuration failures:
 
-- Python formatter/linter commands scanned the whole fixture, so unrelated test-file formatting/E501 state made clean baselines non-zero.
-- TypeScript formatter/linter commands scanned the whole copied fixture, including installed `node_modules`; Oxlint therefore reported third-party package diagnostics instead of only the frozen source fixture.
-- Nx was invoked in temporary workspaces without locally resolvable Nx modules.
-- Turborepo saw the temporary fixture as `monorepo: false`; the workspace fixture lacked the package-manager declaration needed for deterministic workspace discovery in this harness.
+- Python formatters were invoked on the entire fixture, so an unrelated test file made the clean baseline fail.
+- Flake8 and Ruff were not restricted to the same overlapping lint responsibility; Flake8 blocked on unrelated `E501` findings.
+- Biome and Prettier are opinionated formatters with different canonical indentation, so one raw source tree cannot simultaneously be a preformatted clean baseline for both.
+- Oxlint was invoked on `.`, so it linted the benchmark's shared `node_modules` tree.
+- ESLint referenced `@typescript-eslint/*` rules without registering the `typescript-eslint` parser/plugin, causing configuration failure before source linting.
+- Pyrefly was run without Pyrefly configuration. Official no-config behavior is the `basic` preset, which intentionally silences broader argument/return type diagnostics; that is not a valid test of Pyrefly as the experiment's blocking static-type authority.
+- Nx was invoked in temporary workspace copies without a locally resolvable Nx module.
+- Turborepo did not recognize the copied fixture as a multi-package workspace because the root lacked the package-manager declaration its v2 workspace model expects; it executed zero package tasks.
 
-## What may change
+These are benchmark-construction failures, not candidate losses.
 
-Only execution plumbing required to satisfy the original measurement preconditions:
+## Frozen repair rules
 
-1. source-oriented formatter/linter commands are scoped to the frozen `src` directory;
-2. temporary workspace copies expose the exact already-pinned benchmark `node_modules` locally;
-3. the workspace root declares and the workflow pins the npm package-manager version used to generate workspace metadata;
-4. a repair-validity gate requires clean source baselines and successful workspace command execution before repaired controlled evidence may replace the current working result files.
+### Formatting
+
+`PY-FORMAT-001` and `TS-FORMAT-001` use candidate-normalized clean baselines:
+
+1. start from the same semantically valid source;
+2. apply each formatter once to the target source file only;
+3. require its second pass/check to be clean and semantic smoke checks to pass;
+4. independently seed the same formatting mutant;
+5. require check mode to observe a required change;
+6. apply the formatter and require idempotence plus semantic smoke checks;
+7. compare output to that candidate's own normalized baseline, not another formatter's canonical style.
+
+Tabs-vs-spaces preference is not a correctness win or false positive.
+
+### Python lint
+
+`PY-LINT-001` scores the common unused-local responsibility only:
+
+- Ruff `F841` on the controlled service file;
+- Flake8 `F841` on the same file.
+
+Unrelated style rules are outside this mutant.
+
+### Python type checking
+
+Pyrefly is run with its documented `default` preset for the blocking type-authority comparison. Its no-config `basic` behavior is retained only as an onboarding/default-mode observation, not as the full type-authority score.
+
+### TypeScript lint/type
+
+- Oxlint is restricted to `src` and uses the preregistered type-aware rules.
+- ESLint is restricted to `src`, explicitly registers `typescript-eslint`'s parser/plugin, and retains the already frozen supported TypeScript profile.
+- `tsc --noEmit` remains the compiler baseline.
+- Oxlint `--type-check` remains an Experimental challenger; experimental status remains a disqualifier for default compiler authority under the current protocol.
+
+### Workspace
+
+The workspace is repaired only enough to satisfy the original execution precondition:
+
+- root declares `private`, npm `workspaces`, and `packageManager`;
+- lockfile is generated with the pinned npm used by the workflow;
+- every fresh copy exposes the exact already-pinned local Nx/Turbo installation through local `node_modules`;
+- project discovery must find exactly `core`, `ui`, `web`, `api`, and `docs` for both tools before affected/cache observations are recommendation-eligible;
+- the same package manifests, dependency edges, changed files, deterministic task implementation, and expected affected sets are retained.
+
+## Hard validity gate
+
+The rerun writes `baseline-calibration.json`. `summary.json.status` may be `complete` only if:
+
+- every declared non-formatter clean source baseline exits successfully;
+- every formatter candidate-normalized baseline is idempotent and passes semantic smoke checks;
+- both Nx and Turborepo discover exactly the five frozen projects;
+- the hook runner baseline is valid.
+
+If the gate fails, the run is `invalid_baseline`; mutant output is debugging evidence only.
+
+The validity gate deliberately does **not** require a candidate to detect a mutant, agree on affected sets, hit the cache, or beat another candidate. Those are measured outcomes.
 
 ## What may not change
 
-- `mutants.json` root-fault definitions;
-- the 22 preregistered scenarios;
+- the root-fault definitions in `mutants.json`;
 - expected affected sets;
-- candidate versions or stability labels;
-- scoring semantics;
-- candidate outputs already observed in the invalid run;
-- the frozen real-repository sample or its selected SHAs.
+- frozen candidate versions/stability labels, except previously preregistered supported environment profiles;
+- the frozen real-repository sample or its SHAs;
+- scoring semantics after the repaired results become visible.
 
-A repaired run is valid even if a candidate misses a mutant, produces a different affected set, fails patch parity, or fails cache correctness. Those are candidate observations. The repair gate checks only that the clean baseline and harness execution are valid enough to interpret those observations.
+## Sampling independence
+
+The real-repository sample was frozen before candidate-level controlled output was used for repository selection and remains unchanged:
+
+- Python: `KAFKA2306/2511youtuber@95a0f6b4f5270d1463c15f301a2bd4f0d709c109`
+- TypeScript: `KAFKA2306/investor2@9a45de93437456f215f1a251666f322254aac6b4`
 
 ## Interpretation boundary
 
-`status: complete` means collection completed; it is not a quality verdict. The repaired collection supersedes run `31820990784` only for controlled comparison, while the old fixed commit remains the audit trail for why this repair was necessary.
+A repaired `status: complete` means the calibrated evidence corpus executed under valid clean baselines. It is not a quality verdict and does not authorize an article thesis or publication.
