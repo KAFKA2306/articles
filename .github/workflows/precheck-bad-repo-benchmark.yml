@@ -1,0 +1,190 @@
+name: Precheck bad-repo benchmark
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/precheck-bad-repo-benchmark.yml"
+      - "artifacts/reports/2026-08/precheck-bad-repo/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deepcode-zero-dependency:
+    name: DeepCode / ${{ matrix.tool }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tool:
+          - pre-commit
+          - prek
+          - ruff
+          - ty
+          - pyrefly
+    steps:
+      - name: Checkout benchmark harness
+        uses: actions/checkout@v4
+
+      - name: Checkout frozen broken target
+        uses: actions/checkout@v4
+        with:
+          repository: KAFKA2306/DeepCode
+          ref: 088059855d2c9187c51d674db02a06f70c37f087
+          path: target
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv harness
+        run: python -m pip install --disable-pip-version-check uv
+
+      - name: Run cold precheck
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p benchmark-results
+          tool="${{ matrix.tool }}"
+          target_sha="$(git -C target rev-parse HEAD)"
+          printf 'tool=%s\ntarget=KAFKA2306/DeepCode\ntarget_sha=%s\nrunner=%s\npython=%s\nuv=%s\n' \
+            "$tool" "$target_sha" "$RUNNER_OS" "$(python --version 2>&1)" "$(uv --version)" \
+            > "benchmark-results/${tool}.meta.txt"
+
+          cd target
+          set +e
+          case "$tool" in
+            pre-commit)
+              install_start=$(date +%s%N)
+              python -m pip install --disable-pip-version-check pre-commit > ../benchmark-results/pre-commit.install.log 2>&1
+              install_rc=$?
+              install_end=$(date +%s%N)
+              pre-commit --version >> ../benchmark-results/pre-commit.meta.txt 2>&1
+              scan_start=$(date +%s%N)
+              pre-commit run --all-files --show-diff-on-failure > ../benchmark-results/pre-commit.scan.log 2>&1
+              scan_rc=$?
+              scan_end=$(date +%s%N)
+              ;;
+            prek)
+              install_start=$(date +%s%N)
+              uvx prek@0.4.11 --version > ../benchmark-results/prek.install.log 2>&1
+              install_rc=$?
+              install_end=$(date +%s%N)
+              cat ../benchmark-results/prek.install.log >> ../benchmark-results/prek.meta.txt
+              scan_start=$(date +%s%N)
+              uvx prek@0.4.11 run --all-files > ../benchmark-results/prek.scan.log 2>&1
+              scan_rc=$?
+              scan_end=$(date +%s%N)
+              ;;
+            ruff)
+              install_start=$(date +%s%N)
+              uvx ruff --version > ../benchmark-results/ruff.install.log 2>&1
+              install_rc=$?
+              install_end=$(date +%s%N)
+              cat ../benchmark-results/ruff.install.log >> ../benchmark-results/ruff.meta.txt
+              scan_start=$(date +%s%N)
+              uvx ruff check --no-cache --output-format=json . > ../benchmark-results/ruff.lint.json 2> ../benchmark-results/ruff.lint.stderr
+              lint_rc=$?
+              uvx ruff format --check --no-cache . > ../benchmark-results/ruff.format.log 2>&1
+              format_rc=$?
+              scan_rc=$(( lint_rc != 0 || format_rc != 0 ))
+              scan_end=$(date +%s%N)
+              printf 'lint_rc=%s\nformat_rc=%s\n' "$lint_rc" "$format_rc" >> ../benchmark-results/ruff.meta.txt
+              ;;
+            ty)
+              install_start=$(date +%s%N)
+              uvx ty version > ../benchmark-results/ty.install.log 2>&1
+              install_rc=$?
+              install_end=$(date +%s%N)
+              cat ../benchmark-results/ty.install.log >> ../benchmark-results/ty.meta.txt
+              scan_start=$(date +%s%N)
+              uvx ty check --output-format concise --no-progress . > ../benchmark-results/ty.scan.log 2>&1
+              scan_rc=$?
+              scan_end=$(date +%s%N)
+              ;;
+            pyrefly)
+              install_start=$(date +%s%N)
+              uvx pyrefly --version > ../benchmark-results/pyrefly.install.log 2>&1
+              install_rc=$?
+              install_end=$(date +%s%N)
+              cat ../benchmark-results/pyrefly.install.log >> ../benchmark-results/pyrefly.meta.txt
+              scan_start=$(date +%s%N)
+              uvx pyrefly check --output-format json > ../benchmark-results/pyrefly.scan.json 2> ../benchmark-results/pyrefly.scan.stderr
+              scan_rc=$?
+              scan_end=$(date +%s%N)
+              ;;
+          esac
+          set -e
+
+          install_ms=$(( (install_end - install_start) / 1000000 ))
+          scan_ms=$(( (scan_end - scan_start) / 1000000 ))
+          printf 'install_rc=%s\nscan_rc=%s\ninstall_ms=%s\nscan_ms=%s\n' \
+            "$install_rc" "$scan_rc" "$install_ms" "$scan_ms" \
+            >> "../benchmark-results/${tool}.meta.txt"
+
+          git status --short > "../benchmark-results/${tool}.git-status.txt"
+          git diff --stat > "../benchmark-results/${tool}.diff-stat.txt"
+          git diff > "../benchmark-results/${tool}.diff.patch"
+
+      - name: Summarize machine-readable counts
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool="${{ matrix.tool }}"
+          case "$tool" in
+            ruff)
+              python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('benchmark-results/ruff.lint.json')
+          try:
+              data = json.loads(p.read_text())
+              print(f"ruff_lint_findings={len(data)}")
+          except Exception as exc:
+              print(f"ruff_lint_findings_parse_error={exc}")
+          PY
+              ;;
+            pyrefly)
+              python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('benchmark-results/pyrefly.scan.json')
+          try:
+              data = json.loads(p.read_text())
+              if isinstance(data, list):
+                  n = len(data)
+              elif isinstance(data, dict):
+                  for key in ('errors', 'diagnostics', 'messages'):
+                      if isinstance(data.get(key), list):
+                          n = len(data[key]); break
+                  else:
+                      n = None
+              else:
+                  n = None
+              print(f"pyrefly_findings={n}")
+          except Exception as exc:
+              print(f"pyrefly_findings_parse_error={exc}")
+          PY
+              ;;
+            ty)
+              printf 'ty_concise_lines=%s\n' "$(wc -l < benchmark-results/ty.scan.log)"
+              ;;
+            pre-commit|prek)
+              printf '%s_scan_lines=%s\n' "$tool" "$(wc -l < "benchmark-results/${tool}.scan.log")"
+              ;;
+          esac | tee -a "benchmark-results/${tool}.meta.txt"
+
+      - name: Show benchmark metadata
+        run: cat "benchmark-results/${{ matrix.tool }}.meta.txt"
+
+      - name: Upload raw benchmark evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: deepcode-${{ matrix.tool }}-evidence
+          path: benchmark-results/
+          if-no-files-found: error
+          retention-days: 30
