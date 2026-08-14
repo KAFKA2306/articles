@@ -1,5 +1,5 @@
 ---
-title: "差が大きく見えても結論にしない。効果量を記述で止める"
+title: "Cohen's dが0.76でも「判定できる」とは言わない。数字と利用許可を分ける"
 emoji: "📏"
 type: "tech"
 topics: ["python", "statistics", "dataengineering", "testing"]
@@ -7,138 +7,245 @@ published: false
 published_at: 2026-08-13 21:00
 ---
 
-2群の平均値を比較して大きな差が出ると、すぐに「年代を判定できる」「原因はAIだ」と言いたくなる。しかし、小規模な探索データから計算した効果量は、まず**記述統計として保存し、推論・因果・分類へ自動昇格させない**方が安全である。
+探索分析で **Cohen's d ≈ -0.760** が出た。
 
-この記事では、公開リポジトリ `KAFKA2306/detective` の実装を具体例に、計算結果と解釈権限を別フィールドで管理する方法を扱う。
+数字だけを見ると、かなり差がありそうに見える。
 
-一次情報:
-
-- https://github.com/KAFKA2306/detective/blob/main/scripts/summarize_2026_oss_distribution_shift.py
-- https://github.com/KAFKA2306/detective/blob/main/reports/zenn_2026_oss_distribution_shift.json
-- https://github.com/KAFKA2306/detective/commit/64bf09e86ddf76601a4378ac95d7d4d7cb7ffc4e
-
-## 1. 問題
-
-実際の入力は、2022年と2026年から各12件、先頭1000文字を解析したpilotである。公開artifactでは `title_case_count` の平均が2022年12.0、2026年6.5833、pooled SDが約7.125、Cohen's d（2026−2022）が約-0.760と記録されている。
-
-数字だけを見ると差は目立つ。しかし、この1値から「2026年の記事を判定できる」とは言えない。
-
-壊れた例は次のような実装である。
+ここで次のコードを書きたくなる。
 
 ```python
 if abs(cohen_d) > 0.7:
     result["year_signal"] = True
 ```
 
-これは効果量という**記述値**へ、未検証の分類能力を勝手に付与している。
+しかし今回、それはしなかった。
 
-## 2. 原因
+`KAFKA2306/detective` のpilotは、2022年と2026年から各12件、先頭1000文字を解析した小規模な探索だった。
 
-原因は、計算可能性と解釈可能性を同じものとして扱うことにある。
+- 2022 mean: 12.0
+- 2026 mean: 6.5833
+- pooled SD: 約7.125
+- Cohen's d: 約-0.760
 
-`detective` の公開scriptは2群の平均とpooled standard deviationからCohen's dを計算できる。一方、同じ実装は入力が各年12件のdescriptive pilotであること、上流featureが日本語で妥当性確認されていないことを理由に、年推論・multiple testing claim・AI因果claimを明示的に禁止している。
+観測された差は残す。
 
-つまり、**数値を正しく計算できることは、その数値を意思決定へ使ってよい証拠ではない**。
+一方で、
 
-## 3. 設計判断と代替案
+```text
+年代を判定できる
+AI生成が原因である
+未知記事へ一般化できる
+```
 
-代替案は3つある。
+とは言わない。
 
-1. 効果量が閾値を超えたら自動で意味ラベルを付ける。単純だが、閾値自体が用途妥当性を保証しない。
-2. 効果量を計算せず、生データだけ保存する。過剰解釈は減るが、探索時の比較可能性まで失う。
-3. 効果量は計算・保存するが、解釈権限を別のgateとして保存する。
+この記事で扱うのは効果量の計算方法ではない。
 
-ここでは3を採る。`detective` のartifactは `status: descriptive_pilot_only` とし、さらに `interpretation_gate` に `use_for_year_inference: false`、`multiple_testing_claims: false`、`causal_ai_claim: false` を保存している。
+**派手な数字が出ても、証拠の強さを超えて意思決定へ昇格させない分析UX**について書く。
 
-重要なのは「弱いデータだから捨てる」ことではない。**観測結果は残し、許可されていない用途だけを閉じる**。
+- script: https://github.com/KAFKA2306/detective/blob/main/scripts/summarize_2026_oss_distribution_shift.py
+- artifact: https://github.com/KAFKA2306/detective/blob/main/reports/zenn_2026_oss_distribution_shift.json
+- commit: https://github.com/KAFKA2306/detective/commit/64bf09e86ddf76601a4378ac95d7d4d7cb7ffc4e
 
-## 4. 実装
+## 数字を消すのではなく、権限を狭くする
 
-最小構成は、数値と権限を分離するだけでよい。
+探索結果を過大解釈したくないなら、数字を出さない方法もある。
 
-```python
-result = {
-    "status": "descriptive_pilot_only",
-    "effect": {
-        "cohen_d": d,
-        "absolute_cohen_d": abs(d),
-    },
-    "interpretation_gate": {
-        "use_for_year_inference": False,
-        "multiple_testing_claims": False,
-        "causal_ai_claim": False,
-    },
+しかし、それでは比較や次の仮説づくりに使える情報まで失う。
+
+そこで、
+
+```text
+measurement
+```
+
+と、
+
+```text
+allowed interpretation
+```
+
+を別々に保存する。
+
+```json
+{
+  "status": "descriptive_pilot_only",
+  "effect": {
+    "cohen_d": -0.760
+  },
+  "interpretation_gate": {
+    "use_for_year_inference": false,
+    "multiple_testing_claims": false,
+    "causal_ai_claim": false
+  }
 }
 ```
 
-`detective` の実装ではさらに、入力長を1000文字へ固定しているため常に同じになる `char_count` を `eligible_for_interpretation: false` としてranking対象から除外している。
+この形なら「差が観測された」は残る。
 
-改善後の例では、`title_case_count` の `absolute_cohen_d` 約0.760という観測値は残る。一方で、それを年代分類やAI原因説へ使う経路は閉じたままになる。
+その一方で、「年代判定に使える」へ勝手に昇格しない。
 
-## 5. 検証
+**弱い証拠を捨てるのではなく、使える範囲だけ開ける。**
 
-守るべきcontractは「効果量が計算できる」だけではない。**禁止した解釈が出力上でも禁止されたままか**をtestする。
+## 計算できることと、判断に使えることは別
+
+効果量の式が正しいことは重要である。
+
+しかし、用途妥当性には別の問題がある。
+
+今回のpilotには、少なくとも次の制約がある。
+
+- 各年12件
+- 1000文字の固定window
+- feature自体が日本語用途で十分にvalidationされていない
+- topicやformatting差を拾っている可能性がある
+- multiple testingやcausal inferenceを目的に設計していない
+
+だから、`d = -0.760` の正確な計算から、直接 `year_signal = true` とは言えない。
+
+**metric correctnessとdecision validityは別contract**である。
+
+## 「何に使えるか」をmachine-readableにする
+
+READMEへ「参考値です」と書くだけでも警告にはなる。
+
+ただし後段の自動処理は、その文章を無視できる。
+
+そこで用途をfieldとして持たせる。
+
+```yaml
+allowed_use:
+  exploratory_comparison: true
+  feature_ranking: limited
+  year_classification: false
+  causal_ai_claim: false
+```
+
+これならreport generatorやLLM prompt側でも、禁止用途を確認できる。
+
+例えば、
+
+```python
+if not result["allowed_use"]["year_classification"]:
+    raise ValueError("This pilot cannot be used for year classification")
+```
+
+と後段で止められる。
+
+**注意書きをデータ契約へ昇格させる。**
+
+## 大きな値ほど、用途gateが必要になる
+
+小さな差なら慎重になりやすい。
+
+逆に大きな差が出ると、「これは使えそうだ」という心理が強くなる。
+
+そこが危ない。
+
+```text
+大きなeffect size
+→ 興味深い観測
+```
+
+まではよい。
+
+しかし、
+
+```text
+大きなeffect size
+→ 予測できる
+→ 原因が分かった
+```
+
+には追加証拠が必要である。
+
+この昇格をコード上で別stageへすると、分析者の気分に左右されにくい。
+
+## feature自身が意味を持つかも確認する
+
+今回の実装では、入力長を1000文字へ固定したため常に同じになる `char_count` を `eligible_for_interpretation: false` として扱っている。
+
+これは小さいが重要な例である。
+
+数値として計算できても、実験設計上意味がないfeatureならrankingへ入れない。
+
+```text
+calculated
+≠
+meaningful
+≠
+decision-ready
+```
+
+この3段階を混ぜない。
+
+## testすべきなのは、禁止用途が開いていないこと
+
+分析pipelineでは「計算が成功した」testだけを書きがちである。
+
+しかし今回守りたいのは、解釈境界も含む。
 
 ```python
 assert output["status"] == "descriptive_pilot_only"
 assert output["interpretation_gate"]["use_for_year_inference"] is False
 assert output["interpretation_gate"]["multiple_testing_claims"] is False
 assert output["interpretation_gate"]["causal_ai_claim"] is False
-assert output["features"]["char_count"]["eligible_for_interpretation"] is False
 ```
 
-公開workflowも、固定pilotの測定後にsummary scriptを実行し、measurement JSONとdistribution-shift JSONの両方をevidenceとしてcommitする構成になっている。
+このnegative contractがあると、将来reportを便利にする変更で禁止用途が勝手に開くのを防げる。
 
-## 6. 失敗と学び
+## 企業分析やA/B testでも同じ
 
-失敗は「大きそうな効果量」を「強い結論」と読み替えることである。
+この考え方は文章特徴量だけではない。
 
-今回の公開artifact自身が、各年12件、1000文字window、descriptive pilotという制約を持つ。またinterpretation gateのreasonには、日本語で未検証のfeatureがtopic・formatting・English-tokenization artifactを拾う可能性が明記されている。
+例えば、
 
-したがって、観測された差を消す必要はないが、そこから年代推論やAI因果へ飛ぶべきでもない。
+- 企業AとBのmargin差
+- 製造条件別の不良率差
+- UI A/B testのconversion差
+- ML model間のscore差
 
-学びは、analysis pipelineの出力に**「何が分かったか」だけでなく「何には使ってはいけないか」もmachine-readableに保存する**ことである。READMEの注意書きだけより、後段コードが誤用を検出しやすい。
+でも、観測値と意思決定権限を分けられる。
 
-## 7. 再現方法
+最小schemaなら次でよい。
 
-読者は次の最小例で、計算と解釈gateの分離を試せる。
+```yaml
+metric:
+  name: cohen_d
+  value: -0.760
 
-```python
-import math
+evidence_strength:
+  status: exploratory
+  sample_size: 24
 
-A = {"n": 12, "mean": 12.0, "std": 7.0}
-B = {"n": 12, "mean": 6.6, "std": 7.2}
-
-variance = (
-    (A["n"] - 1) * A["std"] ** 2
-    + (B["n"] - 1) * B["std"] ** 2
-) / (A["n"] + B["n"] - 2)
-pooled_sd = math.sqrt(variance)
-d = (B["mean"] - A["mean"]) / pooled_sd
-
-output = {
-    "cohen_d": d,
-    "use_for_classification": False,
-    "causal_claim": False,
-}
-
-assert isinstance(output["cohen_d"], float)
-assert output["use_for_classification"] is False
-assert output["causal_claim"] is False
-print(output)
+allowed_use:
+  exploration: true
+  production_decision: false
 ```
 
-ここで確認するのはdの大小ではない。**計算結果が存在しても、未検証の用途が自動的にtrueにならない**ことである。
+読者や下流systemは、数字だけでなく「どこまで使える数字か」を同時に見られる。
 
-実務ではこのgateをJSON Schemaや型へ昇格させ、後段のclassifier・report generator・LLM promptが `descriptive_pilot_only` を無視できないようにするとよい。
+## この設計で欲しいのは、慎重さより分析速度
 
-## まとめ
+用途gateを入れると保守的に見える。
 
-探索分析では、数値を出さないことより、数値の権限を狭く保つことが重要になる。
+しかし実際には、探索を速くできる。
 
-- 効果量は観測値として保存する
-- 入力設計上意味のないfeatureはrankingから外す
-- 推論・multiple testing・因果claimの可否を別gateにする
-- 未検証用途をmachine-readableなfalseとして残す
+弱いpilotでも、
 
-この分離を入れると、探索結果を捨てずに残しながら、後段の自動化が「差がある」から「判定できる」「原因が分かった」へ勝手に飛躍するのを防げる。
+```text
+探索用途なら保存してよい
+```
+
+と明示できるからだ。
+
+すべてをproduction-grade validationまで待つ必要はない。
+
+- 観測は残す
+- 仮説を作る
+- 次の実験を決める
+- 判断用途だけは閉じる
+
+この分離により、**探索の速度を落とさず、過剰解釈だけを止める**ことができる。
+
+Cohen's dが0.76だったことより重要なのは、その数字にどの権限を与えたかだった。
