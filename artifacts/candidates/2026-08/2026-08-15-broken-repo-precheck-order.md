@@ -1,48 +1,48 @@
-<!-- pipeline_meta: {"idea_source":"public-github-engineering","idea_only":true,"raw_private_content_persisted":false,"topic":{"title":"1,799件見つかった。でも1,799件の問題ではなかった――Ruff/PyreflyからNxまで、2026年の品質基盤を組み直す","audience":"GitHub Actions、AI coding agent、monorepo/複数repositoryを運用する開発者・Tech Lead・Platform Engineer","central_question":"最新の高速checkerを増やせば品質基盤は強くなるのか。それとも、各層のauthorityとdiagnostic依存関係を設計する方が重要なのか","surprising_finding":"Ruff 1,076 findingsとPyrefly 723 findingsは独立した1,799欠陥ではなかった。Pyreflyの723件中508件はparse-errorで、Ruffの508 invalid-syntaxと同じ前段failureに依存していた","initial_hypothesis":"Ruff、Pyrefly、tyなど高速checkerを横並びで増やせば、短時間で広く独立した故障面を得られる","hypothesis_update":"quality stackの強さはtool数ではなく、one concern / one authority、root failureから下流diagnosticへの依存関係、feedback latency、runtime trust boundary、workspace graphの設計で決まる","stakes":"AI agentやCIが大量diagnosticを返す環境では、件数を品質指標にすると修正順序を誤り、二重rule・CI待ち・architecture driftを増やす","story_type":"falsified-ranking-premise","reader_before":"Ruff、Pyrefly、Biome、Oxlint、tsc、Pydantic、Zod、prek、Nx、Turborepoの名前は知っているが、どれを標準化し、どの責務を誰に持たせるべきか判断できない","reader_after":"Python/TypeScript/monorepoの各層で第一候補とauthorityを決め、未実証・Beta・Experimentalを区別しながら自分の品質基盤を設計できる","design_philosophy":"最強toolを集めない。各責務に一つのauthorityを置き、前段failureほど早く安く返し、runtime validationはtrust boundaryだけ、workspace orchestrationはgraph問題があるときだけ導入する","why_this_article":"実際に壊れていた公開repositoryの固定commitへRuff/Pyrefly/ty/pre-commit/prekを実行し、raw diagnosticsと生成patchを比較した。その結果をGoogle Researchと各toolの公式仕様で再解釈している","proof_of_value":"KAFKA2306/DeepCode@088059855d2c9187c51d674db02a06f70c37f087、GitHub Actions run 31812751114、Ruff 1,076 findings、Pyrefly 723 findings、双方の最大syntax系category 508、pre-commit/prek生成patch SHA-256一致","desired_reader_action":"自分のrepoでformatter/linter/type/runtime-contract/workspace-orchestratorのauthority mapを作り、重複authorityとroot failure由来のdiagnostic noiseを減らす","non_goal":"単発速度から普遍的なtoolランキングを作らない。未実測のPydantic/Biome/Oxlint/tsc/Zod/Nx/Turborepoを実測済みとは扱わない。既存Pyright/ESLint/monorepo基盤を根拠なく置換しない"},"public_evidence":["https://github.com/KAFKA2306/articles/pull/115","https://github.com/KAFKA2306/articles/actions/runs/31812751114","https://github.com/KAFKA2306/DeepCode/commit/088059855d2c9187c51d674db02a06f70c37f087","https://research.google/pubs/tricorder-building-a-program-analysis-ecosystem/","https://research.google/pubs/lessons-from-building-static-analysis-tools-at-google/","https://docs.astral.sh/ruff/","https://pyrefly.org/blog/v1.0/","https://docs.astral.sh/ty/","https://docs.pydantic.dev/2.10/concepts/validation_decorator/","https://prek.j178.dev/compatibility/","https://biomejs.dev/formatter/","https://oxc.rs/docs/guide/usage/linter/type-aware.html","https://oxc.rs/docs/guide/usage/linter/config-file-reference","https://www.typescriptlang.org/tsconfig/noEmit.html","https://zod.dev/basics","https://nx.dev/docs/features/ci-features/affected","https://nx.dev/docs/features/enforce-module-boundaries","https://turborepo.dev/docs/core-concepts/package-and-task-graph","https://turborepo.dev/docs/crafting-your-repository/caching","https://turborepo.dev/docs/reference/boundaries"]} -->
+<!-- pipeline_meta: {"idea_source":"public-github-engineering","idea_only":true,"raw_private_content_persisted":false,"topic":{"title":"コードを書く速度より、検証する速度が問題になった――2026年の開発品質スタックを組み直す","audience":"AI coding agent、GitHub Actions、Python/TypeScript、monorepoを運用するTech Lead・Platform Engineer・開発者","central_question":"コード生成が高速化した環境で、どの検証を誰に任せれば、変更速度を落とさず信頼性を上げられるか","surprising_finding":"壊れた実repositoryでRuff 1,076 findingsとPyrefly 723 findingsを得たが、Pyreflyの508 parse-errorはRuffの508 invalid-syntaxと同じ上流failureを反映していた。checkerを増やすだけではsignalは加算されない","initial_hypothesis":"高速なcheckerを増やせば、短時間でより多くの独立した欠陥を発見できる","hypothesis_update":"検証基盤はtool listではなくauthority mapとして設計すべき。source hygiene、static semantics、runtime boundary、workspace graph、local triggerを別責務として配置し、同じ責務を二重blockingしない","stakes":"AIがコード量を増やすほど、重複diagnostic、遅いCI、曖昧なauthorityは人間とagent双方の修復速度を落とす","story_type":"verification-bottleneck","reader_before":"最新toolの名前は知っているが、Ruff/Pyrefly/Pydantic、Biome/Oxlint/tsc/Zod、prek、Nx/Turborepoをどう組み合わせるべきか判断できない","reader_after":"自分のrepoで各検証責務のauthorityを決め、single repoとmonorepoで必要な層だけ導入できる","design_philosophy":"one responsibility, one authority。速いtoolを集めるのではなく、最も安い場所で最も信頼できるfailureを返す。runtime validationとworkspace graphは必要な境界だけに置く","why_this_article":"壊れた公開repositoryの固定commitでRuff/Pyrefly/ty/pre-commit/prekを実測し、raw diagnosticsとpatchを比較した。そのうえでGoogle Researchと各tool公式docsだけから2026年8月時点の役割分担を再構成している","proof_of_value":"KAFKA2306/DeepCode@088059855d2c9187c51d674db02a06f70c37f087、Actions run 31812751114、Ruff 1,076 findings、Pyrefly 723 findings、syntax系最大categoryが双方508、pre-commit/prekの生成patch SHA-256一致","desired_reader_action":"formatter/linter/type/runtime boundary/workspace graph/local triggerのauthority mapを作り、重複checkを減らしてPR feedbackを短くする","non_goal":"未実測toolの性能ランキングを作らない。Pydantic/Zodをlinter扱いしない。Nx/Turborepoを小規模repoへ理由なく入れない。既存Pyright/ESLintを無条件に削除しない"},"public_evidence":["https://github.com/KAFKA2306/articles/actions/runs/31812751114","https://github.com/KAFKA2306/DeepCode/commit/088059855d2c9187c51d674db02a06f70c37f087","https://research.google/pubs/tricorder-building-a-program-analysis-ecosystem/","https://www.oreilly.com/radar/ai-is-writing-our-code-faster-than-we-can-verify-it/","https://www.oreilly.com/radar/ai-demands-more-engineering-discipline-not-less/","https://docs.astral.sh/ruff/","https://pyrefly.org/blog/v1.0/","https://docs.pydantic.dev/2.10/concepts/validation_decorator/","https://biomejs.dev/formatter/","https://oxc.rs/docs/guide/usage/linter/type-aware.html","https://oxc.rs/docs/guide/usage/linter/config-file-reference","https://www.typescriptlang.org/tsconfig/noEmit.html","https://zod.dev/basics","https://prek.j178.dev/compatibility/","https://nx.dev/docs/features/enforce-module-boundaries","https://nx.dev/docs/kb/what-is-a-monorepo","https://turborepo.dev/docs/core-concepts/package-and-task-graph","https://turborepo.dev/docs/crafting-your-repository/caching","https://turborepo.dev/docs/reference/boundaries"]} -->
 
-# 1,799件見つかった。でも1,799件の問題ではなかった――Ruff/PyreflyからNxまで、2026年の品質基盤を組み直す
+# コードを書く速度より、検証する速度が問題になった――2026年の開発品質スタックを組み直す
 
-*Ruff / Pyrefly / Pydantic / Biome / Oxlint / tsc / Zod / prek / Nx / Turborepo。名前を並べるのではなく、壊れたrepositoryの実測から「誰に何を任せるか」を決め直した。*
+AI coding agentで、コードを書くコストは急速に下がっています。
 
-最初は、単純に考えていました。
+一方で、生成された変更を**信じてよいか判断する仕事**は消えていません。むしろ、変更量が増えるほど検証側の設計がボトルネックになります。
 
-```text
-速いcheckerを増やす
-        ↓
-より多くの問題が見つかる
-        ↓
-品質基盤が強くなる
-```
+O'Reilly Radarでも2026年に「AIがコードを書く速度が検証速度を上回る」「AI時代ほどengineering disciplineが必要になる」という問題設定が前面に出ています。
 
-そこで、実際に状態の悪かった公開repositoryへ2026年のprecheck候補を当てました。
+- https://www.oreilly.com/radar/ai-is-writing-our-code-faster-than-we-can-verify-it/
+- https://www.oreilly.com/radar/ai-demands-more-engineering-discipline-not-less/
 
-最初の数字は派手でした。
+では、検証側は何を標準にすればよいのか。
 
-```text
-Ruff      1,076 findings
-Pyrefly     723 findings
-```
+Ruff、Pyrefly、Pydantic、Biome、Oxlint、TypeScript compiler、Zod、prek。monorepoならNxやTurborepoも候補に入ります。
 
-合計1,799件。
+この選択を「どのtoolが一番速いか」だけで決めると、設計を誤ります。
 
-しかもscan部分はRuff 99 ms、Pyrefly 361 msでした。
+## 先に結論
 
-「1秒未満で1,799件の問題を見つけた」と書けば、強そうに見えます。
+2026年8月時点で、greenfieldなら私は次の役割分担から始めます。
 
-でもraw diagnosticsを分類した瞬間、その解釈は崩れました。
+| 責務 | 第一候補 | authorityとしての意味 |
+|---|---|---|
+| Python source hygiene | **Ruff** | format / lint |
+| Python static semantics | **Pyrefly** | blocking type check |
+| Python runtime boundary | **Pydantic** | 外部値のvalidation |
+| JS/TS formatting | **Biome formatter** | formatting |
+| JS/TS lint | **Oxlint** | lint / type-aware lint |
+| TypeScript semantics | **`tsc --noEmit`** | compiler/type authority |
+| TS runtime boundary | **Zod** | `unknown`のvalidation |
+| local Git hook | **prek** | checkを起動するrunner |
+| governance-heavy monorepo | **Nx** | project graph / affected / architecture policy |
+| lean JS/TS monorepo | **Turborepo** | task graph / cache |
 
-```text
-Ruff     invalid-syntax  508
-Pyrefly  parse-error     508
-```
+これは「10個入れれば最強」という意味ではありません。
 
-Pyreflyの723件のうち、508件はparse errorでした。
+むしろ逆です。
 
-**新しいtype checkerが独立した問題を723件追加発見したわけではありません。同じ壊れた構文が、後段の解析器へ伝播していました。**
+**同じ責務を複数toolに持たせないための表**です。
 
-この508件が、今回いちばん重要な数字です。
+## 1,799件見つけて、最初の考えが崩れた
 
-## 実験したのは「きれいなbenchmark repo」ではない
+この設計を考えるきっかけになったのは、きれいなbenchmarkではなく、実際に壊れていた公開repositoryでした。
 
 対象は `KAFKA2306/DeepCode` の固定commitです。
 
@@ -53,336 +53,259 @@ Pyreflyの723件のうち、508件はparse errorでした。
 実験run:
 https://github.com/KAFKA2306/articles/actions/runs/31812751114
 
-各toolは別のGitHub Actions jobで実行し、version、install time、scan time、exit code、raw diagnostics、working-tree diffを保存しました。
-
-| tool | version | scan observation | output |
-|---|---:|---:|---:|
-| Ruff | 0.16.3 | 99 ms | 1,076 findings |
-| ty | 0.0.71 | 264 ms | 952 concise lines |
-| Pyrefly | 1.2.0 | 361 ms | 723 findings |
-| prek | 0.4.11 | 2,326 ms | existing hook config, exit 1 |
-| pre-commit | 4.6.2 | 8,765 ms | same hook config, exit 1 |
-
-この時間は別runner VMでの単発観測なので、普遍的な速度ランキングには使いません。
-
-見るべきだったのは「何msだったか」より、**何がroot failureで、何がその派生diagnosticだったか**でした。
-
-Ruffの上位categoryはこうでした。
-
-| category | count |
-|---|---:|
-| `invalid-syntax` | **508** |
-| `UP006` | 147 |
-| `BLE001` | 143 |
-| `I001` | 44 |
-| `RUF010` | 42 |
-
-Pyreflyはこうです。
-
-| category | count |
-|---|---:|
-| `parse-error` | **508** |
-| `unknown-name` | 108 |
-| `missing-import` | 86 |
-| `invalid-syntax` | 12 |
-| `unexpected-keyword` | 9 |
-| **total** | **723** |
-
-`1,076 + 723 = 1,799 independent defects` ではありません。
-
-構文とenvironmentが壊れたままなら、type checkerの総件数をそのまま「型品質」と読むこともできません。
-
-## ここで「最強tool比較」をやめた
-
-Google ResearchのTricorderが扱っているのも、analyzer単体の勝敗ではありません。
-
-複数の解析を大規模codebaseとdeveloper workflowへ統合し、日常的に使われるsystemへすることが中心です。
-
-- https://research.google/pubs/tricorder-building-a-program-analysis-ecosystem/
-- https://research.google/pubs/lessons-from-building-static-analysis-tools-at-google/
-
-この視点に立つと、品質toolの評価軸は変わります。
+RuffとPyreflyを当てると、最初はこう見えました。
 
 ```text
-semantic authority   最後に誰を信じるか
-signal density       本当に独立してactionableか
-feedback latency     context switch前に返るか
-trust boundary       runtimeの実値をどこで止めるか
-graph awareness      変更影響とtask依存を理解できるか
-migration cost       既存運用を壊さずtool debtを減らせるか
-stability boundary   stable / beta / experimentalを区別できるか
+Ruff      1,076 findings
+Pyrefly     723 findings
 ```
 
-「rules数が多い」「速い」だけでは足りません。
+合計1,799件。
 
-**同じ責務を二つのtoolに持たせないことの方が重要です。**
+Ruffのscan観測は99 ms、Pyreflyは361 msでした。
 
-## 先に結論：2026年8月なら、私はこう置く
+これだけ見ると「高速なcheckerを増やせば、短時間でより広い故障面が得られる」と考えたくなります。
 
-### Python
+しかしraw diagnosticsを分類すると、最大categoryはこうでした。
 
 ```text
-Ruff
-  ↓
-Pyrefly
-  ↓
-Pydantic @ untrusted runtime boundary
+Ruff     invalid-syntax  508
+Pyrefly  parse-error     508
 ```
 
-### TypeScript
+Pyreflyの723件中508件はparse errorです。
 
-```text
-Biome formatter
-  ↓
-Oxlint
-  ↓
-tsc --noEmit
-  ↓
-Zod @ untrusted runtime boundary
-```
+つまり、**723件の独立したtype defectが追加で見つかったわけではありません。** 同じ壊れたsyntaxが、後段の解析器にも伝播していました。
 
-### local commit orchestration
+ここで「diagnostic総数」を品質指標にする考えを捨てました。
 
-```text
-prek
-```
+GoogleのTricorderも、program analysisを単体toolの競争ではなく、複数解析をdeveloper workflowへ統合するplatform問題として扱っています。
 
-ただしprek自身を品質policyにはしません。
+https://research.google/pubs/tricorder-building-a-program-analysis-ecosystem/
 
-### monorepoだけ追加
+必要なのはcheckerのカタログではなく、**どのfailureを誰が最終判定するかというauthority map**です。
 
-```text
-governance-heavy / heterogeneous workspace → Nx
-lean JS/TS task graph + cache              → Turborepo
-```
+## Layer 1: source hygieneは安く、速く、議論なく返す
 
-NxとTurborepoを同じworkspaceの競合task-graph authorityにはしません。
+PythonではRuffを第一候補にします。
 
-そしてsingle-project repoに、理由なくどちらかを追加することもしません。
+Ruffはlinterとformatterを同じtoolchainに持ち、Flake8系、isort、pyupgradeなど広い責務を統合しています。
 
-## Python：Ruff + Pyrefly + Pydantic
+https://docs.astral.sh/ruff/
 
-### Ruffは「速い」より「authorityを減らせる」ことが強い
+価値は「何倍速いか」だけではありません。
 
-Ruffはlinterとformatterを同じtoolchainに持ち、Flake8系、isort、pyupgradeなど複数の既存責務を統合できます。
-
-- https://docs.astral.sh/ruff/
-- https://docs.astral.sh/ruff/linter/
-- https://docs.astral.sh/ruff/formatter/
-
-professional environmentで大きいのは、100 msか200 msかより、
+複数のformat/lint authorityを一つに減らせることが重要です。
 
 ```text
 Black
 isort
-Flake8
+Flake8 + plugins
 pyupgrade
 ...
 ```
 
-という複数version・複数config・複数exceptionを減らせることです。
+を別々に運用すると、version、config、ignore、autofixの責任が分散します。
 
-**greenfield Pythonなら、format/lint authorityはRuffを第一候補にします。**
+Ruffはこの層をかなり圧縮できます。
 
-### Pyreflyはblocking type authority候補
+TypeScript側ではBiomeをformatter authorityに置きます。
 
-Pyreflyは2026年5月にstable v1へ到達し、公式にproduction-readyとしています。
-
-https://pyrefly.org/blog/v1.0/
-
-今回のDeepCodeでは723件の大部分がparse failureに汚染されていたので、723という数字を「検出力score」にはしません。
-
-それでも、現時点でproductionのblocking authorityを一つ選ぶならPyreflyを第一候補にします。
-
-### tyは「負け」ではない。challengerに置く
-
-今回の単発scan observationでは、tyは264 ms、Pyreflyは361 msでした。
-
-ただしtyは現在もBetaです。
-
-https://docs.astral.sh/ty/
-
-だから、
-
-```text
-blocking CI             → Pyrefly
-shadow / editor trial   → ty
-```
-
-とします。
-
-両方を永久にblocking CIへ入れるのは、通常はauthority duplicationです。
-
-### Pydanticはrepository-wide checkerではない
-
-Pydanticの役割は、HTTP、JSON、CSV、environment、AI outputなど、code外から来る実値のvalidationです。
-
-https://docs.pydantic.dev/2.10/concepts/validation_decorator/
-
-```text
-untrusted value
-      ↓
-  Pydantic
-      ↓
-validated application object
-```
-
-内部functionまで何でもPydantic化すると、runtime costとschema duplicationが増えます。
-
-**trust boundaryだけに置く**のが基本です。
-
-## TypeScript：Biome + Oxlint + tsc + Zod
-
-### Biomeはformatter authorityに絞る
-
-Biomeはlinterも持っています。
-
-それでもこの構成ではformatter authorityへ役割を絞ります。
+Biomeは意図的にoptionを絞るopinionated formatterです。style debateをtool config debateへ置き換えない、という設計思想が明示されています。
 
 https://biomejs.dev/formatter/
 
-理由はBiomeが弱いからではありません。
+この層の目的は高度なバグ発見ではありません。
 
-Oxlintもlint authorityとして採用するなら、同じrule domainを二重blockingしないためです。
+**レビューから機械的なstyle議論を消し、壊れたsyntaxや明白なsource problemを早く返すこと**です。
 
-### Oxlintはlint authority。ただしcompiler authorityまでは渡さない
+## Layer 2: static semanticsは一つのauthorityにする
 
-Oxlintはtype-aware lintingを持ち、2026年時点ではかなり有力です。
+Python type checkerはPyreflyをblocking authority候補にします。
+
+Pyreflyは2026年5月にstable v1へ到達し、production useにreadyだと公式に表明しています。
+
+https://pyrefly.org/blog/v1.0/
+
+今回の実験では大量のparse errorに汚染されたため、723件という数字をPyreflyの「検出力score」には使いません。
+
+ただしproductionのblocking type checkerを今ひとつ選ぶ、という判断ではstable境界が明確です。
+
+TypeScriptでは、Oxlintと`tsc`を同じものとして扱いません。
+
+Oxlintのtype-aware lintingはTypeScriptのtype informationを使い、現在59/61のtype-aware typescript-eslint rulesをカバーしています。
 
 https://oxc.rs/docs/guide/usage/linter/type-aware.html
 
-一方、Oxlintの`typeCheck`は現在の公式config referenceでexperimental扱いです。
+一方、compiler diagnosticsを統合する`typeCheck`は公式config referenceでまだexperimentalです。
 
 https://oxc.rs/docs/guide/usage/linter/config-file-reference
 
-そのため現時点では、
+したがって現時点では、
 
 ```text
-Oxlint         = lint authority
-tsc --noEmit   = type authority
+Oxlint       = lint authority
+tsc --noEmit = TypeScript compiler/type authority
 ```
 
 と分けます。
 
+`noEmit`はTypeScriptをsource code type-checkerとして使い、JavaScript等の出力を生成しない公式optionです。
+
 https://www.typescriptlang.org/tsconfig/noEmit.html
 
-### Zodもboundaryだけ
+Oxlintのtype-check機能が成熟すれば将来この二重program構築を統合できる可能性はあります。しかし**experimentalな機能へ最終authorityを急いで移す理由はありません。**
 
-Zodは`unknown`なruntime valueをschemaで検証し、validated valueへ変換する層です。
+## Layer 3: PydanticとZodはprecheckではない
+
+ここを混ぜると設計が崩れます。
+
+PydanticとZodはlinterではありません。
+
+static checkerが保証できるのは、code上で想定した型関係です。productionではその外から値が入ります。
+
+```text
+HTTP
+JSON / YAML
+CSV
+DB result
+environment variable
+user input
+AI model output
+```
+
+Pydanticの`validate_call`もruntimeで引数をvalidationし、公式docsはそのvalidationにperformance costがあることを明示しています。
+
+https://docs.pydantic.dev/2.10/concepts/validation_decorator/
+
+Zodもschemaに対してruntime inputを`.parse()` / `.safeParse()`し、validated dataと推論されたTypeScript typeを得る仕組みです。
 
 https://zod.dev/basics
 
-Pydanticと同じく、static type checkerの代替ではありません。
+だから配置はこうです。
 
-## prek：今回いちばん直接比較できた置換
+```text
+untrusted value
+      ↓
+Pydantic / Zod
+      ↓
+validated application core
+```
 
-同じ `.pre-commit-config.yaml` を `pre-commit 4.6.2` と `prek 0.4.11` で実行しました。
+すべての内部functionへvalidationを追加するのではなく、**trust boundaryにだけ置く**のが基本です。
 
-単発観測はこうでした。
+## Layer 4: prekはpolicyではなくtrigger
+
+local commitでcheckをどう起動するかは別問題です。
+
+今回、既存の同じ`.pre-commit-config.yaml`を`pre-commit 4.6.2`と`prek 0.4.11`で実行しました。
+
+単発観測では、
 
 ```text
 pre-commit measured total  10,299 ms
 prek measured total         2,619 ms
 ```
 
-ただし別runnerなので「常に3.93倍」とは言いません。
+でした。
 
-より強い証拠は生成patchです。
+別runnerなので普遍的な「3.93倍高速」という結論にはしません。
+
+より重要なのは、両者が生成したworking-tree patchのSHA-256が一致したことです。
 
 ```text
-SHA-256(pre-commit patch)
-30275602cf6b35644199d3a7fe949c038a10eaa9e6685074de4f7c8d62b36bf1
-
-SHA-256(prek patch)
 30275602cf6b35644199d3a7fe949c038a10eaa9e6685074de4f7c8d62b36bf1
 ```
 
-このfixtureではbyte-identicalでした。
+prek公式も既存`.pre-commit-config.yaml`との互換を主要目的にしています。
 
 https://prek.j178.dev/compatibility/
 
-つまり今回の範囲では、**既存hook semanticsを保ったままrunnerだけ交換できる可能性が高い**という結果です。
+このfixtureでは、runnerだけ交換して同じ修正結果を得られました。
 
-ただし設計上は、
-
-```text
-quality policy != prek
-```
-
-にします。
-
-hook runnerを変えたら品質意味論まで変わる構成にはしません。
-
-## Nx / Turborepoはcheckerの上に置く
-
-ここで視点をrepository内部からworkspaceへ上げます。
-
-RuffやOxlintは「このsourceが正しいか」を見ます。
-
-Nx/Turborepoが見るのは、
+ただし、品質policy自体をprekへ埋め込みません。
 
 ```text
-どのprojectが変わったか
-どのtaskがその変更に依存するか
-何を再実行すべきか
-何をcacheから戻せるか
+quality policy != hook runner
 ```
 
-です。
+repository command、tool config、CI contractが正準で、prekはそれをcommit時に起動するだけ、という構造にします。
 
-### Nx：governanceをgraphへ持ちたいとき
+## Layer 5: Nx / Turborepoはcheckerの上にある
 
-Nxの`affected`はGit差分とproject graphから、変更の影響を受ける最小project集合を求めます。
+monorepoになると、問題が変わります。
 
-https://nx.dev/docs/features/ci-features/affected
+RuffやOxlintが答えるのは、主に「このsourceに問題があるか」です。
 
-さらにproject tagを使ってarchitecture boundaryを宣言できます。
+workspaceではさらに、
+
+```text
+何が変わったか
+どのprojectが影響を受けるか
+どのtaskを再実行すべきか
+何をcacheから戻してよいか
+どのprojectがどこへ依存してよいか
+```
+
+を解かなければなりません。
+
+Nxはgraph-aware toolingとして、affected detection、caching、module boundariesなどを前面に置いています。
+
+https://nx.dev/docs/kb/what-is-a-monorepo
+
+architecture governanceを重視するworkspaceならNxが強い理由はここです。
+
+ただし実務上の注意があります。
+
+Nx OSSのJavaScript/TypeScript向けmodule boundary enforcementは`@nx/enforce-module-boundaries`というESLint ruleです。language-agnosticなConformanceはEnterprise機能です。
 
 https://nx.dev/docs/features/enforce-module-boundaries
 
-ここには実務上の重要な注意があります。
+したがって、Oxlintへ移行するからといってESLintを機械的に削除すると、**lint設定ではなくarchitecture policyまで消す可能性があります。**
 
-OSSのJavaScript/TypeScript向けmodule-boundary enforcementは `@nx/enforce-module-boundaries` というESLint ruleです。
+Turborepoはよりtask execution寄りです。
 
-つまりOxlintへ移行するからといってESLintを機械的に削除すると、**lint ruleではなくarchitecture policyまで消す可能性があります。**
-
-language-agnosticなConformanceはEnterprise側です。
-
-Nxを選ぶ理由は「buildが速い」だけではなく、**workspace architectureをproject graphへ持ちたいか**です。
-
-### Turborepo：task DAGとcacheを薄く入れたいとき
-
-Turborepoはpackage graphからtask graphを組み、DAGとしてtask dependencyを扱います。
+package graphからtask graphを作り、DAGとしてtask dependencyを扱います。
 
 https://turborepo.dev/docs/core-concepts/package-and-task-graph
 
-cacheはinput fingerprintに基づき、local/remoteで再利用できます。
+cacheはtask inputのfingerprintから結果を再利用し、remote cacheでteam/CI間共有もできます。
 
 https://turborepo.dev/docs/crafting-your-repository/caching
 
-JS/TS中心で、既存package scriptsを大きく変えずtask executionとcacheを強くしたいなら自然です。
+JS/TS中心で既存package scriptsを活かしながらtask graphとcacheを足したいなら自然です。
 
-ただし `turbo boundaries` は現在もExperimentalです。
+一方、`turbo boundaries`は現在もExperimentalです。
 
 https://turborepo.dev/docs/reference/boundaries
 
-したがって、architecture governanceを最重要要件にするなら現時点ではNxの方が成熟しています。
+そのため現時点では、
 
-## 「全部commit時に走らせる」もやめる
+```text
+architecture governanceを強く持つ → Nx
+leanなJS/TS task graph + cache     → Turborepo
+```
 
-強いtoolを選んでも、配置を間違えるとdeveloper experienceを壊します。
+と判断します。
 
-私はfeedback topologyをこう分けます。
+NxとTurborepoを同じworkspaceへ競合するtask-graph authorityとして両方入れる必要はありません。
+
+## 最終的なstackは「一本のpipeline」ではない
+
+`Ruff → Pyrefly → Pydantic` のように一直線で描くと、少し誤解があります。
+
+実際には、**時間軸と責務軸の二次元**です。
 
 ```text
 EDITOR / SAVE
   Ruff / Biome
-  Pyrefly or ty LSP
+  Pyrefly LSP
   Oxlint LSP
 
 COMMIT
   changed-file format/lint
-  cheap syntax/config validation
+  cheap syntax/config checks
+  triggered by prek
 
 PR CI
   full Ruff
@@ -392,47 +315,54 @@ PR CI
   contract fixtures
   unit tests
 
-HEAVIER / SCHEDULED
-  integration / E2E
-  dependency/security audit
-  expensive repository-wide checks
+RUNTIME BOUNDARY
+  Pydantic / Zod
+
+MONOREPO CONTROL PLANE
+  Nx OR Turborepo
+
+HEAVIER CI
+  integration / E2E / security / repository-wide audits
 ```
 
-速さの価値はbenchmark順位ではありません。
+これなら、安いfailureは早く返り、重い検証だけCIへ送れます。
 
-**人間やagentが次の行動へ移る前に、十分に信頼できるfailureを返せること**です。
+そして一つの責務に複数のblocking authorityを持たせません。
 
-## だから「最強」は一個ではない
+## 「最強tool」はある。でも最強stackはtool listではない
 
-現時点の第一候補をもう一度まとめます。
+個別の採用判断はかなり明確です。
 
-| concern | authority |
-|---|---|
-| Python format/lint | **Ruff** |
-| Python type | **Pyrefly** |
-| Python runtime contract | **Pydantic @ boundary** |
-| JS/TS format | **Biome formatter** |
-| JS/TS lint | **Oxlint** |
-| TypeScript type | **`tsc --noEmit`** |
-| TS runtime contract | **Zod @ boundary** |
-| local hook runner | **prek** |
-| governance-heavy monorepo | **Nx** |
-| lean JS/TS monorepo execution | **Turborepo** |
+- Python format/lint: **Ruff**
+- Python type: **Pyrefly**
+- Python external data: **Pydantic**
+- JS/TS format: **Biome formatter**
+- JS/TS lint: **Oxlint**
+- TypeScript type: **`tsc --noEmit`**
+- TS external data: **Zod**
+- local hook runner: **prek**
+- governance-heavy monorepo: **Nx**
+- lean JS/TS monorepo: **Turborepo**
 
-ただし、この表だけをコピーするのがこの記事の結論ではありません。
+しかし、今回いちばん大きかった発見はtool名ではありません。
 
-今回、最初に見た1,799という数字は全部正しい観測でした。
+Ruff 1,076件とPyrefly 723件は、どちらも正しい観測でした。
 
-間違っていたのは、**その1,799を1,799個の独立した問題だと解釈したこと**です。
+間違っていたのは、それを1,799個の独立した価値だと解釈したことです。
 
-quality platformでも同じです。
+AIで生成速度が上がるほど、検証基盤にも同じ問題が起きます。
 
-強いtoolを10個集めても、10個の独立した価値にはなりません。
+**checkerを増やすことは簡単です。何を信じるかを一意にすることの方が難しい。**
 
-責務が重なればnoiseになり、graphを理解しなければ無駄なCIになり、trust boundaryを間違えればruntime defectは残ります。
+コード生成が豊富になった時代に希少になるのは、syntaxを書く能力ではなく、変更を短時間で「通してよい」と判断できる検証設計です。
 
-> **最強の品質基盤は、最強toolの寄せ集めではない。各failureを、最も早く・最も信頼できるauthorityへ一度だけ割り当てる設計である。**
+次に測るべきなのは、さらにtoolを増やしたときの総diagnostic数ではありません。
 
-次の実験では、508件のsyntax failureを先に除去してPyreflyを再実行し、723件がどこまで減るかを測ります。
+- syntax修復前後でtype diagnosticがどれだけ減るか
+- dependencyを正しく入れた後に何件が残るか
+- TypeScript実repoでBiome/Oxlint/tscがどこまで補完・重複するか
+- monorepoでNx/TurborepoがPR feedback timeとCI実行量をどれだけ変えるか
 
-その次に、実際に状態の悪いTypeScript monorepoを固定し、Biome / Oxlint / tsc と Nx / Turborepoのaffected/cache behaviorまで同じ基準で実測します。
+です。
+
+**検証速度は、toolのbenchmarkではなく、信頼できる判断までの時間で測る。**
