@@ -1,0 +1,158 @@
+src/providers/tts.py:10: error: Library stubs not installed for "requests"  [import-untyped]
+src/providers/tts.py:11: error: Cannot find implementation or library stub for module named "pydub"  [import-not-found]
+src/providers/tts.py:48: error: Incompatible types in assignment (expression has type "int | None", variable has type "int")  [assignment]
+src/providers/tts.py:56: error: Argument 1 to "Path" has incompatible type "str | None"; expected "str | PathLike[str]"  [arg-type]
+src/storyboard.py:6: error: Cannot find implementation or library stub for module named "pydantic"  [import-not-found]
+src/utils/discord_config.py:8: error: Library stubs not installed for "yaml"  [import-untyped]
+src/services/image_generation.py:9: error: Cannot find implementation or library stub for module named "torch"  [import-not-found]
+src/services/image_generation.py:163: error: Cannot find implementation or library stub for module named "diffusers"  [import-not-found]
+src/services/image_generation.py:171: error: "None" has no attribute "unet"  [attr-defined]
+src/services/image_generation.py:172: error: "None" has no attribute "unet"  [attr-defined]
+scripts/restore_prompt.py:6: error: Library stubs not installed for "yaml"  [import-untyped]
+scripts/restore_prompt.py:7: error: Cannot find implementation or library stub for module named "aim"  [import-not-found]
+src/utils/config.py:6: error: Library stubs not installed for "yaml"  [import-untyped]
+src/utils/config.py:7: error: Cannot find implementation or library stub for module named "pydantic"  [import-not-found]
+src/utils/prompt_version.py:23: error: Incompatible types in assignment (expression has type "HASH", variable has type "str")  [assignment]
+src/utils/prompt_version.py:25: error: "str" has no attribute "update"  [attr-defined]
+src/utils/prompt_version.py:26: error: "str" has no attribute "update"  [attr-defined]
+src/utils/prompt_version.py:27: error: "str" has no attribute "update"  [attr-defined]
+src/utils/prompt_version.py:28: error: "str" has no attribute "update"  [attr-defined]
+src/utils/prompt_version.py:29: error: "str" has no attribute "hexdigest"  [attr-defined]
+src/tracking.py:8: error: Cannot find implementation or library stub for module named "aim"  [import-not-found]
+tests/unit/test_voice_controls.py:1: error: Cannot find implementation or library stub for module named "pytest"  [import-not-found]
+src/models.py:6: error: Cannot find implementation or library stub for module named "pydantic"  [import-not-found]
+src/core/state.py:8: error: Cannot find implementation or library stub for module named "pydantic"  [import-not-found]
+src/providers/video_generation.py:10: error: Library stubs not installed for "requests"  [import-untyped]
+src/steps/buzzsprout.py:7: error: Library stubs not installed for "requests"  [import-untyped]
+src/providers/video_effects.py:7: error: Cannot find implementation or library stub for module named "ffmpeg.nodes"  [import-not-found]
+src/providers/video_effects.py:182: error: Cannot find implementation or library stub for module named "ffmpeg"  [import-not-found]
+src/providers/llm.py:5: error: Cannot find implementation or library stub for module named "litellm"  [import-not-found]
+src/providers/llm.py:6: error: Library stubs not installed for "yaml"  [import-untyped]
+scripts/import_to_aim.py:7: error: Cannot find implementation or library stub for module named "aim"  [import-not-found]
+scripts/tone_report.py:10: error: Library stubs not installed for "yaml"  [import-untyped]
+src/steps/audio.py:5: error: Cannot find implementation or library stub for module named "pydub"  [import-not-found]
+src/providers/news.py:7: error: Cannot find implementation or library stub for module named "litellm"  [import-not-found]
+src/providers/news.py:8: error: Library stubs not installed for "requests"  [import-untyped]
+src/core/io_utils.py:10: error: Incompatible default for parameter "default" (default has type "None", parameter has type "T")  [assignment]
+src/core/io_utils.py:10: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+src/core/io_utils.py:10: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+tests/test_performance_feedback.py:4: error: Cannot find implementation or library stub for module named "pytest"  [import-not-found]
+src/core/orchestrator.py:44: error: Argument 1 to "run" of "Step" has incompatible type "dict[str, str]"; expected "dict[str, Path]"  [arg-type]
+src/core/orchestrator.py:54: error: Argument 1 to "track_diff" of "AimTracker" has incompatible type "dict[str, Path]"; expected "dict[str, Path | str]"  [arg-type]
+src/core/orchestrator.py:54: note: "dict" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+src/core/orchestrator.py:54: note: Consider using "Mapping" instead, which is covariant in the value type
+src/core/orchestrator.py:54: error: Argument 2 to "track_diff" of "AimTracker" has incompatible type "dict[str, str]"; expected "dict[str, Path | str]"  [arg-type]
+tests/test_storyboard_video_generation.py:1: error: Cannot find implementation or library stub for module named "pytest"  [import-not-found]
+tests/test_storyboard_video_generation.py:2: error: Cannot find implementation or library stub for module named "pydantic"  [import-not-found]
+tests/test_remotion_renderer.py:7: error: Cannot find implementation or library stub for module named "pytest"  [import-not-found]
+src/providers/twitter.py:10: error: Cannot find implementation or library stub for module named "tweepy"  [import-not-found]
+src/providers/twitter.py:107: error: Item "None" of "Any | None" has no attribute "create_tweet"  [union-attr]
+src/providers/twitter.py:114: error: Item "None" of "Any | None" has no attribute "media_upload"  [union-attr]
+tests/conftest.py:13: error: Cannot find implementation or library stub for module named "pytest"  [import-not-found]
+src/steps/podcast.py:8: error: Cannot find implementation or library stub for module named "feedgen.feed"  [import-not-found]
+src/core/media_utils.py:5: error: Cannot find implementation or library stub for module named "ffmpeg"  [import-not-found]
+src/core/media_utils.py:6: error: Cannot find implementation or library stub for module named "pydub"  [import-not-found]
+scripts/discord_news_bot.py:7: error: Cannot find implementation or library stub for module named "discord"  [import-not-found]
+scripts/discord_news_bot.py:7: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
+tests/unit/steps/test_audio_di.py:8: error: Cannot find implementation or library stub for module named "pydub"  [import-not-found]
+src/steps/thumbnail.py:8: error: Cannot find implementation or library stub for module named "PIL"  [import-not-found]
+src/steps/thumbnail.py:9: error: Cannot find implementation or library stub for module named "PIL.ImageColor"  [import-not-found]
+src/steps/thumbnail.py:72: error: Argument 1 of "execute" is incompatible with supertype "src.core.step.Step"; supertype defines the argument type as "dict[str, Path]"  [override]
+src/steps/thumbnail.py:72: note: This violates the Liskov substitution principle
+src/steps/thumbnail.py:72: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
+src/steps/thumbnail.py:259: error: Need type annotation for "lines" (hint: "lines: list[<type>] = ...")  [var-annotated]
+src/steps/social/linkedin.py:7: error: Library stubs not installed for "requests"  [import-untyped]
+src/steps/social/linkedin.py:8: error: Cannot find implementation or library stub for module named "pydantic"  [import-not-found]
+src/steps/social/hatena.py:11: error: Library stubs not installed for "requests"  [import-untyped]
+src/steps/social/hatena.py:12: error: Cannot find implementation or library stub for module named "pydantic"  [import-not-found]
+src/steps/social/hatena.py:51: error: Incompatible default for parameter "categories" (default has type "None", parameter has type "list[str]")  [assignment]
+src/steps/social/hatena.py:51: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+src/steps/social/hatena.py:51: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+src/steps/scene_generator.py:308: error: Argument 1 of "execute" is incompatible with supertype "src.core.step.Step"; supertype defines the argument type as "dict[str, Path]"  [override]
+src/steps/scene_generator.py:308: note: This violates the Liskov substitution principle
+src/steps/scene_generator.py:308: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
+src/steps/scene_generator.py:369: error: Library stubs not installed for "yaml"  [import-untyped]
+src/steps/metadata.py:67: error: Argument 1 to "_generate_metadata_with_llm" of "MetadataAnalyzer" has incompatible type "Collection[Any]"; expected "list[dict[Any, Any]]"  [arg-type]
+src/steps/metadata.py:98: error: Item "None" of "GeminiProvider | None" has no attribute "execute"  [union-attr]
+src/steps/metadata.py:107: error: Item "None" of "GeminiProvider | None" has no attribute "model"  [union-attr]
+src/providers/youtube.py:10: error: Cannot find implementation or library stub for module named "google.auth.transport.requests"  [import-not-found]
+src/providers/youtube.py:11: error: Cannot find implementation or library stub for module named "google.oauth2.credentials"  [import-not-found]
+src/providers/youtube.py:12: error: Cannot find implementation or library stub for module named "google_auth_oauthlib.flow"  [import-not-found]
+src/providers/youtube.py:13: error: Cannot find implementation or library stub for module named "googleapiclient.discovery"  [import-not-found]
+src/providers/youtube.py:14: error: Cannot find implementation or library stub for module named "googleapiclient.http"  [import-not-found]
+src/providers/cloudflare_ai.py:7: error: Library stubs not installed for "requests"  [import-untyped]
+src/providers/cloudflare_ai.py:7: note: Hint: "python3 -m pip install types-requests"
+src/utils/discord.py:6: error: Library stubs not installed for "requests"  [import-untyped]
+src/utils/discord.py:65: error: Argument 1 to "resolve_video_input" has incompatible type "dict[str, str]"; expected "dict[str, str | Path]"  [arg-type]
+src/utils/discord.py:65: note: "dict" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+src/utils/discord.py:65: note: Consider using "Mapping" instead, which is covariant in the value type
+src/steps/video.py:6: error: Cannot find implementation or library stub for module named "ffmpeg"  [import-not-found]
+src/steps/twitter.py:8: error: Cannot find implementation or library stub for module named "dotenv"  [import-not-found]
+src/steps/twitter.py:79: error: Incompatible types in assignment (expression has type "Path | None", variable has type "Path")  [assignment]
+src/steps/twitter.py:79: error: Argument 1 to "resolve_video_input" has incompatible type "dict[str, Path]"; expected "dict[str, str | Path]"  [arg-type]
+src/steps/twitter.py:79: note: "dict" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+src/steps/twitter.py:79: note: Consider using "Mapping" instead, which is covariant in the value type
+src/steps/subtitle.py:5: error: Cannot find implementation or library stub for module named "PIL"  [import-not-found]
+src/steps/subtitle.py:36: error: Item "None" of "VideoSubtitleStyleConfig | None" has no attribute "margin_l"  [union-attr]
+src/steps/subtitle.py:37: error: Item "None" of "VideoSubtitleStyleConfig | None" has no attribute "margin_r"  [union-attr]
+src/steps/subtitle.py:39: error: Argument 1 to "Path" has incompatible type "str | Any | None"; expected "str | PathLike[str]"  [arg-type]
+src/steps/subtitle.py:39: error: Item "None" of "VideoSubtitleStyleConfig | None" has no attribute "font_path"  [union-attr]
+src/steps/subtitle.py:40: error: Item "None" of "VideoSubtitleStyleConfig | None" has no attribute "font_size"  [union-attr]
+src/steps/subtitle.py:205: error: Item "None" of "Any | None" has no attribute "model_dump"  [union-attr]
+src/steps/intro_outro.py:7: error: Cannot find implementation or library stub for module named "ffmpeg"  [import-not-found]
+src/steps/script.py:8: error: Library stubs not installed for "yaml"  [import-untyped]
+src/steps/script.py:65: error: "Provider" has no attribute "model"  [attr-defined]
+src/steps/news.py:11: error: Library stubs not installed for "yaml"  [import-untyped]
+tests/unit/steps/test_thumbnail_spec.py:8: error: Library stubs not installed for "yaml"  [import-untyped]
+tests/unit/steps/test_thumbnail_spec.py:9: error: Cannot find implementation or library stub for module named "PIL"  [import-not-found]
+tests/unit/steps/test_thumbnail_spec.py:46: error: Need type annotation for "calls" (hint: "calls: list[<type>] = ...")  [var-annotated]
+scripts/mass_generate_gallery.py:19: error: Library stubs not installed for "yaml"  [import-untyped]
+scripts/mass_generate_gallery.py:19: note: Hint: "python3 -m pip install types-PyYAML"
+scripts/mass_generate_gallery.py:19: note: (or run "mypy --install-types" to install all missing stub packages)
+scripts/mass_generate_gallery.py:24: error: Cannot find implementation or library stub for module named "torch"  [import-not-found]
+scripts/mass_generate_gallery.py:25: error: Cannot find implementation or library stub for module named "diffusers"  [import-not-found]
+scripts/mass_generate_gallery.py:46: error: Incompatible return value type (got "None", expected "str")  [return-value]
+scripts/mass_generate_gallery.py:54: error: Incompatible return value type (got "None", expected "str")  [return-value]
+src/steps/youtube.py:36: error: Argument 1 to "resolve_video_input" has incompatible type "dict[str, Path]"; expected "dict[str, str | Path]"  [arg-type]
+src/steps/youtube.py:36: note: "dict" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+src/steps/youtube.py:36: note: Consider using "Mapping" instead, which is covariant in the value type
+src/steps/youtube.py:53: error: Argument 1 to "Path" has incompatible type "Path | None"; expected "str | PathLike[str]"  [arg-type]
+src/steps/thumbnail_ai.py:8: error: Cannot find implementation or library stub for module named "PIL"  [import-not-found]
+src/steps/thumbnail_ai.py:37: error: Argument 1 of "execute" is incompatible with supertype "src.core.step.Step"; supertype defines the argument type as "dict[str, Path]"  [override]
+src/steps/thumbnail_ai.py:37: note: This violates the Liskov substitution principle
+src/steps/thumbnail_ai.py:37: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
+src/steps/thumbnail_ai.py:44: error: Argument 1 to "_resolve_title" of "AIThumbnailGenerator" has incompatible type "dict[Any, Any] | None"; expected "dict[Any, Any]"  [arg-type]
+tests/unit/test_voice_prompt_contract.py:5: error: Cannot find implementation or library stub for module named "pytest"  [import-not-found]
+tests/unit/test_voice_prompt_contract.py:11: error: Module has no attribute "AimTracker"  [attr-defined]
+tests/test_real_workflow.py:27: error: Cannot find implementation or library stub for module named "pytest"  [import-not-found]
+tests/test_real_workflow.py:65: error: Missing positional argument "voicevox_config" in call to "AudioSynthesizer"  [call-arg]
+tests/test_real_workflow.py:136: error: Missing positional argument "voicevox_config" in call to "AudioSynthesizer"  [call-arg]
+tests/test_real_workflow.py:199: error: Missing positional argument "voicevox_config" in call to "AudioSynthesizer"  [call-arg]
+tests/test_real_workflow.py:215: error: Missing positional argument "voicevox_config" in call to "AudioSynthesizer"  [call-arg]
+tests/test_real_workflow.py:249: error: Missing positional argument "voicevox_config" in call to "AudioSynthesizer"  [call-arg]
+tests/test_real_workflow.py:349: error: Cannot find implementation or library stub for module named "PIL"  [import-not-found]
+tests/test_real_workflow.py:370: error: Missing positional argument "voicevox_config" in call to "AudioSynthesizer"  [call-arg]
+tests/test_news_collector_logic.py:2: error: Cannot find implementation or library stub for module named "pytest"  [import-not-found]
+tests/test_complete_e2e.py:11: error: Cannot find implementation or library stub for module named "pytest"  [import-not-found]
+tests/test_complete_e2e.py:49: error: Missing positional argument "voicevox_config" in call to "AudioSynthesizer"  [call-arg]
+tests/unit/steps/test_news_diversity.py:53: error: Incompatible types in assignment (expression has type "def _build_selection_prompt(self, candidates: list[NewsItem], recent: list[str]) -> str", variable has type "def _build_selection_prompt(self, candidates: list[NewsItem], recent_topics: list[str]) -> str")  [assignment]
+tests/unit/steps/test_news_diversity.py:53: note: Error code "assignment" not covered by "type: ignore[method-assign]" comment
+tests/unit/steps/test_thumbnail_ai_text_overlay.py:6: error: Cannot find implementation or library stub for module named "PIL"  [import-not-found]
+apps/youtube/cli.py:140: error: Argument "llm_provider" to "ScriptGenerator" has incompatible type "GeminiProvider"; expected "Provider"  [arg-type]
+apps/youtube/cli.py:140: note: Following member(s) of "GeminiProvider" have conflicts:
+apps/youtube/cli.py:140: note:     Expected:
+apps/youtube/cli.py:140: note:         def execute(self, **kwargs: Any) -> Any
+apps/youtube/cli.py:140: note:     Got:
+apps/youtube/cli.py:140: note:         def execute(self, prompt: str, system_prompt: str | None = ..., **kwargs: Any) -> str
+apps/youtube/cli.py:146: error: Argument "tts_provider" to "AudioSynthesizer" has incompatible type "VOICEVOXProvider"; expected "Provider"  [arg-type]
+apps/youtube/cli.py:146: note: Following member(s) of "VOICEVOXProvider" have conflicts:
+apps/youtube/cli.py:146: note:     Expected:
+apps/youtube/cli.py:146: note:         def execute(self, **kwargs: Any) -> Any
+apps/youtube/cli.py:146: note:     Got:
+apps/youtube/cli.py:146: note:         def execute(self, text: str, speaker: str, **kwargs: Any) -> Any
+apps/youtube/cli.py:341: error: Argument 1 to "append" of "list" has incompatible type "GeminiNewsProvider"; expected "PerplexityNewsProvider"  [arg-type]
+src/main.py:6: error: Cannot find implementation or library stub for module named "dotenv"  [import-not-found]
+tests/test_provider_internet_boundary.py:45: error: "expr" has no attribute "elts"  [attr-defined]
+tests/test_provider_internet_boundary.py:46: error: "expr" has no attribute "elts"  [attr-defined]
+tests/test_default_config_safety.py:4: error: Library stubs not installed for "yaml"  [import-untyped]
+Found 124 errors in 58 files (checked 88 source files)

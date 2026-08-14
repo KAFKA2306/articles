@@ -1,0 +1,79 @@
+{
+  "guardrails": [
+    "nonzero exit codes are observations, not proof of true defects",
+    "elapsed_ms values are single external-validity observations and are not performance rankings",
+    "tool output counts are not summed or treated as defect counts",
+    "setup failure is retained as operational evidence rather than triggering repository reselection"
+  ],
+  "probes": {
+    "mypy": {
+      "elapsed_ms": 3712,
+      "exit_code": 1,
+      "name": "mypy",
+      "output_nonempty": true,
+      "stderr_lines": 5,
+      "stdout_lines": 158
+    },
+    "npm_ci": {
+      "elapsed_ms": 11294,
+      "exit_code": 0,
+      "name": "npm_ci",
+      "output_nonempty": true,
+      "stderr_lines": 1,
+      "stdout_lines": 15
+    },
+    "oxlint": {
+      "elapsed_ms": 3351,
+      "exit_code": 1,
+      "name": "oxlint",
+      "output_nonempty": true,
+      "stderr_lines": 0,
+      "stdout_lines": 23
+    },
+    "pyrefly": {
+      "elapsed_ms": 889,
+      "exit_code": 1,
+      "name": "pyrefly",
+      "output_nonempty": true,
+      "stderr_lines": 8,
+      "stdout_lines": 2788
+    },
+    "pyright": {
+      "elapsed_ms": 9278,
+      "exit_code": 1,
+      "name": "pyright",
+      "output_nonempty": true,
+      "stderr_lines": 0,
+      "stdout_lines": 292
+    },
+    "tsc": {
+      "elapsed_ms": 2229,
+      "exit_code": 0,
+      "name": "tsc",
+      "output_nonempty": false,
+      "stderr_lines": 0,
+      "stdout_lines": 0
+    },
+    "ty": {
+      "elapsed_ms": 691,
+      "exit_code": 1,
+      "name": "ty",
+      "output_nonempty": true,
+      "stderr_lines": 3,
+      "stdout_lines": 136
+    }
+  },
+  "purpose": "external validity only; unknown real-repository defect ground truth prohibits recall/ranking claims",
+  "samples": {
+    "python": {
+      "repository": "KAFKA2306/2511youtuber",
+      "sha": "95a0f6b4f5270d1463c15f301a2bd4f0d709c109"
+    },
+    "typescript": {
+      "repository": "KAFKA2306/investor2",
+      "sha": "9a45de93437456f215f1a251666f322254aac6b4"
+    }
+  },
+  "schema_version": 1,
+  "status": "complete"
+}

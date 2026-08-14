@@ -1,0 +1,136 @@
+apps/youtube/cli.py:140:13: error[invalid-argument-type] Argument to `ScriptGenerator.__init__` is incorrect: Expected `Provider`, found `GeminiProvider`
+apps/youtube/cli.py:146:13: error[invalid-argument-type] Argument to `AudioSynthesizer.__init__` is incorrect: Expected `Provider`, found `VOICEVOXProvider`
+scripts/discord_news_bot.py:7:8: error[unresolved-import] Cannot resolve imported module `discord`
+scripts/discord_news_bot.py:8:6: error[unresolved-import] Cannot resolve imported module `discord`
+scripts/import_to_aim.py:7:6: error[unresolved-import] Cannot resolve imported module `aim`
+scripts/mass_generate_gallery.py:19:8: error[unresolved-import] Cannot resolve imported module `yaml`
+scripts/mass_generate_gallery.py:24:8: error[unresolved-import] Cannot resolve imported module `torch`
+scripts/mass_generate_gallery.py:25:6: error[unresolved-import] Cannot resolve imported module `diffusers`
+scripts/mass_generate_gallery.py:46:16: error[invalid-return-type] Return type does not match returned value: expected `str`, found `None`
+scripts/mass_generate_gallery.py:54:12: error[invalid-return-type] Return type does not match returned value: expected `str`, found `None`
+scripts/restore_prompt.py:6:8: error[unresolved-import] Cannot resolve imported module `yaml`
+scripts/restore_prompt.py:7:6: error[unresolved-import] Cannot resolve imported module `aim`
+scripts/test_scene_gen.py:81:17: error[missing-argument] No argument provided for required parameter `image_service` of `SceneGenerator.__init__`
+scripts/test_scene_gen.py:102:41: error[invalid-argument-type] Argument to bound method `SceneGenerator.execute` is incorrect: Expected `dict[str, Path | str]`, found `dict[str, str]`
+scripts/tone_report.py:10:8: error[unresolved-import] Cannot resolve imported module `yaml`
+src/core/io_utils.py:10:27: error[invalid-parameter-default] Default value of type `None` is not assignable to annotated parameter type `T@load_json`
+src/core/media_utils.py:5:8: error[unresolved-import] Cannot resolve imported module `ffmpeg`
+src/core/media_utils.py:6:6: error[unresolved-import] Cannot resolve imported module `pydub`
+src/core/orchestrator.py:44:40: error[invalid-argument-type] Argument to bound method `Step.run` is incorrect: Expected `dict[str, Path]`, found `dict[str, str]`
+src/core/orchestrator.py:54:36: error[invalid-argument-type] Argument to bound method `AimTracker.track_diff` is incorrect: Expected `dict[str, Path | str]`, found `dict[str, Path] & ~AlwaysFalsy`
+src/core/orchestrator.py:54:50: error[invalid-argument-type] Argument to bound method `AimTracker.track_diff` is incorrect: Expected `dict[str, Path | str]`, found `dict[str, str]`
+src/core/state.py:8:6: error[unresolved-import] Cannot resolve imported module `pydantic`
+src/main.py:6:6: error[unresolved-import] Cannot resolve imported module `dotenv`
+src/models.py:6:6: error[unresolved-import] Cannot resolve imported module `pydantic`
+src/providers/cloudflare_ai.py:7:8: error[unresolved-import] Cannot resolve imported module `requests`
+src/providers/llm.py:5:8: error[unresolved-import] Cannot resolve imported module `litellm`
+src/providers/llm.py:6:8: error[unresolved-import] Cannot resolve imported module `yaml`
+src/providers/news.py:7:8: error[unresolved-import] Cannot resolve imported module `litellm`
+src/providers/news.py:8:8: error[unresolved-import] Cannot resolve imported module `requests`
+src/providers/tts.py:10:8: error[unresolved-import] Cannot resolve imported module `requests`
+src/providers/tts.py:11:6: error[unresolved-import] Cannot resolve imported module `pydub`
+src/providers/tts.py:31:27: error[unsupported-operator] Operator `|` is unsupported between objects of type `<special-form 'typing.Dict'>` and `None`
+src/providers/tts.py:56:28: error[invalid-argument-type] Argument to constructor `Path.__new__` is incorrect: Expected `str | PathLike[str]`, found `str | None`
+src/providers/twitter.py:10:8: error[unresolved-import] Cannot resolve imported module `tweepy`
+src/providers/twitter.py:107:20: error[unresolved-attribute] Attribute `create_tweet` is not defined on `None` in union `Unknown | None`
+src/providers/twitter.py:114:17: error[unresolved-attribute] Attribute `media_upload` is not defined on `None` in union `Unknown | None`
+src/providers/video_effects.py:7:6: error[unresolved-import] Cannot resolve imported module `ffmpeg.nodes`
+src/providers/video_effects.py:68:20: error[call-non-callable] Object of type `object` is not callable
+src/providers/video_effects.py:182:16: error[unresolved-import] Cannot resolve imported module `ffmpeg`
+src/providers/video_effects.py:247:21: error[invalid-type-form] Variable of type `type[VideoEffect]` is not allowed in a type expression
+src/providers/video_effects.py:249:20: error[call-non-callable] Object of type `object` is not callable
+src/providers/video_generation.py:10:8: error[unresolved-import] Cannot resolve imported module `requests`
+src/providers/youtube.py:10:6: error[unresolved-import] Cannot resolve imported module `google.auth.transport.requests`
+src/providers/youtube.py:11:6: error[unresolved-import] Cannot resolve imported module `google.oauth2.credentials`
+src/providers/youtube.py:12:6: error[unresolved-import] Cannot resolve imported module `google_auth_oauthlib.flow`
+src/providers/youtube.py:13:6: error[unresolved-import] Cannot resolve imported module `googleapiclient.discovery`
+src/providers/youtube.py:14:6: error[unresolved-import] Cannot resolve imported module `googleapiclient.http`
+src/services/image_generation.py:9:8: error[unresolved-import] Cannot resolve imported module `torch`
+src/services/image_generation.py:163:18: error[unresolved-import] Cannot resolve imported module `diffusers`
+src/steps/audio.py:5:6: error[unresolved-import] Cannot resolve imported module `pydub`
+src/steps/audio.py:23:21: error[unsupported-operator] Operator `|` is unsupported between objects of type `<special-form 'typing.Dict'>` and `None`
+src/steps/audio.py:24:27: error[unsupported-operator] Operator `|` is unsupported between objects of type `<special-form 'typing.Dict'>` and `None`
+src/steps/buzzsprout.py:7:8: error[unresolved-import] Cannot resolve imported module `requests`
+src/steps/intro_outro.py:7:8: error[unresolved-import] Cannot resolve imported module `ffmpeg`
+src/steps/metadata.py:67:57: error[invalid-argument-type] Argument to bound method `MetadataAnalyzer._generate_metadata_with_llm` is incorrect: Expected `list[dict[Unknown, Unknown]]`, found `dict[Unknown, Unknown] | Unknown | list[Unknown]`
+src/steps/metadata.py:98:22: error[unresolved-attribute] Attribute `execute` is not defined on `None` in union `GeminiProvider | None`
+src/steps/metadata.py:107:19: error[unresolved-attribute] Attribute `model` is not defined on `None` in union `GeminiProvider | None`
+src/steps/news.py:11:8: error[unresolved-import] Cannot resolve imported module `yaml`
+src/steps/podcast.py:8:6: error[unresolved-import] Cannot resolve imported module `feedgen.feed`
+src/steps/scene_generator.py:308:9: error[invalid-method-override] Invalid override of method `execute`: Definition is incompatible with `Step.execute`
+src/steps/scene_generator.py:369:16: error[unresolved-import] Cannot resolve imported module `yaml`
+src/steps/script.py:8:8: error[unresolved-import] Cannot resolve imported module `yaml`
+src/steps/script.py:65:19: error[unresolved-attribute] Object of type `Provider` has no attribute `model`
+src/steps/social/hatena.py:11:8: error[unresolved-import] Cannot resolve imported module `requests`
+src/steps/social/hatena.py:12:6: error[unresolved-import] Cannot resolve imported module `pydantic`
+src/steps/social/hatena.py:51:46: error[invalid-parameter-default] Default value of type `None` is not assignable to annotated parameter type `list[str]`
+src/steps/social/linkedin.py:7:8: error[unresolved-import] Cannot resolve imported module `requests`
+src/steps/social/linkedin.py:8:6: error[unresolved-import] Cannot resolve imported module `pydantic`
+src/steps/subtitle.py:5:6: error[unresolved-import] Cannot resolve imported module `PIL`
+src/steps/subtitle.py:36:24: error[unresolved-attribute] Attribute `margin_l` is not defined on `None` in union `VideoSubtitleStyleConfig | None`
+src/steps/subtitle.py:37:24: error[unresolved-attribute] Attribute `margin_r` is not defined on `None` in union `VideoSubtitleStyleConfig | None`
+src/steps/subtitle.py:39:31: error[invalid-argument-type] Argument to constructor `Path.__new__` is incorrect: Expected `str | PathLike[str]`, found `str | None`
+src/steps/subtitle.py:39:44: error[unresolved-attribute] Attribute `font_path` is not defined on `None` in union `VideoSubtitleStyleConfig | None`
+src/steps/subtitle.py:39:82: error[unresolved-attribute] Attribute `font_path` is not defined on `None` in union `VideoSubtitleStyleConfig | None`
+src/steps/subtitle.py:40:39: error[unresolved-attribute] Attribute `font_size` is not defined on `None` in union `VideoSubtitleStyleConfig | None`
+src/steps/thumbnail.py:8:6: error[unresolved-import] Cannot resolve imported module `PIL`
+src/steps/thumbnail.py:9:6: error[unresolved-import] Cannot resolve imported module `PIL.ImageColor`
+src/steps/thumbnail.py:72:9: error[invalid-method-override] Invalid override of method `execute`: Definition is incompatible with `Step.execute`
+src/steps/thumbnail_ai.py:8:6: error[unresolved-import] Cannot resolve imported module `PIL`
+src/steps/thumbnail_ai.py:37:9: error[invalid-method-override] Invalid override of method `execute`: Definition is incompatible with `Step.execute`
+src/steps/thumbnail_ai.py:44:37: error[invalid-argument-type] Argument to bound method `AIThumbnailGenerator._resolve_title` is incorrect: Expected `dict[Unknown, Unknown]`, found `dict[Unknown, Unknown] | Unknown | None`
+src/steps/twitter.py:8:6: error[unresolved-import] Cannot resolve imported module `dotenv`
+src/steps/twitter.py:79:46: error[invalid-argument-type] Argument to function `resolve_video_input` is incorrect: Expected `dict[str, str | Path]`, found `dict[str, Path]`
+src/steps/video.py:6:8: error[unresolved-import] Cannot resolve imported module `ffmpeg`
+src/steps/video.py:114:22: error[call-non-callable] Object of type `object` is not callable
+src/steps/youtube.py:36:42: error[invalid-argument-type] Argument to function `resolve_video_input` is incorrect: Expected `dict[str, str | Path]`, found `dict[str, Path]`
+src/steps/youtube.py:53:49: error[invalid-argument-type] Argument to constructor `Path.__new__` is incorrect: Expected `str | PathLike[str]`, found `Path | None`
+src/storyboard.py:6:6: error[unresolved-import] Cannot resolve imported module `pydantic`
+src/tracking.py:8:6: error[unresolved-import] Cannot resolve imported module `aim`
+src/tracking.py:72:9: error[invalid-assignment] Cannot assign to a subscript on an object of type `None`
+src/tracking.py:97:9: error[invalid-assignment] Cannot assign to a subscript on an object of type `None`
+src/tracking.py:98:9: error[invalid-assignment] Cannot assign to a subscript on an object of type `None`
+src/tracking.py:99:9: error[invalid-assignment] Cannot assign to a subscript on an object of type `None`
+src/tracking.py:100:9: error[invalid-assignment] Cannot assign to a subscript on an object of type `None`
+src/tracking.py:101:9: error[invalid-assignment] Cannot assign to a subscript on an object of type `None`
+src/tracking.py:125:17: error[unresolved-attribute] Attribute `track` is not defined on `None` in union `Unknown | None`
+src/tracking.py:126:13: error[invalid-assignment] Cannot assign to a subscript on an object of type `None`
+src/tracking.py:130:13: error[unresolved-attribute] Attribute `track` is not defined on `None` in union `Unknown | None`
+src/tracking.py:133:9: error[invalid-assignment] Cannot assign to a subscript on an object of type `None`
+src/tracking.py:135:13: error[invalid-assignment] Cannot assign to a subscript on an object of type `None`
+src/utils/config.py:6:8: error[unresolved-import] Cannot resolve imported module `yaml`
+src/utils/config.py:7:6: error[unresolved-import] Cannot resolve imported module `pydantic`
+src/utils/discord.py:6:8: error[unresolved-import] Cannot resolve imported module `requests`
+src/utils/discord.py:65:42: error[invalid-argument-type] Argument to function `resolve_video_input` is incorrect: Expected `dict[str, str | Path]`, found `dict[str, str]`
+src/utils/discord_config.py:8:8: error[unresolved-import] Cannot resolve imported module `yaml`
+tests/conftest.py:13:8: error[unresolved-import] Cannot resolve imported module `pytest`
+tests/test_complete_e2e.py:11:8: error[unresolved-import] Cannot resolve imported module `pytest`
+tests/test_complete_e2e.py:49:9: error[missing-argument] No argument provided for required parameter `voicevox_config` of `AudioSynthesizer.__init__`
+tests/test_default_config_safety.py:4:8: error[unresolved-import] Cannot resolve imported module `yaml`
+tests/test_news_collector_logic.py:2:8: error[unresolved-import] Cannot resolve imported module `pytest`
+tests/test_news_collector_logic.py:16:9: error[invalid-argument-type] Argument to `NewsCollector.__init__` is incorrect: Expected `Path`, found `Literal["/tmp"]`
+tests/test_performance_feedback.py:4:8: error[unresolved-import] Cannot resolve imported module `pytest`
+tests/test_provider_internet_boundary.py:45:30: error[unresolved-attribute] Object of type `expr` has no attribute `elts`
+tests/test_provider_internet_boundary.py:46:51: error[unresolved-attribute] Object of type `expr` has no attribute `elts`
+tests/test_real_workflow.py:27:8: error[unresolved-import] Cannot resolve imported module `pytest`
+tests/test_real_workflow.py:65:9: error[missing-argument] No argument provided for required parameter `voicevox_config` of `AudioSynthesizer.__init__`
+tests/test_real_workflow.py:136:9: error[missing-argument] No argument provided for required parameter `voicevox_config` of `AudioSynthesizer.__init__`
+tests/test_real_workflow.py:199:9: error[missing-argument] No argument provided for required parameter `voicevox_config` of `AudioSynthesizer.__init__`
+tests/test_real_workflow.py:215:9: error[missing-argument] No argument provided for required parameter `voicevox_config` of `AudioSynthesizer.__init__`
+tests/test_real_workflow.py:249:9: error[missing-argument] No argument provided for required parameter `voicevox_config` of `AudioSynthesizer.__init__`
+tests/test_real_workflow.py:349:10: error[unresolved-import] Cannot resolve imported module `PIL`
+tests/test_real_workflow.py:370:9: error[missing-argument] No argument provided for required parameter `voicevox_config` of `AudioSynthesizer.__init__`
+tests/test_remotion_renderer.py:7:8: error[unresolved-import] Cannot resolve imported module `pytest`
+tests/test_storyboard_video_generation.py:1:8: error[unresolved-import] Cannot resolve imported module `pytest`
+tests/test_storyboard_video_generation.py:2:6: error[unresolved-import] Cannot resolve imported module `pydantic`
+tests/unit/steps/test_audio_di.py:8:6: error[unresolved-import] Cannot resolve imported module `pydub`
+tests/unit/steps/test_audio_di.py:45:13: error[invalid-argument-type] Argument to `AudioSynthesizer.__init__` is incorrect: Expected `Provider`, found `MockTTSProvider`
+tests/unit/steps/test_news_diversity.py:53:5: error[invalid-assignment] Object of type `(candidates, recent) -> Literal["candidate selection prompt"]` is not assignable to attribute `_build_selection_prompt` of type `def _build_selection_prompt(self, candidates: list[NewsItem], recent_topics: list[str]) -> str`
+tests/unit/steps/test_script_di.py:56:13: error[invalid-argument-type] Argument to `ScriptGenerator.__init__` is incorrect: Expected `Provider`, found `MockLLMProvider`
+tests/unit/steps/test_thumbnail_ai_text_overlay.py:6:6: error[unresolved-import] Cannot resolve imported module `PIL`
+tests/unit/steps/test_thumbnail_spec.py:8:8: error[unresolved-import] Cannot resolve imported module `yaml`
+tests/unit/steps/test_thumbnail_spec.py:9:6: error[unresolved-import] Cannot resolve imported module `PIL`
+tests/unit/test_voice_controls.py:1:8: error[unresolved-import] Cannot resolve imported module `pytest`
+tests/unit/test_voice_prompt_contract.py:5:8: error[unresolved-import] Cannot resolve imported module `pytest`
+tests/unit/test_voice_prompt_contract.py:11:1: error[unresolved-attribute] Unresolved attribute `AimTracker` on type `ModuleType`
+Found 135 diagnostics

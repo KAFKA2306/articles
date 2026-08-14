@@ -1,0 +1,23 @@
+::warning file=src/io/discord.ts,line=7,endLine=7,col=2,endColumn=14,title=eslint(no-unused-vars)::Identifier 'MessageFlags' is imported but never used.
+::warning file=src/io/discord.ts,line=79,endLine=79,col=12,endColumn=18,title=eslint(no-unused-vars)::Catch parameter '_error' is caught but never used.
+::warning file=src/io/discord.ts,line=95,endLine=95,col=9,endColumn=18,title=eslint(no-unused-vars)::Variable 'isPrivate' is declared but never used. Unused variables should start with a '_'.
+::warning file=src/io/discord.ts,line=196,endLine=196,col=12,endColumn=18,title=eslint(no-unused-vars)::Catch parameter '_error' is caught but never used.
+::warning file=src/io/sector_data_fetcher.ts,line=6,endLine=6,col=10,endColumn=24,title=eslint(no-unused-vars)::Identifier 'fetchWithCache' is imported but never used.
+::warning file=src/preprocess/sector_spillover.ts,line=105,endLine=105,col=16,endColumn=28,title=unicorn(no-new-array)::Do not use `new Array(singleArgument)`.
+::warning file=src/preprocess/sector_spillover.ts,line=120,endLine=120,col=15,endColumn=27,title=unicorn(no-new-array)::Do not use `new Array(singleArgument)`.
+::warning file=src/preprocess/sector_spillover.ts,line=149,endLine=149,col=4,endColumn=16,title=unicorn(no-new-array)::Do not use `new Array(singleArgument)`.
+::warning file=src/preprocess/sector_spillover.ts,line=195,endLine=195,col=12,endColumn=24,title=unicorn(no-new-array)::Do not use `new Array(singleArgument)`.
+::warning file=src/preprocess/sector_spillover.ts,line=267,endLine=267,col=4,endColumn=16,title=unicorn(no-new-array)::Do not use `new Array(singleArgument)`.
+::warning file=src/preprocess/sector_spillover.ts,line=321,endLine=321,col=26,endColumn=56,title=unicorn(no-new-array)::Do not use `new Array(singleArgument)`.
+::error file=.agent/hooks/pre-tool-use.mjs,line=64,endLine=64,col=16,endColumn=25,title=oxlint::The keyword 'protected' is reserved
+::error file=.agent/hooks/pre-tool-use.mjs,line=65,endLine=65,col=24,endColumn=33,title=oxlint::The keyword 'protected' is reserved
+::error file=.agent/hooks/pre-tool-use.mjs,line=65,endLine=65,col=59,endColumn=68,title=oxlint::The keyword 'protected' is reserved
+::warning file=.agent/hooks/post-tool-use.mjs,line=11,endLine=11,col=24,endColumn=37,title=eslint(no-unused-vars)::Identifier 'writeFileSync' is imported but never used.
+::warning file=.agent/hooks/post-tool-use-enhanced.mjs,line=16,endLine=16,col=24,endColumn=37,title=eslint(no-unused-vars)::Identifier 'writeFileSync' is imported but never used.
+::warning file=.agent/hooks/post-tool-use-enhanced.mjs,line=16,endLine=16,col=39,endColumn=49,title=eslint(no-unused-vars)::Identifier 'existsSync' is imported but never used.
+::warning file=.agent/hooks/post-tool-use-enhanced.mjs,line=17,endLine=17,col=8,endColumn=12,title=eslint(no-unused-vars)::Identifier 'path' is imported but never used.
+::warning file=.agent/hooks/post-tool-use-enhanced.mjs,line=43,endLine=43,col=12,endColumn=13,title=eslint(no-unused-vars)::Catch parameter 'e' is caught but never used.
+::warning file=.agent/hooks/post-tool-use-enhanced.mjs,line=82,endLine=82,col=7,endColumn=16,title=eslint(no-unused-vars)::Variable 'archRules' is declared but never used. Unused variables should start with a '_'.
+
+Found 17 warnings and 3 errors.
+Finished in 21ms on 63 files with 96 rules using 4 threads.
