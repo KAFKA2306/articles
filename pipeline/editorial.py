@@ -35,6 +35,41 @@ TITLE_OPTION_ROLES = tuple(
 TITLE_BLOCKING_ISSUE = str(
     TITLE_POLICY.get("blocking_issue", "narrow_technical_title_entry")
 )
+VALUE_POLICY = dict(core.CONFIG.get("reader_value_policy", {}))
+VALUE_FIELDS = tuple(
+    str(field) for field in VALUE_POLICY.get("required_fields", [])
+)
+VALUE_BLOCKING_ISSUES = frozenset(
+    str(issue) for issue in VALUE_POLICY.get("blocking_issues", [])
+)
+ACTIONABLE_READER_AFTER_MARKERS = (
+    "できる",
+    "判断",
+    "選べる",
+    "実行",
+    "導入",
+    "確認",
+    "比較",
+    "説明",
+    "再現",
+    "止め",
+    "減ら",
+    "使える",
+    "運用",
+    "切り分け",
+    "移行",
+    "委任",
+)
+GENERIC_WHY_PHRASES = frozenset(
+    {
+        "詳しく説明する",
+        "詳しく解説する",
+        "わかりやすく説明する",
+        "わかりやすく解説する",
+        "分かりやすく説明する",
+        "分かりやすく解説する",
+    }
+)
 PREMATURE_CONCLUSION_MARKERS = (
     "結論はこれです",
     "結論は単純です",
@@ -79,16 +114,42 @@ def title_options_ready(topic: dict[str, object]) -> bool:
     return True
 
 
+def value_contract_ready(topic: dict[str, object]) -> bool:
+    if not VALUE_FIELDS:
+        return True
+
+    values = {
+        field: str(topic.get(field, "")).strip()
+        for field in VALUE_FIELDS
+    }
+    if any(not values[field] for field in VALUE_FIELDS):
+        return False
+
+    reader_after = values.get("reader_after", "")
+    if VALUE_POLICY.get("require_actionable_reader_after") is True:
+        if not any(marker in reader_after for marker in ACTIONABLE_READER_AFTER_MARKERS):
+            return False
+
+    why = values.get("why_this_article", "")
+    normalized_why = why.rstrip("。.!！ ")
+    if VALUE_POLICY.get("forbid_generic_why") is True:
+        if normalized_why in GENERIC_WHY_PHRASES:
+            return False
+
+    return True
+
+
 def story_ready(topic: dict[str, object]) -> bool:
     if any(not topic.get(key) for key in STORY_FIELDS):
         return False
     if str(topic.get("story_type")) not in set(core.CONFIG["story_types"]):
         return False
     urls = topic.get("evidence_urls")
-    return (
+    return bool(
         isinstance(urls, list)
         and len(urls) >= 2
         and title_options_ready(topic)
+        and value_contract_ready(topic)
     )
 
 
@@ -112,6 +173,17 @@ def choose_topic(signals: list[dict[str, object]]) -> dict[str, object]:
 - 読者の自然な予想または既存前提が、一次証拠によってどう崩れるかを明示できない候補は落とす。
 - `why_interesting` が「役に立つ」「安全になる」「理解しやすい」の言い換えだけなら落とす。
 - 文章を上手く書けば面白くなりそう、ではなく、事実そのものに読む理由がある候補だけを残す。
+
+さらに、候補ごとに読者価値を先に定義してください。
+- `reader_before`: 読む前の摩擦・損失・不確実性。技術名ではなく利用者の状態を書く。
+- `reader_after`: 読後に可能になる具体的な判断・行動・運用を書く。「理解する」「学ぶ」だけでは不可。
+- `design_philosophy`: その価値を守るため何を優先し、何を捨て、どのtrade-offを受け入れるかを書く。技術stack列挙は禁止。
+- `why_this_article`: 一般tutorial / 公式docs / AI要約では代替できない固有価値を書く。実測、失敗、比較、制約、判断変更のどれかを含める。
+- `proof_of_value`: PUBLIC_GITHUB_SIGNALSで確認できる実績・実測・運用結果・失敗証拠を書く。空欄は禁止。
+- `desired_reader_action`: 読後に自然に起こせる次actionを書く。根拠のない「問い合わせる」「契約する」を強制しない。
+- `non_goal`: 記事が証明しないこと、解決しない範囲を書く。
+- FastAPI / Actions / MCP / Pyodide / API統合など、技術名や実装行為そのものを価値として書かない。
+- 記事数を増やすことを価値にしない。reader valueとproofを作れない候補は落とす。
 
 タイトルは各候補で必ず3案作る:
 1. `general_problem`: 技術名を知らない人でも、自分に関係する問題だと分かる一般語の入口。
@@ -147,7 +219,14 @@ PUBLIC_GITHUB_SIGNALS:
   "story_type": "anomaly|contradiction|failure|unexpected-connection|counterintuitive-result|magnitude",
   "evidence_urls": ["https://github.com/KAFKA2306/...", "https://github.com/KAFKA2306/..."],
   "why_interesting": "この題材固有の面白さ。どの前提がどう裏切られるかまで書く",
-  "technical_payoff": "最後に一般化できる技術知見"
+  "technical_payoff": "最後に一般化できる技術知見",
+  "reader_before": "読む前の具体的な摩擦・不確実性",
+  "reader_after": "読後に可能になる具体的な判断・行動・運用",
+  "design_philosophy": "読者価値を守る優先順位・trade-off",
+  "why_this_article": "一般tutorialでは得られない固有の実測・失敗・判断変更",
+  "proof_of_value": "公開証拠で確認できる実績・実測・比較・運用結果",
+  "desired_reader_action": "本文から自然に導ける次action",
+  "non_goal": "この記事が証明しないこと・解決しない範囲"
 }}
 
 JSONのみ返してください。
@@ -155,7 +234,7 @@ JSONのみ返してください。
 """
     result = json.loads(
         core.model_call(
-            "あなたは事実検証を優先する技術編集者です。弱い問いを文章力で救済せず、前提を更新する強い問いと一つの発見で記事を選びます。タイトルは一般語の問題から入り、技術名は後から与えます。文体模倣はしません。",
+            "あなたは事実検証を優先する技術編集者です。弱い問いや弱い読者価値を文章力で救済せず、前提を更新する強い問い、公開証拠、読後の具体的な状態変化で記事を選びます。技術名は価値そのものにしません。文体模倣はしません。",
             user,
             temperature=0.0,
             json_mode=True,
@@ -163,7 +242,7 @@ JSONのみ返してください。
     )
     selected = result.get("selected")
     if not isinstance(selected, dict) or not story_ready(selected):
-        raise RuntimeError("topic selection did not produce a story-ready candidate")
+        raise RuntimeError("topic selection did not produce a story/value-ready candidate")
     return result
 
 
@@ -176,15 +255,20 @@ def enrich_topic(
 
     user = f"""
 既に選ばれた技術テーマを、そのまま説明記事にせず、
-公開証拠で検証できる一つの発見へ絞り直してください。
+公開証拠で検証できる一つの発見と具体的な読者価値へ絞り直してください。
 
 重要:
 - 元テーマにない事実を創作しない。
-- PUBLIC_GITHUB_SIGNALSで支えられない発見は採用しない。
+- PUBLIC_GITHUB_SIGNALSで支えられない発見・価値・実績は採用しない。
 - 単なる生成ミス、URL間違い、設定漏れだけの話にはしない。
 - 既知の原則を別技術へ適用しただけなら `publishable` を false にする。
 - 読者の自然な予想・既存前提を何も更新しない場合は `publishable` を false にする。
-- 十分な発見を作れない場合は `publishable` を false にする。
+- `reader_after` が「理解する」「学ぶ」だけなら `publishable` を false にする。
+- 技術名・ライブラリ名・repository名・CI追加を価値そのものにしない。
+- `why_this_article` が「詳しく説明する」「分かりやすく解説する」だけなら `publishable` を false にする。
+- `proof_of_value` が公開証拠へ接続できない場合は `publishable` を false にする。
+- `desired_reader_action` は本文の価値から自然に導く。相談・契約を無理に要求しない。
+- 十分な発見または読者価値を作れない場合は `publishable` を false にする。
 - タイトルは `general_problem` / `concrete_anomaly` / `searchable` の3案を作る。
 - 技術名を知らない読者がタイトル前半だけで問題を理解できるようにする。
 - `title` は3案のいずれかをそのまま採用する。
@@ -212,19 +296,26 @@ JSONのみ返してください。
   "story_type": "anomaly|contradiction|failure|unexpected-connection|counterintuitive-result|magnitude",
   "evidence_urls": ["...", "..."],
   "why_interesting": "...",
-  "technical_payoff": "..."
+  "technical_payoff": "...",
+  "reader_before": "...",
+  "reader_after": "...",
+  "design_philosophy": "...",
+  "why_this_article": "...",
+  "proof_of_value": "...",
+  "desired_reader_action": "...",
+  "non_goal": "..."
 }}
 """
     result = json.loads(
         core.model_call(
-            "あなたは技術テーマを一つの検証可能な発見へ絞る編集者です。問いが弱ければ公開不可にします。タイトルは一般語の問題から入ります。",
+            "あなたは技術テーマを一つの検証可能な発見とreader outcomeへ絞る編集者です。問い・読者価値・proofのどれかが弱ければ公開不可にします。技術名は価値そのものにしません。",
             user,
             temperature=0.0,
             json_mode=True,
         )
     )
     if result.get("publishable") is not True or not story_ready(result):
-        raise RuntimeError("topic could not be converted into a story-ready candidate")
+        raise RuntimeError("topic could not be converted into a story/value-ready candidate")
     return result
 
 
@@ -255,6 +346,13 @@ Markdown本文のみ。front matterは不要です。
 - `結論はこれです`、`結論は単純です`、`この記事で伝えたい結論は一つです` のような結論先出し定型句を使わない。
 - `initial_hypothesis` を置き、観測や実験で `hypothesis_update` へ進む。
 - `surprising_finding` 以外の論点を主役にしない。
+- `reader_before` の摩擦が本文の具体sceneとして見え、読み終わるまでに `reader_after` の判断・行動・運用へ到達させる。
+- `design_philosophy` は採用技術の列挙ではなく、何を優先し何を捨てたかというtrade-offとして自然に本文へ統合する。
+- `why_this_article` は一般論として宣言せず、実測・失敗・比較・制約・判断変更を本文で見せて証明する。
+- `proof_of_value` を「本当にどこまで動いたか」の境界として本文に置く。未実証範囲は `non_goal` と整合させる。
+- `desired_reader_action` は記事末尾へ広告CTAとして足さない。本文から自然に試せる最小手順、判断表、checklist、template等として組み込む。
+- `## Vision`、`## Design philosophy`、`## Why`、`## Commercial intent` の固定見出しを作らない。
+- 技術名、repository名、ライブラリ名、CI追加を読者価値そのものとして表現しない。
 - 公開URLを冒頭で一覧化しない。証拠は、その事実を使う位置へ置く。
 - 技術用語は必要になった位置で短く説明する。
 - 固有名詞は役割が分かる一文を添える。
@@ -267,7 +365,7 @@ Markdown本文のみ。front matterは不要です。
 - 最低でもKAFKA2306 GitHub URLを2件、外部の公式一次情報を1件含める。
 """
     return core.model_call(
-        "あなたは調査の過程を読者が追体験できる技術ライターです。正確さと面白さを両立し、一般語の問題と具体的なsceneから始め、文体模倣はしません。",
+        "あなたは調査の過程を読者が追体験できる技術ライターです。正確さ・面白さに加え、読む前から読んだ後への具体的な状態変化とproofを本文で成立させます。技術名や営業文句を価値そのものにしません。",
         user,
     )
 
@@ -289,6 +387,15 @@ def evaluate(article: str) -> dict[str, object]:
 - narrative: scene→自然な予想→観測/実験→仮説更新→結論の因果が通るか
 - context: 本文だけで固有名詞・数値・技術の意味を追えるか
 
+読者価値もblocking判定してください。次の場合は `blocking_issues` に指定codeを入れてください。
+- `weak_reader_value`: 読む前の具体的な摩擦と、読後に可能になる判断・行動・運用を本文だけで説明できない。読後が「理解した」「学んだ」だけでも該当。
+- `weak_differentiation`: 一般tutorial / 公式docs / AI要約との違いが、実測・失敗・比較・制約・判断変更で証明されていない。
+- `missing_proof_of_value`: 「使える」「安全」「自動化できる」等の価値主張に、実装結果・実測・public evidence・明示的な未実証境界がない。
+- `forced_commercial_cta`: 本文の価値から自然に導けない問い合わせ・契約・購入等を要求している。
+- `technical_value_as_product`: FastAPI / Actions / MCP / Pyodide / API統合 / repository等、技術名や実装行為そのものを価値として売っている。
+
+`Vision` / `Design philosophy` / `Why` / `Commercial intent` という固定見出しの有無では判定しません。意味が自然な本文に統合されているかを見てください。
+
 タイトルの「入口の広さ」も必ず査読してください。
 タイトル前半が、repository名、内部クラス名、API名、ライブラリ名、略語、専門用語の知識を前提にし、
 それらを知らない読者が「何が問題なのか」「なぜ読むのか」を判断できない場合は、
@@ -297,7 +404,7 @@ def evaluate(article: str) -> dict[str, object]:
 逆に、入口を広く見せるために本文の証拠より大きな主張へ広げている場合も、logic / clarityを下げ、blocking issueに理由を記録してください。
 
 甘く採点しないでください。
-LAPRAS相当の技術品質は「他のエンジニアに役立つか」の品質床であり、面白さの代理ではありません。
+LAPRAS相当の技術品質は「他のエンジニアに役立つか」の品質床であり、面白さや読者価値の代理ではありません。
 技術的に正しくても、次の場合は `interest` を3.5以下にしてください。
 - 用語説明や一般論がsceneより先行する。
 - 冒頭で記事全体の最終結論を閉じ、続きを読む必要をなくしている。
@@ -308,7 +415,7 @@ LAPRAS相当の技術品質は「他のエンジニアに役立つか」の品�
 
 具体物が遅い、論点が散る、結論が予想通り、導入を読んでも続きを知りたくならない場合は編集品質を下げてください。
 クリックを誘うだけで本文が回収しない場合も `interest` を下げてください。
-100+人気記事の文体を模倣したかではなく、scene before concept、具体的結果、実測、著者固有の経験、制約開示という編集原理が素材に根ざしているかを見てください。
+100+人気記事の文体を模倣したかではなく、scene before concept、具体的結果、実測、著者固有の経験、制約開示、reader before→afterという編集原理が素材に根ざしているかを見てください。
 
 {core.PROMPT}
 
@@ -332,7 +439,7 @@ JSONのみ返してください。
 """
     result = json.loads(
         core.model_call(
-            "あなたは独立した技術記事の編集査読者です。正確さ・有用性と、実際に読み進めたくなる構造を別々に採点します。タイトルは技術名を知らない第三者の視点でも査読します。",
+            "あなたは独立した技術記事の編集査読者です。正確さ・有用性・読み進めたくなる構造・reader value・proofを別々に判定し、技術名や強制CTAで価値を偽装した記事を通しません。",
             user,
             temperature=0.0,
             json_mode=True,
@@ -411,6 +518,8 @@ def passes_quality(review: dict[str, object], sources_ok: bool) -> bool:
     blocking_set = set(blocking) if isinstance(blocking, list) else set()
     if {"premature_conclusion_in_opening", TITLE_BLOCKING_ISSUE} & blocking_set:
         return False
+    if VALUE_BLOCKING_ISSUES & blocking_set:
+        return False
     return bool(
         sources_ok
         and _score(review.get("overall")) >= float(gate["minimum_overall"])
@@ -435,7 +544,7 @@ def revise(
 ) -> str:
     user = f"""
 以下の記事を全面改稿してください。
-文章量を増やすことではなく、問い・発見・因果を強くすることが目的です。
+文章量を増やすことではなく、問い・発見・因果・reader valueを強くすることが目的です。
 Markdown本文のみ返してください。
 
 品質契約:
@@ -458,15 +567,21 @@ ARTICLE:
 - `discovery` が弱い場合、最も強い一つ以外の論点を削る。
 - `narrative` が弱い場合、scene→予想→観測→更新→結論の因果順に組み直す。
 - `context` が弱い場合、必要な固有名詞だけをその場で一文説明する。
+- `weak_reader_value` がある場合、読者の具体的なbefore sceneと、読後に可能になる判断・行動・運用を本文へ接続する。「理解できる」だけで終えない。
+- `weak_differentiation` がある場合、一般論を削り、著者固有の実測・失敗・比較・制約・判断変更を中心へ移す。固有証拠がなければ公開不可のままにする。
+- `missing_proof_of_value` がある場合、公開証拠で確認できる実績・実測・運用境界を追加する。証拠がなければ価値主張を弱めるか削る。
+- `forced_commercial_cta` がある場合、問い合わせ・契約等の強制CTAを削り、読者がその場で試せる最小手順・checklist・templateへ置き換える。
+- `technical_value_as_product` がある場合、技術名や実装行為を主語から外し、利用者の摩擦・成果・能力へ書き換える。
+- `Vision` / `Design philosophy` / `Why` / `Commercial intent` の固定見出しは新設しない。意味をstoryへ統合する。
 - URL一覧がsceneより先にある場合、URLを事実の使用箇所へ移す。
 - 中心の問いを前進させない正しい節を削る。網羅性を増やさない。
 - 既知のベストプラクティス適用だけで問いが弱い場合、無理に文章で救済せずblocking issueを残す。
 - 存在確認できないURL・断定・数値は削除する。
-- 面白さのために新しい事実を作らない。
+- 面白さや営業価値のために新しい事実を作らない。
 - 最後を一文の持ち帰りで閉じる。
 """
     return core.model_call(
-        "あなたは記事の論点を削って強くするリビジョン担当です。タイトルと冒頭を一般語の問題から入り、答えを消してsceneと問いを前に出します。",
+        "あなたは記事の論点を削って強くするリビジョン担当です。sceneと問いに加え、reader before→after、trade-off、固有proofを自然な本文へ統合し、技術名や営業CTAで価値を偽装しません。",
         user,
         temperature=0.0,
     )
