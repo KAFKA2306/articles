@@ -2,7 +2,7 @@
   "schema_version": 2,
   "outcome": "article_candidate_ready",
   "selected_candidate": "configuration-is-part-of-authority",
-  "candidate_path": "articles/2026-08-15-stable-is-not-correctness-proof.md",
+  "candidate_path": "articles/2026-08-15-type-checker-config-is-authority.md",
   "selection_reason": "It is the only surviving proposition that directly explains the repaired controlled evidence without converting a five-mutant corpus into a universal product ranking: the same Pyrefly 1.2.0 execution changed from 2/5 under basic to 5/5 under default, so preset/configuration must be part of the authority contract.",
   "counterfactual": "If basic and default had produced the same frozen-corpus outcome, or if the old 2/5 result persisted after configuration was held constant, this proposition would not be selected.",
   "publication_authorized": false
