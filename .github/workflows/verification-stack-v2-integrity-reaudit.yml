@@ -1,0 +1,179 @@
+name: Verification Stack v2 Integrity Re-audit
+
+on:
+  push:
+    branches:
+      - fix/verification-stack-v2-evidence-integrity
+    paths:
+      - "benchmarks/verification-stack-v2/**"
+      - ".github/workflows/verification-stack-v2-integrity-reaudit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verification-stack-v2-integrity-reaudit
+  cancel-in-progress: true
+
+jobs:
+  controlled-integrity:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact trigger SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Pin npm used for workspace metadata
+        run: npm install --global npm@10.9.2
+
+      - name: Assert immutable experimental inputs
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -f benchmarks/verification-stack-v2/AMENDMENT-v2.4-controlled-harness-repair.md
+          test -f benchmarks/verification-stack-v2/AMENDMENT-v2.5-post-merge-evidence-integrity.md
+          python benchmarks/verification-stack-v2/harness.py --validate-only
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('benchmarks/verification-stack-v2')
+          sample=json.load(open(root/'real-repo-sample.json', encoding='utf-8'))
+          selected=sample['selected']
+          assert selected['python']['repository']=='KAFKA2306/2511youtuber', selected
+          assert selected['python']['head_sha']=='95a0f6b4f5270d1463c15f301a2bd4f0d709c109', selected
+          assert selected['typescript']['repository']=='KAFKA2306/investor2', selected
+          assert selected['typescript']['head_sha']=='9a45de93437456f215f1a251666f322254aac6b4', selected
+          PY
+
+      - name: Install exact pinned Python candidates
+        run: |
+          python - <<'PY'
+          import json, subprocess, sys
+          c=json.load(open('benchmarks/verification-stack-v2/candidate-versions.json', encoding='utf-8'))['candidates']
+          names=['ruff','black','isort','flake8','pyrefly','ty','mypy','pydantic','pre-commit','prek']
+          subprocess.check_call([sys.executable,'-m','pip','install','--disable-pip-version-check',*[f"{name}=={c[name]['version']}" for name in names]])
+          PY
+
+      - name: Install TS7-compatible and compiler-independent Node candidates
+        working-directory: benchmarks/verification-stack-v2
+        run: |
+          npm init -y >/dev/null 2>&1
+          node - <<'JS' > /tmp/npm-ts7-specs.txt
+          const c=require('./candidate-versions.json').candidates;
+          console.log([
+            `pyright@${c.pyright.version}`,
+            `@biomejs/biome@${c.biome.version}`,
+            `prettier@${c.prettier.version}`,
+            `oxlint@${c.oxlint.version}`,
+            `oxlint-tsgolint@${c['oxlint-tsgolint'].version}`,
+            `typescript@${c.typescript.version}`,
+            `zod@${c.zod.version}`,
+            `nx@${c.nx.version}`,
+            `turbo@${c.turbo.version}`,
+          ].join(' '));
+          JS
+          npm install --ignore-scripts --no-save $(cat /tmp/npm-ts7-specs.txt)
+          echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Install ESLint plus typescript-eslint in its frozen supported profile
+        working-directory: benchmarks/verification-stack-v2
+        run: |
+          mkdir -p profiles/typescript-eslint
+          cd profiles/typescript-eslint
+          npm init -y >/dev/null 2>&1
+          node - <<'JS' > /tmp/npm-eslint-specs.txt
+          const manifest=require('../../candidate-versions.json');
+          const c=manifest.candidates;
+          const p=manifest.environment_profiles.typescript_eslint;
+          console.log([
+            `eslint@${c.eslint.version}`,
+            `typescript-eslint@${c['typescript-eslint'].version}`,
+            `typescript@${p.typescript}`,
+          ].join(' '));
+          JS
+          npm install --ignore-scripts --no-save $(cat /tmp/npm-eslint-specs.txt)
+
+      - name: Prepare deterministic workspace metadata
+        working-directory: benchmarks/verification-stack-v2/workspace
+        run: npm install --package-lock-only --ignore-scripts
+
+      - name: Capture exact environment
+        run: |
+          mkdir -p benchmarks/verification-stack-v2/results/controlled
+          python - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          root=Path('benchmarks/verification-stack-v2')
+          def cmd(*args, cwd=None):
+              return subprocess.check_output(args, text=True, cwd=cwd).strip()
+          eslint_bin=root/'profiles/typescript-eslint/node_modules/.bin'
+          value={
+            'trigger_sha': cmd('git','rev-parse','HEAD'),
+            'reaudit': 'v2.5',
+            'npm': cmd('npm','--version'),
+            'python': {
+              'ruff': cmd('ruff','--version'), 'black': cmd('black','--version').splitlines()[0],
+              'pyrefly': cmd('pyrefly','--version'), 'ty': cmd('ty','--version'),
+              'mypy': cmd('mypy','--version'), 'prek': cmd('prek','--version')
+            },
+            'ts7_profile': {
+              'node': cmd('node','--version'), 'typescript': cmd('tsc','--version'),
+              'oxlint': cmd('oxlint','--version'), 'nx': cmd('nx','--version'), 'turbo': cmd('turbo','--version')
+            },
+            'typescript_eslint_profile': {
+              'typescript': cmd(str(eslint_bin/'tsc'),'--version'),
+              'eslint': cmd(str(eslint_bin/'eslint'),'--version')
+            }
+          }
+          with open(root/'results/controlled/installed-versions.json','w',encoding='utf-8') as f:
+              json.dump(value,f,indent=2,sort_keys=True); f.write('\n')
+          PY
+
+      - name: Run repaired source corpus
+        run: python benchmarks/verification-stack-v2/controlled_source_repair_runner.py
+
+      - name: Run hook patch-parity corpus
+        run: python benchmarks/verification-stack-v2/controlled_hook_runner.py
+
+      - name: Run repaired workspace corpus
+        run: python benchmarks/verification-stack-v2/controlled_workspace_repair_runner.py
+
+      - name: Recompute baseline-qualified summary
+        run: python benchmarks/verification-stack-v2/summarize_controlled.py
+
+      - name: Require valid calibrated evidence corpus
+        run: python benchmarks/verification-stack-v2/validate_controlled_repair.py
+
+      - name: Upload raw re-audit evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-stack-v2-integrity-${{ github.sha }}
+          path: benchmarks/verification-stack-v2/results/controlled/
+
+      - name: Refuse to attach evidence if branch head moved
+        run: |
+          remote_head="$(git ls-remote origin refs/heads/fix/verification-stack-v2-evidence-integrity | awk '{print $1}')"
+          echo "trigger=$GITHUB_SHA remote=$remote_head"
+          test "$remote_head" = "$GITHUB_SHA"
+
+      - name: Commit exact-run re-audit evidence
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add benchmarks/verification-stack-v2/results/controlled
+          git commit -m "audit: record repaired controlled evidence for $GITHUB_SHA"
+          git push origin HEAD:fix/verification-stack-v2-evidence-integrity
