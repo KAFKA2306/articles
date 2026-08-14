@@ -1,5 +1,5 @@
 ---
-title: "型チェッカーを比較する前に、設定を比較対象から消す"
+title: "同じ型チェッカーでも、設定で2/5が5/5になる"
 emoji: "🧪"
 type: "tech"
 topics: ["python", "typechecking", "ci", "testing", "developerexperience"]
