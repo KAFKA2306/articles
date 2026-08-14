@@ -13,11 +13,11 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent
 WORKSPACE = ROOT / "workspace"
 GROUND = json.loads((WORKSPACE / "ground-truth.json").read_text(encoding="utf-8"))
+EXPECTED_PROJECTS = set(GROUND["nodes"])
 
 
 def env() -> dict[str, str]:
     value = os.environ.copy()
-    value["TURBO_DANGEROUSLY_DISABLE_PACKAGE_MANAGER_CHECK"] = "1"
     value["NX_DAEMON"] = "false"
     return value
 
@@ -39,6 +39,9 @@ def git(cwd: Path, *args: str) -> str:
 def make_workspace(parent: Path, name: str) -> Path:
     dst = parent / name
     shutil.copytree(WORKSPACE, dst, ignore=shutil.ignore_patterns("node_modules", "dist", ".nx", ".turbo"))
+    shared_modules = ROOT / "node_modules"
+    if shared_modules.exists():
+        os.symlink(shared_modules, dst / "node_modules", target_is_directory=True)
     git(dst, "init", "-q")
     git(dst, "config", "user.name", "verification-benchmark")
     git(dst, "config", "user.email", "benchmark@example.invalid")
@@ -51,29 +54,51 @@ def normalize_package(name: str) -> str:
     return name.rsplit("/", 1)[-1].lstrip("@")
 
 
-def parse_nx_projects(result: dict[str, Any]) -> list[str]:
-    text = result["stdout"].strip()
-    try:
-        value = json.loads(text)
-        if isinstance(value, list):
-            return sorted({normalize_package(str(item)) for item in value})
-    except json.JSONDecodeError:
-        pass
-    return sorted({normalize_package(line.strip()) for line in text.splitlines() if line.strip() and not line.startswith("[")})
-
-
-def parse_turbo_projects(result: dict[str, Any]) -> list[str]:
-    value = json.loads(result["stdout"])
+def collect_project_names(value: Any) -> set[str]:
     found: set[str] = set()
-    for task in value.get("tasks", []):
-        package = task.get("package")
-        if package:
-            found.add(normalize_package(package))
-            continue
-        task_id = task.get("taskId") or task.get("task") or ""
-        if "#" in task_id:
-            found.add(normalize_package(task_id.split("#", 1)[0]))
-    return sorted(found)
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key in {"name", "package", "project"} and isinstance(item, str):
+                normalized = normalize_package(item)
+                if normalized in EXPECTED_PROJECTS:
+                    found.add(normalized)
+            elif key in {"task", "taskId", "fullName"} and isinstance(item, str) and "#" in item:
+                normalized = normalize_package(item.split("#", 1)[0])
+                if normalized in EXPECTED_PROJECTS:
+                    found.add(normalized)
+            found.update(collect_project_names(item))
+    elif isinstance(value, list):
+        for item in value:
+            found.update(collect_project_names(item))
+    elif isinstance(value, str):
+        normalized = normalize_package(value)
+        if normalized in EXPECTED_PROJECTS:
+            found.add(normalized)
+    return found
+
+
+def projects_from_json(result: dict[str, Any]) -> list[str]:
+    try:
+        value = json.loads(result["stdout"])
+    except json.JSONDecodeError:
+        return []
+    return sorted(collect_project_names(value))
+
+
+def discover(candidate: str, parent: Path) -> dict[str, Any]:
+    repo = make_workspace(parent, f"discover-{candidate}")
+    if candidate == "nx":
+        raw = run(["nx", "show", "projects", "--json"], repo)
+    else:
+        raw = run(["turbo", "ls", "--output=json"], repo)
+    observed = projects_from_json(raw)
+    return {
+        "candidate": candidate,
+        "expected": sorted(EXPECTED_PROJECTS),
+        "observed": observed,
+        "correct": raw["exit_code"] == 0 and set(observed) == EXPECTED_PROJECTS,
+        "raw": raw,
+    }
 
 
 def mutate_source(repo: Path, rel: str, marker: str) -> None:
@@ -89,12 +114,11 @@ def affected(candidate: str, changed_key: str, target: str, parent: Path) -> dic
     git(repo, "commit", "-q", "-m", changed_key)
     if candidate == "nx":
         result = run(["nx", "show", "projects", "--affected", f"--base={base}", "--head=HEAD", "--json"], repo)
-        projects = parse_nx_projects(result) if result["exit_code"] == 0 else []
     else:
         result = run(["turbo", "run", "build", "--affected", "--dry=json"], repo, {"TURBO_SCM_BASE": base, "TURBO_SCM_HEAD": "HEAD"})
-        projects = parse_turbo_projects(result) if result["exit_code"] == 0 else []
+    projects = projects_from_json(result) if result["exit_code"] == 0 else []
     expected = sorted(GROUND["affected_expectations"][changed_key])
-    return {"candidate": candidate, "changed": changed_key, "expected": expected, "observed": projects, "correct": projects == expected, "raw": result}
+    return {"candidate": candidate, "changed": changed_key, "expected": expected, "observed": projects, "correct": result["exit_code"] == 0 and projects == expected, "raw": result}
 
 
 def output_hashes(repo: Path) -> dict[str, str]:
@@ -139,13 +163,17 @@ def cache_hit(candidate: str, parent: Path) -> dict[str, Any]:
         "second": second,
         "first_output_hashes": first_hashes,
         "restored_output_hashes": restored,
-        "all_outputs_present": set(restored) == set(GROUND["nodes"]),
+        "all_outputs_present": set(restored) == EXPECTED_PROJECTS,
         "byte_identical_restore": first_hashes == restored,
-        "correct": first["exit_code"] == 0 and second["exit_code"] == 0 and first_hashes == restored and set(restored) == set(GROUND["nodes"]),
+        "correct": first["exit_code"] == 0 and second["exit_code"] == 0 and first_hashes == restored and set(restored) == EXPECTED_PROJECTS,
     }
 
 
 def cache_invalidation(candidate: str, parent: Path) -> dict[str, Any]:
+    baseline_ref = make_workspace(parent, f"invalidate-baseline-{candidate}")
+    baseline_run = build(candidate, baseline_ref, force=True)
+    baseline_hashes = output_hashes(baseline_ref)
+
     cached_repo = make_workspace(parent, f"invalidate-cached-{candidate}")
     initial = build(candidate, cached_repo)
     mutate_source(cached_repo, "packages/core/src/value.ts", "cache-invalidation")
@@ -156,10 +184,8 @@ def cache_invalidation(candidate: str, parent: Path) -> dict[str, Any]:
     mutate_source(reference, "packages/core/src/value.ts", "cache-invalidation")
     reference_run = build(candidate, reference, force=True)
     reference_hashes = output_hashes(reference)
+
     expected_changed = {"core", "ui", "web", "api"}
-    baseline_ref = make_workspace(parent, f"invalidate-baseline-{candidate}")
-    baseline_run = build(candidate, baseline_ref, force=True)
-    baseline_hashes = output_hashes(baseline_ref)
     changed = {name for name in reference_hashes if reference_hashes.get(name) != baseline_hashes.get(name)}
     return {
         "candidate": candidate,
@@ -180,12 +206,9 @@ def cache_invalidation(candidate: str, parent: Path) -> dict[str, Any]:
 def main() -> None:
     with tempfile.TemporaryDirectory(prefix="verification-v2-workspace-") as raw:
         parent = Path(raw)
+        discovery = [discover(candidate, parent) for candidate in ("nx", "turbo")]
         affected_results = []
-        targets = {
-            "core": "packages/core/src/value.ts",
-            "ui": "packages/ui/src/value.ts",
-            "docs": "packages/docs/src/value.ts",
-        }
+        targets = {"core": "packages/core/src/value.ts", "ui": "packages/ui/src/value.ts", "docs": "packages/docs/src/value.ts"}
         for candidate in ("nx", "turbo"):
             for key, target in targets.items():
                 affected_results.append(affected(candidate, key, target, parent))
@@ -200,9 +223,15 @@ def main() -> None:
     }
     out = ROOT / "results" / "controlled"
     out.mkdir(parents=True, exist_ok=True)
-    payload = {"schema_version": 1, "affected": affected_results, "cache_hit": cache_hits, "cache_invalidation": invalidations, "boundary_capability": boundary}
+    payload = {"schema_version": 2, "protocol_revision": "v2.4", "discovery": discovery, "affected": affected_results, "cache_hit": cache_hits, "cache_invalidation": invalidations, "boundary_capability": boundary}
     (out / "workspace.json").write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(json.dumps({"affected_correct": sum(x["correct"] for x in affected_results), "affected_total": len(affected_results), "cache_hit_correct": [x["correct"] for x in cache_hits], "cache_invalidation_correct": [x["correct"] for x in invalidations]}, indent=2))
+    print(json.dumps({
+        "discovery": {x["candidate"]: x["correct"] for x in discovery},
+        "affected_correct": sum(x["correct"] for x in affected_results),
+        "affected_total": len(affected_results),
+        "cache_hit_correct": {x["candidate"]: x["correct"] for x in cache_hits},
+        "cache_invalidation_correct": {x["candidate"]: x["correct"] for x in invalidations},
+    }, indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":
