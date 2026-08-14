@@ -1,9 +1,9 @@
 {
-  "blocked_on": "real_repo_sample_not_frozen",
+  "blocked_on": "external_results_incomplete",
   "comparison_started": true,
-  "last_transition": "harness_ready->controlled_results_ready",
-  "phase": "controlled_results_ready",
+  "last_transition": "controlled_results_ready->real_repo_sample_frozen",
+  "phase": "real_repo_sample_frozen",
   "publication_authorized": false,
-  "real_repo_sample_frozen": false,
+  "real_repo_sample_frozen": true,
   "schema_version": 1
 }
