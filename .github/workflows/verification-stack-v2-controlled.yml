@@ -1,0 +1,143 @@
+name: Verification Stack v2 Controlled Benchmark
+
+on:
+  push:
+    branches:
+      - experiment/verification-stack-v2-ground-truth
+    paths:
+      - "benchmarks/verification-stack-v2/**"
+      - ".github/workflows/verification-stack-v2-controlled.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verification-stack-v2-controlled
+  cancel-in-progress: false
+
+jobs:
+  controlled:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout canonical workline
+        uses: actions/checkout@v4
+        with:
+          ref: experiment/verification-stack-v2-ground-truth
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Assert benchmark is still pre-comparison and harness-ready
+        run: |
+          python - <<'PY'
+          import json
+          p='benchmarks/verification-stack-v2/state.json'
+          s=json.load(open(p, encoding='utf-8'))
+          assert s['phase'] == 'harness_ready', s
+          assert s['comparison_started'] is False, s
+          assert s['publication_authorized'] is False, s
+          PY
+          python benchmarks/verification-stack-v2/harness.py --validate-only
+
+      - name: Install exact pinned Python candidates
+        run: |
+          python - <<'PY'
+          import json, subprocess, sys
+          root='benchmarks/verification-stack-v2/candidate-versions.json'
+          c=json.load(open(root, encoding='utf-8'))['candidates']
+          names=['ruff','black','isort','flake8','pyrefly','ty','mypy','pydantic','pre-commit','prek']
+          specs=[f"{name}=={c[name]['version']}" for name in names]
+          subprocess.check_call([sys.executable,'-m','pip','install','--disable-pip-version-check',*specs])
+          PY
+
+      - name: Install exact pinned Node candidates in shared benchmark tool root
+        working-directory: benchmarks/verification-stack-v2
+        run: |
+          npm init -y >/dev/null 2>&1
+          node - <<'JS' > /tmp/npm-specs.txt
+          const c=require('./candidate-versions.json').candidates;
+          const specs=[
+            `pyright@${c.pyright.version}`,
+            `@biomejs/biome@${c.biome.version}`,
+            `prettier@${c.prettier.version}`,
+            `oxlint@${c.oxlint.version}`,
+            `oxlint-tsgolint@${c['oxlint-tsgolint'].version}`,
+            `eslint@${c.eslint.version}`,
+            `typescript-eslint@${c['typescript-eslint'].version}`,
+            `typescript@${c.typescript.version}`,
+            `zod@${c.zod.version}`,
+            `nx@${c.nx.version}`,
+            `turbo@${c.turbo.version}`,
+          ];
+          console.log(specs.join(' '));
+          JS
+          npm install --ignore-scripts --no-save $(cat /tmp/npm-specs.txt)
+          echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Prepare package-manager workspace metadata without changing frozen sources
+        working-directory: benchmarks/verification-stack-v2/workspace
+        run: npm install --package-lock-only --ignore-scripts
+
+      - name: Capture installed candidate versions
+        shell: bash
+        run: |
+          mkdir -p benchmarks/verification-stack-v2/results/controlled
+          {
+            echo '{'
+            echo '  "python": {'
+            echo "    \"ruff\": \"$(ruff --version | awk '{print $2}')\"," 
+            echo "    \"black\": \"$(black --version | head -1 | awk '{print $2}')\"," 
+            echo "    \"pyrefly\": \"$(pyrefly --version | awk '{print $2}')\"," 
+            echo "    \"ty\": \"$(ty --version | awk '{print $2}')\"," 
+            echo "    \"mypy\": \"$(mypy --version | awk '{print $2}')\"," 
+            echo "    \"prek\": \"$(prek --version | awk '{print $2}')\""
+            echo '  },'
+            echo '  "node": {'
+            echo "    \"node\": \"$(node --version)\"," 
+            echo "    \"typescript\": \"$(tsc --version | awk '{print $2}')\"," 
+            echo "    \"nx\": \"$(nx --version | tail -1 | tr -d '\r')\"," 
+            echo "    \"turbo\": \"$(turbo --version | tail -1 | tr -d '\r')\""
+            echo '  }'
+            echo '}'
+          } > benchmarks/verification-stack-v2/results/controlled/installed-versions.json
+
+      - name: Run source, type, lint, formatter and runtime boundary corpus
+        run: python benchmarks/verification-stack-v2/controlled_source_runner.py
+
+      - name: Run pre-commit versus prek patch-parity corpus
+        run: python benchmarks/verification-stack-v2/controlled_hook_runner.py
+
+      - name: Run Nx versus Turborepo affected/cache corpus
+        run: python benchmarks/verification-stack-v2/controlled_workspace_runner.py
+
+      - name: Produce correctness-first controlled summary
+        run: python benchmarks/verification-stack-v2/summarize_controlled.py
+
+      - name: Advance state only because collection is complete
+        run: python benchmarks/verification-stack-v2/controller.py --write-state
+
+      - name: Upload raw controlled evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-stack-v2-controlled-${{ github.sha }}
+          path: benchmarks/verification-stack-v2/results/controlled/
+
+      - name: Commit exact-run evidence and state
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add benchmarks/verification-stack-v2/results/controlled benchmarks/verification-stack-v2/state.json
+          git commit -m "experiment: record controlled verification evidence"
+          git push origin HEAD:experiment/verification-stack-v2-ground-truth
