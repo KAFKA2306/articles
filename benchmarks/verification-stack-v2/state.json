@@ -1,9 +1,9 @@
 {
-  "schema_version": 1,
-  "phase": "design_frozen",
-  "publication_authorized": false,
+  "blocked_on": "missing_harness_input:harness.py",
   "comparison_started": false,
+  "last_transition": "design_frozen->fixtures_frozen",
+  "phase": "fixtures_frozen",
+  "publication_authorized": false,
   "real_repo_sample_frozen": false,
-  "last_transition": null,
-  "blocked_on": "fixture_manifest"
+  "schema_version": 1
 }
