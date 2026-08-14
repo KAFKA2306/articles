@@ -3,7 +3,7 @@ title: "Claudeの「秘密の透かし」は誰のため？ 検出と秘密鍵�
 emoji: "🔐"
 type: "tech"
 topics: ["claude", "watermark", "security", "llm", "ai"]
-published: true
+published: false
 published_at: 2026-08-13 09:00
 ---
 
