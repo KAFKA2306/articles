@@ -59,9 +59,23 @@ FORMAT_WRITE = {
 }
 
 
-def run(command: list[str], cwd: Path) -> dict[str, Any]:
+def tool_root(candidate: str) -> Path:
+    if candidate == "eslint":
+        return ROOT / "profiles" / "typescript-eslint" / "node_modules"
+    return ROOT / "node_modules"
+
+
+def candidate_env(candidate: str) -> dict[str, str]:
+    value = os.environ.copy()
+    modules = tool_root(candidate)
+    if modules.exists():
+        value["PATH"] = str(modules / ".bin") + os.pathsep + value.get("PATH", "")
+    return value
+
+
+def run(command: list[str], cwd: Path, candidate: str | None = None) -> dict[str, Any]:
     start = time.perf_counter_ns()
-    p = subprocess.run(command, cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, env=os.environ.copy())
+    p = subprocess.run(command, cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, env=candidate_env(candidate or ""))
     return {
         "command": command,
         "exit_code": p.returncode,
@@ -75,12 +89,14 @@ def sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def copy_fixture(name: str, destination: Path) -> Path:
+def copy_fixture(name: str, destination: Path, candidate: str | None = None) -> Path:
     src = ROOT / name
     dst = destination / name
     shutil.copytree(src, dst, ignore=shutil.ignore_patterns("node_modules", "dist", ".nx", ".turbo"))
-    if name == "typescript" and (ROOT / "node_modules").exists():
-        os.symlink(ROOT / "node_modules", dst / "node_modules", target_is_directory=True)
+    if name == "typescript":
+        modules = tool_root(candidate or "")
+        if modules.exists():
+            os.symlink(modules, dst / "node_modules", target_is_directory=True)
     return dst
 
 
@@ -114,32 +130,32 @@ def apply_mutant(mutant: dict[str, Any], fixture_root: Path) -> Path:
 def control_run(candidate: str, fixture: str, cwd: Path) -> dict[str, Any]:
     if candidate == "unvalidated_python":
         script = "import json; from pathlib import Path; v=json.loads(Path('tests/payload.json').read_text()); assert isinstance(v, dict)"
-        return run(["python", "-c", script], cwd)
+        return run(["python", "-c", script], cwd, candidate)
     if candidate == "unvalidated_typescript":
         script = "JSON.parse(require('fs').readFileSync('test/payload.json','utf8'));"
-        return run(["node", "-e", script], cwd)
-    return run(COMMANDS[candidate], cwd)
+        return run(["node", "-e", script], cwd, candidate)
+    return run(COMMANDS[candidate], cwd, candidate)
 
 
-def smoke_after_format(fixture: str, cwd: Path) -> list[dict[str, Any]]:
+def smoke_after_format(fixture: str, cwd: Path, candidate: str) -> list[dict[str, Any]]:
     if fixture == "python":
-        return [run(["python", "-m", "compileall", "-q", "src"], cwd), run(["python", "-m", "unittest", "discover", "-s", "tests", "-v"], cwd)]
-    return [run(["tsc", "--noEmit"], cwd)]
+        return [run(["python", "-m", "compileall", "-q", "src"], cwd, candidate), run(["python", "-m", "unittest", "discover", "-s", "tests", "-v"], cwd, candidate)]
+    return [run(["tsc", "--noEmit"], cwd, candidate)]
 
 
 def format_quality(candidate: str, mutant: dict[str, Any], temp: Path) -> dict[str, Any]:
     fixture = mutant["fixture"]
-    clean_root = copy_fixture(fixture, temp / "clean-format")
-    mutant_root = copy_fixture(fixture, temp / "mutant-format")
+    clean_root = copy_fixture(fixture, temp / "clean-format", candidate)
+    mutant_root = copy_fixture(fixture, temp / "mutant-format", candidate)
     clean_target = clean_root / Path(*Path(mutant["target"]).parts[1:])
     mutant_target = apply_mutant(mutant, mutant_root)
     before = mutant_target.read_bytes()
-    first = run(FORMAT_WRITE[candidate], mutant_root)
+    first = run(FORMAT_WRITE[candidate], mutant_root, candidate)
     after_first = mutant_target.read_bytes()
-    second = run(FORMAT_WRITE[candidate], mutant_root)
+    second = run(FORMAT_WRITE[candidate], mutant_root, candidate)
     after_second = mutant_target.read_bytes()
     diff = "".join(difflib.unified_diff(before.decode().splitlines(True), after_first.decode().splitlines(True)))
-    smoke = smoke_after_format(fixture, mutant_root)
+    smoke = smoke_after_format(fixture, mutant_root, candidate)
     return {
         "write_first": first,
         "write_second": second,
@@ -160,8 +176,8 @@ def main() -> None:
         for mutant in source_mutants:
             fixture = mutant["fixture"]
             for candidate in SCOPES[mutant["id"]]:
-                clean = copy_fixture(fixture, temp / f"{mutant['id']}-{candidate}-clean")
-                mutated = copy_fixture(fixture, temp / f"{mutant['id']}-{candidate}-mutant")
+                clean = copy_fixture(fixture, temp / f"{mutant['id']}-{candidate}-clean", candidate)
+                mutated = copy_fixture(fixture, temp / f"{mutant['id']}-{candidate}-mutant", candidate)
                 baseline = control_run(candidate, fixture, clean)
                 apply_mutant(mutant, mutated)
                 observed = control_run(candidate, fixture, mutated)
@@ -170,6 +186,7 @@ def main() -> None:
                     "root_fault": mutant.get("root"),
                     "responsibility": mutant["responsibility"],
                     "candidate": candidate,
+                    "environment_profile": "typescript-eslint" if candidate == "eslint" else ("ts7" if fixture == "typescript" else "python"),
                     "baseline_exit_code": baseline["exit_code"],
                     "baseline_blocking_false_positive": baseline["exit_code"] != 0,
                     "mutant_exit_code": observed["exit_code"],
@@ -183,7 +200,7 @@ def main() -> None:
 
     out = ROOT / "results" / "controlled"
     out.mkdir(parents=True, exist_ok=True)
-    (out / "source-runtime.json").write_text(json.dumps({"schema_version": 1, "results": results}, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (out / "source-runtime.json").write_text(json.dumps({"schema_version": 2, "results": results}, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps({"records": len(results), "output": str(out / 'source-runtime.json')}, indent=2))
 
 
