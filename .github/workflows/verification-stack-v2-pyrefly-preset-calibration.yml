@@ -33,12 +33,16 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install exact pinned Pyrefly
+      - name: Install exact pinned calibration dependencies
         run: |
           python - <<'PY'
           import json, subprocess, sys
           c=json.load(open('benchmarks/verification-stack-v2/candidate-versions.json', encoding='utf-8'))['candidates']
-          subprocess.check_call([sys.executable,'-m','pip','install','--disable-pip-version-check',f"pyrefly=={c['pyrefly']['version']}"])
+          subprocess.check_call([
+              sys.executable,'-m','pip','install','--disable-pip-version-check',
+              f"pyrefly=={c['pyrefly']['version']}",
+              f"pydantic=={c['pydantic']['version']}",
+          ])
           PY
 
       - name: Verify frozen inputs and run calibration
@@ -50,6 +54,7 @@ jobs:
           assert len(m['mutants']) == 22
           v=json.load(open('benchmarks/verification-stack-v2/candidate-versions.json', encoding='utf-8'))
           assert v['candidates']['pyrefly']['version'] == '1.2.0'
+          assert v['candidates']['pydantic']['version'] == '2.13.4'
           PY
           python scripts/verification_stack_v2_pyrefly_preset_calibration.py
 
