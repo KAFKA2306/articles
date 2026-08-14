@@ -1,5 +1,8 @@
-import { readFileSync } from "node:fs";
+export interface ExternalPayloadShape {
+  count: number;
+  label: string;
+}
 
-export function loadUnknownPayload(path: string): unknown {
-  return JSON.parse(readFileSync(path, "utf8"));
+export function acceptUnknownPayload(value: unknown): unknown {
+  return value;
 }
