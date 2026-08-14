@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parent
 MUTANTS = json.loads((ROOT / "mutants.json").read_text(encoding="utf-8"))["mutants"]
 
 SCOPES: dict[str, list[str]] = {
-    "PY-SYNTAX-001": ["ruff_lint", "black", "pyrefly", "ty", "pyright", "mypy"],
+    "PY-SYNTAX-001": ["ruff_lint", "pyrefly", "ty", "pyright", "mypy"],
     "PY-FORMAT-001": ["ruff_format", "black"],
     "PY-LINT-001": ["ruff_lint", "flake8"],
     "PY-TYPE-ARG-001": ["pyrefly", "ty", "pyright", "mypy"],
@@ -23,7 +23,7 @@ SCOPES: dict[str, list[str]] = {
     "PY-NAME-001": ["pyrefly", "ty", "pyright", "mypy"],
     "PY-ASYNC-001": ["pyrefly", "ty", "pyright", "mypy"],
     "PY-RUNTIME-001": ["unvalidated_python", "pydantic"],
-    "TS-SYNTAX-001": ["biome", "prettier", "oxlint", "eslint", "tsc"],
+    "TS-SYNTAX-001": ["oxlint", "eslint", "tsc"],
     "TS-FORMAT-001": ["biome", "prettier"],
     "TS-LINT-001": ["oxlint", "eslint"],
     "TS-TYPE-ARG-001": ["tsc", "oxlint_type_check"],
@@ -32,31 +32,7 @@ SCOPES: dict[str, list[str]] = {
     "TS-RUNTIME-001": ["unvalidated_typescript", "zod"],
 }
 
-COMMANDS: dict[str, list[str]] = {
-    "ruff_lint": ["ruff", "check", "--no-cache", "--output-format=json", "."],
-    "ruff_format": ["ruff", "format", "--check", "."],
-    "black": ["black", "--check", "."],
-    "flake8": ["flake8", "."],
-    "pyrefly": ["pyrefly", "check", "--output-format", "json"],
-    "ty": ["ty", "check", "--output-format", "concise", "--no-progress", "."],
-    "pyright": ["pyright", "--outputjson", "."],
-    "mypy": ["mypy", "--show-error-codes", "--no-error-summary", "src", "tests"],
-    "pydantic": ["python", "runtime_validate.py", "tests/payload.json"],
-    "biome": ["biome", "format", "."],
-    "prettier": ["prettier", "--check", "."],
-    "oxlint": ["oxlint", "--type-aware", "."],
-    "eslint": ["eslint", "."],
-    "tsc": ["tsc", "--noEmit"],
-    "oxlint_type_check": ["oxlint", "--type-aware", "--type-check", "."],
-    "zod": ["node", "runtime_validate.mjs", "test/payload.json"],
-}
-
-FORMAT_WRITE = {
-    "ruff_format": ["ruff", "format", "."],
-    "black": ["black", "."],
-    "biome": ["biome", "format", "--write", "."],
-    "prettier": ["prettier", "--write", "."],
-}
+FORMATTERS = {"ruff_format", "black", "biome", "prettier"}
 
 
 def tool_root(candidate: str) -> Path:
@@ -71,6 +47,47 @@ def candidate_env(candidate: str) -> dict[str, str]:
     if modules.exists():
         value["PATH"] = str(modules / ".bin") + os.pathsep + value.get("PATH", "")
     return value
+
+
+def command_for(candidate: str, mutant_id: str, *, write: bool = False) -> list[str]:
+    python_service = "src/verification_fixture/service.py"
+    ts_service = "src/service.ts"
+    if candidate == "ruff_lint":
+        command = ["ruff", "check", "--no-cache", "--output-format=json"]
+        if mutant_id == "PY-LINT-001":
+            command += ["--select", "F841"]
+        return command + [python_service]
+    if candidate == "ruff_format":
+        return ["ruff", "format", *( [] if write else ["--check"] ), python_service]
+    if candidate == "black":
+        return ["black", *( [] if write else ["--check"] ), python_service]
+    if candidate == "flake8":
+        return ["flake8", "--select=F841", python_service]
+    if candidate == "pyrefly":
+        return ["pyrefly", "check", "--preset", "default", "--output-format", "json"]
+    if candidate == "ty":
+        return ["ty", "check", "--output-format", "concise", "--no-progress", "."]
+    if candidate == "pyright":
+        return ["pyright", "--outputjson", "."]
+    if candidate == "mypy":
+        return ["mypy", "--show-error-codes", "--no-error-summary", "src", "tests"]
+    if candidate == "pydantic":
+        return ["python", "runtime_validate.py", "tests/payload.json"]
+    if candidate == "biome":
+        return ["biome", "format", *( ["--write"] if write else [] ), ts_service]
+    if candidate == "prettier":
+        return ["prettier", "--write" if write else "--check", ts_service]
+    if candidate == "oxlint":
+        return ["oxlint", "--type-aware", "src"]
+    if candidate == "eslint":
+        return ["eslint", "src"]
+    if candidate == "tsc":
+        return ["tsc", "--noEmit"]
+    if candidate == "oxlint_type_check":
+        return ["oxlint", "--type-aware", "--type-check", "src"]
+    if candidate == "zod":
+        return ["node", "runtime_validate.mjs", "test/payload.json"]
+    raise KeyError(candidate)
 
 
 def run(command: list[str], cwd: Path, candidate: str | None = None) -> dict[str, Any]:
@@ -127,40 +144,68 @@ def apply_mutant(mutant: dict[str, Any], fixture_root: Path) -> Path:
     return path
 
 
-def control_run(candidate: str, fixture: str, cwd: Path) -> dict[str, Any]:
+def execute(candidate: str, mutant_id: str, cwd: Path, *, write: bool = False) -> dict[str, Any]:
     if candidate == "unvalidated_python":
         script = "import json; from pathlib import Path; v=json.loads(Path('tests/payload.json').read_text()); assert isinstance(v, dict)"
         return run(["python", "-c", script], cwd, candidate)
     if candidate == "unvalidated_typescript":
         script = "JSON.parse(require('fs').readFileSync('test/payload.json','utf8'));"
         return run(["node", "-e", script], cwd, candidate)
-    return run(COMMANDS[candidate], cwd, candidate)
+    return run(command_for(candidate, mutant_id, write=write), cwd, candidate)
 
 
 def smoke_after_format(fixture: str, cwd: Path, candidate: str) -> list[dict[str, Any]]:
     if fixture == "python":
-        return [run(["python", "-m", "compileall", "-q", "src"], cwd, candidate), run(["python", "-m", "unittest", "discover", "-s", "tests", "-v"], cwd, candidate)]
-    return [run(["tsc", "--noEmit"], cwd, candidate)]
+        return [
+            run(["python", "-m", "compileall", "-q", "src"], cwd, candidate),
+            run(["python", "-m", "unittest", "discover", "-s", "tests", "-v"], cwd, candidate),
+        ]
+    # Always use the TS7 compiler baseline for semantic smoke; formatter style is independent of ESLint's TS profile.
+    return [run(["tsc", "--noEmit"], cwd, "tsc")]
+
+
+def formatter_baseline(candidate: str, mutant: dict[str, Any], clean: Path) -> dict[str, Any]:
+    write_first = execute(candidate, mutant["id"], clean, write=True)
+    check = execute(candidate, mutant["id"], clean)
+    write_second = execute(candidate, mutant["id"], clean, write=True)
+    smoke = smoke_after_format(mutant["fixture"], clean, candidate)
+    target = clean / Path(*Path(mutant["target"]).parts[1:])
+    return {
+        "write_first": write_first,
+        "check": check,
+        "write_second": write_second,
+        "target_sha256": sha(target.read_bytes()),
+        "idempotent": check["exit_code"] == 0 and write_second["exit_code"] == 0,
+        "smoke_pass": all(step["exit_code"] == 0 for step in smoke),
+        "smoke": smoke,
+    }
 
 
 def format_quality(candidate: str, mutant: dict[str, Any], temp: Path) -> dict[str, Any]:
-    fixture = mutant["fixture"]
-    clean_root = copy_fixture(fixture, temp / "clean-format", candidate)
-    mutant_root = copy_fixture(fixture, temp / "mutant-format", candidate)
-    clean_target = clean_root / Path(*Path(mutant["target"]).parts[1:])
+    clean_root = copy_fixture(mutant["fixture"], temp / "clean-format", candidate)
+    clean_baseline = formatter_baseline(candidate, mutant, clean_root)
+    normalized_target = clean_root / Path(*Path(mutant["target"]).parts[1:])
+    normalized_bytes = normalized_target.read_bytes()
+
+    mutant_root = copy_fixture(mutant["fixture"], temp / "mutant-format", candidate)
     mutant_target = apply_mutant(mutant, mutant_root)
     before = mutant_target.read_bytes()
-    first = run(FORMAT_WRITE[candidate], mutant_root, candidate)
+    check_before = execute(candidate, mutant["id"], mutant_root)
+    first = execute(candidate, mutant["id"], mutant_root, write=True)
     after_first = mutant_target.read_bytes()
-    second = run(FORMAT_WRITE[candidate], mutant_root, candidate)
+    second = execute(candidate, mutant["id"], mutant_root, write=True)
     after_second = mutant_target.read_bytes()
+    check_after = execute(candidate, mutant["id"], mutant_root)
     diff = "".join(difflib.unified_diff(before.decode().splitlines(True), after_first.decode().splitlines(True)))
-    smoke = smoke_after_format(fixture, mutant_root, candidate)
+    smoke = smoke_after_format(mutant["fixture"], mutant_root, candidate)
     return {
+        "candidate_normalized_baseline": clean_baseline,
+        "check_before": check_before,
         "write_first": first,
         "write_second": second,
-        "matches_clean_target": after_first == clean_target.read_bytes(),
-        "idempotent": after_first == after_second,
+        "check_after": check_after,
+        "matches_candidate_normalized_baseline": after_first == normalized_bytes,
+        "idempotent": after_first == after_second and check_after["exit_code"] == 0,
         "patch_sha256": sha(diff.encode()),
         "formatted_target_sha256": sha(after_first),
         "smoke_pass": all(step["exit_code"] == 0 for step in smoke),
@@ -176,12 +221,30 @@ def main() -> None:
         for mutant in source_mutants:
             fixture = mutant["fixture"]
             for candidate in SCOPES[mutant["id"]]:
+                if candidate in FORMATTERS:
+                    quality = format_quality(candidate, mutant, temp / f"{mutant['id']}-{candidate}-quality")
+                    baseline_ok = quality["candidate_normalized_baseline"]["idempotent"] and quality["candidate_normalized_baseline"]["smoke_pass"]
+                    record = {
+                        "mutant_id": mutant["id"],
+                        "root_fault": mutant.get("root"),
+                        "responsibility": mutant["responsibility"],
+                        "candidate": candidate,
+                        "environment_profile": "ts7" if fixture == "typescript" else "python",
+                        "baseline_exit_code": 0 if baseline_ok else 1,
+                        "baseline_blocking_false_positive": not baseline_ok,
+                        "mutant_exit_code": quality["check_before"]["exit_code"],
+                        "detected": quality["check_before"]["exit_code"] != 0,
+                        "format_quality": quality,
+                    }
+                    results.append(record)
+                    continue
+
                 clean = copy_fixture(fixture, temp / f"{mutant['id']}-{candidate}-clean", candidate)
                 mutated = copy_fixture(fixture, temp / f"{mutant['id']}-{candidate}-mutant", candidate)
-                baseline = control_run(candidate, fixture, clean)
+                baseline = execute(candidate, mutant["id"], clean)
                 apply_mutant(mutant, mutated)
-                observed = control_run(candidate, fixture, mutated)
-                record: dict[str, Any] = {
+                observed = execute(candidate, mutant["id"], mutated)
+                results.append({
                     "mutant_id": mutant["id"],
                     "root_fault": mutant.get("root"),
                     "responsibility": mutant["responsibility"],
@@ -193,14 +256,11 @@ def main() -> None:
                     "detected": observed["exit_code"] != 0,
                     "baseline": baseline,
                     "mutant": observed,
-                }
-                if mutant["id"] in {"PY-FORMAT-001", "TS-FORMAT-001"}:
-                    record["format_quality"] = format_quality(candidate, mutant, temp / f"{mutant['id']}-{candidate}-quality")
-                results.append(record)
+                })
 
     out = ROOT / "results" / "controlled"
     out.mkdir(parents=True, exist_ok=True)
-    (out / "source-runtime.json").write_text(json.dumps({"schema_version": 2, "results": results}, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (out / "source-runtime.json").write_text(json.dumps({"schema_version": 3, "protocol_revision": "v2.4", "results": results}, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps({"records": len(results), "output": str(out / 'source-runtime.json')}, indent=2))
 
 
