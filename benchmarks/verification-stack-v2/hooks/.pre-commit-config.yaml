@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: normalize-text
+        name: normalize text fixture
+        entry: python benchmarks/verification-stack-v2/hooks/fixer.py
+        language: system
+        files: ^benchmarks/verification-stack-v2/hooks/fixtures/.*\.txt$

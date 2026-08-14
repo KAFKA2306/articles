@@ -1,0 +1,8 @@
+Downloading pyrefly (13.7MiB)
+ Downloaded pyrefly
+Installed 1 package in 1ms
+ INFO Found `/home/runner/work/articles/articles/external/python/pyproject.toml` marking project root, checking root directory with auto configuration
+ INFO 232 errors (2 suppressed)
+No `pyrefly.toml` found — using preset `basic`.
+Run `pyrefly init` to continue setting up Pyrefly.
+Docs: https://pyrefly.org/en/docs/installation/

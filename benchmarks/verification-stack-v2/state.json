@@ -1,0 +1,9 @@
+{
+  "blocked_on": null,
+  "comparison_started": true,
+  "last_transition": "story_candidates_ready->article_candidate_ready",
+  "phase": "article_candidate_ready",
+  "publication_authorized": false,
+  "real_repo_sample_frozen": true,
+  "schema_version": 1
+}

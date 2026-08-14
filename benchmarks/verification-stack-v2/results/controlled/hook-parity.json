@@ -1,0 +1,86 @@
+{
+  "mutant_id": "HOOK-PATCH-PARITY-001",
+  "parity": {
+    "both_idempotent": true,
+    "same_changed_files": true,
+    "same_content_sha256": true,
+    "same_diff_sha256": true
+  },
+  "pre_commit": {
+    "content_changed": true,
+    "content_sha256": "e49c81e2d2f84e259d40e2fb8192f3bcd198b355184845d76d8f58807d0d78ee",
+    "diff_sha256": "323ef123ae4bbc972ce47832e9d25a196129241bdc024643f7beaa055a000497",
+    "first": {
+      "command": [
+        "pre-commit",
+        "run",
+        "--all-files",
+        "--config",
+        "benchmarks/verification-stack-v2/hooks/.pre-commit-config.yaml"
+      ],
+      "elapsed_ms": 310.883617,
+      "exit_code": 1,
+      "stderr": "",
+      "stdout": "normalize text fixture...................................................Failed\n- hook id: normalize-text\n- files were modified by this hook\n"
+    },
+    "first_exit_code": 1,
+    "idempotent_second_run": true,
+    "runner": "pre-commit",
+    "second": {
+      "command": [
+        "pre-commit",
+        "run",
+        "--all-files",
+        "--config",
+        "benchmarks/verification-stack-v2/hooks/.pre-commit-config.yaml"
+      ],
+      "elapsed_ms": 152.45877,
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "normalize text fixture...................................................Passed\n"
+    },
+    "second_exit_code": 0,
+    "selected_changed_files": [
+      "benchmarks/verification-stack-v2/hooks/fixtures/input.txt"
+    ]
+  },
+  "prek": {
+    "content_changed": true,
+    "content_sha256": "e49c81e2d2f84e259d40e2fb8192f3bcd198b355184845d76d8f58807d0d78ee",
+    "diff_sha256": "323ef123ae4bbc972ce47832e9d25a196129241bdc024643f7beaa055a000497",
+    "first": {
+      "command": [
+        "prek",
+        "run",
+        "--all-files",
+        "--config",
+        "benchmarks/verification-stack-v2/hooks/.pre-commit-config.yaml"
+      ],
+      "elapsed_ms": 34.171847,
+      "exit_code": 1,
+      "stderr": "",
+      "stdout": "normalize text fixture...................................................Failed\n- hook id: normalize-text\n- files were modified by this hook\n"
+    },
+    "first_exit_code": 1,
+    "idempotent_second_run": true,
+    "runner": "prek",
+    "second": {
+      "command": [
+        "prek",
+        "run",
+        "--all-files",
+        "--config",
+        "benchmarks/verification-stack-v2/hooks/.pre-commit-config.yaml"
+      ],
+      "elapsed_ms": 32.565488,
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "normalize text fixture...................................................Passed\n"
+    },
+    "second_exit_code": 0,
+    "selected_changed_files": [
+      "benchmarks/verification-stack-v2/hooks/fixtures/input.txt"
+    ]
+  },
+  "schema_version": 1
+}

@@ -1,0 +1,292 @@
+/home/runner/work/articles/articles/external/python/scripts/discord_news_bot.py
+  /home/runner/work/articles/articles/external/python/scripts/discord_news_bot.py:7:8 - error: Import "discord" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/scripts/discord_news_bot.py:8:6 - error: Import "discord" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/scripts/import_to_aim.py
+  /home/runner/work/articles/articles/external/python/scripts/import_to_aim.py:7:6 - error: Import "aim" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/scripts/inspect_tree.py
+  /home/runner/work/articles/articles/external/python/scripts/inspect_tree.py:107:55 - error: Index 0 is out of range for type tuple[()] (reportGeneralTypeIssues)
+/home/runner/work/articles/articles/external/python/scripts/mass_generate_gallery.py
+  /home/runner/work/articles/articles/external/python/scripts/mass_generate_gallery.py:19:8 - warning: Import "yaml" could not be resolved from source (reportMissingModuleSource)
+  /home/runner/work/articles/articles/external/python/scripts/mass_generate_gallery.py:24:8 - error: Import "torch" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/scripts/mass_generate_gallery.py:25:6 - error: Import "diffusers" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/scripts/mass_generate_gallery.py:46:16 - error: Type "None" is not assignable to return type "str"
+    "None" is not assignable to "str" (reportReturnType)
+  /home/runner/work/articles/articles/external/python/scripts/mass_generate_gallery.py:54:12 - error: Type "None" is not assignable to return type "str"
+    "None" is not assignable to "str" (reportReturnType)
+  /home/runner/work/articles/articles/external/python/scripts/mass_generate_gallery.py:68:28 - error: "get" is not a known attribute of "None" (reportOptionalMemberAccess)
+/home/runner/work/articles/articles/external/python/scripts/restore_prompt.py
+  /home/runner/work/articles/articles/external/python/scripts/restore_prompt.py:6:8 - warning: Import "yaml" could not be resolved from source (reportMissingModuleSource)
+  /home/runner/work/articles/articles/external/python/scripts/restore_prompt.py:7:6 - error: Import "aim" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/scripts/test_scene_gen.py
+  /home/runner/work/articles/articles/external/python/scripts/test_scene_gen.py:81:17 - error: Argument missing for parameter "image_service" (reportCallIssue)
+  /home/runner/work/articles/articles/external/python/scripts/test_scene_gen.py:102:41 - error: Argument of type "dict[str, str]" cannot be assigned to parameter "inputs" of type "Dict[str, Path | str]" in function "execute"
+    "dict[str, str]" is not assignable to "Dict[str, Path | str]"
+      Type parameter "_VT@dict" is invariant, but "str" is not the same as "Path | str"
+      Consider switching from "dict" to "Mapping" which is covariant in the value type (reportArgumentType)
+/home/runner/work/articles/articles/external/python/scripts/tone_report.py
+  /home/runner/work/articles/articles/external/python/scripts/tone_report.py:10:8 - warning: Import "yaml" could not be resolved from source (reportMissingModuleSource)
+/home/runner/work/articles/articles/external/python/src/core/io_utils.py
+  /home/runner/work/articles/articles/external/python/src/core/io_utils.py:18:21 - error: Argument expression after ** must be a mapping with a "str" key type (reportCallIssue)
+/home/runner/work/articles/articles/external/python/src/core/media_utils.py
+  /home/runner/work/articles/articles/external/python/src/core/media_utils.py:5:8 - error: Import "ffmpeg" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/core/media_utils.py:6:6 - error: Import "pydub" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/src/core/orchestrator.py
+  /home/runner/work/articles/articles/external/python/src/core/orchestrator.py:44:40 - error: Argument of type "Dict[str, str]" cannot be assigned to parameter "inputs" of type "Dict[str, Path]" in function "run"
+    "Dict[str, str]" is not assignable to "Dict[str, Path]"
+      Type parameter "_VT@dict" is invariant, but "str" is not the same as "Path"
+      Consider switching from "dict" to "Mapping" which is covariant in the value type (reportArgumentType)
+  /home/runner/work/articles/articles/external/python/src/core/orchestrator.py:54:36 - error: Argument of type "Dict[str, Path]" cannot be assigned to parameter "prev_outputs" of type "Dict[str, Path | str]" in function "track_diff"
+    "Dict[str, Path]" is not assignable to "Dict[str, Path | str]"
+      Type parameter "_VT@dict" is invariant, but "Path" is not the same as "Path | str"
+      Consider switching from "dict" to "Mapping" which is covariant in the value type (reportArgumentType)
+  /home/runner/work/articles/articles/external/python/src/core/orchestrator.py:54:50 - error: Argument of type "Dict[str, str]" cannot be assigned to parameter "curr_outputs" of type "Dict[str, Path | str]" in function "track_diff"
+    "Dict[str, str]" is not assignable to "Dict[str, Path | str]"
+      Type parameter "_VT@dict" is invariant, but "str" is not the same as "Path | str"
+      Consider switching from "dict" to "Mapping" which is covariant in the value type (reportArgumentType)
+/home/runner/work/articles/articles/external/python/src/core/state.py
+  /home/runner/work/articles/articles/external/python/src/core/state.py:8:6 - error: Import "pydantic" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/src/main.py
+  /home/runner/work/articles/articles/external/python/src/main.py:6:6 - error: Import "dotenv" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/src/models.py
+  /home/runner/work/articles/articles/external/python/src/models.py:6:6 - error: Import "pydantic" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/src/providers/cloudflare_ai.py
+  /home/runner/work/articles/articles/external/python/src/providers/cloudflare_ai.py:7:8 - warning: Import "requests" could not be resolved from source (reportMissingModuleSource)
+/home/runner/work/articles/articles/external/python/src/providers/llm.py
+  /home/runner/work/articles/articles/external/python/src/providers/llm.py:5:8 - error: Import "litellm" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/providers/llm.py:6:8 - warning: Import "yaml" could not be resolved from source (reportMissingModuleSource)
+  /home/runner/work/articles/articles/external/python/src/providers/llm.py:27:16 - error: "defaults" is possibly unbound (reportPossiblyUnboundVariable)
+  /home/runner/work/articles/articles/external/python/src/providers/llm.py:27:36 - error: "defaults" is possibly unbound (reportPossiblyUnboundVariable)
+  /home/runner/work/articles/articles/external/python/src/providers/llm.py:29:21 - error: "defaults" is possibly unbound (reportPossiblyUnboundVariable)
+  /home/runner/work/articles/articles/external/python/src/providers/llm.py:32:27 - error: "defaults" is possibly unbound (reportPossiblyUnboundVariable)
+  /home/runner/work/articles/articles/external/python/src/providers/llm.py:32:51 - error: "defaults" is possibly unbound (reportPossiblyUnboundVariable)
+  /home/runner/work/articles/articles/external/python/src/providers/llm.py:35:26 - error: "defaults" is possibly unbound (reportPossiblyUnboundVariable)
+  /home/runner/work/articles/articles/external/python/src/providers/llm.py:35:49 - error: "defaults" is possibly unbound (reportPossiblyUnboundVariable)
+  /home/runner/work/articles/articles/external/python/src/providers/llm.py:37:49 - error: Argument of type "Unknown | str | None" cannot be assigned to parameter "model" of type "str" in function "_normalise_model_name"
+    Type "Unknown | str | None" is not assignable to type "str"
+      "None" is not assignable to "str" (reportArgumentType)
+  /home/runner/work/articles/articles/external/python/src/providers/llm.py:43:12 - error: "defaults" is possibly unbound (reportPossiblyUnboundVariable)
+  /home/runner/work/articles/articles/external/python/src/providers/llm.py:43:45 - error: "defaults" is possibly unbound (reportPossiblyUnboundVariable)
+  /home/runner/work/articles/articles/external/python/src/providers/llm.py:43:77 - error: "defaults" is possibly unbound (reportPossiblyUnboundVariable)
+  /home/runner/work/articles/articles/external/python/src/providers/llm.py:44:62 - error: "defaults" is possibly unbound (reportPossiblyUnboundVariable)
+/home/runner/work/articles/articles/external/python/src/providers/news.py
+  /home/runner/work/articles/articles/external/python/src/providers/news.py:7:8 - error: Import "litellm" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/providers/news.py:8:8 - warning: Import "requests" could not be resolved from source (reportMissingModuleSource)
+/home/runner/work/articles/articles/external/python/src/providers/tts.py
+  /home/runner/work/articles/articles/external/python/src/providers/tts.py:10:8 - warning: Import "requests" could not be resolved from source (reportMissingModuleSource)
+  /home/runner/work/articles/articles/external/python/src/providers/tts.py:11:6 - error: Import "pydub" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/providers/tts.py:56:28 - error: Argument of type "str | None" cannot be assigned to parameter "args" of type "StrPath" in function "__new__"
+    Type "str | None" is not assignable to type "StrPath"
+      Type "None" is not assignable to type "StrPath"
+        "None" is not assignable to "str"
+        "None" is incompatible with protocol "PathLike[str]"
+          "__fspath__" is not present (reportArgumentType)
+  /home/runner/work/articles/articles/external/python/src/providers/tts.py:56:28 - error: Argument of type "str | None" cannot be assigned to parameter "args" of type "StrPath" in function "__init__"
+    Type "str | None" is not assignable to type "StrPath"
+      Type "None" is not assignable to type "StrPath"
+        "None" is not assignable to "str"
+        "None" is incompatible with protocol "PathLike[str]"
+          "__fspath__" is not present (reportArgumentType)
+/home/runner/work/articles/articles/external/python/src/providers/twitter.py
+  /home/runner/work/articles/articles/external/python/src/providers/twitter.py:10:8 - error: Import "tweepy" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/providers/twitter.py:107:32 - error: "create_tweet" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/runner/work/articles/articles/external/python/src/providers/twitter.py:114:26 - error: "media_upload" is not a known attribute of "None" (reportOptionalMemberAccess)
+/home/runner/work/articles/articles/external/python/src/providers/video_effects.py
+  /home/runner/work/articles/articles/external/python/src/providers/video_effects.py:7:6 - error: Import "ffmpeg.nodes" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/providers/video_effects.py:68:24 - error: Cannot access attribute "model_dump" for class "Dict[Unknown, Unknown]"
+    Attribute "model_dump" is unknown (reportAttributeAccessIssue)
+  /home/runner/work/articles/articles/external/python/src/providers/video_effects.py:182:16 - error: Import "ffmpeg" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/providers/video_effects.py:249:28 - error: Cannot access attribute "model_dump" for class "Dict[Unknown, Unknown]"
+    Attribute "model_dump" is unknown (reportAttributeAccessIssue)
+/home/runner/work/articles/articles/external/python/src/providers/video_generation.py
+  /home/runner/work/articles/articles/external/python/src/providers/video_generation.py:10:8 - warning: Import "requests" could not be resolved from source (reportMissingModuleSource)
+/home/runner/work/articles/articles/external/python/src/providers/youtube.py
+  /home/runner/work/articles/articles/external/python/src/providers/youtube.py:10:6 - error: Import "google.auth.transport.requests" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/providers/youtube.py:11:6 - error: Import "google.oauth2.credentials" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/providers/youtube.py:12:6 - error: Import "google_auth_oauthlib.flow" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/providers/youtube.py:13:6 - error: Import "googleapiclient.discovery" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/providers/youtube.py:14:6 - error: Import "googleapiclient.http" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/src/services/image_generation.py
+  /home/runner/work/articles/articles/external/python/src/services/image_generation.py:9:8 - error: Import "torch" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/services/image_generation.py:163:18 - error: Import "diffusers" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/src/steps/audio.py
+  /home/runner/work/articles/articles/external/python/src/steps/audio.py:5:6 - error: Import "pydub" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/src/steps/buzzsprout.py
+  /home/runner/work/articles/articles/external/python/src/steps/buzzsprout.py:7:8 - warning: Import "requests" could not be resolved from source (reportMissingModuleSource)
+/home/runner/work/articles/articles/external/python/src/steps/intro_outro.py
+  /home/runner/work/articles/articles/external/python/src/steps/intro_outro.py:7:8 - error: Import "ffmpeg" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/src/steps/metadata.py
+  /home/runner/work/articles/articles/external/python/src/steps/metadata.py:67:57 - error: Argument of type "Dict[Unknown, Unknown] | list[Unknown] | None" cannot be assigned to parameter "news_items" of type "List[Dict[Unknown, Unknown]]" in function "_generate_metadata_with_llm"
+    Type "Dict[Unknown, Unknown] | list[Unknown] | None" is not assignable to type "List[Dict[Unknown, Unknown]]"
+      "Dict[Unknown, Unknown]" is not assignable to "List[Dict[Unknown, Unknown]]" (reportArgumentType)
+  /home/runner/work/articles/articles/external/python/src/steps/metadata.py:98:40 - error: "execute" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/runner/work/articles/articles/external/python/src/steps/metadata.py:107:37 - error: "model" is not a known attribute of "None" (reportOptionalMemberAccess)
+/home/runner/work/articles/articles/external/python/src/steps/news.py
+  /home/runner/work/articles/articles/external/python/src/steps/news.py:11:8 - warning: Import "yaml" could not be resolved from source (reportMissingModuleSource)
+  /home/runner/work/articles/articles/external/python/src/steps/news.py:140:52 - error: Argument of type "object | Any" cannot be assigned to parameter "raw" of type "str" in function "_parse_selection"
+    Type "object | Any" is not assignable to type "str"
+      "object" is not assignable to "str" (reportArgumentType)
+  /home/runner/work/articles/articles/external/python/src/steps/news.py:143:28 - error: Type "tuple[list[list[NewsItem]], Dict[str, Any]]" is not assignable to return type "Tuple[List[NewsItem], Dict[str, Any]]"
+    "list[list[NewsItem]]" is not assignable to "List[NewsItem]"
+      Type parameter "_T@list" is invariant, but "list[NewsItem]" is not the same as "NewsItem"
+      Consider switching from "list" to "Sequence" which is covariant (reportReturnType)
+  /home/runner/work/articles/articles/external/python/src/steps/news.py:147:38 - error: Argument of type "object | Any" cannot be assigned to parameter "raw_response" of type "str | None" in function "_selection_record"
+    Type "object | Any" is not assignable to type "str | None"
+      Type "object" is not assignable to type "str | None"
+        "object" is not assignable to "str"
+        "object" is not assignable to "None" (reportArgumentType)
+  /home/runner/work/articles/articles/external/python/src/steps/news.py:242:43 - error: Cannot access attribute "model_dump" for class "list[NewsItem]"
+    Attribute "model_dump" is unknown (reportAttributeAccessIssue)
+/home/runner/work/articles/articles/external/python/src/steps/podcast.py
+  /home/runner/work/articles/articles/external/python/src/steps/podcast.py:8:6 - error: Import "feedgen.feed" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/src/steps/scene_generator.py
+  /home/runner/work/articles/articles/external/python/src/steps/scene_generator.py:308:9 - error: Method "execute" overrides class "Step" in an incompatible manner
+    Parameter 2 type mismatch: base parameter is type "Dict[str, Path]", override parameter is type "Dict[str, Path | str]"
+      "Dict[str, Path]" is not assignable to "Dict[str, Path | str]"
+        Type parameter "_VT@dict" is invariant, but "Path" is not the same as "Path | str"
+        Consider switching from "dict" to "Mapping" which is covariant in the value type (reportIncompatibleMethodOverride)
+  /home/runner/work/articles/articles/external/python/src/steps/scene_generator.py:323:32 - error: "get" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/runner/work/articles/articles/external/python/src/steps/scene_generator.py:369:16 - warning: Import "yaml" could not be resolved from source (reportMissingModuleSource)
+/home/runner/work/articles/articles/external/python/src/steps/script.py
+  /home/runner/work/articles/articles/external/python/src/steps/script.py:8:8 - warning: Import "yaml" could not be resolved from source (reportMissingModuleSource)
+  /home/runner/work/articles/articles/external/python/src/steps/script.py:48:52 - error: Object of type "None" cannot be used as iterable value (reportOptionalIterable)
+  /home/runner/work/articles/articles/external/python/src/steps/script.py:65:33 - error: Cannot access attribute "model" for class "Provider"
+    Attribute "model" is unknown (reportAttributeAccessIssue)
+  /home/runner/work/articles/articles/external/python/src/steps/script.py:154:50 - error: "json_candidate" is possibly unbound (reportPossiblyUnboundVariable)
+/home/runner/work/articles/articles/external/python/src/steps/social/hatena.py
+  /home/runner/work/articles/articles/external/python/src/steps/social/hatena.py:11:8 - warning: Import "requests" could not be resolved from source (reportMissingModuleSource)
+  /home/runner/work/articles/articles/external/python/src/steps/social/hatena.py:12:6 - error: Import "pydantic" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/steps/social/hatena.py:51:70 - error: Expression of type "None" cannot be assigned to parameter of type "list[str]"
+    "None" is not assignable to "list[str]" (reportArgumentType)
+  /home/runner/work/articles/articles/external/python/src/steps/social/hatena.py:113:26 - error: "get" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/runner/work/articles/articles/external/python/src/steps/social/hatena.py:114:28 - error: "get" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/runner/work/articles/articles/external/python/src/steps/social/hatena.py:115:25 - error: "get" is not a known attribute of "None" (reportOptionalMemberAccess)
+/home/runner/work/articles/articles/external/python/src/steps/social/linkedin.py
+  /home/runner/work/articles/articles/external/python/src/steps/social/linkedin.py:7:8 - warning: Import "requests" could not be resolved from source (reportMissingModuleSource)
+  /home/runner/work/articles/articles/external/python/src/steps/social/linkedin.py:8:6 - error: Import "pydantic" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/steps/social/linkedin.py:146:28 - error: "get" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/runner/work/articles/articles/external/python/src/steps/social/linkedin.py:146:59 - error: "get" is not a known attribute of "None" (reportOptionalMemberAccess)
+/home/runner/work/articles/articles/external/python/src/steps/subtitle.py
+  /home/runner/work/articles/articles/external/python/src/steps/subtitle.py:5:6 - error: Import "PIL" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/steps/subtitle.py:205:33 - error: "model_dump" is not a known attribute of "None" (reportOptionalMemberAccess)
+/home/runner/work/articles/articles/external/python/src/steps/thumbnail.py
+  /home/runner/work/articles/articles/external/python/src/steps/thumbnail.py:8:6 - error: Import "PIL" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/steps/thumbnail.py:9:6 - error: Import "PIL.ImageColor" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/steps/thumbnail.py:72:9 - error: Method "execute" overrides class "Step" in an incompatible manner
+    Parameter 2 type mismatch: base parameter is type "Dict[str, Path]", override parameter is type "Dict[str, Path | str]"
+      "Dict[str, Path]" is not assignable to "Dict[str, Path | str]"
+        Type parameter "_VT@dict" is invariant, but "Path" is not the same as "Path | str"
+        Consider switching from "dict" to "Mapping" which is covariant in the value type (reportIncompatibleMethodOverride)
+/home/runner/work/articles/articles/external/python/src/steps/thumbnail_ai.py
+  /home/runner/work/articles/articles/external/python/src/steps/thumbnail_ai.py:8:6 - error: Import "PIL" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/steps/thumbnail_ai.py:37:9 - error: Method "execute" overrides class "Step" in an incompatible manner
+    Parameter 2 type mismatch: base parameter is type "Dict[str, Path]", override parameter is type "Dict[str, Path | str]"
+      "Dict[str, Path]" is not assignable to "Dict[str, Path | str]"
+        Type parameter "_VT@dict" is invariant, but "Path" is not the same as "Path | str"
+        Consider switching from "dict" to "Mapping" which is covariant in the value type (reportIncompatibleMethodOverride)
+  /home/runner/work/articles/articles/external/python/src/steps/thumbnail_ai.py:44:37 - error: Argument of type "Dict[Unknown, Unknown] | None" cannot be assigned to parameter "metadata" of type "Dict[Unknown, Unknown]" in function "_resolve_title"
+    Type "Dict[Unknown, Unknown] | None" is not assignable to type "Dict[Unknown, Unknown]"
+      "None" is not assignable to "Dict[Unknown, Unknown]" (reportArgumentType)
+/home/runner/work/articles/articles/external/python/src/steps/twitter.py
+  /home/runner/work/articles/articles/external/python/src/steps/twitter.py:8:6 - error: Import "dotenv" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/steps/twitter.py:79:46 - error: Argument of type "Dict[str, Path]" cannot be assigned to parameter "inputs" of type "Dict[str, str | Path]" in function "resolve_video_input"
+    "Dict[str, Path]" is not assignable to "Dict[str, str | Path]"
+      Type parameter "_VT@dict" is invariant, but "Path" is not the same as "str | Path"
+      Consider switching from "dict" to "Mapping" which is covariant in the value type (reportArgumentType)
+/home/runner/work/articles/articles/external/python/src/steps/video.py
+  /home/runner/work/articles/articles/external/python/src/steps/video.py:6:8 - error: Import "ffmpeg" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/steps/video.py:114:29 - error: Cannot access attribute "model_dump" for class "Dict[Unknown, Unknown]"
+    Attribute "model_dump" is unknown (reportAttributeAccessIssue)
+/home/runner/work/articles/articles/external/python/src/steps/youtube.py
+  /home/runner/work/articles/articles/external/python/src/steps/youtube.py:36:42 - error: Argument of type "Dict[str, Path]" cannot be assigned to parameter "inputs" of type "Dict[str, str | Path]" in function "resolve_video_input"
+    "Dict[str, Path]" is not assignable to "Dict[str, str | Path]"
+      Type parameter "_VT@dict" is invariant, but "Path" is not the same as "str | Path"
+      Consider switching from "dict" to "Mapping" which is covariant in the value type (reportArgumentType)
+  /home/runner/work/articles/articles/external/python/src/steps/youtube.py:53:49 - error: Argument of type "Path | None" cannot be assigned to parameter "args" of type "StrPath" in function "__new__"
+    Type "Path | None" is not assignable to type "StrPath"
+      Type "None" is not assignable to type "StrPath"
+        "None" is not assignable to "str"
+        "None" is incompatible with protocol "PathLike[str]"
+          "__fspath__" is not present (reportArgumentType)
+  /home/runner/work/articles/articles/external/python/src/steps/youtube.py:53:49 - error: Argument of type "Path | None" cannot be assigned to parameter "args" of type "StrPath" in function "__init__"
+    Type "Path | None" is not assignable to type "StrPath"
+      Type "None" is not assignable to type "StrPath"
+        "None" is not assignable to "str"
+        "None" is incompatible with protocol "PathLike[str]"
+          "__fspath__" is not present (reportArgumentType)
+/home/runner/work/articles/articles/external/python/src/storyboard.py
+  /home/runner/work/articles/articles/external/python/src/storyboard.py:6:6 - error: Import "pydantic" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/src/tracking.py
+  /home/runner/work/articles/articles/external/python/src/tracking.py:8:6 - error: Import "aim" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/src/tracking.py:49:16 - error: Union syntax cannot be used with string operand; use quotes around entire expression (reportGeneralTypeIssues)
+  /home/runner/work/articles/articles/external/python/src/tracking.py:72:9 - error: Object of type "None" is not subscriptable (reportOptionalSubscript)
+  /home/runner/work/articles/articles/external/python/src/tracking.py:97:9 - error: Object of type "None" is not subscriptable (reportOptionalSubscript)
+  /home/runner/work/articles/articles/external/python/src/tracking.py:98:9 - error: Object of type "None" is not subscriptable (reportOptionalSubscript)
+  /home/runner/work/articles/articles/external/python/src/tracking.py:99:9 - error: Object of type "None" is not subscriptable (reportOptionalSubscript)
+  /home/runner/work/articles/articles/external/python/src/tracking.py:100:9 - error: Object of type "None" is not subscriptable (reportOptionalSubscript)
+  /home/runner/work/articles/articles/external/python/src/tracking.py:101:9 - error: Object of type "None" is not subscriptable (reportOptionalSubscript)
+  /home/runner/work/articles/articles/external/python/src/tracking.py:125:27 - error: "track" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/runner/work/articles/articles/external/python/src/tracking.py:126:13 - error: Object of type "None" is not subscriptable (reportOptionalSubscript)
+  /home/runner/work/articles/articles/external/python/src/tracking.py:130:23 - error: "track" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/runner/work/articles/articles/external/python/src/tracking.py:133:9 - error: Object of type "None" is not subscriptable (reportOptionalSubscript)
+  /home/runner/work/articles/articles/external/python/src/tracking.py:135:13 - error: Object of type "None" is not subscriptable (reportOptionalSubscript)
+/home/runner/work/articles/articles/external/python/src/utils/config.py
+  /home/runner/work/articles/articles/external/python/src/utils/config.py:6:8 - warning: Import "yaml" could not be resolved from source (reportMissingModuleSource)
+  /home/runner/work/articles/articles/external/python/src/utils/config.py:7:6 - error: Import "pydantic" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/src/utils/discord.py
+  /home/runner/work/articles/articles/external/python/src/utils/discord.py:6:8 - warning: Import "requests" could not be resolved from source (reportMissingModuleSource)
+  /home/runner/work/articles/articles/external/python/src/utils/discord.py:65:42 - error: Argument of type "dict[str, str]" cannot be assigned to parameter "inputs" of type "Dict[str, str | Path]" in function "resolve_video_input"
+    "dict[str, str]" is not assignable to "Dict[str, str | Path]"
+      Type parameter "_VT@dict" is invariant, but "str" is not the same as "str | Path"
+      Consider switching from "dict" to "Mapping" which is covariant in the value type (reportArgumentType)
+/home/runner/work/articles/articles/external/python/src/utils/discord_config.py
+  /home/runner/work/articles/articles/external/python/src/utils/discord_config.py:8:8 - warning: Import "yaml" could not be resolved from source (reportMissingModuleSource)
+/home/runner/work/articles/articles/external/python/src/utils/history.py
+  /home/runner/work/articles/articles/external/python/src/utils/history.py:26:31 - error: Argument of type "Dict[Unknown, Unknown] | None" cannot be assigned to parameter "data" of type "dict[Unknown, Unknown]" in function "extract_title"
+    Type "Dict[Unknown, Unknown] | None" is not assignable to type "dict[Unknown, Unknown]"
+      "None" is not assignable to "dict[Unknown, Unknown]" (reportArgumentType)
+/home/runner/work/articles/articles/external/python/tests/conftest.py
+  /home/runner/work/articles/articles/external/python/tests/conftest.py:13:8 - error: Import "pytest" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/tests/test_complete_e2e.py
+  /home/runner/work/articles/articles/external/python/tests/test_complete_e2e.py:11:8 - error: Import "pytest" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/tests/test_complete_e2e.py:49:9 - error: Argument missing for parameter "voicevox_config" (reportCallIssue)
+/home/runner/work/articles/articles/external/python/tests/test_default_config_safety.py
+  /home/runner/work/articles/articles/external/python/tests/test_default_config_safety.py:4:8 - warning: Import "yaml" could not be resolved from source (reportMissingModuleSource)
+/home/runner/work/articles/articles/external/python/tests/test_news_collector_logic.py
+  /home/runner/work/articles/articles/external/python/tests/test_news_collector_logic.py:2:8 - error: Import "pytest" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/tests/test_news_collector_logic.py:16:17 - error: Argument of type "Literal['/tmp']" cannot be assigned to parameter "run_dir" of type "Path" in function "__init__"
+    "Literal['/tmp']" is not assignable to "Path" (reportArgumentType)
+/home/runner/work/articles/articles/external/python/tests/test_performance_feedback.py
+  /home/runner/work/articles/articles/external/python/tests/test_performance_feedback.py:4:8 - error: Import "pytest" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/tests/test_provider_internet_boundary.py
+  /home/runner/work/articles/articles/external/python/tests/test_provider_internet_boundary.py:45:36 - error: Cannot access attribute "elts" for class "expr"
+    Attribute "elts" is unknown (reportAttributeAccessIssue)
+  /home/runner/work/articles/articles/external/python/tests/test_provider_internet_boundary.py:46:57 - error: Cannot access attribute "elts" for class "expr"
+    Attribute "elts" is unknown (reportAttributeAccessIssue)
+/home/runner/work/articles/articles/external/python/tests/test_real_workflow.py
+  /home/runner/work/articles/articles/external/python/tests/test_real_workflow.py:27:8 - error: Import "pytest" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/tests/test_real_workflow.py:65:9 - error: Argument missing for parameter "voicevox_config" (reportCallIssue)
+  /home/runner/work/articles/articles/external/python/tests/test_real_workflow.py:136:9 - error: Argument missing for parameter "voicevox_config" (reportCallIssue)
+  /home/runner/work/articles/articles/external/python/tests/test_real_workflow.py:199:9 - error: Argument missing for parameter "voicevox_config" (reportCallIssue)
+  /home/runner/work/articles/articles/external/python/tests/test_real_workflow.py:215:9 - error: Argument missing for parameter "voicevox_config" (reportCallIssue)
+  /home/runner/work/articles/articles/external/python/tests/test_real_workflow.py:249:9 - error: Argument missing for parameter "voicevox_config" (reportCallIssue)
+  /home/runner/work/articles/articles/external/python/tests/test_real_workflow.py:349:10 - error: Import "PIL" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/tests/test_real_workflow.py:370:9 - error: Argument missing for parameter "voicevox_config" (reportCallIssue)
+/home/runner/work/articles/articles/external/python/tests/test_remotion_renderer.py
+  /home/runner/work/articles/articles/external/python/tests/test_remotion_renderer.py:7:8 - error: Import "pytest" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/tests/test_storyboard_video_generation.py
+  /home/runner/work/articles/articles/external/python/tests/test_storyboard_video_generation.py:1:8 - error: Import "pytest" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/tests/test_storyboard_video_generation.py:2:6 - error: Import "pydantic" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/tests/unit/steps/test_audio_di.py
+  /home/runner/work/articles/articles/external/python/tests/unit/steps/test_audio_di.py:8:6 - error: Import "pydub" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/tests/unit/steps/test_thumbnail_ai_text_overlay.py
+  /home/runner/work/articles/articles/external/python/tests/unit/steps/test_thumbnail_ai_text_overlay.py:6:6 - error: Import "PIL" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/tests/unit/steps/test_thumbnail_spec.py
+  /home/runner/work/articles/articles/external/python/tests/unit/steps/test_thumbnail_spec.py:8:8 - warning: Import "yaml" could not be resolved from source (reportMissingModuleSource)
+  /home/runner/work/articles/articles/external/python/tests/unit/steps/test_thumbnail_spec.py:9:6 - error: Import "PIL" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/tests/unit/test_voice_controls.py
+  /home/runner/work/articles/articles/external/python/tests/unit/test_voice_controls.py:1:8 - error: Import "pytest" could not be resolved (reportMissingImports)
+/home/runner/work/articles/articles/external/python/tests/unit/test_voice_prompt_contract.py
+  /home/runner/work/articles/articles/external/python/tests/unit/test_voice_prompt_contract.py:5:8 - error: Import "pytest" could not be resolved (reportMissingImports)
+  /home/runner/work/articles/articles/external/python/tests/unit/test_voice_prompt_contract.py:11:15 - error: Cannot assign to attribute "AimTracker" for class "ModuleType"
+    Attribute "AimTracker" is unknown (reportAttributeAccessIssue)
+132 errors, 19 warnings, 0 informations

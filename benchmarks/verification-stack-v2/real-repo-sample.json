@@ -1,0 +1,896 @@
+{
+  "activity_cutoff_utc": "2025-08-15T00:00:00Z",
+  "frozen_at_utc": "2026-08-14T16:53:58.391310+00:00",
+  "frozen_before_candidate_output_review": true,
+  "interpretation_boundary": [
+    "Repositories are frozen before controlled candidate-level output is inspected for article selection.",
+    "Real repositories measure external validity, not total defect recall.",
+    "A later no-secret installation failure is recorded as setup incompatibility; it does not trigger post-hoc reselection."
+  ],
+  "inventory_failures": [],
+  "owner": "KAFKA2306",
+  "python_inventory": [
+    {
+      "default_branch": "main",
+      "head_sha": "95a0f6b4f5270d1463c15f301a2bd4f0d709c109",
+      "pushed_at": "2026-08-13T16:06:14Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 88,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/2511youtuber",
+      "selection_digest": "00fb9fe964d068c17665edcff11cb92bd8beedc22401e734b41a771d6055a006",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 5,
+        "typescript_source_count": 331
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "e9c6d5abc6450712b65fec3674725cf50488ae6d",
+      "pushed_at": "2026-08-14T11:47:01Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 38,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/trahist",
+      "selection_digest": "0223677a5e54ce26449894c1a4a66a4da83fcca21a5e39100eaa317bd13712d7",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "51d206bfc1e6ea569503709774f4429cc911e931",
+      "pushed_at": "2026-08-14T15:41:36Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 118,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/semiconductor-earnings-model",
+      "selection_digest": "02f958e439fa4ea06d817fc34aab69958711679f133fad481e800a371e3ea780",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "0b3e98c4d005a91554fbb4cde24067b39e5ced20",
+      "pushed_at": "2026-08-13T23:39:32Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 12,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/dmovie2511",
+      "selection_digest": "039b84c3e89d3ab887a186fc779ece8cb13579a926235af2222b32e3336f7d8a",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "9a45de93437456f215f1a251666f322254aac6b4",
+      "pushed_at": "2026-08-14T16:39:35Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 61,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/investor2",
+      "selection_digest": "130cd7eb028ff05bc670a5911c7f081b7a85ae3c3098ce2e325cc8da690cd80c",
+      "typescript": {
+        "eligible": true,
+        "lockfile": true,
+        "obvious_private_config_signals": [],
+        "package_json": true,
+        "test_or_ci": true,
+        "tsconfig_count": 1,
+        "typescript_source_count": 58
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "d7c342dff4e1c47364527ddc670ed656fcadc712",
+      "pushed_at": "2026-08-13T03:52:33Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 71,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/WealthAudit",
+      "selection_digest": "151e6c277e57507630a46151ec207bab315b9597143bf9c6c910d818a91b3404",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "22e0b3c88d5b9723720bcb55ae4f73e33b7c76cd",
+      "pushed_at": "2026-08-08T04:50:52Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 18,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/333",
+      "selection_digest": "230f29e90d732a6c1d4e3f3e3712787bc9b6edcdb7decec0d7a2f2465843c58e",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "28d7d7aafd33ea6133f4aaf5bb2251b2538d2611",
+      "pushed_at": "2026-08-13T15:40:10Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 17,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/option",
+      "selection_digest": "2efc0b3832091c69512fb227db4623c966370a89ceead3878948cbe977ff3011",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "e040b375acaee5ba7eaf241eb2a56c7a01954906",
+      "pushed_at": "2026-08-11T15:04:59Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 14,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/investor",
+      "selection_digest": "4e78e4046606ba4ba2ff4ab15a8eca40a620d0f98ff09a302b4628df3de574b9",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 1,
+        "typescript_source_count": 134
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "4429e3d56acb7691126a9c400c5743410b9285f8",
+      "pushed_at": "2026-08-14T14:43:42Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 136,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/CrewTrade",
+      "selection_digest": "4e8dac049b8ad74b60ff5d4d2698db7dbd88127a2b89e6c3b1d772360b111ac8",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "c3eac51646b109105cfe0e0384638ffb052a300a",
+      "pushed_at": "2026-08-08T04:56:29Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 16,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/finAnalist",
+      "selection_digest": "5dd3acc4ee02f9de63446a35ba4b251abc014a203dd4742d3c01e8c236894ef2",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "f19c55a1fc3e19e0da74676d002aa019fde20e2a",
+      "pushed_at": "2026-08-14T16:51:44Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 111,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/rule-scribe-games",
+      "selection_digest": "64e216f4a5eba1ef086fe69ecbff366f7642a706a8d22f0d47f2dc78d76a0f71",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "20d989cd79cf43db48d36382299169e98308c76a",
+      "pushed_at": "2026-08-10T16:11:24Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 26,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/NVII",
+      "selection_digest": "64f075ed9a3344351b5eff2103a6e26673e8b2a4e1a3261c7dc20a61c40f08e7",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "12067d726107329744846c6d33c8f423d78a87e9",
+      "pushed_at": "2026-08-14T11:57:37Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 111,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/agent-resources",
+      "selection_digest": "69a5d7c45aead9964f4c3dfe2b5d42a8f9b09b912a0bef8d2f89f3a776ec7672",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": true,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "0368269943474ff1d25f7db99681347187973b8f",
+      "pushed_at": "2026-08-08T04:52:02Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 11,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/auto-invest",
+      "selection_digest": "6eba50dd96f02092e3ece9e6be57e9c0abed3d557d1de0b3baf7efc7dc30eae4",
+      "typescript": {
+        "eligible": true,
+        "lockfile": true,
+        "obvious_private_config_signals": [],
+        "package_json": true,
+        "test_or_ci": true,
+        "tsconfig_count": 3,
+        "typescript_source_count": 79
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "1521a8521629f67094ad42637527bf6030143ca1",
+      "pushed_at": "2026-08-08T05:01:39Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 18,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/m2",
+      "selection_digest": "8ae45e31cc5cbf95e76f1a98857420dd5ccfb0ee96e1f836288917c892ad5d5f",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "2532bdfddead80a58e70b2137cda1db49f03904f",
+      "pushed_at": "2026-08-13T17:06:17Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 21,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/nk225seasonality",
+      "selection_digest": "8d8baf0496ebdb789156ec746c102fb0a13305284d97a12b9b73426bfe82e5ec",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "master",
+      "head_sha": "fe0257544546014c33c490489cee188991178b49",
+      "pushed_at": "2026-08-14T09:42:25Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 57,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/bodogenomikata2",
+      "selection_digest": "8eefc0085070deaef6b011998ea4a10680b67522423fe663033001ee34094ddd",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 3,
+        "typescript_source_count": 17
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "04e5bb001f07a157eba60f8a0c74dab5d2f77ffd",
+      "pushed_at": "2026-08-13T04:02:58Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 41,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/kakeibo",
+      "selection_digest": "8faec457e851a6f7acd5964916f136276a5b565edb3ceb84998502bae88a03d6",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "7a502f692c176e275166dd9a7422bbe67040a225",
+      "pushed_at": "2026-08-13T22:35:35Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 112,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/vlog",
+      "selection_digest": "9041e665488728c301ec4259f06ecd2a2ce6d0032cc439c72bdbdfe2aff244f9",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 1,
+        "typescript_source_count": 25
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "62d6cff6e56d811f8fd7c7687e98a1d03272acbb",
+      "pushed_at": "2026-08-08T05:04:10Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 101,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/pamiq-poker",
+      "selection_digest": "947a9d1aaeaca7be4a1994cafa2a72c6b5c57022eaa8b69c037daeb3681f5e25",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "59c67a8236fee1e23d9abd96065105a67d7c49ee",
+      "pushed_at": "2026-02-11T13:31:05Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 20,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/vrpoker",
+      "selection_digest": "9d03d5b982016753863e4f4e97c11fa778ead788108b6781bc1354140c9fa602",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 2
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "5f2b44e8ea0a052e4130103c98f1777eb220468a",
+      "pushed_at": "2026-08-13T04:11:47Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 16,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/detective",
+      "selection_digest": "9ee49d4c4eb5b421a98a08da40224a91880ca091c09210e3c47d2bd05c0d0b43",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "81e28ddda360257942d91601fa04453452ff43b4",
+      "pushed_at": "2026-08-08T04:50:59Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 19,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/abestudy",
+      "selection_digest": "a5a21e7090fc05b04877a148d8a52b5df8df53daeef14301d6a32270a9ba9805",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "d1d8b2634a548ef4fba837922ae50d4f48e29bef",
+      "pushed_at": "2026-08-13T02:49:17Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 34,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/boothitemmanager",
+      "selection_digest": "a910b9cc05062142397481bb8883e4ad798878ca246f9cc5b77478dd4619a73e",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "6ce7eaefe57720cd489ce13de2f430a8fae2dcbf",
+      "pushed_at": "2026-08-08T04:55:11Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 11,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/dancer",
+      "selection_digest": "b330b998dd92ffa3e3510d7b5254cc78a7cf124c4f297de8167cca73c4f48d35",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "d0ae9359fc9f6734ee5fd5ffb772505c2b661eef",
+      "pushed_at": "2026-08-14T07:58:03Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 54,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/prompt-vault",
+      "selection_digest": "c49a3c220803e602fadf885407f4d98cc528aca60f99cbf156b1c8b3ccb093a8",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 1
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "f40caf62a2af4abd13c314339093d3d6163067d4",
+      "pushed_at": "2026-08-13T21:32:39Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 89,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/cast_event_cal",
+      "selection_digest": "cb730fbd81f9b3a80763b4ae1747e40e5844d80416e70d0ea89ccfbe57790063",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "af7f25f694c012e3447f647bc3952d1dd4d97d02",
+      "pushed_at": "2026-08-13T17:26:03Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 16,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/factory",
+      "selection_digest": "df0664c4bddb5d7e56c99cd4f2a91bb487d4bd0b089f740fb04bbd5ba81a3997",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "a8bd59b5a99ecd5f6531d136cc64f5fd2724ca14",
+      "pushed_at": "2026-08-04T16:32:51Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 12,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/tradermade_cfd",
+      "selection_digest": "e0f5ad08b260c65e3bf501423de4ad9826f10d8248fb4b7c477bca3c6ed69a80",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "1d74ba331076eecebe46a2f321f66fa40f3a2c80",
+      "pushed_at": "2026-08-14T08:45:04Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 163,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/image2outfit",
+      "selection_digest": "e35ddffa808d0312a28f163198aa50ab511e3e060ba9dcbadefa578a09766e6f",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 0,
+        "typescript_source_count": 0
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "e10b490f05aed2374d9db271cf560fc47632b7b1",
+      "pushed_at": "2026-08-13T09:39:39Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 20,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/vlogrs",
+      "selection_digest": "e611786737fe42812c59129cf5aef45715860a003ab2b893e0f495c59c59bee2",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 1,
+        "typescript_source_count": 4
+      }
+    }
+  ],
+  "schema_version": 1,
+  "selected": {
+    "python": {
+      "default_branch": "main",
+      "head_sha": "95a0f6b4f5270d1463c15f301a2bd4f0d709c109",
+      "pushed_at": "2026-08-13T16:06:14Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 88,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/2511youtuber",
+      "selection_digest": "00fb9fe964d068c17665edcff11cb92bd8beedc22401e734b41a771d6055a006",
+      "typescript": {
+        "eligible": false,
+        "lockfile": false,
+        "obvious_private_config_signals": [],
+        "package_json": false,
+        "test_or_ci": true,
+        "tsconfig_count": 5,
+        "typescript_source_count": 331
+      }
+    },
+    "typescript": {
+      "default_branch": "main",
+      "head_sha": "9a45de93437456f215f1a251666f322254aac6b4",
+      "pushed_at": "2026-08-14T16:39:35Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 61,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/investor2",
+      "selection_digest": "130cd7eb028ff05bc670a5911c7f081b7a85ae3c3098ce2e325cc8da690cd80c",
+      "typescript": {
+        "eligible": true,
+        "lockfile": true,
+        "obvious_private_config_signals": [],
+        "package_json": true,
+        "test_or_ci": true,
+        "tsconfig_count": 1,
+        "typescript_source_count": 58
+      }
+    }
+  },
+  "selection_rule": "lexicographically smallest sha256(repository_full_name) among eligible repositories, independently per language",
+  "status": "frozen",
+  "typescript_inventory": [
+    {
+      "default_branch": "main",
+      "head_sha": "9a45de93437456f215f1a251666f322254aac6b4",
+      "pushed_at": "2026-08-14T16:39:35Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 61,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/investor2",
+      "selection_digest": "130cd7eb028ff05bc670a5911c7f081b7a85ae3c3098ce2e325cc8da690cd80c",
+      "typescript": {
+        "eligible": true,
+        "lockfile": true,
+        "obvious_private_config_signals": [],
+        "package_json": true,
+        "test_or_ci": true,
+        "tsconfig_count": 1,
+        "typescript_source_count": 58
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "7fb4fa00c466c8dcc37ffb2545ea2d680476c39d",
+      "pushed_at": "2026-08-14T09:27:45Z",
+      "python": {
+        "eligible": false,
+        "obvious_private_config_signals": [],
+        "python_source_count": 4,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/yt4",
+      "selection_digest": "221fb65aebd978bc5c444b94cbcd81b1a2459fda0cf54f43197def8bbb6538e4",
+      "typescript": {
+        "eligible": true,
+        "lockfile": true,
+        "obvious_private_config_signals": [],
+        "package_json": true,
+        "test_or_ci": true,
+        "tsconfig_count": 1,
+        "typescript_source_count": 37
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "47554ea7d9db92d5741919c2f3d4847b1a0c20a7",
+      "pushed_at": "2025-10-29T09:37:41Z",
+      "python": {
+        "eligible": false,
+        "obvious_private_config_signals": [],
+        "python_source_count": 0,
+        "root_manifest": false,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/vrcplat",
+      "selection_digest": "3efb2b7cf3c8a20c217019e130e86ed89d033bc0cd603c7dd299706ae71fc693",
+      "typescript": {
+        "eligible": true,
+        "lockfile": true,
+        "obvious_private_config_signals": [],
+        "package_json": true,
+        "test_or_ci": true,
+        "tsconfig_count": 7,
+        "typescript_source_count": 41
+      }
+    },
+    {
+      "default_branch": "main",
+      "head_sha": "0368269943474ff1d25f7db99681347187973b8f",
+      "pushed_at": "2026-08-08T04:52:02Z",
+      "python": {
+        "eligible": true,
+        "obvious_private_config_signals": [],
+        "python_source_count": 11,
+        "root_manifest": true,
+        "test_or_ci": true
+      },
+      "repository": "KAFKA2306/auto-invest",
+      "selection_digest": "6eba50dd96f02092e3ece9e6be57e9c0abed3d557d1de0b3baf7efc7dc30eae4",
+      "typescript": {
+        "eligible": true,
+        "lockfile": true,
+        "obvious_private_config_signals": [],
+        "package_json": true,
+        "test_or_ci": true,
+        "tsconfig_count": 3,
+        "typescript_source_count": 79
+      }
+    }
+  ],
+  "universe_count": 103
+}

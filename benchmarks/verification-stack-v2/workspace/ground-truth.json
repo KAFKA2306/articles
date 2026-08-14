@@ -1,0 +1,19 @@
+{
+  "nodes": ["core", "ui", "web", "api", "docs"],
+  "edges": [
+    ["ui", "core"],
+    ["web", "ui"],
+    ["api", "core"]
+  ],
+  "independent": ["docs"],
+  "affected_expectations": {
+    "core": ["core", "ui", "web", "api"],
+    "ui": ["ui", "web"],
+    "docs": ["docs"]
+  },
+  "forbidden_edges": [
+    ["core", "web"],
+    ["core", "api"],
+    ["ui", "web"]
+  ]
+}

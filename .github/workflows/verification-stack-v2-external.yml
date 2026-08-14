@@ -1,0 +1,146 @@
+name: Verification Stack v2 External Validity
+
+on:
+  push:
+    branches:
+      - experiment/verification-stack-v2-ground-truth
+    paths:
+      - ".github/workflows/verification-stack-v2-external.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verification-stack-v2-external
+  cancel-in-progress: false
+
+jobs:
+  external-validity:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout canonical benchmark workline
+        uses: actions/checkout@v4
+        with:
+          ref: experiment/verification-stack-v2-ground-truth
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install uv
+        run: python -m pip install --disable-pip-version-check uv
+
+      - name: Checkout preregistered Python sample
+        uses: actions/checkout@v4
+        with:
+          repository: KAFKA2306/2511youtuber
+          ref: 95a0f6b4f5270d1463c15f301a2bd4f0d709c109
+          path: external/python
+          persist-credentials: false
+
+      - name: Checkout preregistered TypeScript sample
+        uses: actions/checkout@v4
+        with:
+          repository: KAFKA2306/investor2
+          ref: 9a45de93437456f215f1a251666f322254aac6b4
+          path: external/typescript
+          persist-credentials: false
+
+      - name: Run external-validity probes
+        shell: bash
+        run: |
+          set -uo pipefail
+          root="$GITHUB_WORKSPACE"
+          out="$root/benchmarks/verification-stack-v2/results/external"
+          mkdir -p "$out/raw"
+
+          run_probe() {
+            name="$1"; shift
+            workdir="$1"; shift
+            start=$(date +%s%N)
+            set +e
+            (cd "$workdir" && "$@") >"$out/raw/${name}.stdout" 2>"$out/raw/${name}.stderr"
+            rc=$?
+            set -e
+            end=$(date +%s%N)
+            ms=$(( (end-start)/1000000 ))
+            printf '{"name":"%s","exit_code":%s,"elapsed_ms":%s}\n' "$name" "$rc" "$ms" >"$out/raw/${name}.meta.json"
+          }
+
+          # External validity is execution compatibility and operational signal only.
+          # Unknown real-repo ground truth means no recall claim is made here.
+          run_probe pyrefly external/python uvx pyrefly==1.2.0 check --output-format json
+          run_probe ty external/python uvx ty==0.0.71 check --output-format concise --no-progress .
+          run_probe pyright external/python npx --yes pyright@1.1.411 .
+          run_probe mypy external/python uvx mypy==2.3.0 .
+
+          # Preserve the repository's own installability as an observed setup dimension.
+          run_probe npm_ci external/typescript npm ci --ignore-scripts
+          run_probe tsc external/typescript npx --yes typescript@7.0.2 --noEmit
+          run_probe oxlint external/typescript npx --yes oxlint@1.76.0 .
+
+          python - <<'PY'
+          from __future__ import annotations
+          import json
+          from pathlib import Path
+
+          root = Path('benchmarks/verification-stack-v2/results/external')
+          raw = root / 'raw'
+          probes = {}
+          for meta in sorted(raw.glob('*.meta.json')):
+              value = json.loads(meta.read_text())
+              name = value['name']
+              stdout = (raw / f'{name}.stdout').read_text(errors='replace')
+              stderr = (raw / f'{name}.stderr').read_text(errors='replace')
+              value.update(
+                  stdout_lines=len(stdout.splitlines()),
+                  stderr_lines=len(stderr.splitlines()),
+                  output_nonempty=bool(stdout.strip() or stderr.strip()),
+              )
+              probes[name] = value
+
+          summary = {
+              'schema_version': 1,
+              'status': 'complete',
+              'purpose': 'external validity only; unknown real-repository defect ground truth prohibits recall/ranking claims',
+              'samples': {
+                  'python': {
+                      'repository': 'KAFKA2306/2511youtuber',
+                      'sha': '95a0f6b4f5270d1463c15f301a2bd4f0d709c109',
+                  },
+                  'typescript': {
+                      'repository': 'KAFKA2306/investor2',
+                      'sha': '9a45de93437456f215f1a251666f322254aac6b4',
+                  },
+              },
+              'probes': probes,
+              'guardrails': [
+                  'nonzero exit codes are observations, not proof of true defects',
+                  'elapsed_ms values are single external-validity observations and are not performance rankings',
+                  'tool output counts are not summed or treated as defect counts',
+                  'setup failure is retained as operational evidence rather than triggering repository reselection',
+              ],
+          }
+          root.joinpath('summary.json').write_text(json.dumps(summary, indent=2, sort_keys=True) + '\n')
+          PY
+
+      - name: Commit external evidence
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add benchmarks/verification-stack-v2/results/external
+          if git diff --cached --quiet; then
+            echo "External evidence already current."
+            exit 0
+          fi
+          git commit -m "experiment: record frozen real-repo external evidence"
+          git push origin HEAD:experiment/verification-stack-v2-ground-truth

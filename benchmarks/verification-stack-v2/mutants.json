@@ -1,0 +1,29 @@
+{
+  "schema_version": 2,
+  "frozen_before_comparison": true,
+  "amendment": "AMENDMENT-v2.1-before-comparison.md",
+  "mutants": [
+    {"id":"PY-SYNTAX-001","fixture":"python","responsibility":"parser/source hygiene","target":"python/src/verification_fixture/service.py","operation":"replace_once","old":"return f\"{total:.2f}\"","new":"return f\"{total:.2f}","root":"unterminated f-string at render_total return"},
+    {"id":"PY-FORMAT-001","fixture":"python","responsibility":"formatting","target":"python/src/verification_fixture/service.py","operation":"replace_once","old":"return amount * (1.0 + rate)","new":"return amount*(1.0+rate)","root":"valid but non-canonical formatter spacing"},
+    {"id":"PY-LINT-001","fixture":"python","responsibility":"lint","target":"python/src/verification_fixture/service.py","operation":"insert_before","anchor":"return amount * (1.0 + rate)","text":"unused_value = 1","root":"unused local variable"},
+    {"id":"PY-TYPE-ARG-001","fixture":"python","responsibility":"static typing","target":"python/src/verification_fixture/service.py","operation":"replace_once","old":"calculate_total(100.0, 0.2)","new":"calculate_total(\"100\", 0.2)","root":"incompatible first argument at call site"},
+    {"id":"PY-TYPE-RETURN-001","fixture":"python","responsibility":"static typing","target":"python/src/verification_fixture/service.py","operation":"replace_once","old":"return f\"{total:.2f}\"","new":"return total","root":"float returned from function declared str"},
+    {"id":"PY-NAME-001","fixture":"python","responsibility":"static semantics","target":"python/src/verification_fixture/service.py","operation":"replace_once","old":"def increment(count: int) -> int:\n    return count + 1","new":"def increment(count: int) -> int:\n    return missing_count + 1","root":"undefined identifier missing_count in increment"},
+    {"id":"PY-ASYNC-001","fixture":"python","responsibility":"static semantics","target":"python/src/verification_fixture/service.py","operation":"replace_once","old":"count = await fetch_count()","new":"count = fetch_count()","root":"coroutine used without await"},
+    {"id":"PY-RUNTIME-001","fixture":"python","responsibility":"runtime validation","target":"python/tests/payload.json","operation":"replace_once","old":"\"count\": 2","new":"\"count\": -1","root":"external count violates positive runtime contract"},
+    {"id":"TS-SYNTAX-001","fixture":"typescript","responsibility":"parser/source hygiene","target":"typescript/src/service.ts","operation":"replace_once","old":"return total.toFixed(2);","new":"return total.toFixed(2;","root":"invalid call syntax at renderTotal return"},
+    {"id":"TS-FORMAT-001","fixture":"typescript","responsibility":"formatting","target":"typescript/src/service.ts","operation":"replace_once","old":"return amount * (1 + rate);","new":"return amount*(1+rate);","root":"valid but non-canonical formatter spacing"},
+    {"id":"TS-LINT-001","fixture":"typescript","responsibility":"lint","target":"typescript/src/service.ts","operation":"insert_before","anchor":"return amount * (1 + rate);","text":"const unusedValue = 1;","root":"unused local variable"},
+    {"id":"TS-TYPE-ARG-001","fixture":"typescript","responsibility":"compiler/static typing","target":"typescript/src/service.ts","operation":"replace_once","old":"calculateTotal(100, 0.2)","new":"calculateTotal(\"100\", 0.2)","root":"incompatible first argument at call site"},
+    {"id":"TS-TYPE-RETURN-001","fixture":"typescript","responsibility":"compiler/static typing","target":"typescript/src/service.ts","operation":"replace_once","old":"return total.toFixed(2);","new":"return total;","root":"number returned from function declared string"},
+    {"id":"TS-PROMISE-001","fixture":"typescript","responsibility":"lint/static semantics","target":"typescript/src/service.ts","operation":"insert_before","anchor":"const count = await fetchCount();","text":"fetchCount();","root":"floating promise"},
+    {"id":"TS-RUNTIME-001","fixture":"typescript","responsibility":"runtime validation","target":"typescript/test/payload.json","operation":"replace_once","old":"\"count\": 2","new":"\"count\": -1","root":"external count violates positive runtime schema"},
+    {"id":"WS-AFFECTED-CORE-001","fixture":"workspace","responsibility":"affected-set correctness","operation":"touch_input","target":"workspace/packages/core/src/value.ts","expected":["core","ui","web","api"]},
+    {"id":"WS-AFFECTED-UI-001","fixture":"workspace","responsibility":"affected-set correctness","operation":"touch_input","target":"workspace/packages/ui/src/value.ts","expected":["ui","web"]},
+    {"id":"WS-AFFECTED-DOCS-001","fixture":"workspace","responsibility":"affected-set correctness","operation":"touch_input","target":"workspace/packages/docs/src/value.ts","expected":["docs"]},
+    {"id":"WS-CACHE-HIT-001","fixture":"workspace","responsibility":"cache correctness","operation":"repeat_without_change","expected":"cache_eligible_and_byte_identical"},
+    {"id":"WS-CACHE-INVALIDATE-001","fixture":"workspace","responsibility":"cache correctness","operation":"change_dependency_input","target":"workspace/packages/core/src/value.ts","expected":"dependent_tasks_invalidated"},
+    {"id":"WS-BOUNDARY-001","fixture":"workspace","responsibility":"architecture boundary","operation":"introduce_forbidden_dependency","from":"packages/core","to":"apps/web","expected":"reject_where_supported"},
+    {"id":"HOOK-PATCH-PARITY-001","fixture":"hooks","responsibility":"local orchestration parity","operation":"run_hook_runners","target":"hooks/fixtures/input.txt","config":"hooks/.pre-commit-config.yaml","expected":"byte_identical_patch_and_selected_files"}
+  ]
+}

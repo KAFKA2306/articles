@@ -1,0 +1,7 @@
+{
+  "name": "verification-stack-v2-workspace-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "npm@10.9.2",
+  "workspaces": ["apps/*", "packages/*"]
+}
