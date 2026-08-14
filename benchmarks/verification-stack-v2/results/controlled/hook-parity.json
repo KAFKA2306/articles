@@ -18,7 +18,7 @@
         "--config",
         "benchmarks/verification-stack-v2/hooks/.pre-commit-config.yaml"
       ],
-      "elapsed_ms": 310.883617,
+      "elapsed_ms": 366.944608,
       "exit_code": 1,
       "stderr": "",
       "stdout": "normalize text fixture...................................................Failed\n- hook id: normalize-text\n- files were modified by this hook\n"
@@ -34,7 +34,7 @@
         "--config",
         "benchmarks/verification-stack-v2/hooks/.pre-commit-config.yaml"
       ],
-      "elapsed_ms": 152.45877,
+      "elapsed_ms": 193.798022,
       "exit_code": 0,
       "stderr": "",
       "stdout": "normalize text fixture...................................................Passed\n"
@@ -56,7 +56,7 @@
         "--config",
         "benchmarks/verification-stack-v2/hooks/.pre-commit-config.yaml"
       ],
-      "elapsed_ms": 34.171847,
+      "elapsed_ms": 40.112697,
       "exit_code": 1,
       "stderr": "",
       "stdout": "normalize text fixture...................................................Failed\n- hook id: normalize-text\n- files were modified by this hook\n"
@@ -72,7 +72,7 @@
         "--config",
         "benchmarks/verification-stack-v2/hooks/.pre-commit-config.yaml"
       ],
-      "elapsed_ms": 32.565488,
+      "elapsed_ms": 40.452128,
       "exit_code": 0,
       "stderr": "",
       "stdout": "normalize text fixture...................................................Passed\n"

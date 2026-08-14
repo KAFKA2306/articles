@@ -1,0 +1,217 @@
+{
+  "candidate": "pyrefly",
+  "candidate_version": "pyrefly 1.2.0",
+  "guardrail": "This calibration compares modes of one pinned candidate; it is not a cross-tool ranking.",
+  "purpose": "Isolate preset/configuration effect using the same frozen five-mutant Python static-type corpus.",
+  "rows": [
+    {
+      "baseline_exit_code": 0,
+      "baseline_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-SYNTAX-001-no_config-clean/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\nNo `pyrefly.toml` found \u2014 using preset `basic`.\nRun `pyrefly init` to continue setting up Pyrefly.\nDocs: https://pyrefly.org/en/docs/installation/\n",
+      "baseline_stdout": "{\n  \"errors\": []\n}",
+      "detected": true,
+      "mode": "no_config",
+      "mutant_exit_code": 1,
+      "mutant_id": "PY-SYNTAX-001",
+      "mutant_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-SYNTAX-001-no_config-mutant/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 1 error\nNo `pyrefly.toml` found \u2014 using preset `basic`.\nRun `pyrefly init` to continue setting up Pyrefly.\nDocs: https://pyrefly.org/en/docs/installation/\n",
+      "mutant_stdout": "{\n  \"errors\": [\n    {\n      \"line\": 13,\n      \"column\": 25,\n      \"stop_line\": 13,\n      \"stop_column\": 25,\n      \"path\": \"src/verification_fixture/service.py\",\n      \"code\": -2,\n      \"name\": \"parse-error\",\n      \"description\": \"Parse error: f-string: unterminated string\",\n      \"concise_description\": \"Parse error: f-string: unterminated string\",\n      \"severity\": \"error\"\n    }\n  ]\n}"
+    },
+    {
+      "baseline_exit_code": 0,
+      "baseline_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-SYNTAX-001-basic-clean/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
+      "baseline_stdout": "{\n  \"errors\": []\n}",
+      "detected": true,
+      "mode": "basic",
+      "mutant_exit_code": 1,
+      "mutant_id": "PY-SYNTAX-001",
+      "mutant_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-SYNTAX-001-basic-mutant/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 1 error\n",
+      "mutant_stdout": "{\n  \"errors\": [\n    {\n      \"line\": 13,\n      \"column\": 25,\n      \"stop_line\": 13,\n      \"stop_column\": 25,\n      \"path\": \"src/verification_fixture/service.py\",\n      \"code\": -2,\n      \"name\": \"parse-error\",\n      \"description\": \"Parse error: f-string: unterminated string\",\n      \"concise_description\": \"Parse error: f-string: unterminated string\",\n      \"severity\": \"error\"\n    }\n  ]\n}"
+    },
+    {
+      "baseline_exit_code": 0,
+      "baseline_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-SYNTAX-001-default-clean/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
+      "baseline_stdout": "{\n  \"errors\": []\n}",
+      "detected": true,
+      "mode": "default",
+      "mutant_exit_code": 1,
+      "mutant_id": "PY-SYNTAX-001",
+      "mutant_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-SYNTAX-001-default-mutant/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 1 error\n",
+      "mutant_stdout": "{\n  \"errors\": [\n    {\n      \"line\": 13,\n      \"column\": 25,\n      \"stop_line\": 13,\n      \"stop_column\": 25,\n      \"path\": \"src/verification_fixture/service.py\",\n      \"code\": -2,\n      \"name\": \"parse-error\",\n      \"description\": \"Parse error: f-string: unterminated string\",\n      \"concise_description\": \"Parse error: f-string: unterminated string\",\n      \"severity\": \"error\"\n    }\n  ]\n}"
+    },
+    {
+      "baseline_exit_code": 0,
+      "baseline_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-TYPE-ARG-001-no_config-clean/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\nNo `pyrefly.toml` found \u2014 using preset `basic`.\nRun `pyrefly init` to continue setting up Pyrefly.\nDocs: https://pyrefly.org/en/docs/installation/\n",
+      "baseline_stdout": "{\n  \"errors\": []\n}",
+      "detected": false,
+      "mode": "no_config",
+      "mutant_exit_code": 0,
+      "mutant_id": "PY-TYPE-ARG-001",
+      "mutant_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-TYPE-ARG-001-no_config-mutant/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\nNo `pyrefly.toml` found \u2014 using preset `basic`.\nRun `pyrefly init` to continue setting up Pyrefly.\nDocs: https://pyrefly.org/en/docs/installation/\n",
+      "mutant_stdout": "{\n  \"errors\": []\n}"
+    },
+    {
+      "baseline_exit_code": 0,
+      "baseline_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-TYPE-ARG-001-basic-clean/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
+      "baseline_stdout": "{\n  \"errors\": []\n}",
+      "detected": false,
+      "mode": "basic",
+      "mutant_exit_code": 0,
+      "mutant_id": "PY-TYPE-ARG-001",
+      "mutant_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-TYPE-ARG-001-basic-mutant/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
+      "mutant_stdout": "{\n  \"errors\": []\n}"
+    },
+    {
+      "baseline_exit_code": 0,
+      "baseline_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-TYPE-ARG-001-default-clean/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
+      "baseline_stdout": "{\n  \"errors\": []\n}",
+      "detected": true,
+      "mode": "default",
+      "mutant_exit_code": 1,
+      "mutant_id": "PY-TYPE-ARG-001",
+      "mutant_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-TYPE-ARG-001-default-mutant/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 1 error\n",
+      "mutant_stdout": "{\n  \"errors\": [\n    {\n      \"line\": 25,\n      \"column\": 33,\n      \"stop_line\": 25,\n      \"stop_column\": 38,\n      \"path\": \"src/verification_fixture/service.py\",\n      \"code\": -2,\n      \"name\": \"bad-argument-type\",\n      \"description\": \"Argument `Literal['100']` is not assignable to parameter `amount` with type `float` in function `calculate_total`\",\n      \"concise_description\": \"Argument `Literal['100']` is not assignable to parameter `amount` with type `float` in function `calculate_total`\",\n      \"severity\": \"error\"\n    }\n  ]\n}"
+    },
+    {
+      "baseline_exit_code": 0,
+      "baseline_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-TYPE-RETURN-001-no_config-clean/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\nNo `pyrefly.toml` found \u2014 using preset `basic`.\nRun `pyrefly init` to continue setting up Pyrefly.\nDocs: https://pyrefly.org/en/docs/installation/\n",
+      "baseline_stdout": "{\n  \"errors\": []\n}",
+      "detected": false,
+      "mode": "no_config",
+      "mutant_exit_code": 0,
+      "mutant_id": "PY-TYPE-RETURN-001",
+      "mutant_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-TYPE-RETURN-001-no_config-mutant/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\nNo `pyrefly.toml` found \u2014 using preset `basic`.\nRun `pyrefly init` to continue setting up Pyrefly.\nDocs: https://pyrefly.org/en/docs/installation/\n",
+      "mutant_stdout": "{\n  \"errors\": []\n}"
+    },
+    {
+      "baseline_exit_code": 0,
+      "baseline_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-TYPE-RETURN-001-basic-clean/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
+      "baseline_stdout": "{\n  \"errors\": []\n}",
+      "detected": false,
+      "mode": "basic",
+      "mutant_exit_code": 0,
+      "mutant_id": "PY-TYPE-RETURN-001",
+      "mutant_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-TYPE-RETURN-001-basic-mutant/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
+      "mutant_stdout": "{\n  \"errors\": []\n}"
+    },
+    {
+      "baseline_exit_code": 0,
+      "baseline_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-TYPE-RETURN-001-default-clean/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
+      "baseline_stdout": "{\n  \"errors\": []\n}",
+      "detected": true,
+      "mode": "default",
+      "mutant_exit_code": 1,
+      "mutant_id": "PY-TYPE-RETURN-001",
+      "mutant_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-TYPE-RETURN-001-default-mutant/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 1 error\n",
+      "mutant_stdout": "{\n  \"errors\": [\n    {\n      \"line\": 13,\n      \"column\": 12,\n      \"stop_line\": 13,\n      \"stop_column\": 17,\n      \"path\": \"src/verification_fixture/service.py\",\n      \"code\": -2,\n      \"name\": \"bad-return\",\n      \"description\": \"Returned type `float` is not assignable to declared return type `str`\",\n      \"concise_description\": \"Returned type `float` is not assignable to declared return type `str`\",\n      \"severity\": \"error\"\n    }\n  ]\n}"
+    },
+    {
+      "baseline_exit_code": 0,
+      "baseline_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-NAME-001-no_config-clean/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\nNo `pyrefly.toml` found \u2014 using preset `basic`.\nRun `pyrefly init` to continue setting up Pyrefly.\nDocs: https://pyrefly.org/en/docs/installation/\n",
+      "baseline_stdout": "{\n  \"errors\": []\n}",
+      "detected": true,
+      "mode": "no_config",
+      "mutant_exit_code": 1,
+      "mutant_id": "PY-NAME-001",
+      "mutant_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-NAME-001-no_config-mutant/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 1 error\nNo `pyrefly.toml` found \u2014 using preset `basic`.\nRun `pyrefly init` to continue setting up Pyrefly.\nDocs: https://pyrefly.org/en/docs/installation/\n",
+      "mutant_stdout": "{\n  \"errors\": [\n    {\n      \"line\": 17,\n      \"column\": 12,\n      \"stop_line\": 17,\n      \"stop_column\": 25,\n      \"path\": \"src/verification_fixture/service.py\",\n      \"code\": -2,\n      \"name\": \"unknown-name\",\n      \"description\": \"Could not find name `missing_count`\",\n      \"concise_description\": \"Could not find name `missing_count`\",\n      \"severity\": \"error\"\n    }\n  ]\n}"
+    },
+    {
+      "baseline_exit_code": 0,
+      "baseline_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-NAME-001-basic-clean/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
+      "baseline_stdout": "{\n  \"errors\": []\n}",
+      "detected": true,
+      "mode": "basic",
+      "mutant_exit_code": 1,
+      "mutant_id": "PY-NAME-001",
+      "mutant_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-NAME-001-basic-mutant/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 1 error\n",
+      "mutant_stdout": "{\n  \"errors\": [\n    {\n      \"line\": 17,\n      \"column\": 12,\n      \"stop_line\": 17,\n      \"stop_column\": 25,\n      \"path\": \"src/verification_fixture/service.py\",\n      \"code\": -2,\n      \"name\": \"unknown-name\",\n      \"description\": \"Could not find name `missing_count`\",\n      \"concise_description\": \"Could not find name `missing_count`\",\n      \"severity\": \"error\"\n    }\n  ]\n}"
+    },
+    {
+      "baseline_exit_code": 0,
+      "baseline_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-NAME-001-default-clean/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
+      "baseline_stdout": "{\n  \"errors\": []\n}",
+      "detected": true,
+      "mode": "default",
+      "mutant_exit_code": 1,
+      "mutant_id": "PY-NAME-001",
+      "mutant_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-NAME-001-default-mutant/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 1 error\n",
+      "mutant_stdout": "{\n  \"errors\": [\n    {\n      \"line\": 17,\n      \"column\": 12,\n      \"stop_line\": 17,\n      \"stop_column\": 25,\n      \"path\": \"src/verification_fixture/service.py\",\n      \"code\": -2,\n      \"name\": \"unknown-name\",\n      \"description\": \"Could not find name `missing_count`\",\n      \"concise_description\": \"Could not find name `missing_count`\",\n      \"severity\": \"error\"\n    }\n  ]\n}"
+    },
+    {
+      "baseline_exit_code": 0,
+      "baseline_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-ASYNC-001-no_config-clean/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\nNo `pyrefly.toml` found \u2014 using preset `basic`.\nRun `pyrefly init` to continue setting up Pyrefly.\nDocs: https://pyrefly.org/en/docs/installation/\n",
+      "baseline_stdout": "{\n  \"errors\": []\n}",
+      "detected": false,
+      "mode": "no_config",
+      "mutant_exit_code": 0,
+      "mutant_id": "PY-ASYNC-001",
+      "mutant_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-ASYNC-001-no_config-mutant/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\nNo `pyrefly.toml` found \u2014 using preset `basic`.\nRun `pyrefly init` to continue setting up Pyrefly.\nDocs: https://pyrefly.org/en/docs/installation/\n",
+      "mutant_stdout": "{\n  \"errors\": []\n}"
+    },
+    {
+      "baseline_exit_code": 0,
+      "baseline_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-ASYNC-001-basic-clean/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
+      "baseline_stdout": "{\n  \"errors\": []\n}",
+      "detected": false,
+      "mode": "basic",
+      "mutant_exit_code": 0,
+      "mutant_id": "PY-ASYNC-001",
+      "mutant_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-ASYNC-001-basic-mutant/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
+      "mutant_stdout": "{\n  \"errors\": []\n}"
+    },
+    {
+      "baseline_exit_code": 0,
+      "baseline_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-ASYNC-001-default-clean/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
+      "baseline_stdout": "{\n  \"errors\": []\n}",
+      "detected": true,
+      "mode": "default",
+      "mutant_exit_code": 1,
+      "mutant_id": "PY-ASYNC-001",
+      "mutant_stderr": " INFO Found `/tmp/pyrefly-preset-calibration-tc1k6jr1/PY-ASYNC-001-default-mutant/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 1 error\n",
+      "mutant_stdout": "{\n  \"errors\": [\n    {\n      \"line\": 22,\n      \"column\": 12,\n      \"stop_line\": 22,\n      \"stop_column\": 21,\n      \"path\": \"src/verification_fixture/service.py\",\n      \"code\": -2,\n      \"name\": \"unsupported-operation\",\n      \"description\": \"`+` is not supported between `Coroutine[Unknown, Unknown, int]` and `Literal[1]`\\n  Argument `Coroutine[Unknown, Unknown, int]` is not assignable to parameter `value` with type `int` in function `int.__radd__`\",\n      \"concise_description\": \"`+` is not supported between `Coroutine[Unknown, Unknown, int]` and `Literal[1]`\",\n      \"severity\": \"error\"\n    }\n  ]\n}"
+    }
+  ],
+  "schema_version": 1,
+  "summary": {
+    "basic": {
+      "clean_baselines": 5,
+      "detected": 2,
+      "detected_ids": [
+        "PY-NAME-001",
+        "PY-SYNTAX-001"
+      ],
+      "in_scope": 5,
+      "missed_ids": [
+        "PY-ASYNC-001",
+        "PY-TYPE-ARG-001",
+        "PY-TYPE-RETURN-001"
+      ]
+    },
+    "default": {
+      "clean_baselines": 5,
+      "detected": 5,
+      "detected_ids": [
+        "PY-ASYNC-001",
+        "PY-NAME-001",
+        "PY-SYNTAX-001",
+        "PY-TYPE-ARG-001",
+        "PY-TYPE-RETURN-001"
+      ],
+      "in_scope": 5,
+      "missed_ids": []
+    },
+    "no_config": {
+      "clean_baselines": 5,
+      "detected": 2,
+      "detected_ids": [
+        "PY-NAME-001",
+        "PY-SYNTAX-001"
+      ],
+      "in_scope": 5,
+      "missed_ids": [
+        "PY-ASYNC-001",
+        "PY-TYPE-ARG-001",
+        "PY-TYPE-RETURN-001"
+      ]
+    }
+  }
+}
