@@ -1,8 +1,8 @@
 {
-  "blocked_on": "missing_harness_input:harness.py",
+  "blocked_on": "fixture_amendment_v2.1_revalidation",
   "comparison_started": false,
-  "last_transition": "design_frozen->fixtures_frozen",
-  "phase": "fixtures_frozen",
+  "last_transition": "fixtures_frozen->design_frozen_for_v2.1_amendment",
+  "phase": "design_frozen",
   "publication_authorized": false,
   "real_repo_sample_frozen": false,
   "schema_version": 1
