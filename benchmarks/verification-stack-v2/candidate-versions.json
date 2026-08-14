@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "checked_at": "2026-08-15",
   "selection_rule": "Current stable registry release at execution time, except explicitly preregistered Beta/Experimental challengers. Registry/package metadata is provenance only, not evidence of benchmark quality.",
   "candidates": {
@@ -24,6 +24,19 @@
     "prek": {"version": "0.4.13", "channel": "stable", "source": "https://pypi.org/project/prek/"},
     "nx": {"version": "23.1.0", "channel": "stable", "source": "https://www.npmjs.com/package/nx"},
     "turbo": {"version": "2.10.6", "channel": "stable", "source": "https://www.npmjs.com/package/turbo"}
+  },
+  "environment_profiles": {
+    "ts7": {
+      "typescript": "7.0.2",
+      "purpose": "current stable compiler baseline and Oxlint type-aware supported path"
+    },
+    "typescript_eslint": {
+      "typescript": "6.0.3",
+      "eslint": "10.8.0",
+      "typescript-eslint": "8.65.0",
+      "purpose": "latest stable TypeScript inside the current official typescript-eslint >=4.8.4 <6.1.0 support range",
+      "source": "https://typescript-eslint.io/users/dependency-versions/"
+    }
   },
   "experimental_roles": {
     "oxlint_type_check": {
