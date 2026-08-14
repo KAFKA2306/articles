@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-08-15",
+  "selection_rule": "Current stable registry release at execution time, except explicitly preregistered Beta/Experimental challengers. Registry/package metadata is provenance only, not evidence of benchmark quality.",
+  "candidates": {
+    "ruff": {"version": "0.16.3", "channel": "stable", "source": "https://pypi.org/project/ruff/"},
+    "black": {"version": "26.5.1", "channel": "stable", "source": "https://pypi.org/project/black/"},
+    "isort": {"version": "8.0.1", "channel": "stable", "source": "https://pypi.org/project/isort/"},
+    "flake8": {"version": "7.3.0", "channel": "stable", "source": "https://pypi.org/project/flake8/"},
+    "pyrefly": {"version": "1.2.0", "channel": "stable", "source": "https://pypi.org/project/pyrefly/"},
+    "ty": {"version": "0.0.71", "channel": "beta", "source": "https://pypi.org/project/ty/"},
+    "pyright": {"version": "1.1.411", "channel": "stable", "source": "https://www.npmjs.com/package/pyright"},
+    "mypy": {"version": "2.3.0", "channel": "stable", "source": "https://pypi.org/project/mypy/"},
+    "pydantic": {"version": "2.13.4", "channel": "stable", "source": "https://pypi.org/project/pydantic/"},
+    "biome": {"version": "2.5.6", "channel": "stable", "package": "@biomejs/biome", "source": "https://www.npmjs.com/package/@biomejs/biome"},
+    "prettier": {"version": "3.9.6", "channel": "stable", "source": "https://www.npmjs.com/package/prettier"},
+    "oxlint": {"version": "1.76.0", "channel": "stable", "source": "https://www.npmjs.com/package/oxlint"},
+    "eslint": {"version": "10.8.0", "channel": "stable", "source": "https://www.npmjs.com/package/eslint"},
+    "typescript-eslint": {"version": "8.65.0", "channel": "stable", "source": "https://www.npmjs.com/package/typescript-eslint"},
+    "typescript": {"version": "7.0.2", "channel": "stable", "source": "https://www.npmjs.com/package/typescript"},
+    "zod": {"version": "4.4.3", "channel": "stable", "source": "https://www.npmjs.com/package/zod"},
+    "pre-commit": {"version": "4.6.0", "channel": "stable", "source": "https://pypi.org/project/pre-commit/"},
+    "prek": {"version": "0.4.13", "channel": "stable", "source": "https://pypi.org/project/prek/"},
+    "nx": {"version": "23.1.0", "channel": "stable", "source": "https://www.npmjs.com/package/nx"},
+    "turbo": {"version": "2.10.6", "channel": "stable", "source": "https://www.npmjs.com/package/turbo"}
+  },
+  "experimental_roles": {
+    "oxlint_type_check": {
+      "candidate": "oxlint",
+      "version": "1.76.0",
+      "status": "experimental",
+      "source": "https://oxc.rs/docs/guide/usage/linter/config-file-reference",
+      "note": "Protocol permits this only as an Experimental challenger; it cannot become the default compiler/type authority under the preregistered disqualifier while this role remains experimental."
+    }
+  }
+}
