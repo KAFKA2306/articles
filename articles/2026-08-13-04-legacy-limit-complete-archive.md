@@ -1,5 +1,5 @@
 ---
-title: "60件引数を残しても、公開一覧は60件で切らない"
+title: "APIは壊れていないのに、61件目が消える。互換性を守りながら「全部見える」を取り戻す"
 emoji: "📚"
 type: "tech"
 topics: ["api", "pagination", "typescript", "architecture"]
@@ -7,135 +7,122 @@ published: false
 published_at: 2026-08-13 23:03
 ---
 
-APIの互換性を守るために古い `limit=60` 引数を残したまま、公開アーカイブ全件取得へ移行したい。ここで素直に `slice(0, 60)` を残すと、呼び出し元は壊れなくてもデータ契約だけが古いまま残る。
+公開一覧が60件までは正常に見える。
 
-`KAFKA2306/vlog` のReader実装では、この問題を「引数の互換性」と「productionで保証する取得範囲」を分離して解いている。PR #54で全件paginationと欠落検知を共通化し、PR #55で既存の `60` 引数を互換面として残しながら、production/default pathでは公開アーカイブを切り詰めない実装へ変更した。
+61件目が増えた瞬間、何もエラーを出さずに消える。
 
-一次情報:
+APIも落ちない。既存callerも壊れない。テストも60件以下ならgreenのまま。
 
-- https://github.com/KAFKA2306/vlog/pull/54
-- https://github.com/KAFKA2306/vlog/pull/55
-- https://github.com/KAFKA2306/vlog/blob/4bec2f9d04fa12b0b469cc0a3dc68ec6593d58b8/apps/reader/lib/public-archive.ts
-- https://github.com/KAFKA2306/vlog/blob/4bec2f9d04fa12b0b469cc0a3dc68ec6593d58b8/apps/reader/lib/novels-complete.ts
-- https://github.com/KAFKA2306/vlog/blob/5897543bc432c59e440d09c1a3f8712663419422/apps/reader/tests/public-archive.test.ts
-- https://github.com/PostgREST/postgrest/blob/main/docs/references/api/pagination_count.rst
+利用者から見ると、**「全部見える」と思っていた一覧が静かに欠ける。**
 
-## 1. 問題
+`KAFKA2306/vlog` では、以前から残っていた `limit=60` という互換引数と、新しい「公開対象をすべて列挙する」というproduct contractを分離した。
 
-実際の状況は次のようなものだった。
+- PR #54: https://github.com/KAFKA2306/vlog/pull/54
+- PR #55: https://github.com/KAFKA2306/vlog/pull/55
+- archive reader: https://github.com/KAFKA2306/vlog/blob/4bec2f9d04fa12b0b469cc0a3dc68ec6593d58b8/apps/reader/lib/public-archive.ts
+- complete reader: https://github.com/KAFKA2306/vlog/blob/4bec2f9d04fa12b0b469cc0a3dc68ec6593d58b8/apps/reader/lib/novels-complete.ts
+
+この記事で扱うのはpaginationの実装方法ではない。
+
+**古い呼び出し元を壊さず、利用者へは現在のproduct promiseどおりの完全な結果を返す移行方法**について書く。
+
+## 古い引数が、新しいUXを縛っていた
+
+既存コードには、次のような呼び出しがあった。
 
 ```ts
 const items = await getPublicNovels(60)
 ```
 
-この呼び出しは既存コードやテストから見れば安定している。しかし、公開Readerの要件が「最新60件」から「公開対象をすべて列挙する」に変わったあとも `60` をそのまま取得上限として使うと、61件目以降は静かに消える。
+以前の要件が「最新60件」なら正しい。
 
-壊れた例は、互換性のために残した引数をそのまま新しい意味契約にも適用する実装である。
+しかし要件が、
 
-```ts
-export async function getPublicNovels(limit = 60) {
-  const rows = await fetchRows({ limit })
-  return rows
-}
+```text
+公開対象をすべて一覧する
 ```
 
-このコードは例外を出さない。60件以下の環境ではテストも通りやすい。そのため、データ件数が閾値を超えた瞬間に初めて欠落が見える。
+へ変わったあとも、`60` をそのまま取得上限として使えば61件目以降は消える。
 
-## 2. 原因
+ここで厄介なのは、**後方互換を守った結果としてproduct semanticsだけが古いまま残る**ことだ。
 
-原因は、**呼び出しシグネチャの互換性**と**取得結果の意味契約**を同じものとして扱ったことにある。
+## signature compatibilityとproduct semanticsを分ける
 
-`limit` 引数には少なくとも2つの役割があり得る。
+`limit` には2つの意味が混ざっていた。
 
-1. 呼び出し元を壊さないための互換面
-2. 実際に返すデータ量を決める業務仕様
+1. 既存callerを壊さないためのAPI surface
+2. 実際に返す件数を制限する業務仕様
 
-仕様変更後もこの2つを結び付けたままだと、古い既定値が新しいproduction semanticsへ侵入する。
+要件変更後は、この2つを切り離した。
 
-`vlog` PR #54では先に共通の全件取得contractを作り、`Prefer: count=exact` と `Content-Range` の総件数を使ってpagination完了条件を検証するようにした。さらにprivate row、公開開始日前、重複ID、総件数drift、missing pageを失敗扱いにしている。PostgREST公式ドキュメントも、paginationとcountを組み合わせて全rowを辿れること、`Prefer: count=exact` でtotal countを `Content-Range` に含められることを明記している。
+```text
+legacy argument
+  └─ caller compatibilityのため残す
 
-## 3. 設計判断と代替案
-
-代替案は3つある。
-
-### 案A: `limit=60` を削除する
-
-最もきれいだが、既存呼び出し元とテストを一斉に直す必要がある。変更範囲が大きく、機能変更とAPI破壊が同時に起こる。
-
-### 案B: `limit=60` を残し、そのまま切り詰める
-
-互換性は高いが、新しい「完全な公開アーカイブ」という要件を満たさない。最も危険なのは、失敗ではなく部分成功になる点である。
-
-### 案C: 引数は残すがproduction pathでは意味を切り離す
-
-`vlog` PR #55はこの形を採用している。Diary側は `_legacyLimit?: number` として受け取るが、remote public archiveが取れた場合は全件を返す。Novel側も、既存のinjected fetchテストではlegacy limitを維持しつつ、default production fetchでは共通のcomplete archive readerへ流す。
-
-この設計の利点は、**互換性移行と意味契約移行を別々に進められること**である。
-
-## 4. 実装
-
-最小形にすると、境界は次のようになる。
-
-```ts
-type FetchLike = typeof fetch
-
-async function fetchAllPublicRows(): Promise<Row[]> {
-  const out: Row[] = []
-  let expectedTotal: number | null = null
-  let offset = 0
-  const pageSize = 250
-
-  while (expectedTotal === null || out.length < expectedTotal) {
-    const response = await fetch(
-      `/rest/v1/items?order=date.desc,id.asc&limit=${pageSize}&offset=${offset}`,
-      { headers: { Prefer: 'count=exact' } },
-    )
-    if (!response.ok) throw new Error(`request failed: ${response.status}`)
-
-    const total = parseExactCount(response.headers.get('content-range'))
-    if (expectedTotal === null) expectedTotal = total
-    else if (total !== expectedTotal) throw new Error('count drift')
-
-    const rows = await response.json() as Row[]
-    if (rows.length === 0) break
-    out.push(...rows)
-    offset += rows.length
-  }
-
-  if (expectedTotal === null || out.length !== expectedTotal) {
-    throw new Error(`incomplete archive: expected ${expectedTotal}, got ${out.length}`)
-  }
-  return out
-}
-
-export async function getItems(
-  legacyLimit = 60,
-  fetchImpl: FetchLike = fetch,
-) {
-  if (fetchImpl !== fetch) return fetchLegacyRows(legacyLimit, fetchImpl)
-  return fetchAllPublicRows()
-}
+production semantics
+  └─ complete public archiveを返す
 ```
 
-重要なのは `_legacyLimit` という名前そのものではない。**production pathがその値を取得上限として解釈しない**ことがcontractである。
+PR #55では、legacy引数を受け取る面を残しつつ、default production pathではその値を最終truncateへ使わない形へ移行している。
 
-### 改善後の例
+**引数を残すことと、その古い意味を残すことは同じではない。**
 
-公開対象が83件あり、既存callerが `getItems(60)` を呼んでいても、production/default pathでは83件を返す。一方、既存unit testがinjected fetchで60件上限を前提としているなら、そのテスト用互換経路だけは段階的に維持できる。
+## complete fetchは「複数page取れた」だけでは足りない
 
-## 5. 検証
+PR #54では、まず下位層へcomplete archive contractを作った。
 
-「60件を超えても返る」だけでは不十分である。完全取得contractなら、欠落を成功として返さないことまで検証する。
+`Prefer: count=exact` と `Content-Range` のtotalを使い、期待件数までpageを辿る。
 
-`vlog` PR #54のtestではDiary/Novelの両方について、件数0〜17、page size 1〜5を組み合わせて全IDが1回ずつ返ることを確認している。さらに次のnegative caseを独立fixtureにしている。
+しかし本当に守りたいのは、loopが回ったことではない。
 
-- private rowが混じったらreject
-- 公開開始日前のrowが混じったらreject
-- page間でduplicate IDが出たらreject
-- missing pageならpartial resultを返さずreject
-- countがpagination途中で変わったらreject
+```text
+期待total = 83
+取得total = 83
+duplicate = 0
+missing page = 0
+invalid/private row = 0
+```
 
-読者向けの最小テストなら、少なくとも境界値を3つ置く。
+まで確認して初めてcompleteと扱う。
+
+途中pageが空なら、取れた分だけを返さない。
+
+countが途中で変われば止める。
+
+duplicate IDがあれば止める。
+
+**部分成功を「全件取得成功」にしない。**
+
+## 下位paginationが正しくても、最後のsliceで全部壊れる
+
+ここが実装上の重要な学びだった。
+
+下位のarchive readerが83件を正しく返しても、上位callerが最後に、
+
+```ts
+return rows.slice(0, 60)
+```
+
+としていれば、利用者には60件しか見えない。
+
+PR #54でcomplete paginationを作ったあとも、上位のlegacy truncate pointが残っていたため、PR #55でproduction pathから外した。
+
+つまり完全取得は、
+
+```text
+fetch layer
+adapter layer
+reader layer
+UI loader
+```
+
+のどこか1つだけ見ても証明できない。
+
+**最終的に利用者へ返る配列までcontractを追う必要がある。**
+
+## 59 / 60 / 61をtestするだけで、静かな欠落を捕まえやすい
+
+境界値testは単純だ。
 
 ```ts
 for (const count of [59, 60, 61]) {
@@ -145,41 +132,90 @@ for (const count of [59, 60, 61]) {
 }
 ```
 
-61件で初めて失敗する実装を、この1行追加で捕まえられる。
+60までしかtestしなければ、旧仕様の上限とtest datasetが偶然一致してしまう。
 
-## 6. 失敗と学び
+61を1件足すだけで、古いtruncateが見える。
 
-最初にpaginationを正しく作っても、上位callerが最後に `slice(0, 60)` していれば完全取得にはならない。
+この種のcontractでは、通常ケースを増やすより**境界の外へ1歩出るfixture**が効く。
 
-実際、PR #54では共通archive readerが全件取得を実装した一方、Diary callerには引数によるsliceが残り、Novelには独立した `limit=60` pathが残っていた。PR #55の目的は、その残存truncate pointをproduction/default pathから外すことだった。
+## 利用者が欲しいのは「API互換」ではなく「欠けていない」こと
 
-ここから得られる学びは、**下位層のpagination correctnessだけをテストしても、product contractは保証できない**ということだ。取得層、adapter層、UI loader層のどこか1か所に固定上限が残れば、ユーザーから見える結果は欠ける。
+開発者には、
 
-また `count=exact` 自体にもコストがある。PostgREST公式ドキュメントは大きなtableではexact countが遅くなり得ると説明している。そのため、これは常に最適なpagination方式という主張ではない。今回の設計判断は「公開アーカイブを完全列挙し、欠落をfail-closeしたい」という要件に対するものだ。
+```text
+breaking changeを避けた
+```
 
-## 7. 再現方法
+ことが重要に見える。
 
-手元で再現するなら、DBやSupabaseは不要である。fake fetchだけで確認できる。
+利用者には、
 
-1. 61件の配列を用意する。
-2. `limit=20&offset=N` を解釈して20件ずつ返すfake fetchを作る。
-3. response headerへ `Content-Range: start-end/61` を付ける。
-4. 旧実装として `getItems(60)` の最後に `slice(0, 60)` を置き、60件になることを確認する。
-5. 改善実装ではlegacy引数をproduction pathの取得上限に使わず、61件になることを確認する。
-6. 2page目を空配列へ差し替え、61件未満のpartial resultではなく例外になることを確認する。
+```text
+公開されているものが全部見える
+```
 
-確認したいのは「pagination関数が動く」ことではなく、**古い互換引数が新しい完全取得contractを再び狭めていないこと**である。
+ことの方が重要である。
 
-## まとめ
+だからmigrationの成功条件を、
 
-後方互換のために古い引数を残すことと、その引数の古い意味をproductionに残すことは別問題である。
+```text
+古いcallerがまだ動く
+```
 
-完全取得へ移行するときは、次の順序が安全だった。
+だけにしない。
 
-1. 下位層にcomplete pagination contractを作る
-2. count drift・duplicate・missing pageをfail-closeする
-3. 上位callerに残るtruncate pointを洗い出す
-4. legacy引数は互換面として残しても、production semanticsから切り離す
-5. 59/60/61のような境界値で回帰を固定する
+```text
+古いcallerも動く
+AND
+新しいproduct promiseも満たす
+```
 
-「APIは壊していないのにデータだけ欠ける」という不具合は、型や例外では見つけにくい。互換性と意味契約を別々に設計すると、この種の静かな欠落をかなり早い段階で止められる。
+へする。
+
+この2軸で見れば、互換性維持がUX退行を隠すことを防ぎやすい。
+
+## 既存APIを見直すときのチェックリスト
+
+古いdefaultやlimitが残るAPIでは、次を確認する。
+
+1. この引数は今も業務仕様なのか、単なる互換面なのか
+2. 下位層はcompleteでも上位でtruncateしていないか
+3. 0件と取得失敗を分けているか
+4. pagination途中のcount driftを検出しているか
+5. duplicate/missing pageをpartial successにしていないか
+6. 旧上限の直前・同値・直後をtestしているか
+
+特に6は安い。
+
+`59 / 60 / 61` のような3点だけでも、古い制約がproductionへ漏れているか見つけやすい。
+
+## exact countにもコストがある
+
+今回の方式が常に最適という話ではない。
+
+PostgRESTの公式documentationでも、exact countは大きなtableでコストが上がり得る。
+
+https://github.com/PostgREST/postgrest/blob/main/docs/references/api/pagination_count.rst
+
+今回それを使ったのは、**公開アーカイブを完全列挙し、欠落をfail-closeしたい**という要件があったからだ。
+
+性能が主目的なら、別のpagination contractを選ぶこともある。
+
+設計手段よりproduct promiseを先に置く。
+
+## この変更で守ったのはコードではなく、一覧への信頼だった
+
+古い `limit=60` を削除してbreaking changeにする必要はなかった。
+
+同時に、60件という古い意味まで残す必要もなかった。
+
+- caller compatibilityは残す
+- complete archive semanticsへ移す
+- partial resultは返さない
+- boundary testで61件目を守る
+
+この分離で、**APIを壊さずに「全部見える」体験を更新できた。**
+
+後方互換を守るとき、本当に守るべきなのは古いコードの形だけではない。
+
+現在の利用者に何を約束しているかも、同じくらい重要だった。
