@@ -1,8 +1,9 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "outcome": "article_candidate_ready",
-  "selected_candidate": "release-status-is-not-correctness-proof",
+  "selected_candidate": "configuration-is-part-of-authority",
   "candidate_path": "articles/2026-08-15-stable-is-not-correctness-proof.md",
-  "selection_reason": "It is the only proposition that survives the preregistered story gate without turning a small controlled corpus or unknown-ground-truth real repository into a universal product ranking.",
-  "counterfactual": "If the stable candidate had covered the frozen ground truth while the Beta challenger missed required mutants, the article would not argue that release status and semantic authority must be separated on this evidence."
+  "selection_reason": "It is the only surviving proposition that directly explains the repaired controlled evidence without converting a five-mutant corpus into a universal product ranking: the same Pyrefly 1.2.0 execution changed from 2/5 under basic to 5/5 under default, so preset/configuration must be part of the authority contract.",
+  "counterfactual": "If basic and default had produced the same frozen-corpus outcome, or if the old 2/5 result persisted after configuration was held constant, this proposition would not be selected.",
+  "publication_authorized": false
 }
