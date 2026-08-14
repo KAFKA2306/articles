@@ -1,0 +1,75 @@
+name: Verification Stack v2 Resolve Candidate Versions
+
+on:
+  push:
+    branches:
+      - experiment/verification-stack-v2-ground-truth
+    paths:
+      - ".github/workflows/verification-stack-v2-resolve-versions.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - name: Resolve current registry versions without running candidates
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, urllib.request
+          pkgs = ["ruff", "black", "isort", "flake8", "pyrefly", "ty", "mypy", "pydantic", "prek", "pre-commit"]
+          out = {"python": {}}
+          for pkg in pkgs:
+              with urllib.request.urlopen(f"https://pypi.org/pypi/{pkg}/json", timeout=30) as r:
+                  out["python"][pkg] = json.load(r)["info"]["version"]
+          print("PYPI_VERSIONS=" + json.dumps(out["python"], sort_keys=True))
+          with open("/tmp/pypi.json", "w", encoding="utf-8") as f:
+              json.dump(out["python"], f, indent=2, sort_keys=True)
+          PY
+          node - <<'JS'
+          const { execFileSync } = require('child_process');
+          const pkgs = [
+            'pyright', '@biomejs/biome', 'prettier', 'oxlint', 'eslint',
+            'typescript-eslint', 'typescript', 'zod', 'nx', 'turbo'
+          ];
+          const out = {};
+          for (const pkg of pkgs) {
+            out[pkg] = execFileSync('npm', ['view', pkg, 'version'], {encoding:'utf8'}).trim();
+          }
+          console.log('NPM_VERSIONS=' + JSON.stringify(out));
+          require('fs').writeFileSync('/tmp/npm.json', JSON.stringify(out, null, 2));
+          JS
+          python - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          pypi = json.load(open('/tmp/pypi.json', encoding='utf-8'))
+          npm = json.load(open('/tmp/npm.json', encoding='utf-8'))
+          out = {
+              "schema_version": 1,
+              "resolved_at_utc": datetime.now(timezone.utc).isoformat(),
+              "source_policy": "official package registries only; resolved before candidate comparison",
+              "python": pypi,
+              "npm": npm,
+          }
+          print("CANDIDATE_VERSIONS_JSON_BEGIN")
+          print(json.dumps(out, indent=2, sort_keys=True))
+          print("CANDIDATE_VERSIONS_JSON_END")
+          with open('/tmp/candidate-versions.json', 'w', encoding='utf-8') as f:
+              json.dump(out, f, indent=2, sort_keys=True)
+              f.write('\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: candidate-versions
+          path: /tmp/candidate-versions.json
