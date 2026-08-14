@@ -157,8 +157,6 @@ def cache_invalidation(candidate: str, parent: Path) -> dict[str, Any]:
     reference_run = build(candidate, reference, force=True)
     reference_hashes = output_hashes(reference)
     expected_changed = {"core", "ui", "web", "api"}
-    initial_hashes = output_hashes(make_workspace(parent, f"invalidate-initial-ref-{candidate}"))
-    # The extra baseline copy above has no outputs; determine changed set from a separate clean force build.
     baseline_ref = make_workspace(parent, f"invalidate-baseline-{candidate}")
     baseline_run = build(candidate, baseline_ref, force=True)
     baseline_hashes = output_hashes(baseline_ref)
@@ -196,7 +194,7 @@ def main() -> None:
 
     boundary = {
         "mutant_id": "WS-BOUNDARY-001",
-        "scored_head_to_head": false,
+        "scored_head_to_head": False,
         "nx": {"status": "adjunct_required", "reason": "official OSS enforcement requires ESLint + @nx/enforce-module-boundaries; language-agnostic Conformance requires Nx Enterprise"},
         "turbo": {"status": "experimental", "reason": "turbo boundaries and tags are officially Experimental"},
     }
