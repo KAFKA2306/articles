@@ -38,15 +38,24 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Assert benchmark is still pre-comparison and harness-ready
+      - name: Pin npm used for workspace metadata
+        run: npm install --global npm@10.9.2
+
+      - name: Assert normal or audited-repair controlled phase
         run: |
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           python - <<'PY'
           import json
-          p='benchmarks/verification-stack-v2/state.json'
-          s=json.load(open(p, encoding='utf-8'))
-          assert s['phase'] == 'harness_ready', s
-          assert s['comparison_started'] is False, s
+          from pathlib import Path
+          s=json.load(open('benchmarks/verification-stack-v2/state.json', encoding='utf-8'))
+          normal=(s['phase']=='harness_ready' and s['comparison_started'] is False and s['real_repo_sample_frozen'] is False)
+          repair=(
+              s['phase']=='real_repo_sample_frozen'
+              and s['comparison_started'] is True
+              and s['real_repo_sample_frozen'] is True
+              and Path('benchmarks/verification-stack-v2/AMENDMENT-v2.4-controlled-harness-repair.md').is_file()
+          )
+          assert normal or repair, s
           assert s['publication_authorized'] is False, s
           PY
           python benchmarks/verification-stack-v2/harness.py --validate-only
@@ -99,7 +108,7 @@ jobs:
           JS
           npm install --ignore-scripts --no-save $(cat /tmp/npm-eslint-specs.txt)
 
-      - name: Prepare package-manager workspace metadata without changing frozen sources
+      - name: Prepare deterministic workspace metadata
         working-directory: benchmarks/verification-stack-v2/workspace
         run: npm install --package-lock-only --ignore-scripts
 
@@ -115,6 +124,7 @@ jobs:
           eslint_bin=root/'profiles/typescript-eslint/node_modules/.bin'
           value={
             'trigger_sha': cmd('git','rev-parse','HEAD'),
+            'npm': cmd('npm','--version'),
             'python': {
               'ruff': cmd('ruff','--version'), 'black': cmd('black','--version').splitlines()[0],
               'pyrefly': cmd('pyrefly','--version'), 'ty': cmd('ty','--version'),
@@ -134,16 +144,32 @@ jobs:
           PY
 
       - name: Run source, type, lint, formatter and runtime boundary corpus
-        run: python benchmarks/verification-stack-v2/controlled_source_runner.py
+        run: |
+          if test -f benchmarks/verification-stack-v2/AMENDMENT-v2.4-controlled-harness-repair.md; then
+            python benchmarks/verification-stack-v2/controlled_source_repair_runner.py
+          else
+            python benchmarks/verification-stack-v2/controlled_source_runner.py
+          fi
 
       - name: Run pre-commit versus prek patch-parity corpus
         run: python benchmarks/verification-stack-v2/controlled_hook_runner.py
 
       - name: Run Nx versus Turborepo affected/cache corpus
-        run: python benchmarks/verification-stack-v2/controlled_workspace_runner.py
+        run: |
+          if test -f benchmarks/verification-stack-v2/AMENDMENT-v2.4-controlled-harness-repair.md; then
+            python benchmarks/verification-stack-v2/controlled_workspace_repair_runner.py
+          else
+            python benchmarks/verification-stack-v2/controlled_workspace_runner.py
+          fi
 
       - name: Produce correctness-first controlled summary
         run: python benchmarks/verification-stack-v2/summarize_controlled.py
+
+      - name: Validate repaired harness without asserting a winner
+        run: |
+          if test -f benchmarks/verification-stack-v2/AMENDMENT-v2.4-controlled-harness-repair.md; then
+            python benchmarks/verification-stack-v2/validate_controlled_repair.py
+          fi
 
       - name: Advance state only because collection is complete
         run: python benchmarks/verification-stack-v2/controller.py --write-state

@@ -1,124 +1,25 @@
 {
   "schema_version": 1,
   "principle": "Adapters declare responsibility and reproducible commands only. They do not encode a winner, suppress observed failures, or reinterpret raw diagnostic counts as defects.",
+  "repair_scope_note": "v2.4 scopes source-oriented formatter/linter commands to frozen src roots so unrelated tests, configs, and installed dependencies cannot create clean-baseline failures.",
   "adapters": {
-    "ruff": {
-      "responsibility": "python_source_hygiene",
-      "packages": ["ruff"],
-      "fixture": "python",
-      "check": ["ruff", "check", "--no-cache", "--output-format=json", "."],
-      "format_check": ["ruff", "format", "--check", "--no-cache", "."]
-    },
-    "python_incumbent": {
-      "responsibility": "python_source_hygiene",
-      "packages": ["black", "isort", "flake8"],
-      "fixture": "python",
-      "check_sequence": [
-        ["black", "--check", "."],
-        ["isort", "--check-only", "."],
-        ["flake8", "."]
-      ]
-    },
-    "pyrefly": {
-      "responsibility": "python_static_type",
-      "packages": ["pyrefly"],
-      "fixture": "python",
-      "check": ["pyrefly", "check", "--output-format", "json"]
-    },
-    "ty": {
-      "responsibility": "python_static_type",
-      "packages": ["ty"],
-      "fixture": "python",
-      "check": ["ty", "check", "--output-format", "concise", "--no-progress", "."],
-      "challenger_status": "beta"
-    },
-    "pyright": {
-      "responsibility": "python_static_type",
-      "packages": ["pyright"],
-      "fixture": "python",
-      "check": ["pyright", "--outputjson", "."]
-    },
-    "mypy": {
-      "responsibility": "python_static_type",
-      "packages": ["mypy"],
-      "fixture": "python",
-      "check": ["mypy", "--show-error-codes", "--no-error-summary", "src", "tests"]
-    },
-    "pydantic": {
-      "responsibility": "python_runtime_boundary",
-      "packages": ["pydantic"],
-      "fixture": "python",
-      "mode": "contract_test",
-      "check": ["python", "-m", "unittest", "discover", "-s", "tests", "-v"]
-    },
-    "biome": {
-      "responsibility": "typescript_format",
-      "packages": ["biome"],
-      "fixture": "typescript",
-      "check": ["npx", "--no-install", "biome", "format", "."]
-    },
-    "prettier": {
-      "responsibility": "typescript_format",
-      "packages": ["prettier"],
-      "fixture": "typescript",
-      "check": ["npx", "--no-install", "prettier", "--check", "."]
-    },
-    "oxlint": {
-      "responsibility": "typescript_lint",
-      "packages": ["oxlint", "oxlint-tsgolint", "typescript"],
-      "fixture": "typescript",
-      "check": ["npx", "--no-install", "oxlint", "--type-aware", "."]
-    },
-    "eslint_typescript": {
-      "responsibility": "typescript_lint",
-      "packages": ["eslint", "typescript-eslint", "typescript"],
-      "fixture": "typescript",
-      "mode": "config_required",
-      "check": ["npx", "--no-install", "eslint", "."]
-    },
-    "typescript": {
-      "responsibility": "typescript_static_type",
-      "packages": ["typescript"],
-      "fixture": "typescript",
-      "check": ["npx", "--no-install", "tsc", "--noEmit"]
-    },
-    "oxlint_type_check": {
-      "responsibility": "typescript_static_type_experimental",
-      "packages": ["oxlint", "oxlint-tsgolint", "typescript"],
-      "fixture": "typescript",
-      "check": ["npx", "--no-install", "oxlint", "--type-aware", "--type-check", "."],
-      "challenger_status": "experimental",
-      "default_authority_eligible": false
-    },
-    "zod": {
-      "responsibility": "typescript_runtime_boundary",
-      "packages": ["zod", "typescript"],
-      "fixture": "typescript",
-      "mode": "contract_test"
-    },
-    "pre-commit": {
-      "responsibility": "hook_orchestration",
-      "packages": ["pre-commit"],
-      "fixture": "hook_corpus",
-      "check": ["pre-commit", "run", "--all-files", "--show-diff-on-failure"]
-    },
-    "prek": {
-      "responsibility": "hook_orchestration",
-      "packages": ["prek"],
-      "fixture": "hook_corpus",
-      "check": ["prek", "run", "--all-files"]
-    },
-    "nx": {
-      "responsibility": "workspace_orchestration",
-      "packages": ["nx"],
-      "fixture": "workspace",
-      "mode": "scenario_commands_required"
-    },
-    "turbo": {
-      "responsibility": "workspace_orchestration",
-      "packages": ["turbo"],
-      "fixture": "workspace",
-      "mode": "scenario_commands_required"
-    }
+    "ruff": {"responsibility":"python_source_hygiene","packages":["ruff"],"fixture":"python","check":["ruff","check","--no-cache","--output-format=json","src"],"format_check":["ruff","format","--check","--no-cache","src"]},
+    "python_incumbent": {"responsibility":"python_source_hygiene","packages":["black","isort","flake8"],"fixture":"python","check_sequence":[["black","--check","src"],["isort","--check-only","src"],["flake8","src"]]},
+    "pyrefly": {"responsibility":"python_static_type","packages":["pyrefly"],"fixture":"python","check":["pyrefly","check","--output-format","json"]},
+    "ty": {"responsibility":"python_static_type","packages":["ty"],"fixture":"python","check":["ty","check","--output-format","concise","--no-progress","src"],"challenger_status":"beta"},
+    "pyright": {"responsibility":"python_static_type","packages":["pyright"],"fixture":"python","check":["pyright","--outputjson","src"]},
+    "mypy": {"responsibility":"python_static_type","packages":["mypy"],"fixture":"python","check":["mypy","--show-error-codes","--no-error-summary","src"]},
+    "pydantic": {"responsibility":"python_runtime_boundary","packages":["pydantic"],"fixture":"python","mode":"contract_test","check":["python","-m","unittest","discover","-s","tests","-v"]},
+    "biome": {"responsibility":"typescript_format","packages":["biome"],"fixture":"typescript","check":["npx","--no-install","biome","format","src"]},
+    "prettier": {"responsibility":"typescript_format","packages":["prettier"],"fixture":"typescript","check":["npx","--no-install","prettier","--check","src"]},
+    "oxlint": {"responsibility":"typescript_lint","packages":["oxlint","oxlint-tsgolint","typescript"],"fixture":"typescript","check":["npx","--no-install","oxlint","--type-aware","src"]},
+    "eslint_typescript": {"responsibility":"typescript_lint","packages":["eslint","typescript-eslint","typescript"],"fixture":"typescript","mode":"config_required","check":["npx","--no-install","eslint","src"]},
+    "typescript": {"responsibility":"typescript_static_type","packages":["typescript"],"fixture":"typescript","check":["npx","--no-install","tsc","--noEmit"]},
+    "oxlint_type_check": {"responsibility":"typescript_static_type_experimental","packages":["oxlint","oxlint-tsgolint","typescript"],"fixture":"typescript","check":["npx","--no-install","oxlint","--type-aware","--type-check","src"],"challenger_status":"experimental","default_authority_eligible":false},
+    "zod": {"responsibility":"typescript_runtime_boundary","packages":["zod","typescript"],"fixture":"typescript","mode":"contract_test"},
+    "pre-commit": {"responsibility":"hook_orchestration","packages":["pre-commit"],"fixture":"hook_corpus","check":["pre-commit","run","--all-files","--show-diff-on-failure"]},
+    "prek": {"responsibility":"hook_orchestration","packages":["prek"],"fixture":"hook_corpus","check":["prek","run","--all-files"]},
+    "nx": {"responsibility":"workspace_orchestration","packages":["nx"],"fixture":"workspace","mode":"scenario_commands_required"},
+    "turbo": {"responsibility":"workspace_orchestration","packages":["turbo"],"fixture":"workspace","mode":"scenario_commands_required"}
   }
 }
