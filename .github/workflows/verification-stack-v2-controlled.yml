@@ -22,10 +22,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - name: Checkout canonical workline
+      - name: Checkout exact trigger SHA
         uses: actions/checkout@v4
         with:
-          ref: experiment/verification-stack-v2-ground-truth
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
       - name: Set up Python
@@ -40,6 +40,7 @@ jobs:
 
       - name: Assert benchmark is still pre-comparison and harness-ready
         run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           python - <<'PY'
           import json
           p='benchmarks/verification-stack-v2/state.json'
@@ -93,24 +94,30 @@ jobs:
         shell: bash
         run: |
           mkdir -p benchmarks/verification-stack-v2/results/controlled
-          {
-            echo '{'
-            echo '  "python": {'
-            echo "    \"ruff\": \"$(ruff --version | awk '{print $2}')\"," 
-            echo "    \"black\": \"$(black --version | head -1 | awk '{print $2}')\"," 
-            echo "    \"pyrefly\": \"$(pyrefly --version | awk '{print $2}')\"," 
-            echo "    \"ty\": \"$(ty --version | awk '{print $2}')\"," 
-            echo "    \"mypy\": \"$(mypy --version | awk '{print $2}')\"," 
-            echo "    \"prek\": \"$(prek --version | awk '{print $2}')\""
-            echo '  },'
-            echo '  "node": {'
-            echo "    \"node\": \"$(node --version)\"," 
-            echo "    \"typescript\": \"$(tsc --version | awk '{print $2}')\"," 
-            echo "    \"nx\": \"$(nx --version | tail -1 | tr -d '\r')\"," 
-            echo "    \"turbo\": \"$(turbo --version | tail -1 | tr -d '\r')\""
-            echo '  }'
-            echo '}'
-          } > benchmarks/verification-stack-v2/results/controlled/installed-versions.json
+          python - <<'PY'
+          import json, subprocess
+          def cmd(*args):
+              return subprocess.check_output(args, text=True).strip()
+          value={
+            'trigger_sha': cmd('git','rev-parse','HEAD'),
+            'python': {
+              'ruff': cmd('ruff','--version'),
+              'black': cmd('black','--version').splitlines()[0],
+              'pyrefly': cmd('pyrefly','--version'),
+              'ty': cmd('ty','--version'),
+              'mypy': cmd('mypy','--version'),
+              'prek': cmd('prek','--version'),
+            },
+            'node': {
+              'node': cmd('node','--version'),
+              'typescript': cmd('tsc','--version'),
+              'nx': cmd('nx','--version'),
+              'turbo': cmd('turbo','--version'),
+            }
+          }
+          with open('benchmarks/verification-stack-v2/results/controlled/installed-versions.json','w',encoding='utf-8') as f:
+              json.dump(value,f,indent=2,sort_keys=True); f.write('\n')
+          PY
 
       - name: Run source, type, lint, formatter and runtime boundary corpus
         run: python benchmarks/verification-stack-v2/controlled_source_runner.py
@@ -133,11 +140,18 @@ jobs:
           name: verification-stack-v2-controlled-${{ github.sha }}
           path: benchmarks/verification-stack-v2/results/controlled/
 
+      - name: Refuse to attach evidence if canonical head moved
+        shell: bash
+        run: |
+          remote_head="$(git ls-remote origin refs/heads/experiment/verification-stack-v2-ground-truth | awk '{print $1}')"
+          echo "trigger=$GITHUB_SHA remote=$remote_head"
+          test "$remote_head" = "$GITHUB_SHA"
+
       - name: Commit exact-run evidence and state
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add benchmarks/verification-stack-v2/results/controlled benchmarks/verification-stack-v2/state.json
-          git commit -m "experiment: record controlled verification evidence"
+          git commit -m "experiment: record controlled verification evidence for $GITHUB_SHA"
           git push origin HEAD:experiment/verification-stack-v2-ground-truth
