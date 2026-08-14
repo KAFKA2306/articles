@@ -9,7 +9,7 @@
     "ty": "ty 0.0.71"
   },
   "reaudit": "v2.5",
-  "trigger_sha": "d465e8200a7073b4dab5128d5a97b19fb2f4401d",
+  "trigger_sha": "f59f8c4ff09c62478d987b4b777dd01fa6a03079",
   "ts7_profile": {
     "node": "v22.23.2",
     "nx": "Nx Version:\n- Local: Not found\n- Global: v23.1.0",

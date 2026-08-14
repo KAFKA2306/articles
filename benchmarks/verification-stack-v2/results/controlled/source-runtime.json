@@ -10,7 +10,7 @@
           "--output-format=json",
           "src/verification_fixture/service.py"
         ],
-        "elapsed_ms": 6.847836,
+        "elapsed_ms": 6.939823,
         "exit_code": 0,
         "stderr": "",
         "stdout": "[]"
@@ -28,10 +28,10 @@
           "--output-format=json",
           "src/verification_fixture/service.py"
         ],
-        "elapsed_ms": 6.525568,
+        "elapsed_ms": 6.338077,
         "exit_code": 1,
         "stderr": "",
-        "stdout": "[\n  {\n    \"cell\": null,\n    \"code\": \"invalid-syntax\",\n    \"end_location\": {\n      \"column\": 25,\n      \"row\": 13\n    },\n    \"filename\": \"/tmp/verification-v2-source-531d2eyk/PY-SYNTAX-001-ruff_lint-mutant/python/src/verification_fixture/service.py\",\n    \"fix\": null,\n    \"location\": {\n      \"column\": 25,\n      \"row\": 13\n    },\n    \"message\": \"f-string: unterminated string\",\n    \"name\": \"invalid-syntax\",\n    \"noqa_row\": null,\n    \"severity\": \"error\",\n    \"url\": null\n  }\n]"
+        "stdout": "[\n  {\n    \"cell\": null,\n    \"code\": \"invalid-syntax\",\n    \"end_location\": {\n      \"column\": 25,\n      \"row\": 13\n    },\n    \"filename\": \"/tmp/verification-v2-source-zbs0813e/PY-SYNTAX-001-ruff_lint-mutant/python/src/verification_fixture/service.py\",\n    \"fix\": null,\n    \"location\": {\n      \"column\": 25,\n      \"row\": 13\n    },\n    \"message\": \"f-string: unterminated string\",\n    \"name\": \"invalid-syntax\",\n    \"noqa_row\": null,\n    \"severity\": \"error\",\n    \"url\": null\n  }\n]"
       },
       "mutant_exit_code": 1,
       "mutant_id": "PY-SYNTAX-001",
@@ -48,9 +48,9 @@
           "--output-format",
           "json"
         ],
-        "elapsed_ms": 175.343945,
+        "elapsed_ms": 221.849589,
         "exit_code": 0,
-        "stderr": " INFO Found `/tmp/verification-v2-source-531d2eyk/PY-SYNTAX-001-pyrefly-clean/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
+        "stderr": " INFO Found `/tmp/verification-v2-source-zbs0813e/PY-SYNTAX-001-pyrefly-clean/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
         "stdout": "{\n  \"errors\": []\n}"
       },
       "baseline_blocking_false_positive": false,
@@ -67,9 +67,9 @@
           "--output-format",
           "json"
         ],
-        "elapsed_ms": 180.009236,
+        "elapsed_ms": 221.676904,
         "exit_code": 1,
-        "stderr": " INFO Found `/tmp/verification-v2-source-531d2eyk/PY-SYNTAX-001-pyrefly-mutant/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 1 error\n",
+        "stderr": " INFO Found `/tmp/verification-v2-source-zbs0813e/PY-SYNTAX-001-pyrefly-mutant/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 1 error\n",
         "stdout": "{\n  \"errors\": [\n    {\n      \"line\": 13,\n      \"column\": 25,\n      \"stop_line\": 13,\n      \"stop_column\": 25,\n      \"path\": \"src/verification_fixture/service.py\",\n      \"code\": -2,\n      \"name\": \"parse-error\",\n      \"description\": \"Parse error: f-string: unterminated string\",\n      \"concise_description\": \"Parse error: f-string: unterminated string\",\n      \"severity\": \"error\"\n    }\n  ]\n}"
       },
       "mutant_exit_code": 1,
@@ -87,7 +87,7 @@
           "--no-progress",
           "."
         ],
-        "elapsed_ms": 52.168111,
+        "elapsed_ms": 58.431002,
         "exit_code": 0,
         "stderr": "",
         "stdout": "All checks passed!\n"
@@ -106,7 +106,7 @@
           "--no-progress",
           "."
         ],
-        "elapsed_ms": 60.853561,
+        "elapsed_ms": 54.170733,
         "exit_code": 1,
         "stderr": "",
         "stdout": "src/verification_fixture/service.py:13:25: error[invalid-syntax] f-string: unterminated string\nFound 1 diagnostic\n"
@@ -123,10 +123,10 @@
           "--outputjson",
           "."
         ],
-        "elapsed_ms": 1145.059236,
+        "elapsed_ms": 1546.378515,
         "exit_code": 0,
         "stderr": "",
-        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786729547517\",\n    \"generalDiagnostics\": [],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 0,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 0.952\n    }\n}\n\n"
+        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786742642671\",\n    \"generalDiagnostics\": [],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 0,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 1.277\n    }\n}\n\n"
       },
       "baseline_blocking_false_positive": false,
       "baseline_exit_code": 0,
@@ -139,10 +139,10 @@
           "--outputjson",
           "."
         ],
-        "elapsed_ms": 1146.564444,
+        "elapsed_ms": 1526.693158,
         "exit_code": 1,
         "stderr": "",
-        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786729548663\",\n    \"generalDiagnostics\": [\n        {\n            \"file\": \"/tmp/verification-v2-source-531d2eyk/PY-SYNTAX-001-pyright-mutant/python/src/verification_fixture/service.py\",\n            \"severity\": \"error\",\n            \"message\": \"String literal is unterminated\",\n            \"range\": {\n                \"start\": {\n                    \"line\": 12,\n                    \"character\": 24\n                },\n                \"end\": {\n                    \"line\": 13,\n                    \"character\": 0\n                }\n            }\n        }\n    ],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 1,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 0.953\n    }\n}\n\n"
+        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786742644198\",\n    \"generalDiagnostics\": [\n        {\n            \"file\": \"/tmp/verification-v2-source-zbs0813e/PY-SYNTAX-001-pyright-mutant/python/src/verification_fixture/service.py\",\n            \"severity\": \"error\",\n            \"message\": \"String literal is unterminated\",\n            \"range\": {\n                \"start\": {\n                    \"line\": 12,\n                    \"character\": 24\n                },\n                \"end\": {\n                    \"line\": 13,\n                    \"character\": 0\n                }\n            }\n        }\n    ],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 1,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 1.26\n    }\n}\n\n"
       },
       "mutant_exit_code": 1,
       "mutant_id": "PY-SYNTAX-001",
@@ -158,7 +158,7 @@
           "src",
           "tests"
         ],
-        "elapsed_ms": 1005.810786,
+        "elapsed_ms": 1539.979169,
         "exit_code": 0,
         "stderr": "",
         "stdout": ""
@@ -176,7 +176,7 @@
           "src",
           "tests"
         ],
-        "elapsed_ms": 99.803336,
+        "elapsed_ms": 152.939398,
         "exit_code": 2,
         "stderr": "",
         "stdout": "src/verification_fixture/service.py:13: error: Unterminated f-string literal (detected at line 13)  [syntax]\n"
@@ -201,7 +201,7 @@
               "--check",
               "src/verification_fixture/service.py"
             ],
-            "elapsed_ms": 6.311038,
+            "elapsed_ms": 6.527926,
             "exit_code": 0,
             "stderr": "",
             "stdout": "1 file already formatted\n"
@@ -216,7 +216,7 @@
                 "-q",
                 "src"
               ],
-              "elapsed_ms": 30.956568,
+              "elapsed_ms": 45.577809,
               "exit_code": 0,
               "stderr": "",
               "stdout": ""
@@ -231,7 +231,7 @@
                 "tests",
                 "-v"
               ],
-              "elapsed_ms": 311.194334,
+              "elapsed_ms": 305.48831,
               "exit_code": 0,
               "stderr": "test_calculate_total (test_service.ServiceTests.test_calculate_total) ... ok\ntest_next_count (test_service.ServiceTests.test_next_count) ... ok\ntest_render_total (test_service.ServiceTests.test_render_total) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.001s\n\nOK\n",
               "stdout": ""
@@ -245,7 +245,7 @@
               "format",
               "src/verification_fixture/service.py"
             ],
-            "elapsed_ms": 7.125329,
+            "elapsed_ms": 7.169083,
             "exit_code": 0,
             "stderr": "",
             "stdout": "1 file left unchanged\n"
@@ -256,7 +256,7 @@
               "format",
               "src/verification_fixture/service.py"
             ],
-            "elapsed_ms": 6.11779,
+            "elapsed_ms": 6.525252,
             "exit_code": 0,
             "stderr": "",
             "stdout": "1 file left unchanged\n"
@@ -269,7 +269,7 @@
             "--check",
             "src/verification_fixture/service.py"
           ],
-          "elapsed_ms": 6.460515,
+          "elapsed_ms": 6.685259,
           "exit_code": 0,
           "stderr": "",
           "stdout": "1 file already formatted\n"
@@ -281,7 +281,7 @@
             "--check",
             "src/verification_fixture/service.py"
           ],
-          "elapsed_ms": 7.618222,
+          "elapsed_ms": 7.170534,
           "exit_code": 1,
           "stderr": "",
           "stdout": "unformatted: File would be reformatted\n  --> src/verification_fixture/service.py:9:18\n   |\n8  | def calculate_total(amount: float, rate: float) -> float:\n   -     return amount*(1.0+rate)\n9  +     return amount * (1.0 + rate)\n10 |\n   |\n\n1 file would be reformatted\n"
@@ -299,7 +299,7 @@
               "-q",
               "src"
             ],
-            "elapsed_ms": 31.837591,
+            "elapsed_ms": 43.863077,
             "exit_code": 0,
             "stderr": "",
             "stdout": ""
@@ -314,9 +314,9 @@
               "tests",
               "-v"
             ],
-            "elapsed_ms": 66.087876,
+            "elapsed_ms": 95.87264,
             "exit_code": 0,
-            "stderr": "test_calculate_total (test_service.ServiceTests.test_calculate_total) ... ok\ntest_next_count (test_service.ServiceTests.test_next_count) ... ok\ntest_render_total (test_service.ServiceTests.test_render_total) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK\n",
+            "stderr": "test_calculate_total (test_service.ServiceTests.test_calculate_total) ... ok\ntest_next_count (test_service.ServiceTests.test_next_count) ... ok\ntest_render_total (test_service.ServiceTests.test_render_total) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.001s\n\nOK\n",
             "stdout": ""
           }
         ],
@@ -327,7 +327,7 @@
             "format",
             "src/verification_fixture/service.py"
           ],
-          "elapsed_ms": 6.826576,
+          "elapsed_ms": 6.819317,
           "exit_code": 0,
           "stderr": "",
           "stdout": "1 file reformatted\n"
@@ -338,7 +338,7 @@
             "format",
             "src/verification_fixture/service.py"
           ],
-          "elapsed_ms": 6.43318,
+          "elapsed_ms": 6.433216,
           "exit_code": 0,
           "stderr": "",
           "stdout": "1 file left unchanged\n"
@@ -363,7 +363,7 @@
               "--check",
               "src/verification_fixture/service.py"
             ],
-            "elapsed_ms": 119.644863,
+            "elapsed_ms": 165.904877,
             "exit_code": 0,
             "stderr": "All done! \u2728 \ud83c\udf70 \u2728\n1 file would be left unchanged.\n",
             "stdout": ""
@@ -378,7 +378,7 @@
                 "-q",
                 "src"
               ],
-              "elapsed_ms": 30.083869,
+              "elapsed_ms": 44.744769,
               "exit_code": 0,
               "stderr": "",
               "stdout": ""
@@ -393,9 +393,9 @@
                 "tests",
                 "-v"
               ],
-              "elapsed_ms": 67.006474,
+              "elapsed_ms": 94.279419,
               "exit_code": 0,
-              "stderr": "test_calculate_total (test_service.ServiceTests.test_calculate_total) ... ok\ntest_next_count (test_service.ServiceTests.test_next_count) ... ok\ntest_render_total (test_service.ServiceTests.test_render_total) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK\n",
+              "stderr": "test_calculate_total (test_service.ServiceTests.test_calculate_total) ... ok\ntest_next_count (test_service.ServiceTests.test_next_count) ... ok\ntest_render_total (test_service.ServiceTests.test_render_total) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.001s\n\nOK\n",
               "stdout": ""
             }
           ],
@@ -406,7 +406,7 @@
               "black",
               "src/verification_fixture/service.py"
             ],
-            "elapsed_ms": 120.143638,
+            "elapsed_ms": 175.1132,
             "exit_code": 0,
             "stderr": "All done! \u2728 \ud83c\udf70 \u2728\n1 file left unchanged.\n",
             "stdout": ""
@@ -416,7 +416,7 @@
               "black",
               "src/verification_fixture/service.py"
             ],
-            "elapsed_ms": 99.419871,
+            "elapsed_ms": 143.594464,
             "exit_code": 0,
             "stderr": "All done! \u2728 \ud83c\udf70 \u2728\n1 file left unchanged.\n",
             "stdout": ""
@@ -428,7 +428,7 @@
             "--check",
             "src/verification_fixture/service.py"
           ],
-          "elapsed_ms": 97.397769,
+          "elapsed_ms": 141.311104,
           "exit_code": 0,
           "stderr": "All done! \u2728 \ud83c\udf70 \u2728\n1 file would be left unchanged.\n",
           "stdout": ""
@@ -439,7 +439,7 @@
             "--check",
             "src/verification_fixture/service.py"
           ],
-          "elapsed_ms": 107.296403,
+          "elapsed_ms": 158.195347,
           "exit_code": 1,
           "stderr": "would reformat src/verification_fixture/service.py\n\nOh no! \ud83d\udca5 \ud83d\udc94 \ud83d\udca5\n1 file would be reformatted.\n",
           "stdout": ""
@@ -457,7 +457,7 @@
               "-q",
               "src"
             ],
-            "elapsed_ms": 30.184841,
+            "elapsed_ms": 44.044054,
             "exit_code": 0,
             "stderr": "",
             "stdout": ""
@@ -472,9 +472,9 @@
               "tests",
               "-v"
             ],
-            "elapsed_ms": 64.336692,
+            "elapsed_ms": 91.778216,
             "exit_code": 0,
-            "stderr": "test_calculate_total (test_service.ServiceTests.test_calculate_total) ... ok\ntest_next_count (test_service.ServiceTests.test_next_count) ... ok\ntest_render_total (test_service.ServiceTests.test_render_total) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK\n",
+            "stderr": "test_calculate_total (test_service.ServiceTests.test_calculate_total) ... ok\ntest_next_count (test_service.ServiceTests.test_next_count) ... ok\ntest_render_total (test_service.ServiceTests.test_render_total) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.001s\n\nOK\n",
             "stdout": ""
           }
         ],
@@ -484,7 +484,7 @@
             "black",
             "src/verification_fixture/service.py"
           ],
-          "elapsed_ms": 107.101155,
+          "elapsed_ms": 155.123383,
           "exit_code": 0,
           "stderr": "reformatted src/verification_fixture/service.py\n\nAll done! \u2728 \ud83c\udf70 \u2728\n1 file reformatted.\n",
           "stdout": ""
@@ -494,7 +494,7 @@
             "black",
             "src/verification_fixture/service.py"
           ],
-          "elapsed_ms": 97.906077,
+          "elapsed_ms": 151.041046,
           "exit_code": 0,
           "stderr": "All done! \u2728 \ud83c\udf70 \u2728\n1 file left unchanged.\n",
           "stdout": ""
@@ -516,7 +516,7 @@
           "F841",
           "src/verification_fixture/service.py"
         ],
-        "elapsed_ms": 6.688864,
+        "elapsed_ms": 6.812106,
         "exit_code": 0,
         "stderr": "",
         "stdout": "[]"
@@ -536,10 +536,10 @@
           "F841",
           "src/verification_fixture/service.py"
         ],
-        "elapsed_ms": 6.635992,
+        "elapsed_ms": 6.346568,
         "exit_code": 1,
         "stderr": "",
-        "stdout": "[\n  {\n    \"cell\": null,\n    \"code\": \"F841\",\n    \"end_location\": {\n      \"column\": 17,\n      \"row\": 9\n    },\n    \"filename\": \"/tmp/verification-v2-source-531d2eyk/PY-LINT-001-ruff_lint-mutant/python/src/verification_fixture/service.py\",\n    \"fix\": {\n      \"applicability\": \"unsafe\",\n      \"edits\": [\n        {\n          \"content\": \"\",\n          \"end_location\": {\n            \"column\": 1,\n            \"row\": 10\n          },\n          \"location\": {\n            \"column\": 1,\n            \"row\": 9\n          }\n        }\n      ],\n      \"message\": \"Remove assignment to unused variable `unused_value`\"\n    },\n    \"location\": {\n      \"column\": 5,\n      \"row\": 9\n    },\n    \"message\": \"Local variable `unused_value` is assigned to but never used\",\n    \"name\": \"unused-variable\",\n    \"noqa_row\": 9,\n    \"severity\": \"error\",\n    \"url\": \"https://docs.astral.sh/ruff/rules/unused-variable\"\n  }\n]"
+        "stdout": "[\n  {\n    \"cell\": null,\n    \"code\": \"F841\",\n    \"end_location\": {\n      \"column\": 17,\n      \"row\": 9\n    },\n    \"filename\": \"/tmp/verification-v2-source-zbs0813e/PY-LINT-001-ruff_lint-mutant/python/src/verification_fixture/service.py\",\n    \"fix\": {\n      \"applicability\": \"unsafe\",\n      \"edits\": [\n        {\n          \"content\": \"\",\n          \"end_location\": {\n            \"column\": 1,\n            \"row\": 10\n          },\n          \"location\": {\n            \"column\": 1,\n            \"row\": 9\n          }\n        }\n      ],\n      \"message\": \"Remove assignment to unused variable `unused_value`\"\n    },\n    \"location\": {\n      \"column\": 5,\n      \"row\": 9\n    },\n    \"message\": \"Local variable `unused_value` is assigned to but never used\",\n    \"name\": \"unused-variable\",\n    \"noqa_row\": 9,\n    \"severity\": \"error\",\n    \"url\": \"https://docs.astral.sh/ruff/rules/unused-variable\"\n  }\n]"
       },
       "mutant_exit_code": 1,
       "mutant_id": "PY-LINT-001",
@@ -553,7 +553,7 @@
           "--select=F841",
           "src/verification_fixture/service.py"
         ],
-        "elapsed_ms": 403.329168,
+        "elapsed_ms": 474.72119,
         "exit_code": 0,
         "stderr": "",
         "stdout": ""
@@ -569,7 +569,7 @@
           "--select=F841",
           "src/verification_fixture/service.py"
         ],
-        "elapsed_ms": 97.067533,
+        "elapsed_ms": 132.282266,
         "exit_code": 1,
         "stderr": "",
         "stdout": "src/verification_fixture/service.py:9:5: F841 local variable 'unused_value' is assigned to but never used\n"
@@ -589,9 +589,9 @@
           "--output-format",
           "json"
         ],
-        "elapsed_ms": 181.271249,
+        "elapsed_ms": 217.374858,
         "exit_code": 0,
-        "stderr": " INFO Found `/tmp/verification-v2-source-531d2eyk/PY-TYPE-ARG-001-pyrefly-clean/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
+        "stderr": " INFO Found `/tmp/verification-v2-source-zbs0813e/PY-TYPE-ARG-001-pyrefly-clean/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
         "stdout": "{\n  \"errors\": []\n}"
       },
       "baseline_blocking_false_positive": false,
@@ -608,9 +608,9 @@
           "--output-format",
           "json"
         ],
-        "elapsed_ms": 176.912984,
+        "elapsed_ms": 214.802381,
         "exit_code": 1,
-        "stderr": " INFO Found `/tmp/verification-v2-source-531d2eyk/PY-TYPE-ARG-001-pyrefly-mutant/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 1 error\n",
+        "stderr": " INFO Found `/tmp/verification-v2-source-zbs0813e/PY-TYPE-ARG-001-pyrefly-mutant/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 1 error\n",
         "stdout": "{\n  \"errors\": [\n    {\n      \"line\": 25,\n      \"column\": 33,\n      \"stop_line\": 25,\n      \"stop_column\": 38,\n      \"path\": \"src/verification_fixture/service.py\",\n      \"code\": -2,\n      \"name\": \"bad-argument-type\",\n      \"description\": \"Argument `Literal['100']` is not assignable to parameter `amount` with type `float` in function `calculate_total`\",\n      \"concise_description\": \"Argument `Literal['100']` is not assignable to parameter `amount` with type `float` in function `calculate_total`\",\n      \"severity\": \"error\"\n    }\n  ]\n}"
       },
       "mutant_exit_code": 1,
@@ -628,7 +628,7 @@
           "--no-progress",
           "."
         ],
-        "elapsed_ms": 48.806918,
+        "elapsed_ms": 55.269105,
         "exit_code": 0,
         "stderr": "",
         "stdout": "All checks passed!\n"
@@ -647,7 +647,7 @@
           "--no-progress",
           "."
         ],
-        "elapsed_ms": 52.138307,
+        "elapsed_ms": 54.559473,
         "exit_code": 1,
         "stderr": "",
         "stdout": "src/verification_fixture/service.py:25:33: error[invalid-argument-type] Argument to function `calculate_total` is incorrect: Expected `float`, found `Literal[\"100\"]`\nFound 1 diagnostic\n"
@@ -664,10 +664,10 @@
           "--outputjson",
           "."
         ],
-        "elapsed_ms": 1152.809764,
+        "elapsed_ms": 1517.621003,
         "exit_code": 0,
         "stderr": "",
-        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786729553395\",\n    \"generalDiagnostics\": [],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 0,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 0.953\n    }\n}\n\n"
+        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786742650495\",\n    \"generalDiagnostics\": [],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 0,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 1.252\n    }\n}\n\n"
       },
       "baseline_blocking_false_positive": false,
       "baseline_exit_code": 0,
@@ -680,10 +680,10 @@
           "--outputjson",
           "."
         ],
-        "elapsed_ms": 1148.368863,
+        "elapsed_ms": 1508.578183,
         "exit_code": 1,
         "stderr": "",
-        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786729554543\",\n    \"generalDiagnostics\": [\n        {\n            \"file\": \"/tmp/verification-v2-source-531d2eyk/PY-TYPE-ARG-001-pyright-mutant/python/src/verification_fixture/service.py\",\n            \"severity\": \"error\",\n            \"message\": \"Argument of type \\\"Literal['100']\\\" cannot be assigned to parameter \\\"amount\\\" of type \\\"float\\\" in function \\\"calculate_total\\\"\\n\u00a0\u00a0\\\"Literal['100']\\\" is not assignable to \\\"float\\\"\",\n            \"range\": {\n                \"start\": {\n                    \"line\": 24,\n                    \"character\": 32\n                },\n                \"end\": {\n                    \"line\": 24,\n                    \"character\": 37\n                }\n            },\n            \"rule\": \"reportArgumentType\"\n        }\n    ],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 1,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 0.952\n    }\n}\n\n"
+        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786742652003\",\n    \"generalDiagnostics\": [\n        {\n            \"file\": \"/tmp/verification-v2-source-zbs0813e/PY-TYPE-ARG-001-pyright-mutant/python/src/verification_fixture/service.py\",\n            \"severity\": \"error\",\n            \"message\": \"Argument of type \\\"Literal['100']\\\" cannot be assigned to parameter \\\"amount\\\" of type \\\"float\\\" in function \\\"calculate_total\\\"\\n\u00a0\u00a0\\\"Literal['100']\\\" is not assignable to \\\"float\\\"\",\n            \"range\": {\n                \"start\": {\n                    \"line\": 24,\n                    \"character\": 32\n                },\n                \"end\": {\n                    \"line\": 24,\n                    \"character\": 37\n                }\n            },\n            \"rule\": \"reportArgumentType\"\n        }\n    ],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 1,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 1.244\n    }\n}\n\n"
       },
       "mutant_exit_code": 1,
       "mutant_id": "PY-TYPE-ARG-001",
@@ -699,7 +699,7 @@
           "src",
           "tests"
         ],
-        "elapsed_ms": 1001.892141,
+        "elapsed_ms": 1505.960795,
         "exit_code": 0,
         "stderr": "",
         "stdout": ""
@@ -717,7 +717,7 @@
           "src",
           "tests"
         ],
-        "elapsed_ms": 1011.987987,
+        "elapsed_ms": 1527.638785,
         "exit_code": 1,
         "stderr": "",
         "stdout": "src/verification_fixture/service.py:25: error: Argument 1 to \"calculate_total\" has incompatible type \"str\"; expected \"float\"  [arg-type]\n"
@@ -737,9 +737,9 @@
           "--output-format",
           "json"
         ],
-        "elapsed_ms": 179.878325,
+        "elapsed_ms": 217.511735,
         "exit_code": 0,
-        "stderr": " INFO Found `/tmp/verification-v2-source-531d2eyk/PY-TYPE-RETURN-001-pyrefly-clean/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
+        "stderr": " INFO Found `/tmp/verification-v2-source-zbs0813e/PY-TYPE-RETURN-001-pyrefly-clean/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
         "stdout": "{\n  \"errors\": []\n}"
       },
       "baseline_blocking_false_positive": false,
@@ -756,9 +756,9 @@
           "--output-format",
           "json"
         ],
-        "elapsed_ms": 180.153429,
+        "elapsed_ms": 216.845522,
         "exit_code": 1,
-        "stderr": " INFO Found `/tmp/verification-v2-source-531d2eyk/PY-TYPE-RETURN-001-pyrefly-mutant/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 1 error\n",
+        "stderr": " INFO Found `/tmp/verification-v2-source-zbs0813e/PY-TYPE-RETURN-001-pyrefly-mutant/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 1 error\n",
         "stdout": "{\n  \"errors\": [\n    {\n      \"line\": 13,\n      \"column\": 12,\n      \"stop_line\": 13,\n      \"stop_column\": 17,\n      \"path\": \"src/verification_fixture/service.py\",\n      \"code\": -2,\n      \"name\": \"bad-return\",\n      \"description\": \"Returned type `float` is not assignable to declared return type `str`\",\n      \"concise_description\": \"Returned type `float` is not assignable to declared return type `str`\",\n      \"severity\": \"error\"\n    }\n  ]\n}"
       },
       "mutant_exit_code": 1,
@@ -776,7 +776,7 @@
           "--no-progress",
           "."
         ],
-        "elapsed_ms": 49.239073,
+        "elapsed_ms": 56.067099,
         "exit_code": 0,
         "stderr": "",
         "stdout": "All checks passed!\n"
@@ -795,7 +795,7 @@
           "--no-progress",
           "."
         ],
-        "elapsed_ms": 49.819557,
+        "elapsed_ms": 56.425843,
         "exit_code": 1,
         "stderr": "",
         "stdout": "src/verification_fixture/service.py:13:12: error[invalid-return-type] Return type does not match returned value: expected `str`, found `float`\nFound 1 diagnostic\n"
@@ -812,10 +812,10 @@
           "--outputjson",
           "."
         ],
-        "elapsed_ms": 1163.281276,
+        "elapsed_ms": 1505.069312,
         "exit_code": 0,
         "stderr": "",
-        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786729558261\",\n    \"generalDiagnostics\": [],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 0,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 0.967\n    }\n}\n\n"
+        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786742657098\",\n    \"generalDiagnostics\": [],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 0,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 1.243\n    }\n}\n\n"
       },
       "baseline_blocking_false_positive": false,
       "baseline_exit_code": 0,
@@ -828,10 +828,10 @@
           "--outputjson",
           "."
         ],
-        "elapsed_ms": 1157.585613,
+        "elapsed_ms": 1554.015043,
         "exit_code": 1,
         "stderr": "",
-        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786729559455\",\n    \"generalDiagnostics\": [\n        {\n            \"file\": \"/tmp/verification-v2-source-531d2eyk/PY-TYPE-RETURN-001-pyright-mutant/python/src/verification_fixture/service.py\",\n            \"severity\": \"error\",\n            \"message\": \"Type \\\"float\\\" is not assignable to return type \\\"str\\\"\\n\u00a0\u00a0\\\"float\\\" is not assignable to \\\"str\\\"\",\n            \"range\": {\n                \"start\": {\n                    \"line\": 12,\n                    \"character\": 11\n                },\n                \"end\": {\n                    \"line\": 12,\n                    \"character\": 16\n                }\n            },\n            \"rule\": \"reportReturnType\"\n        }\n    ],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 1,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 0.961\n    }\n}\n\n"
+        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786742658653\",\n    \"generalDiagnostics\": [\n        {\n            \"file\": \"/tmp/verification-v2-source-zbs0813e/PY-TYPE-RETURN-001-pyright-mutant/python/src/verification_fixture/service.py\",\n            \"severity\": \"error\",\n            \"message\": \"Type \\\"float\\\" is not assignable to return type \\\"str\\\"\\n\u00a0\u00a0\\\"float\\\" is not assignable to \\\"str\\\"\",\n            \"range\": {\n                \"start\": {\n                    \"line\": 12,\n                    \"character\": 11\n                },\n                \"end\": {\n                    \"line\": 12,\n                    \"character\": 16\n                }\n            },\n            \"rule\": \"reportReturnType\"\n        }\n    ],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 1,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 1.286\n    }\n}\n\n"
       },
       "mutant_exit_code": 1,
       "mutant_id": "PY-TYPE-RETURN-001",
@@ -847,7 +847,7 @@
           "src",
           "tests"
         ],
-        "elapsed_ms": 1008.407756,
+        "elapsed_ms": 1496.498215,
         "exit_code": 0,
         "stderr": "",
         "stdout": ""
@@ -865,7 +865,7 @@
           "src",
           "tests"
         ],
-        "elapsed_ms": 1019.510686,
+        "elapsed_ms": 1496.035793,
         "exit_code": 1,
         "stderr": "",
         "stdout": "src/verification_fixture/service.py:13: error: Incompatible return value type (got \"float\", expected \"str\")  [return-value]\n"
@@ -885,9 +885,9 @@
           "--output-format",
           "json"
         ],
-        "elapsed_ms": 175.381257,
+        "elapsed_ms": 219.528436,
         "exit_code": 0,
-        "stderr": " INFO Found `/tmp/verification-v2-source-531d2eyk/PY-NAME-001-pyrefly-clean/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
+        "stderr": " INFO Found `/tmp/verification-v2-source-zbs0813e/PY-NAME-001-pyrefly-clean/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
         "stdout": "{\n  \"errors\": []\n}"
       },
       "baseline_blocking_false_positive": false,
@@ -904,9 +904,9 @@
           "--output-format",
           "json"
         ],
-        "elapsed_ms": 172.445643,
+        "elapsed_ms": 225.004803,
         "exit_code": 1,
-        "stderr": " INFO Found `/tmp/verification-v2-source-531d2eyk/PY-NAME-001-pyrefly-mutant/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 1 error\n",
+        "stderr": " INFO Found `/tmp/verification-v2-source-zbs0813e/PY-NAME-001-pyrefly-mutant/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 1 error\n",
         "stdout": "{\n  \"errors\": [\n    {\n      \"line\": 17,\n      \"column\": 12,\n      \"stop_line\": 17,\n      \"stop_column\": 25,\n      \"path\": \"src/verification_fixture/service.py\",\n      \"code\": -2,\n      \"name\": \"unknown-name\",\n      \"description\": \"Could not find name `missing_count`\",\n      \"concise_description\": \"Could not find name `missing_count`\",\n      \"severity\": \"error\"\n    }\n  ]\n}"
       },
       "mutant_exit_code": 1,
@@ -924,7 +924,7 @@
           "--no-progress",
           "."
         ],
-        "elapsed_ms": 52.425011,
+        "elapsed_ms": 59.251456,
         "exit_code": 0,
         "stderr": "",
         "stdout": "All checks passed!\n"
@@ -943,7 +943,7 @@
           "--no-progress",
           "."
         ],
-        "elapsed_ms": 48.927181,
+        "elapsed_ms": 57.831213,
         "exit_code": 1,
         "stderr": "",
         "stdout": "src/verification_fixture/service.py:17:12: error[unresolved-reference] Name `missing_count` used when not defined\nFound 1 diagnostic\n"
@@ -960,10 +960,10 @@
           "--outputjson",
           "."
         ],
-        "elapsed_ms": 1147.014783,
+        "elapsed_ms": 1585.346937,
         "exit_code": 0,
         "stderr": "",
-        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786729563086\",\n    \"generalDiagnostics\": [],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 0,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 0.952\n    }\n}\n\n"
+        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786742663802\",\n    \"generalDiagnostics\": [],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 0,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 1.315\n    }\n}\n\n"
       },
       "baseline_blocking_false_positive": false,
       "baseline_exit_code": 0,
@@ -976,10 +976,10 @@
           "--outputjson",
           "."
         ],
-        "elapsed_ms": 1145.702366,
+        "elapsed_ms": 1531.893292,
         "exit_code": 1,
         "stderr": "",
-        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786729564231\",\n    \"generalDiagnostics\": [\n        {\n            \"file\": \"/tmp/verification-v2-source-531d2eyk/PY-NAME-001-pyright-mutant/python/src/verification_fixture/service.py\",\n            \"severity\": \"error\",\n            \"message\": \"\\\"missing_count\\\" is not defined\",\n            \"range\": {\n                \"start\": {\n                    \"line\": 16,\n                    \"character\": 11\n                },\n                \"end\": {\n                    \"line\": 16,\n                    \"character\": 24\n                }\n            },\n            \"rule\": \"reportUndefinedVariable\"\n        }\n    ],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 1,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 0.951\n    }\n}\n\n"
+        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786742665338\",\n    \"generalDiagnostics\": [\n        {\n            \"file\": \"/tmp/verification-v2-source-zbs0813e/PY-NAME-001-pyright-mutant/python/src/verification_fixture/service.py\",\n            \"severity\": \"error\",\n            \"message\": \"\\\"missing_count\\\" is not defined\",\n            \"range\": {\n                \"start\": {\n                    \"line\": 16,\n                    \"character\": 11\n                },\n                \"end\": {\n                    \"line\": 16,\n                    \"character\": 24\n                }\n            },\n            \"rule\": \"reportUndefinedVariable\"\n        }\n    ],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 1,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 1.265\n    }\n}\n\n"
       },
       "mutant_exit_code": 1,
       "mutant_id": "PY-NAME-001",
@@ -995,7 +995,7 @@
           "src",
           "tests"
         ],
-        "elapsed_ms": 1005.421058,
+        "elapsed_ms": 1516.771225,
         "exit_code": 0,
         "stderr": "",
         "stdout": ""
@@ -1013,7 +1013,7 @@
           "src",
           "tests"
         ],
-        "elapsed_ms": 1007.105059,
+        "elapsed_ms": 1541.476068,
         "exit_code": 1,
         "stderr": "",
         "stdout": "src/verification_fixture/service.py:17: error: Name \"missing_count\" is not defined  [name-defined]\n"
@@ -1033,9 +1033,9 @@
           "--output-format",
           "json"
         ],
-        "elapsed_ms": 174.228048,
+        "elapsed_ms": 214.407836,
         "exit_code": 0,
-        "stderr": " INFO Found `/tmp/verification-v2-source-531d2eyk/PY-ASYNC-001-pyrefly-clean/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
+        "stderr": " INFO Found `/tmp/verification-v2-source-zbs0813e/PY-ASYNC-001-pyrefly-clean/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 0 errors\n",
         "stdout": "{\n  \"errors\": []\n}"
       },
       "baseline_blocking_false_positive": false,
@@ -1052,9 +1052,9 @@
           "--output-format",
           "json"
         ],
-        "elapsed_ms": 175.110846,
+        "elapsed_ms": 216.564546,
         "exit_code": 1,
-        "stderr": " INFO Found `/tmp/verification-v2-source-531d2eyk/PY-ASYNC-001-pyrefly-mutant/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 1 error\n",
+        "stderr": " INFO Found `/tmp/verification-v2-source-zbs0813e/PY-ASYNC-001-pyrefly-mutant/python/pyproject.toml` marking project root, checking root directory with auto configuration\n INFO 1 error\n",
         "stdout": "{\n  \"errors\": [\n    {\n      \"line\": 22,\n      \"column\": 12,\n      \"stop_line\": 22,\n      \"stop_column\": 21,\n      \"path\": \"src/verification_fixture/service.py\",\n      \"code\": -2,\n      \"name\": \"unsupported-operation\",\n      \"description\": \"`+` is not supported between `Coroutine[Unknown, Unknown, int]` and `Literal[1]`\\n  Argument `Coroutine[Unknown, Unknown, int]` is not assignable to parameter `value` with type `int` in function `int.__radd__`\",\n      \"concise_description\": \"`+` is not supported between `Coroutine[Unknown, Unknown, int]` and `Literal[1]`\",\n      \"severity\": \"error\"\n    }\n  ]\n}"
       },
       "mutant_exit_code": 1,
@@ -1072,7 +1072,7 @@
           "--no-progress",
           "."
         ],
-        "elapsed_ms": 50.36119,
+        "elapsed_ms": 58.748215,
         "exit_code": 0,
         "stderr": "",
         "stdout": "All checks passed!\n"
@@ -1091,7 +1091,7 @@
           "--no-progress",
           "."
         ],
-        "elapsed_ms": 46.72409,
+        "elapsed_ms": 57.33291,
         "exit_code": 1,
         "stderr": "",
         "stdout": "src/verification_fixture/service.py:22:12: error[unsupported-operator] Operator `+` is not supported between objects of type `CoroutineType[Any, Any, int]` and `Literal[1]`\nFound 1 diagnostic\n"
@@ -1108,10 +1108,10 @@
           "--outputjson",
           "."
         ],
-        "elapsed_ms": 1143.322325,
+        "elapsed_ms": 1552.460322,
         "exit_code": 0,
         "stderr": "",
-        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786729567833\",\n    \"generalDiagnostics\": [],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 0,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 0.942\n    }\n}\n\n"
+        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786742670520\",\n    \"generalDiagnostics\": [],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 0,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 1.269\n    }\n}\n\n"
       },
       "baseline_blocking_false_positive": false,
       "baseline_exit_code": 0,
@@ -1124,10 +1124,10 @@
           "--outputjson",
           "."
         ],
-        "elapsed_ms": 1163.117213,
+        "elapsed_ms": 1504.706857,
         "exit_code": 1,
         "stderr": "",
-        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786729569001\",\n    \"generalDiagnostics\": [\n        {\n            \"file\": \"/tmp/verification-v2-source-531d2eyk/PY-ASYNC-001-pyright-mutant/python/src/verification_fixture/service.py\",\n            \"severity\": \"error\",\n            \"message\": \"Operator \\\"+\\\" not supported for types \\\"CoroutineType[Any, Any, int]\\\" and \\\"Literal[1]\\\"\",\n            \"range\": {\n                \"start\": {\n                    \"line\": 21,\n                    \"character\": 11\n                },\n                \"end\": {\n                    \"line\": 21,\n                    \"character\": 20\n                }\n            },\n            \"rule\": \"reportOperatorIssue\"\n        }\n    ],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 1,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 0.968\n    }\n}\n\n"
+        "stdout": "{\n    \"version\": \"1.1.411\",\n    \"time\": \"1786742672027\",\n    \"generalDiagnostics\": [\n        {\n            \"file\": \"/tmp/verification-v2-source-zbs0813e/PY-ASYNC-001-pyright-mutant/python/src/verification_fixture/service.py\",\n            \"severity\": \"error\",\n            \"message\": \"Operator \\\"+\\\" not supported for types \\\"CoroutineType[Any, Any, int]\\\" and \\\"Literal[1]\\\"\",\n            \"range\": {\n                \"start\": {\n                    \"line\": 21,\n                    \"character\": 11\n                },\n                \"end\": {\n                    \"line\": 21,\n                    \"character\": 20\n                }\n            },\n            \"rule\": \"reportOperatorIssue\"\n        }\n    ],\n    \"summary\": {\n        \"filesAnalyzed\": 5,\n        \"errorCount\": 1,\n        \"warningCount\": 0,\n        \"informationCount\": 0,\n        \"timeInSec\": 1.235\n    }\n}\n\n"
       },
       "mutant_exit_code": 1,
       "mutant_id": "PY-ASYNC-001",
@@ -1143,7 +1143,7 @@
           "src",
           "tests"
         ],
-        "elapsed_ms": 1019.757,
+        "elapsed_ms": 1464.388211,
         "exit_code": 0,
         "stderr": "",
         "stdout": ""
@@ -1161,7 +1161,7 @@
           "src",
           "tests"
         ],
-        "elapsed_ms": 1014.852988,
+        "elapsed_ms": 1500.093918,
         "exit_code": 1,
         "stderr": "",
         "stdout": "src/verification_fixture/service.py:22: error: Unsupported operand types for + (\"Coroutine[Any, Any, int]\" and \"int\")  [operator]\nsrc/verification_fixture/service.py:22: note: Maybe you forgot to use \"await\"?\n"
@@ -1178,7 +1178,7 @@
           "-c",
           "import json; from pathlib import Path; v=json.loads(Path('tests/payload.json').read_text()); assert isinstance(v, dict)"
         ],
-        "elapsed_ms": 21.308681,
+        "elapsed_ms": 31.504617,
         "exit_code": 0,
         "stderr": "",
         "stdout": ""
@@ -1194,7 +1194,7 @@
           "-c",
           "import json; from pathlib import Path; v=json.loads(Path('tests/payload.json').read_text()); assert isinstance(v, dict)"
         ],
-        "elapsed_ms": 20.147984,
+        "elapsed_ms": 30.521655,
         "exit_code": 0,
         "stderr": "",
         "stdout": ""
@@ -1211,7 +1211,7 @@
           "runtime_validate.py",
           "tests/payload.json"
         ],
-        "elapsed_ms": 119.78694,
+        "elapsed_ms": 166.032245,
         "exit_code": 0,
         "stderr": "",
         "stdout": ""
@@ -1227,7 +1227,7 @@
           "runtime_validate.py",
           "tests/payload.json"
         ],
-        "elapsed_ms": 114.26333,
+        "elapsed_ms": 162.982923,
         "exit_code": 2,
         "stderr": "",
         "stdout": "1 validation error for Payload\ncount\n  Input should be greater than 0 [type=greater_than, input_value=-1, input_type=int]\n    For further information visit https://errors.pydantic.dev/2.13/v/greater_than\n"
@@ -1244,10 +1244,10 @@
           "--type-aware",
           "src"
         ],
-        "elapsed_ms": 123.788726,
+        "elapsed_ms": 149.442445,
         "exit_code": 0,
         "stderr": "",
-        "stdout": "Found 0 warnings and 0 errors.\nFinished in 90ms on 2 files with 84 rules using 4 threads.\n"
+        "stdout": "Found 0 warnings and 0 errors.\nFinished in 107ms on 2 files with 84 rules using 4 threads.\n"
       },
       "baseline_blocking_false_positive": false,
       "baseline_exit_code": 0,
@@ -1260,10 +1260,10 @@
           "--type-aware",
           "src"
         ],
-        "elapsed_ms": 112.800795,
+        "elapsed_ms": 162.392161,
         "exit_code": 1,
         "stderr": "",
-        "stdout": "::error file=src/service.ts,line=10,endLine=10,col=25,endColumn=26,title=oxlint::Expected `,` or `)` but found `;`\n\nFound 0 warnings and 1 error.\nFinished in 81ms on 2 files with 84 rules using 4 threads.\n"
+        "stdout": "::error file=src/service.ts,line=10,endLine=10,col=25,endColumn=26,title=oxlint::Expected `,` or `)` but found `;`\n\nFound 0 warnings and 1 error.\nFinished in 119ms on 2 files with 84 rules using 4 threads.\n"
       },
       "mutant_exit_code": 1,
       "mutant_id": "TS-SYNTAX-001",
@@ -1276,7 +1276,7 @@
           "eslint",
           "src"
         ],
-        "elapsed_ms": 1072.479102,
+        "elapsed_ms": 1506.714562,
         "exit_code": 0,
         "stderr": "",
         "stdout": ""
@@ -1291,10 +1291,10 @@
           "eslint",
           "src"
         ],
-        "elapsed_ms": 879.111299,
+        "elapsed_ms": 1192.894405,
         "exit_code": 1,
         "stderr": "",
-        "stdout": "\n/tmp/verification-v2-source-531d2eyk/TS-SYNTAX-001-eslint-mutant/typescript/src/service.ts\n  10:24  error  Parsing error: ')' expected\n\n\u2716 1 problem (1 error, 0 warnings)\n\n"
+        "stdout": "\n/tmp/verification-v2-source-zbs0813e/TS-SYNTAX-001-eslint-mutant/typescript/src/service.ts\n  10:24  error  Parsing error: ')' expected\n\n\u2716 1 problem (1 error, 0 warnings)\n\n"
       },
       "mutant_exit_code": 1,
       "mutant_id": "TS-SYNTAX-001",
@@ -1307,7 +1307,7 @@
           "tsc",
           "--noEmit"
         ],
-        "elapsed_ms": 231.815962,
+        "elapsed_ms": 303.586801,
         "exit_code": 0,
         "stderr": "",
         "stdout": ""
@@ -1322,7 +1322,7 @@
           "tsc",
           "--noEmit"
         ],
-        "elapsed_ms": 61.631061,
+        "elapsed_ms": 86.403498,
         "exit_code": 1,
         "stderr": "",
         "stdout": "src/service.ts(10,25): error TS1005: ')' expected.\n"
@@ -1346,10 +1346,10 @@
               "format",
               "src/service.ts"
             ],
-            "elapsed_ms": 33.242731,
+            "elapsed_ms": 47.529052,
             "exit_code": 0,
             "stderr": "",
-            "stdout": "Checked 1 file in 1217\u00b5s. No fixes applied.\n"
+            "stdout": "Checked 1 file in 1407\u00b5s. No fixes applied.\n"
           },
           "idempotent": true,
           "smoke": [
@@ -1358,7 +1358,7 @@
                 "tsc",
                 "--noEmit"
               ],
-              "elapsed_ms": 227.712365,
+              "elapsed_ms": 299.216299,
               "exit_code": 0,
               "stderr": "",
               "stdout": ""
@@ -1373,10 +1373,10 @@
               "--write",
               "src/service.ts"
             ],
-            "elapsed_ms": 36.991399,
+            "elapsed_ms": 46.761359,
             "exit_code": 0,
             "stderr": "",
-            "stdout": "Formatted 1 file in 1396\u00b5s. Fixed 1 file.\n"
+            "stdout": "Formatted 1 file in 1628\u00b5s. Fixed 1 file.\n"
           },
           "write_second": {
             "command": [
@@ -1385,10 +1385,10 @@
               "--write",
               "src/service.ts"
             ],
-            "elapsed_ms": 34.853358,
+            "elapsed_ms": 45.838961,
             "exit_code": 0,
             "stderr": "",
-            "stdout": "Formatted 1 file in 1129\u00b5s. No fixes applied.\n"
+            "stdout": "Formatted 1 file in 1572\u00b5s. No fixes applied.\n"
           }
         },
         "check_after": {
@@ -1397,10 +1397,10 @@
             "format",
             "src/service.ts"
           ],
-          "elapsed_ms": 38.262789,
+          "elapsed_ms": 48.165611,
           "exit_code": 0,
           "stderr": "",
-          "stdout": "Checked 1 file in 987\u00b5s. No fixes applied.\n"
+          "stdout": "Checked 1 file in 1534\u00b5s. No fixes applied.\n"
         },
         "check_before": {
           "command": [
@@ -1408,10 +1408,10 @@
             "format",
             "src/service.ts"
           ],
-          "elapsed_ms": 35.623807,
+          "elapsed_ms": 49.298148,
           "exit_code": 1,
           "stderr": "src/service.ts format \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n  \u00d7 Formatter would have printed the following content:\n  \n     1  1 \u2502   export async function fetchCount(): Promise<number> {\n     2    \u2502 - \u00b7\u00b7return\u00b71;\n        2 \u2502 + \u2192 return\u00b71;\n     3  3 \u2502   }\n     4  4 \u2502   \n     5  5 \u2502   export function calculateTotal(amount: number, rate: number): number {\n     6    \u2502 - \u00b7\u00b7return\u00b7amount*(1+rate);\n        6 \u2502 + \u2192 return\u00b7amount\u00b7*\u00b7(1\u00b7+\u00b7rate);\n     7  7 \u2502   }\n     8  8 \u2502   \n     9  9 \u2502   export function renderTotal(total: number): string {\n    10    \u2502 - \u00b7\u00b7return\u00b7total.toFixed(2);\n       10 \u2502 + \u2192 return\u00b7total.toFixed(2);\n    11 11 \u2502   }\n    12 12 \u2502   \n    13 13 \u2502   export function increment(count: number): number {\n    14    \u2502 - \u00b7\u00b7return\u00b7count\u00b7+\u00b71;\n       14 \u2502 + \u2192 return\u00b7count\u00b7+\u00b71;\n    15 15 \u2502   }\n    16 16 \u2502   \n    17 17 \u2502   export async function nextCount(): Promise<number> {\n    18    \u2502 - \u00b7\u00b7const\u00b7count\u00b7=\u00b7await\u00b7fetchCount();\n    19    \u2502 - \u00b7\u00b7return\u00b7count\u00b7+\u00b71;\n       18 \u2502 + \u2192 const\u00b7count\u00b7=\u00b7await\u00b7fetchCount();\n       19 \u2502 + \u2192 return\u00b7count\u00b7+\u00b71;\n    20 20 \u2502   }\n    21 21 \u2502   \n  \n\nformat \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n  \u00d7 Some errors were emitted while running checks.\n  \n\n",
-          "stdout": "Checked 1 file in 1351\u00b5s. No fixes applied.\nFound 1 error.\n"
+          "stdout": "Checked 1 file in 1510\u00b5s. No fixes applied.\nFound 1 error.\n"
         },
         "formatted_target_sha256": "eb2562e3cab90d3e0bfb06fad2841873811e3ebe4abf181e316183759922a664",
         "idempotent": true,
@@ -1423,7 +1423,7 @@
               "tsc",
               "--noEmit"
             ],
-            "elapsed_ms": 224.606514,
+            "elapsed_ms": 307.866288,
             "exit_code": 0,
             "stderr": "",
             "stdout": ""
@@ -1437,10 +1437,10 @@
             "--write",
             "src/service.ts"
           ],
-          "elapsed_ms": 33.46002,
+          "elapsed_ms": 47.4839,
           "exit_code": 0,
           "stderr": "",
-          "stdout": "Formatted 1 file in 1247\u00b5s. Fixed 1 file.\n"
+          "stdout": "Formatted 1 file in 1659\u00b5s. Fixed 1 file.\n"
         },
         "write_second": {
           "command": [
@@ -1449,10 +1449,10 @@
             "--write",
             "src/service.ts"
           ],
-          "elapsed_ms": 30.382583,
+          "elapsed_ms": 44.36443,
           "exit_code": 0,
           "stderr": "",
-          "stdout": "Formatted 1 file in 1135\u00b5s. No fixes applied.\n"
+          "stdout": "Formatted 1 file in 1503\u00b5s. No fixes applied.\n"
         }
       },
       "mutant_exit_code": 1,
@@ -1474,7 +1474,7 @@
               "--check",
               "src/service.ts"
             ],
-            "elapsed_ms": 108.293392,
+            "elapsed_ms": 146.319135,
             "exit_code": 0,
             "stderr": "",
             "stdout": "Checking formatting...\nAll matched files use Prettier code style!\n"
@@ -1486,7 +1486,7 @@
                 "tsc",
                 "--noEmit"
               ],
-              "elapsed_ms": 230.384293,
+              "elapsed_ms": 311.54523,
               "exit_code": 0,
               "stderr": "",
               "stdout": ""
@@ -1500,10 +1500,10 @@
               "--write",
               "src/service.ts"
             ],
-            "elapsed_ms": 143.778257,
+            "elapsed_ms": 188.103721,
             "exit_code": 0,
             "stderr": "",
-            "stdout": "\u001b[90msrc/service.ts\u001b[39m 56ms (unchanged)\n"
+            "stdout": "\u001b[90msrc/service.ts\u001b[39m 75ms (unchanged)\n"
           },
           "write_second": {
             "command": [
@@ -1511,10 +1511,10 @@
               "--write",
               "src/service.ts"
             ],
-            "elapsed_ms": 109.297104,
+            "elapsed_ms": 147.279572,
             "exit_code": 0,
             "stderr": "",
-            "stdout": "\u001b[90msrc/service.ts\u001b[39m 38ms (unchanged)\n"
+            "stdout": "\u001b[90msrc/service.ts\u001b[39m 51ms (unchanged)\n"
           }
         },
         "check_after": {
@@ -1523,7 +1523,7 @@
             "--check",
             "src/service.ts"
           ],
-          "elapsed_ms": 108.697174,
+          "elapsed_ms": 144.281673,
           "exit_code": 0,
           "stderr": "",
           "stdout": "Checking formatting...\nAll matched files use Prettier code style!\n"
@@ -1534,7 +1534,7 @@
             "--check",
             "src/service.ts"
           ],
-          "elapsed_ms": 109.636332,
+          "elapsed_ms": 151.951594,
           "exit_code": 1,
           "stderr": "[\u001b[33mwarn\u001b[39m] src/service.ts\n[\u001b[33mwarn\u001b[39m] Code style issues found in the above file. Run Prettier with --write to fix.\n",
           "stdout": "Checking formatting...\n"
@@ -1549,7 +1549,7 @@
               "tsc",
               "--noEmit"
             ],
-            "elapsed_ms": 230.009213,
+            "elapsed_ms": 303.178138,
             "exit_code": 0,
             "stderr": "",
             "stdout": ""
@@ -1562,10 +1562,10 @@
             "--write",
             "src/service.ts"
           ],
-          "elapsed_ms": 109.13831,
+          "elapsed_ms": 151.643634,
           "exit_code": 0,
           "stderr": "",
-          "stdout": "src/service.ts 38ms\n"
+          "stdout": "src/service.ts 52ms\n"
         },
         "write_second": {
           "command": [
@@ -1573,10 +1573,10 @@
             "--write",
             "src/service.ts"
           ],
-          "elapsed_ms": 109.849249,
+          "elapsed_ms": 147.865708,
           "exit_code": 0,
           "stderr": "",
-          "stdout": "\u001b[90msrc/service.ts\u001b[39m 37ms (unchanged)\n"
+          "stdout": "\u001b[90msrc/service.ts\u001b[39m 52ms (unchanged)\n"
         }
       },
       "mutant_exit_code": 1,
@@ -1591,10 +1591,10 @@
           "--type-aware",
           "src"
         ],
-        "elapsed_ms": 117.956027,
+        "elapsed_ms": 140.525949,
         "exit_code": 0,
         "stderr": "",
-        "stdout": "Found 0 warnings and 0 errors.\nFinished in 86ms on 2 files with 84 rules using 4 threads.\n"
+        "stdout": "Found 0 warnings and 0 errors.\nFinished in 96ms on 2 files with 84 rules using 4 threads.\n"
       },
       "baseline_blocking_false_positive": false,
       "baseline_exit_code": 0,
@@ -1607,10 +1607,10 @@
           "--type-aware",
           "src"
         ],
-        "elapsed_ms": 107.45006,
+        "elapsed_ms": 153.96772,
         "exit_code": 1,
         "stderr": "",
-        "stdout": "::error file=src/service.ts,line=6,endLine=6,col=9,endColumn=20,title=eslint(no-unused-vars)::Variable 'unusedValue' is declared but never used. Unused variables should start with a '_'.\n\nFound 0 warnings and 1 error.\nFinished in 75ms on 2 files with 84 rules using 4 threads.\n"
+        "stdout": "::error file=src/service.ts,line=6,endLine=6,col=9,endColumn=20,title=eslint(no-unused-vars)::Variable 'unusedValue' is declared but never used. Unused variables should start with a '_'.\n\nFound 0 warnings and 1 error.\nFinished in 109ms on 2 files with 84 rules using 4 threads.\n"
       },
       "mutant_exit_code": 1,
       "mutant_id": "TS-LINT-001",
@@ -1623,7 +1623,7 @@
           "eslint",
           "src"
         ],
-        "elapsed_ms": 892.285427,
+        "elapsed_ms": 1221.826085,
         "exit_code": 0,
         "stderr": "",
         "stdout": ""
@@ -1638,10 +1638,10 @@
           "eslint",
           "src"
         ],
-        "elapsed_ms": 893.302229,
+        "elapsed_ms": 1233.320963,
         "exit_code": 1,
         "stderr": "",
-        "stdout": "\n/tmp/verification-v2-source-531d2eyk/TS-LINT-001-eslint-mutant/typescript/src/service.ts\n  6:9  error  'unusedValue' is assigned a value but never used  @typescript-eslint/no-unused-vars\n\n\u2716 1 problem (1 error, 0 warnings)\n\n"
+        "stdout": "\n/tmp/verification-v2-source-zbs0813e/TS-LINT-001-eslint-mutant/typescript/src/service.ts\n  6:9  error  'unusedValue' is assigned a value but never used  @typescript-eslint/no-unused-vars\n\n\u2716 1 problem (1 error, 0 warnings)\n\n"
       },
       "mutant_exit_code": 1,
       "mutant_id": "TS-LINT-001",
@@ -1654,7 +1654,7 @@
           "tsc",
           "--noEmit"
         ],
-        "elapsed_ms": 241.737595,
+        "elapsed_ms": 306.713176,
         "exit_code": 0,
         "stderr": "",
         "stdout": ""
@@ -1669,7 +1669,7 @@
           "tsc",
           "--noEmit"
         ],
-        "elapsed_ms": 237.566456,
+        "elapsed_ms": 310.613343,
         "exit_code": 1,
         "stderr": "",
         "stdout": "src/service.ts(22,44): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.\n"
@@ -1687,10 +1687,10 @@
           "--type-check",
           "src"
         ],
-        "elapsed_ms": 116.613768,
+        "elapsed_ms": 154.808411,
         "exit_code": 0,
         "stderr": "",
-        "stdout": "Found 0 warnings and 0 errors.\nFinished in 85ms on 2 files with 84 rules using 4 threads.\n"
+        "stdout": "Found 0 warnings and 0 errors.\nFinished in 110ms on 2 files with 84 rules using 4 threads.\n"
       },
       "baseline_blocking_false_positive": false,
       "baseline_exit_code": 0,
@@ -1704,10 +1704,10 @@
           "--type-check",
           "src"
         ],
-        "elapsed_ms": 107.892096,
+        "elapsed_ms": 149.465434,
         "exit_code": 1,
         "stderr": "",
-        "stdout": "::error file=src/service.ts,line=22,endLine=22,col=44,endColumn=49,title=typescript(TS2345)::Argument of type 'string' is not assignable to parameter of type 'number'.\n\nFound 0 warnings and 1 error.\nFinished in 75ms on 2 files with 84 rules using 4 threads.\n"
+        "stdout": "::error file=src/service.ts,line=22,endLine=22,col=44,endColumn=49,title=typescript(TS2345)::Argument of type 'string' is not assignable to parameter of type 'number'.\n\nFound 0 warnings and 1 error.\nFinished in 101ms on 2 files with 84 rules using 4 threads.\n"
       },
       "mutant_exit_code": 1,
       "mutant_id": "TS-TYPE-ARG-001",
@@ -1720,7 +1720,7 @@
           "tsc",
           "--noEmit"
         ],
-        "elapsed_ms": 237.479023,
+        "elapsed_ms": 311.57262,
         "exit_code": 0,
         "stderr": "",
         "stdout": ""
@@ -1735,7 +1735,7 @@
           "tsc",
           "--noEmit"
         ],
-        "elapsed_ms": 232.265587,
+        "elapsed_ms": 309.955462,
         "exit_code": 1,
         "stderr": "",
         "stdout": "src/service.ts(10,3): error TS2322: Type 'number' is not assignable to type 'string'.\n"
@@ -1753,10 +1753,10 @@
           "--type-check",
           "src"
         ],
-        "elapsed_ms": 110.251044,
+        "elapsed_ms": 147.940945,
         "exit_code": 0,
         "stderr": "",
-        "stdout": "Found 0 warnings and 0 errors.\nFinished in 77ms on 2 files with 84 rules using 4 threads.\n"
+        "stdout": "Found 0 warnings and 0 errors.\nFinished in 103ms on 2 files with 84 rules using 4 threads.\n"
       },
       "baseline_blocking_false_positive": false,
       "baseline_exit_code": 0,
@@ -1770,10 +1770,10 @@
           "--type-check",
           "src"
         ],
-        "elapsed_ms": 125.003643,
+        "elapsed_ms": 148.481943,
         "exit_code": 1,
         "stderr": "",
-        "stdout": "::error file=src/service.ts,line=10,endLine=10,col=3,endColumn=9,title=typescript(TS2322)::Type 'number' is not assignable to type 'string'.\n\nFound 0 warnings and 1 error.\nFinished in 91ms on 2 files with 84 rules using 4 threads.\n"
+        "stdout": "::error file=src/service.ts,line=10,endLine=10,col=3,endColumn=9,title=typescript(TS2322)::Type 'number' is not assignable to type 'string'.\n\nFound 0 warnings and 1 error.\nFinished in 105ms on 2 files with 84 rules using 4 threads.\n"
       },
       "mutant_exit_code": 1,
       "mutant_id": "TS-TYPE-RETURN-001",
@@ -1787,10 +1787,10 @@
           "--type-aware",
           "src"
         ],
-        "elapsed_ms": 131.525626,
+        "elapsed_ms": 146.307453,
         "exit_code": 0,
         "stderr": "",
-        "stdout": "Found 0 warnings and 0 errors.\nFinished in 86ms on 2 files with 84 rules using 4 threads.\n"
+        "stdout": "Found 0 warnings and 0 errors.\nFinished in 100ms on 2 files with 84 rules using 4 threads.\n"
       },
       "baseline_blocking_false_positive": false,
       "baseline_exit_code": 0,
@@ -1803,10 +1803,10 @@
           "--type-aware",
           "src"
         ],
-        "elapsed_ms": 131.417577,
+        "elapsed_ms": 159.226724,
         "exit_code": 1,
         "stderr": "",
-        "stdout": "::error file=src/service.ts,line=18,endLine=18,col=3,endColumn=15,title=typescript(no-floating-promises)::Promises must be awaited, add void operator to ignore.\n\nFound 0 warnings and 1 error.\nFinished in 95ms on 2 files with 84 rules using 4 threads.\n"
+        "stdout": "::error file=src/service.ts,line=18,endLine=18,col=3,endColumn=15,title=typescript(no-floating-promises)::Promises must be awaited, add void operator to ignore.\n\nFound 0 warnings and 1 error.\nFinished in 112ms on 2 files with 84 rules using 4 threads.\n"
       },
       "mutant_exit_code": 1,
       "mutant_id": "TS-PROMISE-001",
@@ -1819,7 +1819,7 @@
           "eslint",
           "src"
         ],
-        "elapsed_ms": 896.818915,
+        "elapsed_ms": 1213.78066,
         "exit_code": 0,
         "stderr": "",
         "stdout": ""
@@ -1834,10 +1834,10 @@
           "eslint",
           "src"
         ],
-        "elapsed_ms": 886.069203,
+        "elapsed_ms": 1230.897266,
         "exit_code": 1,
         "stderr": "",
-        "stdout": "\n/tmp/verification-v2-source-531d2eyk/TS-PROMISE-001-eslint-mutant/typescript/src/service.ts\n  18:3  error  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises\n\n\u2716 1 problem (1 error, 0 warnings)\n\n"
+        "stdout": "\n/tmp/verification-v2-source-zbs0813e/TS-PROMISE-001-eslint-mutant/typescript/src/service.ts\n  18:3  error  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises\n\n\u2716 1 problem (1 error, 0 warnings)\n\n"
       },
       "mutant_exit_code": 1,
       "mutant_id": "TS-PROMISE-001",
@@ -1851,7 +1851,7 @@
           "-e",
           "JSON.parse(require('fs').readFileSync('test/payload.json','utf8'));"
         ],
-        "elapsed_ms": 20.83174,
+        "elapsed_ms": 26.498282,
         "exit_code": 0,
         "stderr": "",
         "stdout": ""
@@ -1867,7 +1867,7 @@
           "-e",
           "JSON.parse(require('fs').readFileSync('test/payload.json','utf8'));"
         ],
-        "elapsed_ms": 21.380791,
+        "elapsed_ms": 24.566819,
         "exit_code": 0,
         "stderr": "",
         "stdout": ""
@@ -1884,7 +1884,7 @@
           "runtime_validate.mjs",
           "test/payload.json"
         ],
-        "elapsed_ms": 57.637503,
+        "elapsed_ms": 76.844141,
         "exit_code": 0,
         "stderr": "",
         "stdout": ""
@@ -1900,7 +1900,7 @@
           "runtime_validate.mjs",
           "test/payload.json"
         ],
-        "elapsed_ms": 52.552738,
+        "elapsed_ms": 77.468952,
         "exit_code": 2,
         "stderr": "[\n  {\n    origin: 'number',\n    code: 'too_small',\n    minimum: 0,\n    inclusive: false,\n    path: [ 'count' ],\n    message: 'Too small: expected number to be >0'\n  }\n]\n",
         "stdout": ""
