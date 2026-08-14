@@ -1,364 +1,569 @@
-<!-- pipeline_meta: {"idea_source":"public-github-engineering","idea_only":true,"raw_private_content_persisted":false,"topic":{"title":"CIが壊れたrepoに最新precheckを当てたら、0.1秒で1000件出た。でも件数比較は罠だった","audience":"GitHub ActionsやAI coding agentで複数repositoryを保守する開発者","central_question":"状態の悪いrepositoryを最短で診断するには、最新lint/type checkerを全部並べればよいのか、それとも検査順序を設計すべきか","surprising_finding":"Ruff 1,076件、Pyrefly 723件という大きな数字は独立した1,799件ではなく、Pyreflyの723件中508件がparse errorで、壊れた構文が後段の型診断を大きく汚染していた","initial_hypothesis":"RuffとPyreflyを併用すれば短時間で広く、ほぼ補完的な故障面を得られる","hypothesis_update":"壊れたrepoでは診断数を足すより、syntax→environment/import→type→runtime contractの順にgateを分け、前段failureが残る間は後段の件数を独立欠陥として扱わない方が有用","stakes":"AI agentやCIが大量diagnosticを返しても、修正順が悪ければ人間もagentもノイズ処理に時間を使う","story_type":"falsified-counting-assumption","reader_before":"CIが赤いrepositoryに複数linter/type checkerを追加したが、数百〜数千件のdiagnosticのどこから直すべきか分からない","reader_after":"precheckをsyntax→lint→type→runtime contractに段階化し、後段diagnosticが信頼できる条件を判断できる","design_philosophy":"ツール数や総diagnostic数をKPIにせず、最初に直すと後段ノイズが減るfailure boundaryを優先する。速度比較も単発runner差を一般化しない","why_this_article":"実際に壊れていた公開repositoryの固定commitへRuff/Pyrefly/ty/pre-commit/prekを同一Actions harnessから当て、raw artifactを分類した結果、見かけ上の件数加算が破綻した実測がある","proof_of_value":"KAFKA2306/DeepCode@088059855d2c9187c51d674db02a06f70c37f087、GitHub Actions run 31812751114、Ruff 1,076件、Pyrefly 723件、うちparse-error 508件、pre-commit/prekの生成patch SHA-256一致","desired_reader_action":"自分の壊れたrepoで最初にsyntax gateを独立させ、type checkerの件数を前段修復前後で比較する","non_goal":"RuffとPyreflyの優劣を件数で決めない。prekが常に約4倍速いとは主張しない。Pydantic/Biome/Oxlint/tsc/Zodはこの実験では未実測"},"public_evidence":["https://github.com/KAFKA2306/articles/pull/115","https://github.com/KAFKA2306/articles/actions/runs/31812751114","https://github.com/KAFKA2306/DeepCode/commit/088059855d2c9187c51d674db02a06f70c37f087","https://docs.astral.sh/ruff/linter/","https://pyrefly.org/en/docs/pydantic/","https://prek.j178.dev/compatibility/","https://biomejs.dev/formatter/","https://oxc.rs/docs/guide/usage/linter/type-aware.html","https://www.typescriptlang.org/tsconfig/noEmit.html","https://zod.dev/basics"]} -->
+<!-- pipeline_meta: {"idea_source":"public-github-engineering","idea_only":true,"raw_private_content_persisted":false,"topic":{"title":"2026年のprecheckは何を選ぶべきか。壊れたrepoで見えた「最強tool」より重要な設計","audience":"複数repository、GitHub Actions、AI coding agentを運用する開発者・Tech Lead","central_question":"2026年のPython/TypeScript repositoryで、品質を落とさず変更速度を上げるprecheck control planeはどう設計すべきか","surprising_finding":"Ruff 1,076件とPyrefly 723件を足しても独立欠陥1,799件にはならなかった。Pyreflyの723件中508件はparse errorで、Ruffの508 invalid-syntaxと同じ前段failureに依存していた。toolの検出数ではなく、semantic authority、signal、feedback latency、trust boundary、migration costで役割を分ける必要があった","initial_hypothesis":"高速な最新toolを横並びで増やせば、広い故障面を短時間で得られる","hypothesis_update":"professionalな標準構成はPython=Ruff+Pyrefly+必要箇所だけPydantic、TypeScript=Biome formatter+Oxlint+tsc+必要箇所だけZod、prek=交換可能なorchestrator。各toolを同じ重さで全commitに走らせず、editor→commit→PR CI→runtime/integrationのfeedback topologyを設計する","stakes":"toolを増やすだけではdiagnostic noise、CI待ち時間、二重ルール、migration debtが増える。品質systemとして設計すればAI agentを含む変更速度を上げつつcode healthを守れる","story_type":"architecture-after-falsified-ranking","reader_before":"Ruff、Pyrefly、ty、Biome、Oxlint、Pydantic、Zod、prekなどの候補は知っているが、結局どれを標準化し、どれを捨て、どこで実行すべきか判断できない","reader_after":"tool単体ランキングではなく、authority・signal・latency・boundary・migrationの5軸でstackを設計し、新規repo/legacy repoそれぞれの採用判断ができる","design_philosophy":"one responsibility, one authority。formatter、linter、type authority、runtime contract、orchestrationを分離し、同じ責務を二重にblockingしない。前段failureほど早く安く返し、重い検査ほどPR CI側へ送る","why_this_article":"実際に壊れていた公開repositoryの固定commitでRuff/Pyrefly/ty/pre-commit/prekを同一Actions harnessから実行し、raw diagnosticsと生成patchまで比較した上で、Googleのstatic-analysis/platform engineering原則と2026年の各tool公式仕様に照らして採用architectureへ落としている","proof_of_value":"KAFKA2306/DeepCode@088059855d2c9187c51d674db02a06f70c37f087、GitHub Actions run 31812751114、Ruff 1,076 findings、Pyrefly 723 findings、そのうちparse-error 508、pre-commit/prek生成patch SHA-256一致","desired_reader_action":"自分のrepoでformatter/linter/type/runtime validation/orchestratorのauthority mapを作り、重複toolを減らし、fast feedbackとfull CIを分離する","non_goal":"単発速度で普遍的なtoolランキングを作らない。Pydantic/Biome/Oxlint/tsc/Zodを今回のDeepCode実験で実測済みとは扱わない。既存Pyright/ESLintを根拠なく一括置換しない"},"public_evidence":["https://github.com/KAFKA2306/articles/pull/115","https://github.com/KAFKA2306/articles/actions/runs/31812751114","https://github.com/KAFKA2306/DeepCode/commit/088059855d2c9187c51d674db02a06f70c37f087","https://research.google/pubs/tricorder-building-a-program-analysis-ecosystem/","https://google.github.io/eng-practices/review/reviewer/standard.html","https://docs.astral.sh/ruff/","https://pyrefly.org/blog/v1.0/","https://astral.sh/blog/ty","https://pyrefly.org/en/docs/pydantic/","https://prek.j178.dev/compatibility/","https://biomejs.dev/formatter/","https://oxc.rs/docs/guide/usage/linter/type-aware.html","https://oxc.rs/docs/guide/usage/linter/config-file-reference","https://www.typescriptlang.org/tsconfig/noEmit.html","https://zod.dev/packages/zod"]} -->
 
-# CIが壊れたrepoに最新precheckを当てたら、0.1秒で1000件出た。でも件数比較は罠だった
+# 2026年のprecheckは何を選ぶべきか。壊れたrepoで見えた「最強tool」より重要な設計
 
-CIが赤いrepositoryに新しいlinterを入れる。
+Ruff、Pyrefly、ty、Pydantic、Biome、Oxlint、Zod、prek。
 
-すると、たくさん問題が見つかる。
+2026年の開発toolはかなり速くなりました。
 
-さらにtype checkerを入れる。
+だからこそ、選び方を間違えやすい。
 
-また大量に見つかる。
+「何倍速いか」「何rulesあるか」「何件見つけたか」を並べると、どのtoolも強く見えます。
 
-数字だけを見ると、検査器を増やすほどrepositoryの故障面が詳しく見えているように思えます。
+しかしTech Leadが決めたいのはbenchmark一位ではありません。
 
-実際に状態の悪い公開repositoryへ2026年のprecheck候補を当てたところ、最初の結果はかなり派手でした。
+**このtoolchainを標準化したとき、変更速度を落とさず、productionへ流出する欠陥を減らし、5年後も運用できるか。**
+
+Googleが大規模static analysis platformのTricorderで扱った問題も、単体analyzerの性能だけではありませんでした。複数の解析をどう開発者workflowへ統合し、実際に使われるsystemにするかが中心です。
+
+- Tricorder: https://research.google/pubs/tricorder-building-a-program-analysis-ecosystem/
+- Google Engineering Practices: https://google.github.io/eng-practices/review/reviewer/standard.html
+
+そこで、実際に壊れていた公開repositoryを使ってprecheckを試しました。
+
+最初に見えた数字は派手でした。
 
 ```text
 Ruff      1,076 findings
 Pyrefly     723 findings
 ```
 
-Ruffのscan部分は99 ms、Pyreflyは361 msでした。
+ところがraw diagnosticsを分類すると、Pyreflyの723件中508件がparse errorでした。
 
-「合計1,799件の問題を1秒未満で発見した」と書きたくなる数字です。
+Ruffにも508件の`invalid-syntax`がありました。
 
-しかしraw diagnosticsを分類すると、その解釈は間違っていました。
-
-**Pyreflyの723件のうち、508件はparse errorでした。Ruff側にも508件の`invalid-syntax`がありました。**
-
-つまり、ツールを増やしたことで独立した問題が723件追加されたわけではありません。
-
-壊れた構文が、後段の型検査まで大量のdiagnosticを伝播させていました。
-
-この記事では「2026年の最強lint一覧」ではなく、**壊れたrepositoryでは何を先に直すと後段のノイズが減るのか**を、固定commitの実測から考えます。
-
-実験:
-https://github.com/KAFKA2306/articles/pull/115
-
-GitHub Actions run:
-https://github.com/KAFKA2306/articles/actions/runs/31812751114
-
-対象commit:
-https://github.com/KAFKA2306/DeepCode/commit/088059855d2c9187c51d674db02a06f70c37f087
-
-## 「正常なrepoで何ms」はやめて、壊れたrepoをそのまま使った
-
-速度比較だけなら、整ったsample repositoryを作る方が簡単です。
-
-でも実際に困るのは、たいてい逆です。
-
-- 既存CIが失敗している
-- 古いlint設定が残っている
-- 構文エラーがある
-- importやdependencyの状態も怪しい
-- 自動fixすると大量diffが出る
-- どのdiagnosticを先に信用すべきか分からない
-
-そこで、`KAFKA2306/DeepCode` の実在commitを固定して、その状態を変更せず検査しました。
-
-対象SHAは次です。
+つまり、
 
 ```text
+1,076 + 723 = 1,799 independent defects
+```
+
+ではありません。
+
+**同じ壊れた構文が、複数の解析層へ伝播していました。**
+
+ここからtool選定の問いを変えました。
+
+「最強のlinterはどれか」ではなく、
+
+> **どのtoolを、どの責任の唯一のauthorityにして、どのタイミングで走らせるべきか。**
+
+これがこの記事の問いです。
+
+## 結論：2026年8月時点で私ならこうする
+
+新規repositoryなら、第一候補は次です。
+
+```text
+Python
+  Ruff                  syntax / format / lint
+  Pyrefly               static type authority
+  Pydantic              untrusted runtime boundary only
+
+TypeScript
+  Biome formatter       formatting authority
+  Oxlint                lint authority
+  tsc --noEmit          type authority
+  Zod                   untrusted runtime boundary only
+
+Orchestration
+  prek                  local hook runner; quality semanticsは持たせない
+```
+
+表にするとこうです。
+
+| concern | 第一候補 | 位置づけ |
+|---|---|---|
+| Python format/lint | **Ruff** | 採用 |
+| Python type | **Pyrefly** | production標準候補 |
+| Python experimental fast type | **ty** | 有力だがBeta |
+| Python runtime contract | **Pydantic** | 必要なboundaryだけ |
+| JS/TS format | **Biome** | formatter authority |
+| JS/TS lint | **Oxlint** | lint authority |
+| TypeScript type | **`tsc --noEmit`** | compiler authority |
+| TS runtime contract | **Zod 4** | 必要なboundaryだけ |
+| Git hook orchestration | **prek** | transport / orchestration |
+
+ただし重要なのは製品名ではありません。
+
+この構成が強い理由は、**責務が重なりにくいこと**です。
+
+## professionalなtoolchain評価は5軸で見る
+
+今回、toolを次の5軸で見直しました。
+
+### 1. Semantic authority — 最後に誰を信じるか
+
+同じ責務を複数toolへ持たせると、差分が出た瞬間に運用が破綻します。
+
+```text
+formatterは誰が正しい？
+linterは誰が正しい？
+type errorは誰が正しい？
+runtime inputは誰が正しい？
+```
+
+これを一つずつ決めます。
+
+Pythonなら、format/lintはRuff、typeはPyrefly。
+
+TypeScriptなら、formatはBiome、lintはOxlint、typeの最終authorityはTypeScript compilerである`tsc`。
+
+Oxlintは2026年7月にtype-aware lintingをstable化し、TypeScript semanticsを利用したruleを実行できます。
+
+一方、Oxlintの`typeCheck`自体は現行config referenceでexperimentalです。
+
+- type-aware linting: https://oxc.rs/docs/guide/usage/linter/type-aware.html
+- config reference: https://oxc.rs/docs/guide/usage/linter/config-file-reference
+
+だから現時点では、Oxlintにcompiler authorityまで渡しません。
+
+```text
+Oxlint = lint authority
+TypeScript compiler = type authority
+```
+
+この分離の方がmigration riskを制御できます。
+
+### 2. Signal density — 件数ではなく、直す価値があるか
+
+static analysisは多く警告すれば強いわけではありません。
+
+今回のbroken repoでそれを実測しました。
+
+対象:
+
+```text
+KAFKA2306/DeepCode
 088059855d2c9187c51d674db02a06f70c37f087
 ```
 
-実験側のGitHub ActionsからこのSHAをcheckoutし、各toolを別jobで実行しています。
-
-今回のDiscovery runで使われた主なversionは次でした。
-
-| tool | version | scan observation |
-|---|---:|---:|
-| Ruff | 0.16.3 | 99 ms |
-| Pyrefly | 1.2.0 | 361 ms |
-| ty | 0.0.71 | 264 ms |
-| prek | 0.4.11 | 2,326 ms |
-| pre-commit | 4.6.2 | 8,765 ms |
-
-ここでの時間は**1回のGitHub Actions観測値**です。
-
-jobは別々のGitHub-hosted runner VMで動いており、特に`pre-commit`と`prek`のscan区間にはhook環境準備も含まれます。したがって「一般に何倍速い」というbenchmark結論には使いません。
-
-今回重視したのは、同じ固定commitで、何がどう壊れていると診断されたかです。
-
-## Ruffの1,076件を分解すると、半分近くがsyntaxだった
+実験:
+https://github.com/KAFKA2306/articles/actions/runs/31812751114
 
 Ruff 0.16.3は47 filesから1,076 findingsを返しました。
 
-上位を分類するとこうなりました。
-
-| category | count |
+| Ruff category | count |
 |---|---:|
 | `invalid-syntax` | **508** |
 | `UP006` | 147 |
 | `BLE001` | 143 |
 | `I001` | 44 |
 | `RUF010` | 42 |
-| `UP045` | 33 |
-| `UP035` | 29 |
-| `S110` | 28 |
-| `ASYNC230` | 21 |
 
-`invalid-syntax`だけで508件あります。
+Pyrefly 1.2.0は723 findingsでした。
 
-14 filesに集中しており、たとえば`deepcode.py`ではclosing quoteの欠落が検出されました。
-
-```text
-missing closing quote in string literal
-```
-
-この時点で重要なのは、残り568件を全部並列に直し始めないことです。
-
-構文が壊れているfileでは、後段の解析器が正しいprogram structureを作れません。
-
-Ruff公式でも`ruff check`はPython filesを再帰的にlintする入口として定義されています。
-
-https://docs.astral.sh/ruff/linter/
-
-## Pyrefly 723件は「Ruffでは見えなかった723件」ではなかった
-
-次にPyrefly 1.2.0を同じcommitへ当てました。
-
-raw JSONをcategory別に数えると、723件の内訳は**これで全部**でした。
-
-| category | count |
+| Pyrefly category | count |
 |---|---:|
 | `parse-error` | **508** |
 | `unknown-name` | 108 |
 | `missing-import` | 86 |
 | `invalid-syntax` | 12 |
 | `unexpected-keyword` | 9 |
-| **total** | **723** |
 
-ここで仮説が崩れました。
+最大categoryが508対508で一致しました。
 
-私は最初、Ruffがsource quality、Pyreflyが型整合性を見るので、両者を並べれば比較的補完的な故障面が得られると考えていました。
+この時点では、Pyreflyが「新しい型欠陥を723件追加発見した」とは言えません。
 
-しかし最初のbroken-repo runでは、Pyreflyの最大categoryも508件のparse errorでした。
+**syntax failureを直す前のtype diagnosticは、confidenceが低いものを含む。**
 
-```text
-Ruff invalid-syntax = 508
-Pyrefly parse-error = 508
-```
-
-さらに86件の`missing-import`には、zero-dependencyのDiscovery環境でmoduleを解決できなかったものが含まれます。
-
-つまり、Pyreflyの723件をすぐ「型の問題723件」と扱うのも違います。
-
-**syntaxとenvironmentが壊れたままでは、type checkerの総件数はrepository固有の型品質だけを表していません。**
-
-## ここでprecheckの設計を変えた
-
-最初に考えていたのは、こんな構成でした。
+そのためCI UIやagentへ返す結果も、総件数ではなくdependencyを持たせるべきです。
 
 ```text
-prek
-├─ Ruff
-├─ Pyrefly
-├─ Pydantic
-├─ Biome
-├─ Oxlint
-├─ tsc
-└─ Zod
-```
-
-全部高速なら全部走らせればいい。
-
-しかしbroken repoでは、単に横並びで全部実行すると大量の重複・派生diagnosticを人間やagentへ返します。
-
-今回の結果から、役割ではなく**依存順序**も明示する必要があると考え直しました。
-
-```text
-Gate 1: parse / syntax
-        ↓ PASS
-Gate 2: formatter + lint
-        ↓ PASS
-Gate 3: dependency / import context
-        ↓ PASS
-Gate 4: static type check
-        ↓ PASS
-Gate 5: runtime schema / fixture validation
-        ↓ PASS
-Gate 6: tests / integration / heavier CI
-```
-
-前段が失敗したら後段を完全に止める必要はありません。
-
-調査目的なら後段も走らせてよい。
-
-ただしUIやagentへの出力では、
-
-```text
-723 errors
-```
-
-と一括表示するのではなく、
-
-```text
-BLOCKING ROOT FAILURE
+ROOT / BLOCKING
   syntax: 508
 
-DOWNSTREAM / LOWER-CONFIDENCE WHILE SYNTAX IS BROKEN
-  unknown-name: 108
+DOWNSTREAM / lower confidence until root is repaired
   missing-import: 86
+  unknown-name: 108
   ...
 ```
 
-のように扱う方が、次の修正行動へつながります。
+AI coding agent時代には特に重要です。
 
-## prekは同じ修正patchを作れた
+1,000 diagnosticsを渡すより、最初のroot causeを1つ渡した方が修復能力は高くなります。
 
-もう一つ確認したかったのが、既存`pre-commit`から`prek`へrunnerだけ差し替えられるかです。
+### 3. Feedback latency — 速さはCI代ではなく人間の認知負荷に効く
 
-対象repoには既存`.pre-commit-config.yaml`がありました。
+速度は重要です。
 
-同じconfigを`pre-commit 4.6.2`と`prek 0.4.11`で実行しました。
+ただし「benchmarkで勝つため」ではありません。
 
-単発観測では次でした。
+速いanalysisは、developerがcontext switchする前にfeedbackを返せます。
 
-| | install | scan | measured total |
-|---|---:|---:|---:|
-| pre-commit | 1,534 ms | 8,765 ms | 10,299 ms |
-| prek | 293 ms | 2,326 ms | 2,619 ms |
+Google Engineering Practicesでも、code healthを守る一方でdeveloperが前進できることを明確にtrade-offとして扱っています。
 
-この1 runだけなら約3.93倍の差です。
+https://google.github.io/eng-practices/review/reviewer/standard.html
 
-ただしrunner VMやnetwork条件が完全には同一でないので、私はこれを「prekは常に4倍速い」という結論にはしません。
+今回の単発Actions observationは次でした。
 
-今回もっと重要だったのは、実行後に生成されたpatchでした。
+| tool | version | scan observation |
+|---|---:|---:|
+| Ruff | 0.16.3 | 99 ms |
+| ty | 0.0.71 | 264 ms |
+| Pyrefly | 1.2.0 | 361 ms |
+| prek | 0.4.11 | 2,326 ms |
+| pre-commit | 4.6.2 | 8,765 ms |
+
+これは別runner VMなので一般benchmarkにはしません。
+
+ただし、Ruff/Pyrefly/tyのようなsub-second classのanalysisをdeveloper loopへ寄せる設計自体は合理的です。
+
+ここで重要なのは、**全checkをpre-commitへ詰め込まないこと**です。
+
+私ならfeedback topologyをこう分けます。
 
 ```text
-SHA-256(pre-commit.diff.patch)
+EDITOR / SAVE
+  Ruff / Biome
+  Pyrefly or ty LSP
+  Oxlint LSP
+
+COMMIT
+  deterministic formatter/lint on changed files
+  cheap syntax/config validation
+
+PR CI
+  full Ruff
+  full Pyrefly
+  Oxlint --type-aware
+  tsc --noEmit
+  contract fixtures
+  unit tests
+
+HEAVIER CI / scheduled
+  integration / E2E
+  dependency/security
+  expensive repository-wide audits
+```
+
+`prek`はこの中のCOMMIT層を便利にするtoolであって、architectureの中心ではありません。
+
+### 4. Trust boundary — static typeで守れない入力をどこで止めるか
+
+ここでPydanticとZodの意味が出ます。
+
+これらはlinterではありません。
+
+production systemでは、codeの外から値が入ります。
+
+```text
+HTTP response
+JSON / YAML
+CSV
+DB row
+environment variable
+AI model output
+user input
+```
+
+static type checkerは、この値が実際にcontractを満たして届くことまでは保証できません。
+
+そこでboundaryだけruntime schemaを置きます。
+
+Python:
+
+```text
+external data
+    ↓
+Pydantic
+    ↓ validated object
+application core
+```
+
+TypeScript:
+
+```text
+unknown
+  ↓
+Zod
+  ↓ typed validated value
+application core
+```
+
+Zod 4はstableで、schema parsingとTypeScript type inferenceを同じschemaから扱います。
+
+https://zod.dev/packages/zod
+
+Pydanticもruntime validationを担います。
+
+一方、すべての内部functionへPydantic validationを付けるのは逆です。
+
+validation costとschema duplicationを増やすだけです。
+
+**Pydantic/Zodはrepository-wide precheckではなく、trust boundary contractです。**
+
+ここは前のstack案から重要な修正です。
+
+### 5. Migration cost — replacementはtool数ではなくoperational debtを減らせるか
+
+Ruffが強い最大の理由の一つは速度だけではありません。
+
+RuffはFlake8系、isort、pyupgrade、autoflake等の広いlint責務を統合し、formatterも同じtoolchainに持ちます。
+
+https://docs.astral.sh/ruff/
+
+これは、
+
+```text
+Black
+isort
+Flake8
+pyupgrade
+...
+```
+
+を長期で別version管理するoperational costを圧縮できるという意味があります。
+
+TypeScript側でも同じです。
+
+ただしBiomeとOxlintを両方lint authorityにすると、また二重化します。
+
+だからこの構成では、
+
+```text
+Biome = formatter
+Oxlint = linter
+```
+
+へ意図的に絞ります。
+
+Biome 2.5自身は500を超えるlint ruleとcross-file lintingを持ちます。
+
+https://biomejs.dev/blog/biome-v2-5/
+
+つまりBiomeが弱いからlintを使わないのではありません。
+
+**組織のstandardとしてauthorityを一つにするために、あえて責務を限定する。**
+
+これがtool-centricとplatform-centricの違いです。
+
+## Ruff + Pyrefly + Pydanticはどうだったか
+
+### Ruff — 強く推奨
+
+今回の実repoでも有効でした。
+
+Ruffはsyntax root failureを最初の安い層で露出し、lint/format関連toolを集約できます。
+
+新規Python repositoryなら第一候補です。
+
+### Pyrefly — production標準候補
+
+Pyreflyは2026年5月にstable v1へ到達し、公式にproduction readyとされています。
+
+https://pyrefly.org/blog/v1.0/
+
+Meta側ではInstagramを含むproduction codebaseで使われていると説明されています。
+
+今回のDeepCodeでは大量parse errorの影響を受けたので、723件という件数そのものを検出力scoreにはしません。
+
+それでも、stable status、IDE/CLI、段階導入、Pydantic supportを考えると、production標準のtype authority候補として扱いやすいです。
+
+### ty — かなり重要。ただし今はchallenger
+
+今回のscan observationでは264 msでPyreflyの361 msより短かったです。
+
+Astralのtyはincremental analysisを中心設計にしており、developer feedback latencyでは非常に有力です。
+
+https://astral.sh/blog/ty
+
+ただし2026年8月現在もBetaです。
+
+Astral自身はmotivated usersへproduction利用を勧めていますが、stableは今後のmilestoneです。
+
+したがって私なら、
+
+```text
+production blocking authority → Pyrefly
+shadow / evaluation / speed-sensitive editor → ty
+```
+
+から始めます。
+
+stable化後に再評価します。
+
+両方を永久にblocking CIで走らせるのは、通常はしません。
+
+### Pydantic — 採用。ただしprecheckではない
+
+外部data contractがあるrepositoryでは強い。
+
+しかし「Python repoだから必ずPydantic」は違います。
+
+pure libraryやruntime inputを持たないtoolでは不要な場合があります。
+
+## Biome + Oxlint + tsc + Zodはどうか
+
+### Biome formatter — 採用候補
+
+Biome formatterはopinionatedでoptionを絞り、style debateを減らす思想を明示しています。
+
+https://biomejs.dev/formatter/
+
+professional environmentでは、formatterの価値は美しさより**人間がstyle reviewをしなくてよくなること**です。
+
+その用途ならかなり適しています。
+
+### Oxlint — 2026年に評価が上がった
+
+Oxlintのtype-aware lintingは2026年7月にstableになりました。
+
+現在59/61のtypescript-eslint type-aware rulesをサポートし、multi-file analysisも持ちます。
+
+https://oxc.rs/docs/guide/usage/linter/type-aware.html
+
+ただしtype-aware modeはTypeScript 7系を前提とし、legacy tsconfig optionにはmigration requirementがあります。
+
+つまり新規repoと既存large monorepoで導入難度が違います。
+
+**greenfieldなら強い。legacyならcompatibility auditが先。**
+
+### tsc --noEmit — まだ外さない
+
+Oxlintは`--type-check`でcompiler diagnosticsも統合でき、公式docsは別`tsc --noEmit`を置換できる形も示しています。
+
+一方、config referenceは`typeCheck`をexperimentalとしています。
+
+だから2026年8月時点では私は`tsc --noEmit`を残します。
+
+https://www.typescriptlang.org/tsconfig/noEmit.html
+
+これは速度より、**semantic authorityをexperimental featureへ移す必要がまだない**という判断です。
+
+### Zod — boundaryがあるなら採用
+
+Zod 4はstableです。
+
+frontend/backend/API boundaryで`unknown`をvalidated dataへ変える用途なら非常に自然です。
+
+ただし内部domain objectまで全部Zod schemaで包む必要はありません。
+
+## prekはどうだったか
+
+今回最も直接比較できたのがここです。
+
+同じ`.pre-commit-config.yaml`を、`pre-commit 4.6.2`と`prek 0.4.11`へ渡しました。
+
+```text
+pre-commit measured total  10,299 ms
+prek measured total         2,619 ms
+```
+
+runner条件が異なるので普遍的な3.93倍とは主張しません。
+
+重要だったのは生成patchです。
+
+```text
+SHA-256(pre-commit patch)
 30275602cf6b35644199d3a7fe949c038a10eaa9e6685074de4f7c8d62b36bf1
 
-SHA-256(prek.diff.patch)
+SHA-256(prek patch)
 30275602cf6b35644199d3a7fe949c038a10eaa9e6685074de4f7c8d62b36bf1
 ```
 
-**このrepository、このconfig、このrunではbyte-identicalでした。**
+このfixtureではbyte-identicalでした。
 
-prek公式も既存`.pre-commit-config.yaml`との互換を目的にしています。
+既存configを保ちながらrunnerだけ差し替えるmigration pathとしてはかなり良い結果です。
 
-https://prek.j178.dev/compatibility/
+ただし設計上、prekは**交換可能であるべき**です。
 
-少なくとも今回のfixtureでは、「高速化したいからhook定義まで作り直す」必要はありませんでした。
+```text
+quality policy
+    ≠ prek
 
-## Pydantic / Zodはlint件数に足してはいけない
+quality policy
+    = repository commands / configs / CI contract
+```
 
-ここまでの実験から、もう一つ整理できます。
+hook runnerを変えただけでquality semanticsが変わる構成にはしません。
 
-PydanticやZodをRuff/Pyrefly/Oxlintと同じ「何件見つけたか」ランキングへ入れるべきではありません。
+## だから「最強stack」の答えはこうなる
 
-Pydanticはruntime data validation、Zodはruntime schema parsingの層です。
-
-たとえば型上は`dict[str, object]`や`unknown`として受け取れても、実際のAPI responseや設定JSONがcontractを満たすとは限りません。
-
-Pydantic:
-https://docs.pydantic.dev/2.10/concepts/validation_decorator/
-
-Zod:
-https://zod.dev/basics
-
-したがってPython側の完成形は、今のところ次を候補にしています。
+### Greenfield Python
 
 ```text
 Ruff
-  ↓
 Pyrefly
-  ↓
-Pydantic contract tests with real fixtures
+Pydantic only at trust boundaries
+prek for local orchestration
 ```
 
-ただし**今回実測したのはRuffとPyreflyまで**です。
+かなり強く推奨します。
 
-PydanticをDeepCodeの実データ境界へ入れた結果は、まだありません。
-
-## TypeScript側も同じ仮説で次に壊す
-
-TypeScript側は次を候補にしています。
+### Greenfield TypeScript
 
 ```text
 Biome formatter
-  ↓
-Oxlint
-  ↓
+Oxlint --type-aware
 tsc --noEmit
-  ↓
-Zod contract tests
+Zod only at trust boundaries
+prek if Git hook standardization is useful
 ```
 
-Biomeはformatterとして使い、Oxlintをsource lint、`tsc --noEmit`をcompiler/type authority、Zodをruntime boundaryにする案です。
+2026年8月なら第一候補に置きます。
 
-Biome formatter:
-https://biomejs.dev/formatter/
+### Legacy Python
 
-Oxlint type-aware linting:
-https://oxc.rs/docs/guide/usage/linter/type-aware.html
+Ruff migrationは有力です。
 
-TypeScript `noEmit`:
-https://www.typescriptlang.org/tsconfig/noEmit.html
+一方、既にPyright/mypyが安定運用されているなら、Pyreflyへ移すこと自体をKPIにしません。
 
-Zod:
-https://zod.dev/basics
+shadow runでfalse positive、coverage、latency、config migration costを測ってから切り替えます。
 
-Oxlintにはtype checkingをまとめる機能もありますが、現在のconfig referenceでは`typeCheck`はexperimentalと記載されています。
+### Legacy TypeScript
 
-https://oxc.rs/docs/guide/usage/linter/config-file-reference
+Oxlint導入前に、ESLint plugin dependencyとTypeScript/tsconfig compatibilityをinventoryします。
 
-そのため、少なくとも次の実証までは`tsc --noEmit`を独立gateとして残します。
+unsupported pluginやlegacy TypeScript requirementがあるrepoで、tool標準化のためだけにmigration scopeを膨らませるのは逆効果です。
 
-そして重要なのは、**このTypeScript stackはまだ今回の実験結果ではない**ことです。
+## 今回の実験で本当に変わった考え
 
-次は実際に状態の悪いTypeScript repositoryを固定し、同じやり方で測ります。
-
-## 次は「syntaxを直したら723件が何件まで減るか」を測る
-
-今回のDiscovery runで一番知りたくなったのは、ツールの絶対速度ではありません。
+最初はこう考えていました。
 
 ```text
-syntax 508件を直す
+速いtoolを全部入れる
         ↓
-Pyrefly 723件は何件残る？
+たくさん見つかる
+        ↓
+品質が上がる
 ```
 
-です。
+今は違います。
 
-さらにdependencyを正しくinstallしたら、86件の`missing-import`はどこまで減るのか。
+```text
+one concern
+  ↓
+one authority
+  ↓
+fastest useful feedback point
+  ↓
+trust boundaryでruntime validation
+  ↓
+full CIでsystem correctness
+```
 
-この前後差を取れば、
+最強のtoolを選ぶこと自体は重要です。
 
-- root causeに近いdiagnostic
-- 前段failureから派生したdiagnostic
-- environment不足によるdiagnostic
-- 修正後も残る本当のtype issue
+しかし、それ以上に重要なのは、**強いtoolを互いに邪魔させないこと**です。
 
-を分離できます。
+今回の508件の重複parse failureは、その最小の実例でした。
 
-precheckで欲しいのは「たくさん怒ってくれること」ではありません。
+precheck platformのKPIを「diagnostic総数」にすると失敗します。
 
-**最初の1つを直したとき、次の100個が消える順序を教えてくれること**です。
+見るべきなのは、たとえば次です。
 
-今回、壊れたrepoへ最新toolを横並びで当てたことで、むしろその設計の方が重要だと分かりました。
+```text
+time to first actionable failure
+false-positive / ignored-diagnostic rate
+PR feedback latency
+production escape rate
+number of overlapping authorities
+migration / config maintenance cost
+```
 
-## 現時点の結論
+この視点なら、Ruff、Pyrefly、Pydantic、Biome、Oxlint、tsc、Zod、prekはかなり良い材料です。
 
-この実験から言える範囲は限定します。
+しかし価値を生むのはtool listではなく、**それらをquality control planeとして配置するarchitecture**です。
 
-- Ruff 0.16.3は固定したbroken repoで1,076 findingsを返した
-- Pyrefly 1.2.0は723 findingsを返した
-- Pyreflyの723件中508件はparse errorだった
-- Ruffにも508件の`invalid-syntax`があった
-- したがって1,076 + 723を独立欠陥数として扱えない
-- 同じ`.pre-commit-config.yaml`を実行したpre-commitとprekは、このrunでは同一SHA-256のpatchを生成した
-- 単発timingはprek側が短かったが、別runner条件なので一般性能比にはしない
-- Pydantic / Biome / Oxlint / `tsc` / Zodは今回の実験では未実測
-
-最初の仮説は「高速toolを積み重ねれば故障面が広く見える」でした。
-
-今は少し違います。
-
-> **壊れたrepositoryでは、toolの数よりdiagnosticの依存関係を設計した方がよい。syntaxとenvironmentが壊れたまま、後段の件数を品質指標にしてはいけない。**
-
-次の実験では、508件のsyntax failureを先に除去し、同じPyrefly 1.2.0を再実行します。
-
-そこで723という数字がどこまで縮むかを見ます。
+次の実験では、このarchitectureをTypeScriptの実際に状態の悪いrepositoryへ適用し、Biome/Oxlint/tsc/Zodについても同じ基準で実測します。
