@@ -1,8 +1,8 @@
 {
-  "blocked_on": "controlled_results_incomplete",
-  "comparison_started": false,
-  "last_transition": "fixtures_frozen->harness_ready",
-  "phase": "harness_ready",
+  "blocked_on": "real_repo_sample_not_frozen",
+  "comparison_started": true,
+  "last_transition": "harness_ready->controlled_results_ready",
+  "phase": "controlled_results_ready",
   "publication_authorized": false,
   "real_repo_sample_frozen": false,
   "schema_version": 1

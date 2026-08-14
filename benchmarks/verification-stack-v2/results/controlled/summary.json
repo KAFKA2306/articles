@@ -1,0 +1,238 @@
+{
+  "candidate_stats": {
+    "biome": {
+      "baseline_blocking_false_positives": 2,
+      "detected": 2,
+      "in_scope_records": 2
+    },
+    "black": {
+      "baseline_blocking_false_positives": 2,
+      "detected": 2,
+      "in_scope_records": 2
+    },
+    "eslint": {
+      "baseline_blocking_false_positives": 3,
+      "detected": 3,
+      "in_scope_records": 3
+    },
+    "flake8": {
+      "baseline_blocking_false_positives": 1,
+      "detected": 1,
+      "in_scope_records": 1
+    },
+    "mypy": {
+      "baseline_blocking_false_positives": 0,
+      "detected": 5,
+      "in_scope_records": 5
+    },
+    "oxlint": {
+      "baseline_blocking_false_positives": 3,
+      "detected": 3,
+      "in_scope_records": 3
+    },
+    "oxlint_type_check": {
+      "baseline_blocking_false_positives": 2,
+      "detected": 2,
+      "in_scope_records": 2
+    },
+    "prettier": {
+      "baseline_blocking_false_positives": 0,
+      "detected": 2,
+      "in_scope_records": 2
+    },
+    "pydantic": {
+      "baseline_blocking_false_positives": 0,
+      "detected": 1,
+      "in_scope_records": 1
+    },
+    "pyrefly": {
+      "baseline_blocking_false_positives": 0,
+      "detected": 2,
+      "in_scope_records": 5
+    },
+    "pyright": {
+      "baseline_blocking_false_positives": 0,
+      "detected": 5,
+      "in_scope_records": 5
+    },
+    "ruff_format": {
+      "baseline_blocking_false_positives": 1,
+      "detected": 1,
+      "in_scope_records": 1
+    },
+    "ruff_lint": {
+      "baseline_blocking_false_positives": 0,
+      "detected": 2,
+      "in_scope_records": 2
+    },
+    "tsc": {
+      "baseline_blocking_false_positives": 0,
+      "detected": 3,
+      "in_scope_records": 3
+    },
+    "ty": {
+      "baseline_blocking_false_positives": 0,
+      "detected": 5,
+      "in_scope_records": 5
+    },
+    "unvalidated_python": {
+      "baseline_blocking_false_positives": 0,
+      "detected": 0,
+      "in_scope_records": 1
+    },
+    "unvalidated_typescript": {
+      "baseline_blocking_false_positives": 0,
+      "detected": 0,
+      "in_scope_records": 1
+    },
+    "zod": {
+      "baseline_blocking_false_positives": 0,
+      "detected": 1,
+      "in_scope_records": 1
+    }
+  },
+  "format_quality": {
+    "PY-FORMAT-001::black": {
+      "idempotent": true,
+      "matches_clean_target": true,
+      "patch_sha256": "9499e76acfcf3af98b26f5e0217245515ae583b62cb1c37894ec35e4e008cd55",
+      "smoke_pass": true
+    },
+    "PY-FORMAT-001::ruff_format": {
+      "idempotent": true,
+      "matches_clean_target": true,
+      "patch_sha256": "9499e76acfcf3af98b26f5e0217245515ae583b62cb1c37894ec35e4e008cd55",
+      "smoke_pass": true
+    },
+    "TS-FORMAT-001::biome": {
+      "idempotent": true,
+      "matches_clean_target": false,
+      "patch_sha256": "be56e2e662b7ad80ff15712710fd43d38426256d8a4cc2423d67a00fdcc95d13",
+      "smoke_pass": true
+    },
+    "TS-FORMAT-001::prettier": {
+      "idempotent": true,
+      "matches_clean_target": true,
+      "patch_sha256": "857542547708577d731c153beedff8c4feafe1039f2dcf0f9205682d8b54264a",
+      "smoke_pass": true
+    }
+  },
+  "guardrails": [
+    "complete means evidence collection completed, not that any candidate passed",
+    "raw diagnostic counts are not defect counts",
+    "candidate_stats do not rank responsibilities against each other",
+    "runtime unvalidated controls are negative controls, not candidate authorities",
+    "boundary capability is not a scored Nx/Turbo head-to-head because official enforcement surfaces differ in maturity and dependencies",
+    "no recommendation or article thesis is authorized by this summary"
+  ],
+  "hook_patch_parity": {
+    "both_idempotent": true,
+    "same_changed_files": true,
+    "same_content_sha256": true,
+    "same_diff_sha256": true
+  },
+  "interpretation_status": "unclassified",
+  "mutant_detection_matrix": {
+    "PY-ASYNC-001": {
+      "mypy": true,
+      "pyrefly": false,
+      "pyright": true,
+      "ty": true
+    },
+    "PY-FORMAT-001": {
+      "black": true,
+      "ruff_format": true
+    },
+    "PY-LINT-001": {
+      "flake8": true,
+      "ruff_lint": true
+    },
+    "PY-NAME-001": {
+      "mypy": true,
+      "pyrefly": true,
+      "pyright": true,
+      "ty": true
+    },
+    "PY-RUNTIME-001": {
+      "pydantic": true,
+      "unvalidated_python": false
+    },
+    "PY-SYNTAX-001": {
+      "black": true,
+      "mypy": true,
+      "pyrefly": true,
+      "pyright": true,
+      "ruff_lint": true,
+      "ty": true
+    },
+    "PY-TYPE-ARG-001": {
+      "mypy": true,
+      "pyrefly": false,
+      "pyright": true,
+      "ty": true
+    },
+    "PY-TYPE-RETURN-001": {
+      "mypy": true,
+      "pyrefly": false,
+      "pyright": true,
+      "ty": true
+    },
+    "TS-FORMAT-001": {
+      "biome": true,
+      "prettier": true
+    },
+    "TS-LINT-001": {
+      "eslint": true,
+      "oxlint": true
+    },
+    "TS-PROMISE-001": {
+      "eslint": true,
+      "oxlint": true
+    },
+    "TS-RUNTIME-001": {
+      "unvalidated_typescript": false,
+      "zod": true
+    },
+    "TS-SYNTAX-001": {
+      "biome": true,
+      "eslint": true,
+      "oxlint": true,
+      "prettier": true,
+      "tsc": true
+    },
+    "TS-TYPE-ARG-001": {
+      "oxlint_type_check": true,
+      "tsc": true
+    },
+    "TS-TYPE-RETURN-001": {
+      "oxlint_type_check": true,
+      "tsc": true
+    }
+  },
+  "schema_version": 1,
+  "status": "complete",
+  "workspace": {
+    "affected_correct": 0,
+    "affected_total": 6,
+    "boundary_capability": {
+      "mutant_id": "WS-BOUNDARY-001",
+      "nx": {
+        "reason": "official OSS enforcement requires ESLint + @nx/enforce-module-boundaries; language-agnostic Conformance requires Nx Enterprise",
+        "status": "adjunct_required"
+      },
+      "scored_head_to_head": false,
+      "turbo": {
+        "reason": "turbo boundaries and tags are officially Experimental",
+        "status": "experimental"
+      }
+    },
+    "cache_hit_correct": {
+      "nx": false,
+      "turbo": false
+    },
+    "cache_invalidation_correct": {
+      "nx": false,
+      "turbo": false
+    }
+  }
+}

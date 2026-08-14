@@ -1,0 +1,22 @@
+{
+  "python": {
+    "black": "black, 26.5.1 (compiled: yes)",
+    "mypy": "mypy 2.3.0 (compiled: yes)",
+    "prek": "prek 0.4.13",
+    "pyrefly": "pyrefly 1.2.0",
+    "ruff": "ruff 0.16.3",
+    "ty": "ty 0.0.71"
+  },
+  "trigger_sha": "143568b2d8e862a810bcc08edf22c7d75c0c9ad2",
+  "ts7_profile": {
+    "node": "v22.23.2",
+    "nx": "Nx Version:\n- Local: Not found\n- Global: v23.1.0",
+    "oxlint": "Version: 1.76.0",
+    "turbo": "2.10.6",
+    "typescript": "Version 7.0.2"
+  },
+  "typescript_eslint_profile": {
+    "eslint": "v10.8.0",
+    "typescript": "Version 6.0.3"
+  }
+}

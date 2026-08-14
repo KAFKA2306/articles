@@ -1,0 +1,355 @@
+{
+  "affected": [
+    {
+      "candidate": "nx",
+      "changed": "core",
+      "correct": false,
+      "expected": [
+        "api",
+        "core",
+        "ui",
+        "web"
+      ],
+      "observed": [],
+      "raw": {
+        "command": [
+          "nx",
+          "show",
+          "projects",
+          "--affected",
+          "--base=5cd9e56a3d9646a9cfe730d085d50eea9bc1426e",
+          "--head=HEAD",
+          "--json"
+        ],
+        "elapsed_ms": 156.049038,
+        "exit_code": 1,
+        "stderr": "\n\u001b[7m\u001b[1m\u001b[31m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[31mCould not find Nx modules at \"/tmp/verification-v2-workspace-uarab6cq/affected-nx-core\".\u001b[39m\n\nHave you run \u001b[1m\u001b[37mnpm/yarn install\u001b[39m\u001b[22m?\n\n",
+        "stdout": ""
+      }
+    },
+    {
+      "candidate": "nx",
+      "changed": "ui",
+      "correct": false,
+      "expected": [
+        "ui",
+        "web"
+      ],
+      "observed": [],
+      "raw": {
+        "command": [
+          "nx",
+          "show",
+          "projects",
+          "--affected",
+          "--base=fb88e002b69067a219533d4c852739f1b431f2c2",
+          "--head=HEAD",
+          "--json"
+        ],
+        "elapsed_ms": 268.846423,
+        "exit_code": 1,
+        "stderr": "\n\u001b[7m\u001b[1m\u001b[31m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[31mCould not find Nx modules at \"/tmp/verification-v2-workspace-uarab6cq/affected-nx-ui\".\u001b[39m\n\nHave you run \u001b[1m\u001b[37mnpm/yarn install\u001b[39m\u001b[22m?\n\n",
+        "stdout": ""
+      }
+    },
+    {
+      "candidate": "nx",
+      "changed": "docs",
+      "correct": false,
+      "expected": [
+        "docs"
+      ],
+      "observed": [],
+      "raw": {
+        "command": [
+          "nx",
+          "show",
+          "projects",
+          "--affected",
+          "--base=fb88e002b69067a219533d4c852739f1b431f2c2",
+          "--head=HEAD",
+          "--json"
+        ],
+        "elapsed_ms": 121.420161,
+        "exit_code": 1,
+        "stderr": "\n\u001b[7m\u001b[1m\u001b[31m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[31mCould not find Nx modules at \"/tmp/verification-v2-workspace-uarab6cq/affected-nx-docs\".\u001b[39m\n\nHave you run \u001b[1m\u001b[37mnpm/yarn install\u001b[39m\u001b[22m?\n\n",
+        "stdout": ""
+      }
+    },
+    {
+      "candidate": "turbo",
+      "changed": "core",
+      "correct": false,
+      "expected": [
+        "api",
+        "core",
+        "ui",
+        "web"
+      ],
+      "observed": [],
+      "raw": {
+        "command": [
+          "turbo",
+          "run",
+          "build",
+          "--affected",
+          "--dry=json"
+        ],
+        "elapsed_ms": 43.48671,
+        "exit_code": 0,
+        "stderr": "\nAttention:\nTurborepo now collects completely anonymous telemetry regarding usage.\nThis information is used to shape the Turborepo roadmap and prioritize features.\nYou can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:\nhttps://turborepo.dev/docs/telemetry\n\n WARNING  No locally installed `turbo` found in your repository. Using globally installed version (2.10.6). Using a specified version in your repository will result in more predictable behavior.\n",
+        "stdout": "{\n  \"id\": \"3HumFBDFOtOr0Pw87ggG1zQMtHu\",\n  \"version\": \"1\",\n  \"turboVersion\": \"2.10.6\",\n  \"monorepo\": false,\n  \"globalCacheInputs\": {\n    \"rootKey\": \"I can\u2019t see ya, but I know you\u2019re here\",\n    \"files\": {\n      \"package-lock.json\": \"ba851d284b916e916c4436b22866f0f43e4a7624\",\n      \"package.json\": \"c3b5617391b625b4290df2aaa1c6cfe401cdb8b7\"\n    },\n    \"hashOfExternalDependencies\": \"\",\n    \"hashOfInternalDependencies\": \"\",\n    \"environmentVariables\": {\n      \"specified\": {\n        \"env\": [],\n        \"passThroughEnv\": null\n      },\n      \"configured\": [],\n      \"inferred\": [],\n      \"passthrough\": null\n    },\n    \"engines\": null\n  },\n  \"envMode\": \"strict\",\n  \"frameworkInference\": true,\n  \"tasks\": [\n    {\n      \"taskId\": \"build\",\n      \"task\": \"build\",\n      \"hash\": \"0e6228983eebfdde\",\n      \"inputs\": {\n        \"apps/api/package.json\": \"85383efd19f1c0546a02b9caa25c1fc1c2450442\",\n        \"apps/api/src/value.ts\": \"b023a2d3e4f5dfb691a7b317045565fc130ad435\",\n        \"apps/web/package.json\": \"9f9cf4570c2f433ce0618bd5c8f74a44b65ad0d8\",\n        \"apps/web/src/value.ts\": \"b0e8f1c72a866ea7b6927b2b442b029798e981b8\",\n        \"build.mjs\": \"cc939ede8be7d2909930fe9b473720f44385bfe5\",\n        \"ground-truth.json\": \"a68f50532135f54b6117e4c03b4206aad76305e5\",\n        \"nx.json\": \"c3faa8a913e4c1b8be9553d1c8e2777d0ee3304e\",\n        \"package-lock.json\": \"ba851d284b916e916c4436b22866f0f43e4a7624\",\n        \"package.json\": \"c3b5617391b625b4290df2aaa1c6cfe401cdb8b7\",\n        \"packages/core/package.json\": \"45dc01527230ccd59670364ba9d80b92bd404819\",\n        \"packages/core/src/value.ts\": \"488af283186b03d444fecbba0615f3b364538951\",\n        \"packages/docs/package.json\": \"b05d06ff0f84a880e328f4007019ca3fcd665a7d\",\n        \"packages/docs/src/value.ts\": \"1d184e0843eb93eb278b6b33b7cba2f464de4219\",\n        \"packages/ui/package.json\": \"42c05de4425841cfda595ae7b980a45d1fa56459\",\n        \"packages/ui/src/value.ts\": \"4626cb81beb304e5bc6d2cd68e42c2f4f8a579a8\",\n        \"turbo.json\": \"9c951b4ed4011bd24bf5d70d4415ace6f83f8b73\"\n      },\n      \"hashOfExternalDependencies\": \"\",\n      \"cache\": {\n        \"local\": false,\n        \"remote\": false,\n        \"status\": \"MISS\",\n        \"timeSaved\": 0\n      },\n      \"command\": \"<NONEXISTENT>\",\n      \"cliArguments\": [],\n      \"outputs\": [\n        \"dist/**\"\n      ],\n      \"excludedOutputs\": null,\n      \"logFile\": \".turbo/turbo-build.log\",\n      \"dependencies\": [],\n      \"dependents\": [],\n      \"with\": [],\n      \"resolvedTaskDefinition\": {\n        \"outputs\": [\n          \"dist/**\"\n        ],\n        \"cache\": true,\n        \"dependsOn\": [\n          \"^build\"\n        ],\n        \"inputs\": [],\n        \"outputLogs\": \"full\",\n        \"persistent\": false,\n        \"interruptible\": false,\n        \"env\": [],\n        \"passThroughEnv\": null,\n        \"interactive\": false\n      },\n      \"expandedOutputs\": [],\n      \"framework\": \"\",\n      \"envMode\": \"strict\",\n      \"environmentVariables\": {\n        \"specified\": {\n          \"env\": [],\n          \"passThroughEnv\": null\n        },\n        \"configured\": [],\n        \"inferred\": [],\n        \"passthrough\": null\n      }\n    }\n  ],\n  \"user\": \"KAFKA2306\",\n  \"scm\": {\n    \"type\": \"git\",\n    \"sha\": \"143568b2d8e862a810bcc08edf22c7d75c0c9ad2\",\n    \"branch\": \"experiment/verification-stack-v2-ground-truth\"\n  }\n}\n\n"
+      }
+    },
+    {
+      "candidate": "turbo",
+      "changed": "ui",
+      "correct": false,
+      "expected": [
+        "ui",
+        "web"
+      ],
+      "observed": [],
+      "raw": {
+        "command": [
+          "turbo",
+          "run",
+          "build",
+          "--affected",
+          "--dry=json"
+        ],
+        "elapsed_ms": 43.721765,
+        "exit_code": 0,
+        "stderr": " WARNING  No locally installed `turbo` found in your repository. Using globally installed version (2.10.6). Using a specified version in your repository will result in more predictable behavior.\n",
+        "stdout": "{\n  \"id\": \"3HumF9aIARfOHeItv00YKkQyMdM\",\n  \"version\": \"1\",\n  \"turboVersion\": \"2.10.6\",\n  \"monorepo\": false,\n  \"globalCacheInputs\": {\n    \"rootKey\": \"I can\u2019t see ya, but I know you\u2019re here\",\n    \"files\": {\n      \"package-lock.json\": \"ba851d284b916e916c4436b22866f0f43e4a7624\",\n      \"package.json\": \"c3b5617391b625b4290df2aaa1c6cfe401cdb8b7\"\n    },\n    \"hashOfExternalDependencies\": \"\",\n    \"hashOfInternalDependencies\": \"\",\n    \"environmentVariables\": {\n      \"specified\": {\n        \"env\": [],\n        \"passThroughEnv\": null\n      },\n      \"configured\": [],\n      \"inferred\": [],\n      \"passthrough\": null\n    },\n    \"engines\": null\n  },\n  \"envMode\": \"strict\",\n  \"frameworkInference\": true,\n  \"tasks\": [\n    {\n      \"taskId\": \"build\",\n      \"task\": \"build\",\n      \"hash\": \"02c3c196d757e6ce\",\n      \"inputs\": {\n        \"apps/api/package.json\": \"85383efd19f1c0546a02b9caa25c1fc1c2450442\",\n        \"apps/api/src/value.ts\": \"b023a2d3e4f5dfb691a7b317045565fc130ad435\",\n        \"apps/web/package.json\": \"9f9cf4570c2f433ce0618bd5c8f74a44b65ad0d8\",\n        \"apps/web/src/value.ts\": \"b0e8f1c72a866ea7b6927b2b442b029798e981b8\",\n        \"build.mjs\": \"cc939ede8be7d2909930fe9b473720f44385bfe5\",\n        \"ground-truth.json\": \"a68f50532135f54b6117e4c03b4206aad76305e5\",\n        \"nx.json\": \"c3faa8a913e4c1b8be9553d1c8e2777d0ee3304e\",\n        \"package-lock.json\": \"ba851d284b916e916c4436b22866f0f43e4a7624\",\n        \"package.json\": \"c3b5617391b625b4290df2aaa1c6cfe401cdb8b7\",\n        \"packages/core/package.json\": \"45dc01527230ccd59670364ba9d80b92bd404819\",\n        \"packages/core/src/value.ts\": \"23e46679c60ba10a860cb586e9ced2052777e265\",\n        \"packages/docs/package.json\": \"b05d06ff0f84a880e328f4007019ca3fcd665a7d\",\n        \"packages/docs/src/value.ts\": \"1d184e0843eb93eb278b6b33b7cba2f464de4219\",\n        \"packages/ui/package.json\": \"42c05de4425841cfda595ae7b980a45d1fa56459\",\n        \"packages/ui/src/value.ts\": \"f3173f5ee117f73d74ab721ae521acfcefbbfe7c\",\n        \"turbo.json\": \"9c951b4ed4011bd24bf5d70d4415ace6f83f8b73\"\n      },\n      \"hashOfExternalDependencies\": \"\",\n      \"cache\": {\n        \"local\": false,\n        \"remote\": false,\n        \"status\": \"MISS\",\n        \"timeSaved\": 0\n      },\n      \"command\": \"<NONEXISTENT>\",\n      \"cliArguments\": [],\n      \"outputs\": [\n        \"dist/**\"\n      ],\n      \"excludedOutputs\": null,\n      \"logFile\": \".turbo/turbo-build.log\",\n      \"dependencies\": [],\n      \"dependents\": [],\n      \"with\": [],\n      \"resolvedTaskDefinition\": {\n        \"outputs\": [\n          \"dist/**\"\n        ],\n        \"cache\": true,\n        \"dependsOn\": [\n          \"^build\"\n        ],\n        \"inputs\": [],\n        \"outputLogs\": \"full\",\n        \"persistent\": false,\n        \"interruptible\": false,\n        \"env\": [],\n        \"passThroughEnv\": null,\n        \"interactive\": false\n      },\n      \"expandedOutputs\": [],\n      \"framework\": \"\",\n      \"envMode\": \"strict\",\n      \"environmentVariables\": {\n        \"specified\": {\n          \"env\": [],\n          \"passThroughEnv\": null\n        },\n        \"configured\": [],\n        \"inferred\": [],\n        \"passthrough\": null\n      }\n    }\n  ],\n  \"user\": \"KAFKA2306\",\n  \"scm\": {\n    \"type\": \"git\",\n    \"sha\": \"143568b2d8e862a810bcc08edf22c7d75c0c9ad2\",\n    \"branch\": \"experiment/verification-stack-v2-ground-truth\"\n  }\n}\n\n"
+      }
+    },
+    {
+      "candidate": "turbo",
+      "changed": "docs",
+      "correct": false,
+      "expected": [
+        "docs"
+      ],
+      "observed": [],
+      "raw": {
+        "command": [
+          "turbo",
+          "run",
+          "build",
+          "--affected",
+          "--dry=json"
+        ],
+        "elapsed_ms": 49.343215,
+        "exit_code": 0,
+        "stderr": " WARNING  No locally installed `turbo` found in your repository. Using globally installed version (2.10.6). Using a specified version in your repository will result in more predictable behavior.\n",
+        "stdout": "{\n  \"id\": \"3HumFBSbLj8FSoZCbrOgfgbC0Yi\",\n  \"version\": \"1\",\n  \"turboVersion\": \"2.10.6\",\n  \"monorepo\": false,\n  \"globalCacheInputs\": {\n    \"rootKey\": \"I can\u2019t see ya, but I know you\u2019re here\",\n    \"files\": {\n      \"package-lock.json\": \"ba851d284b916e916c4436b22866f0f43e4a7624\",\n      \"package.json\": \"c3b5617391b625b4290df2aaa1c6cfe401cdb8b7\"\n    },\n    \"hashOfExternalDependencies\": \"\",\n    \"hashOfInternalDependencies\": \"\",\n    \"environmentVariables\": {\n      \"specified\": {\n        \"env\": [],\n        \"passThroughEnv\": null\n      },\n      \"configured\": [],\n      \"inferred\": [],\n      \"passthrough\": null\n    },\n    \"engines\": null\n  },\n  \"envMode\": \"strict\",\n  \"frameworkInference\": true,\n  \"tasks\": [\n    {\n      \"taskId\": \"build\",\n      \"task\": \"build\",\n      \"hash\": \"a7564a0093ddac06\",\n      \"inputs\": {\n        \"apps/api/package.json\": \"85383efd19f1c0546a02b9caa25c1fc1c2450442\",\n        \"apps/api/src/value.ts\": \"b023a2d3e4f5dfb691a7b317045565fc130ad435\",\n        \"apps/web/package.json\": \"9f9cf4570c2f433ce0618bd5c8f74a44b65ad0d8\",\n        \"apps/web/src/value.ts\": \"b0e8f1c72a866ea7b6927b2b442b029798e981b8\",\n        \"build.mjs\": \"cc939ede8be7d2909930fe9b473720f44385bfe5\",\n        \"ground-truth.json\": \"a68f50532135f54b6117e4c03b4206aad76305e5\",\n        \"nx.json\": \"c3faa8a913e4c1b8be9553d1c8e2777d0ee3304e\",\n        \"package-lock.json\": \"ba851d284b916e916c4436b22866f0f43e4a7624\",\n        \"package.json\": \"c3b5617391b625b4290df2aaa1c6cfe401cdb8b7\",\n        \"packages/core/package.json\": \"45dc01527230ccd59670364ba9d80b92bd404819\",\n        \"packages/core/src/value.ts\": \"23e46679c60ba10a860cb586e9ced2052777e265\",\n        \"packages/docs/package.json\": \"b05d06ff0f84a880e328f4007019ca3fcd665a7d\",\n        \"packages/docs/src/value.ts\": \"268febf1335a2b9b68b7e9283294a5fb9623f267\",\n        \"packages/ui/package.json\": \"42c05de4425841cfda595ae7b980a45d1fa56459\",\n        \"packages/ui/src/value.ts\": \"4626cb81beb304e5bc6d2cd68e42c2f4f8a579a8\",\n        \"turbo.json\": \"9c951b4ed4011bd24bf5d70d4415ace6f83f8b73\"\n      },\n      \"hashOfExternalDependencies\": \"\",\n      \"cache\": {\n        \"local\": false,\n        \"remote\": false,\n        \"status\": \"MISS\",\n        \"timeSaved\": 0\n      },\n      \"command\": \"<NONEXISTENT>\",\n      \"cliArguments\": [],\n      \"outputs\": [\n        \"dist/**\"\n      ],\n      \"excludedOutputs\": null,\n      \"logFile\": \".turbo/turbo-build.log\",\n      \"dependencies\": [],\n      \"dependents\": [],\n      \"with\": [],\n      \"resolvedTaskDefinition\": {\n        \"outputs\": [\n          \"dist/**\"\n        ],\n        \"cache\": true,\n        \"dependsOn\": [\n          \"^build\"\n        ],\n        \"inputs\": [],\n        \"outputLogs\": \"full\",\n        \"persistent\": false,\n        \"interruptible\": false,\n        \"env\": [],\n        \"passThroughEnv\": null,\n        \"interactive\": false\n      },\n      \"expandedOutputs\": [],\n      \"framework\": \"\",\n      \"envMode\": \"strict\",\n      \"environmentVariables\": {\n        \"specified\": {\n          \"env\": [],\n          \"passThroughEnv\": null\n        },\n        \"configured\": [],\n        \"inferred\": [],\n        \"passthrough\": null\n      }\n    }\n  ],\n  \"user\": \"KAFKA2306\",\n  \"scm\": {\n    \"type\": \"git\",\n    \"sha\": \"143568b2d8e862a810bcc08edf22c7d75c0c9ad2\",\n    \"branch\": \"experiment/verification-stack-v2-ground-truth\"\n  }\n}\n\n"
+      }
+    }
+  ],
+  "boundary_capability": {
+    "mutant_id": "WS-BOUNDARY-001",
+    "nx": {
+      "reason": "official OSS enforcement requires ESLint + @nx/enforce-module-boundaries; language-agnostic Conformance requires Nx Enterprise",
+      "status": "adjunct_required"
+    },
+    "scored_head_to_head": false,
+    "turbo": {
+      "reason": "turbo boundaries and tags are officially Experimental",
+      "status": "experimental"
+    }
+  },
+  "cache_hit": [
+    {
+      "all_outputs_present": false,
+      "byte_identical_restore": true,
+      "candidate": "nx",
+      "correct": false,
+      "first": {
+        "command": [
+          "nx",
+          "run-many",
+          "-t",
+          "build"
+        ],
+        "elapsed_ms": 65.787425,
+        "exit_code": 1,
+        "stderr": "\n\u001b[7m\u001b[1m\u001b[31m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[31mCould not find Nx modules at \"/tmp/verification-v2-workspace-uarab6cq/cache-hit-nx\".\u001b[39m\n\nHave you run \u001b[1m\u001b[37mnpm/yarn install\u001b[39m\u001b[22m?\n\n",
+        "stdout": ""
+      },
+      "first_output_hashes": {},
+      "restored_output_hashes": {},
+      "second": {
+        "command": [
+          "nx",
+          "run-many",
+          "-t",
+          "build"
+        ],
+        "elapsed_ms": 59.087412,
+        "exit_code": 1,
+        "stderr": "\n\u001b[7m\u001b[1m\u001b[31m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[31mCould not find Nx modules at \"/tmp/verification-v2-workspace-uarab6cq/cache-hit-nx\".\u001b[39m\n\nHave you run \u001b[1m\u001b[37mnpm/yarn install\u001b[39m\u001b[22m?\n\n",
+        "stdout": ""
+      }
+    },
+    {
+      "all_outputs_present": false,
+      "byte_identical_restore": true,
+      "candidate": "turbo",
+      "correct": false,
+      "first": {
+        "command": [
+          "turbo",
+          "run",
+          "build"
+        ],
+        "elapsed_ms": 40.444818,
+        "exit_code": 0,
+        "stderr": " WARNING  No locally installed `turbo` found in your repository. Using globally installed version (2.10.6). Using a specified version in your repository will result in more predictable behavior.\n WARNING  No tasks were executed as part of this run.\n",
+        "stdout": "\n   \u2022 Running build\n   \u2022 Remote caching disabled\n\n\n Tasks:    0 successful, 0 total\nCached:    0 cached, 0 total\n  Time:    5ms \n\n"
+      },
+      "first_output_hashes": {},
+      "restored_output_hashes": {},
+      "second": {
+        "command": [
+          "turbo",
+          "run",
+          "build"
+        ],
+        "elapsed_ms": 42.033571,
+        "exit_code": 0,
+        "stderr": " WARNING  No locally installed `turbo` found in your repository. Using globally installed version (2.10.6). Using a specified version in your repository will result in more predictable behavior.\n WARNING  No tasks were executed as part of this run.\n",
+        "stdout": "\n   \u2022 Running build\n   \u2022 Remote caching disabled\n\n\n Tasks:    0 successful, 0 total\nCached:    0 cached, 0 total\n  Time:    6ms \n\n"
+      }
+    }
+  ],
+  "cache_invalidation": [
+    {
+      "baseline_force_run": {
+        "command": [
+          "nx",
+          "run-many",
+          "-t",
+          "build",
+          "--skip-nx-cache"
+        ],
+        "elapsed_ms": 65.682256,
+        "exit_code": 1,
+        "stderr": "\n\u001b[7m\u001b[1m\u001b[31m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[31mCould not find Nx modules at \"/tmp/verification-v2-workspace-uarab6cq/invalidate-baseline-nx\".\u001b[39m\n\nHave you run \u001b[1m\u001b[37mnpm/yarn install\u001b[39m\u001b[22m?\n\n",
+        "stdout": ""
+      },
+      "baseline_output_hashes": {},
+      "cached_after_change": {
+        "command": [
+          "nx",
+          "run-many",
+          "-t",
+          "build"
+        ],
+        "elapsed_ms": 61.757113,
+        "exit_code": 1,
+        "stderr": "\n\u001b[7m\u001b[1m\u001b[31m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[31mCould not find Nx modules at \"/tmp/verification-v2-workspace-uarab6cq/invalidate-cached-nx\".\u001b[39m\n\nHave you run \u001b[1m\u001b[37mnpm/yarn install\u001b[39m\u001b[22m?\n\n",
+        "stdout": ""
+      },
+      "cached_output_hashes": {},
+      "candidate": "nx",
+      "correct": false,
+      "expected_changed_outputs": [
+        "api",
+        "core",
+        "ui",
+        "web"
+      ],
+      "initial": {
+        "command": [
+          "nx",
+          "run-many",
+          "-t",
+          "build"
+        ],
+        "elapsed_ms": 71.44673,
+        "exit_code": 1,
+        "stderr": "\n\u001b[7m\u001b[1m\u001b[31m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[31mCould not find Nx modules at \"/tmp/verification-v2-workspace-uarab6cq/invalidate-cached-nx\".\u001b[39m\n\nHave you run \u001b[1m\u001b[37mnpm/yarn install\u001b[39m\u001b[22m?\n\n",
+        "stdout": ""
+      },
+      "matches_cache_free_reference": true,
+      "observed_changed_outputs": [],
+      "reference_force_run": {
+        "command": [
+          "nx",
+          "run-many",
+          "-t",
+          "build",
+          "--skip-nx-cache"
+        ],
+        "elapsed_ms": 68.443726,
+        "exit_code": 1,
+        "stderr": "\n\u001b[7m\u001b[1m\u001b[31m NX \u001b[39m\u001b[22m\u001b[27m  \u001b[31mCould not find Nx modules at \"/tmp/verification-v2-workspace-uarab6cq/invalidate-reference-nx\".\u001b[39m\n\nHave you run \u001b[1m\u001b[37mnpm/yarn install\u001b[39m\u001b[22m?\n\n",
+        "stdout": ""
+      },
+      "reference_output_hashes": {}
+    },
+    {
+      "baseline_force_run": {
+        "command": [
+          "turbo",
+          "run",
+          "build",
+          "--force"
+        ],
+        "elapsed_ms": 41.324553,
+        "exit_code": 0,
+        "stderr": " WARNING  No locally installed `turbo` found in your repository. Using globally installed version (2.10.6). Using a specified version in your repository will result in more predictable behavior.\n WARNING  No tasks were executed as part of this run.\n",
+        "stdout": "\n   \u2022 Running build\n   \u2022 Remote caching disabled\n\n\n Tasks:    0 successful, 0 total\nCached:    0 cached, 0 total\n  Time:    5ms \n\n"
+      },
+      "baseline_output_hashes": {},
+      "cached_after_change": {
+        "command": [
+          "turbo",
+          "run",
+          "build"
+        ],
+        "elapsed_ms": 38.538195,
+        "exit_code": 0,
+        "stderr": " WARNING  No locally installed `turbo` found in your repository. Using globally installed version (2.10.6). Using a specified version in your repository will result in more predictable behavior.\n WARNING  No tasks were executed as part of this run.\n",
+        "stdout": "\n   \u2022 Running build\n   \u2022 Remote caching disabled\n\n\n Tasks:    0 successful, 0 total\nCached:    0 cached, 0 total\n  Time:    4ms \n\n"
+      },
+      "cached_output_hashes": {},
+      "candidate": "turbo",
+      "correct": false,
+      "expected_changed_outputs": [
+        "api",
+        "core",
+        "ui",
+        "web"
+      ],
+      "initial": {
+        "command": [
+          "turbo",
+          "run",
+          "build"
+        ],
+        "elapsed_ms": 40.046628,
+        "exit_code": 0,
+        "stderr": " WARNING  No locally installed `turbo` found in your repository. Using globally installed version (2.10.6). Using a specified version in your repository will result in more predictable behavior.\n WARNING  No tasks were executed as part of this run.\n",
+        "stdout": "\n   \u2022 Running build\n   \u2022 Remote caching disabled\n\n\n Tasks:    0 successful, 0 total\nCached:    0 cached, 0 total\n  Time:    7ms \n\n"
+      },
+      "matches_cache_free_reference": true,
+      "observed_changed_outputs": [],
+      "reference_force_run": {
+        "command": [
+          "turbo",
+          "run",
+          "build",
+          "--force"
+        ],
+        "elapsed_ms": 40.865922,
+        "exit_code": 0,
+        "stderr": " WARNING  No locally installed `turbo` found in your repository. Using globally installed version (2.10.6). Using a specified version in your repository will result in more predictable behavior.\n WARNING  No tasks were executed as part of this run.\n",
+        "stdout": "\n   \u2022 Running build\n   \u2022 Remote caching disabled\n\n\n Tasks:    0 successful, 0 total\nCached:    0 cached, 0 total\n  Time:    7ms \n\n"
+      },
+      "reference_output_hashes": {}
+    }
+  ],
+  "schema_version": 1
+}
