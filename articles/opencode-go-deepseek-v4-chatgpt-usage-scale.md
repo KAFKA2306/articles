@@ -1,5 +1,5 @@
 ---
-title: "OpenCode Goを見て、月10ドルなら試したいと思った理由"
+title: "ChatGPTはそのまま、local実行だけOpenCode Goに任せる"
 emoji: "♾️"
 type: "tech"
 topics: ["opencode", "chatgpt", "coding", "mcp", "local"]
@@ -7,103 +7,101 @@ published: false
 published_at: 2026-08-13 12:09
 ---
 
-OpenCode Goは最初の月$5、その後$10/月。
+OpenCode Goを見て、最初は単純に安いと思った。
 
-DeepSeek V4 Flashは、公式が観測した典型的な利用パターンなら **月158,150 requests相当** とされている。
+初月$5、その後$10/月。DeepSeek V4 Flashは、公式が観測した典型的な利用パターンなら月158,150 requests相当とされている。
 
-数字だけ見たときは、正直「安いな」で終わった。
+でも、いまの自分には「ChatGPTの代わり」が欲しいわけではない。
 
-でも最近の自分の作業を思い返していたら、これ、かなり欲しかったものに近いかもしれないと思った。
+**ChatGPTはそのまま使って、local実行だけ別に任せたい。**
 
-## ChatGPTで決められる。でも、その先がローカルに残る
+これが一番しっくりきた。
 
-いまはChatGPTでかなりの仕事をしている。
+## ChatGPTで考えて、localで実行する
 
-GitHubを横断して次に触るrepoを決める。IssueやPRを見る。記事を直す。金融データを読む。画像を作る。scheduled taskも回す。
+いまはChatGPTで、GitHubを横断して次に触るrepoを決めたり、IssueやPRを見たり、記事や調査を進めたりしている。
 
-[個人開発が123個になって分かった。ChatGPTに任せるべきはコードより「次の1件」だった](https://zenn.dev/kafka2306/articles/chatgpt-multiproject-autonomy) でも書いたけれど、考えるところ、選ぶところはかなりChatGPTに寄せられるようになった。
+以前の記事でも、123個の個人開発を横断すると、コードを書くこと以上に「次に何を進めるか」を決める仕事が重くなると書いた。
 
-一方で、最後まで寄せきれない仕事がずっと残っている。
+- [個人開発が123個になって分かった。ChatGPTに任せるべきはコードより「次の1件」だった](https://zenn.dev/kafka2306/articles/chatgpt-multiproject-autonomy)
 
-以前、local Codexとのbridgeを作ったとき、自分でこう書いていた。
+この部分はChatGPTでかなり満足している。
 
-- 数百GBのローカルデータ
+困るのは、その先だ。
+
+自分のPCにしかないものを触りたい。
+
+- commit前のworkspace
+- 大きなローカルデータ
 - GPU環境
-- USBでつながった実機
-- 社内VPN内のシステム
 - 認証済みのデスクトップアプリ
-- commit前の作業中workspace
+- Unity EditorやPrefabの実状態
+- local MCPでつないだtool
 
-[GitHub IssueをAIの伝言板にしたら、伝言板に全部やらせてはいけないと分かった](https://zenn.dev/kafka2306/articles/codex-chatgpt-github-issue-bridge)
+これはGitHub上の状態だけでは完結しない。
 
-読み返していて、「まさにここだ」と思った。
+以前local Codexとのbridgeを作ったときも、結局ここが残った。
 
-ChatGPTで方針を決めたあと、結局自分のPCへ戻って、localの状態を見ながら続きをやる。その部分をもっとAIに任せたかった。
+- [GitHub IssueをAIの伝言板にしたら、伝言板に全部やらせてはいけないと分かった](https://zenn.dev/kafka2306/articles/codex-chatgpt-github-issue-bridge)
 
-Unityも同じで、PrefabのAnimatorやPhysBone、Contact、Transform階層、Play Modeでの実挙動は、GitHub上のコードだけでは決めきれない。実際のEditorを見ないと分からない。
+## OpenCode Goには、その役だけを期待する
 
-## OpenCode Goなら、そこに置けそうだった
+OpenCodeには、project環境でshell commandを実行する`bash`、fileのread/edit/write、MCP serverとの接続がある。
 
-OpenCodeにはshellを実行する`bash`、fileのread/edit/write、local MCP serverとの接続がある。
+なので使い分けはかなり単純にできる。
 
-つまり、自分のPC上のrepoを読み、testを回し、fileを直し、必要ならlocal MCP経由でUnityなどに触る、という使い方ができる。
+```text
+ChatGPT
+考える / 調べる / 横断する / 次を決める
 
-そこでようやく、月158,150 requests相当という数字が自分に繋がった。
+OpenCode Go
+local repoを読む / 直す / testする / shellを回す / local MCPを触る
+```
 
-「そんなに会話できる」のではなく、
+OpenCode Goに記事を書かせたいわけでも、金融を調べさせたいわけでもない。
 
-**localで何度も試して、直して、testして、また直す余裕があるかもしれない。**
+**local executionだけを担う契約として使う。**
 
-こっちの方がずっと重要だった。
+そう考えると、自分の中ではかなり整理された。
 
-## ChatGPTを置き換えたいわけではない
+## 158,150回より、localで何回やり直せるか
 
-ここも自分の中ではかなりはっきりしている。
+OpenCode Goの利用制限はrequest数ではなくドル換算で、公式docsでは5時間$12、週間$30、月間$60のusageとされている。
 
-ChatGPTは今のまま使いたい。
+DeepSeek V4 Flashの月158,150 requestsは、そのusageを典型的なtoken/cache patternから換算した推定値で、hard quotaではない。
 
-調査したり、複数repoを横断したり、次に何をやるか決めたりする場所として便利だからだ。
+でも自分にとって重要なのは、もう158,150という数字ではない。
 
-OpenCode Goに期待しているのは、その代わりではない。
+```text
+直す
+↓
+testする
+↓
+失敗する
+↓
+また直す
+```
 
-**ChatGPTで決めたことを、自分のPC側で大量に実行する役。**
+このlocal loopを、料金をあまり気にせず何度も回せるか。
 
-この役割なら、月$10はかなり納得しやすい。
+そこに月$10を払う価値を感じている。
 
-## 他と比べるとこう見える
+ChatGPTとの役割も競合しない。
 
-| Service | 月額 | 今の自分なら |
-|---|---:|---|
-| **OpenCode Go** | **$10** | local repo・shell・test・MCPを回す |
-| **GitHub Copilot Pro** | **$10** | GitHub/IDE中心なら強い |
-| **Cursor Pro** | **$20** | EditorごとAgent中心にするなら便利 |
-| **Claude Pro + Claude Code** | **$20** | Claudeとterminal codingをまとめたいなら自然 |
-| **ChatGPT Plus + Codex** | **$20** | 今の調査・判断・横断作業の中心 |
+**考える場所は変えない。実行する場所だけ増やす。**
 
-OpenCode Goの158,150回はhard quotaではない。DeepSeek V4 Flashの月$60 usageを、公式の典型的なtoken/cache patternからrequest数へ換算した推定値である。
-
-でも、もうその数字そのものにはあまり惹かれていない。
-
-**自分が何度も「ここはlocalでやりたい」と感じていた場所に、月$10でAIを置ける。**
-
-それなら試したい。
-
-あとは実際にrepoやUnity/MCP作業をやらせてみて、どれだけ仕事が終わるかを見るだけだと思っている。
+今のところ、この使い方が一番試してみたい。
 
 ## 注意：local実行とlocal推論は別
 
-OpenCode GoはローカルLLMを買うサービスではない。GoのmodelはOpenCode Go provider経由で利用する。
+OpenCode Goはlocal LLMの契約ではない。GoのmodelはOpenCode Go provider経由で利用する。
 
-ここで言うlocalは、**実行場所とtool accessが自分のPCにある**という意味で、推論まで完全offlineという意味ではない。
+ここでいうlocalは、実行場所とtool accessが自分のPCにあるという意味で、推論まで完全offlineという意味ではない。
 
 ## 公式情報
 
 - OpenCode Go: https://opencode.ai/docs/go/
 - OpenCode Tools: https://opencode.ai/docs/ja/tools/
-- OpenCode MCP servers: https://opencode.ai/v2/docs/mcp-servers
-- GitHub Copilot plans: https://docs.github.com/en/copilot/concepts/billing/individual-plans
-- Cursor pricing: https://cursor.com/pricing
-- Claude Pro: https://support.claude.com/en/articles/8325606-what-is-the-pro-plan
-- Codex usage: https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan/
+- OpenCode MCP: https://opencode.ai/docs/mcp-servers/
 
-料金・model・利用上限は変更される。契約時には現行の公式情報を再確認する。
+料金・model・利用上限は変更されるため、契約時には現行docsを再確認する。
