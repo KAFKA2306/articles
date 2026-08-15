@@ -1,22 +1,60 @@
-<!-- pipeline_meta: {"idea_source":"public-github-engineering","idea_only":true,"raw_private_content_persisted":false,"topic":{"title":"AIエージェント連携の本質はキューではない――GitHub Actions、Tailscale、MCP Tunnelと比較して分かった境界設計","audience":"ChatGPT、Codex、GitHub、ローカル実行環境を組み合わせて自動化したいエンジニア","central_question":"AIエージェント同士・クラウドとローカルを安全につなぐとき、GitHub Issue、Actions、Tailscale、MCP Tunnel、message queueをどう使い分けるべきか","surprising_finding":"GitHub Issue bridgeは一般解ではなく、人間可読な低頻度control planeとしては有効だが、到達性はTailscaleやSecure MCP Tunnel、GitHub-native実行はActions、厳密な配送は専用queueに任せる方が責務分離として自然だった","initial_hypothesis":"private GitHub IssueをqueueにすればChatGPTとlocal Codexの連携問題をまとめて解ける","hypothesis_update":"問題はqueueではなくcontrol plane・network plane・execution plane・permission boundary・completion evidenceの分離であり、用途ごとに既存の公式機構を組み合わせるべき","stakes":"ローカルagentの自律性を上げながら、credential、private infrastructure、任意ディレクトリ実行、誤った再実行を不用意に公開しない","story_type":"architecture-reassessment","public_evidence":["https://developers.openai.com/api/docs/guides/secure-mcp-tunnels","https://developers.openai.com/codex/github-action","https://developers.openai.com/codex/non-interactive-mode","https://developers.openai.com/codex/sandboxing","https://help.openai.com/en/articles/11145903-connecting-github-to-chatgpt","https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows","https://docs.github.com/en/webhooks/using-webhooks/best-practices-for-using-webhooks","https://tailscale.com/docs/integrations/github/github-action","https://tailscale.com/docs/features/tailscale-serve","https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html","https://github.com/KAFKA2306/KAFKA2306/tree/main/scripts/codex-chatgpt-bridge"]}} -->
+<!-- pipeline_meta: {"idea_source":"public-github-engineering","idea_only":true,"raw_private_content_persisted":false,"topic":{"title":"GitHub IssueをAIの伝言板にしたら、伝言板に全部やらせてはいけないと分かった","audience":"ChatGPT、Codex、GitHubを使って仕事を自動化したいが、インフラ設計は専門ではないエンジニア","central_question":"AIに仕事を任せるとき、GitHub Issue、Actions、Tailscale、MCP Tunnel、message queueをどう使い分ければよいか","surprising_finding":"GitHub Issue bridgeは万能queueではなく、人間にも読める低頻度の受付・伝言板として使うと強い。到達経路、実行場所、大量配送、完了確認は別の仕組みに任せた方が自然だった","initial_hypothesis":"private GitHub IssueをqueueにすればChatGPTとlocal Codexの連携問題をまとめて解ける","hypothesis_update":"受付、通路、作業場、配送、検収を分けて考えると、GitHub Issue、Tailscale、GitHub Actions、Secure MCP Tunnel、専用queueの役割が自然に分かれる","stakes":"AIの自律性を上げながら、人間が理解できる承認点と、credential・private infrastructure・filesystemへの境界を残す","story_type":"architecture-reassessment","public_evidence":["https://developers.openai.com/api/docs/guides/secure-mcp-tunnels","https://developers.openai.com/codex/github-action","https://developers.openai.com/codex/non-interactive-mode","https://developers.openai.com/codex/sandboxing","https://help.openai.com/en/articles/11145903-connecting-github-to-chatgpt","https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows","https://docs.github.com/en/webhooks/using-webhooks/best-practices-for-using-webhooks","https://tailscale.com/docs/integrations/github/github-action","https://tailscale.com/docs/features/tailscale-serve","https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html","https://github.com/KAFKA2306/KAFKA2306/tree/main/scripts/codex-chatgpt-bridge"]}} -->
 
-# AIエージェント連携の本質はキューではない――GitHub Actions、Tailscale、MCP Tunnelと比較して分かった境界設計
+# GitHub IssueをAIの伝言板にしたら、伝言板に全部やらせてはいけないと分かった
 
-ローカルの Codex CLI に調査や修正を任せ、その最終出力を ChatGPT に貼り直す。
+ChatGPTに相談する。
 
-この往復を消すため、私は **private GitHub Issue を ChatGPT と local Codex の受け渡し場所にする bridge** を作りました。
+「このリポジトリ、どこがおかしい？」
 
-最初はこれを「AI間のmessage queue」と考えていました。
+次にローカルのCodex CLIへ移動して、同じ説明をする。
 
-しかし2026年の公式機構と横に並べてみると、この理解は狭すぎました。
+Codexが調べ終わったら、結果をコピーしてChatGPTへ戻す。
 
-GitHub Actions は外部イベントからworkflowを起動できる。TailscaleはGitHub-hosted runnerをprivate networkへ一時参加させられる。OpenAIには、private MCP serverをpublic internetへ出さずChatGPTやCodexから呼ぶための Secure MCP Tunnel がある。そして本物のmessage queueには、visibility timeout、acknowledgement、retry、dead-letter queueのような配送セマンティクスがある。
+修正方針が決まったら、またCodexへ貼る。
 
-ここまで並べると、GitHub Issue は「queueの簡易版」ではありません。
+数回なら平気です。でも、調査 → 判断 → 修正 → テストを繰り返すと、**自分がAI同士の伝書鳩になっている**ことに気づきます。
 
-**人間にも読める、低頻度のcontrol planeとして使うなら強い。だが、network、execution、deliveryまでIssueに背負わせると設計が崩れる。**
+そこで私は、private GitHub Issueを2つのAIの間に置きました。
 
-この記事では、自作bridgeを成功談として紹介するのではなく、一般的な選択肢と比較しながら「どこに何の責務を置くべきか」を考えます。
+```text
+ChatGPT / 人間
+  ↓ 依頼を書く
+private GitHub Issue
+  ↓
+local daemon
+  ↓
+Codex CLI
+  ↓ 結果を書く
+private GitHub Issue
+  ↓
+ChatGPT / 人間
+```
+
+感覚としては、会社の受付に置く伝言ノートです。
+
+「この資料を確認してください」と書いておけば、担当者が見つけて仕事をする。終わったら同じノートに「確認しました」と残す。
+
+最初は、これで十分だと思いました。
+
+**GitHub IssueをAI同士のmessage queueにすればいい。**
+
+ところがGitHub Actions、Tailscale、OpenAI Secure MCP Tunnel、本物のmessage queueと比べてみると、少し変なことをしていると分かりました。
+
+会社で言えば、受付の伝言ノートに、
+
+- 誰を社内に入れてよいか
+- どの部屋まで行ってよいか
+- 誰が実作業するか
+- 荷物を何百件どう配送するか
+- 本当に仕事が終わったか
+
+まで全部任せようとしていたのです。
+
+伝言ノートが悪いのではありません。
+
+**伝言ノートは、伝言ノートとして使えばかなり便利です。**
+
+この記事では、自作bridgeを「これが正解です」と紹介するのではなく、身近な仕事の流れに置き換えながら、GitHub Issue、Actions、Tailscale、MCP Tunnel、専用queueをどう使い分ければよいかを整理します。
 
 公開実装:
 https://github.com/KAFKA2306/KAFKA2306/tree/main/scripts/codex-chatgpt-bridge
@@ -24,367 +62,398 @@ https://github.com/KAFKA2306/KAFKA2306/tree/main/scripts/codex-chatgpt-bridge
 > **公開昇格条件**
 > この原稿は記事候補です。最新公開bundleを実機で再installし、installer末尾の `BRIDGE_OK` と worker payload の `exit_code: 0` を確認するまで、`articles/` へは昇格しません。
 
-## まず分けるべきは「5つのplane」だった
+## まず「小さな会社」だと思うと分かりやすい
 
-AI agent連携を一枚の矢印で描くと、異なる問題が同じ箱に見えます。
+AI agentの構成図を見ると、急に難しくなります。
+
+`control plane`、`network plane`、`execution plane`。
+
+言葉は正しいのですが、最初からこれを読むと「結局どれが何をしているの？」となりがちです。
+
+なので、いったん5人くらいの小さな会社を想像します。
+
+朝、あなたが会社に着いて、こんな仕事を頼みたいとします。
+
+> 昨日から落ちているテストの原因を調べて。勝手に修正はしないで。
+
+この一言だけでも、実際には5つの仕事があります。
+
+| 日常の仕事 | 技術的な役割 | 代表例 |
+|---|---|---|
+| 受付に依頼を置く | Control | GitHub Issue、PR、workflow input |
+| 担当者が作業場所まで行く | Network | Tailscale、Secure MCP Tunnel |
+| 実際にPCを触って調べる | Execution | Codex CLI、GitHub Actions |
+| 大量の依頼を順番に配る | Delivery | SQS、Pub/Subなど |
+| 「終わった」を確認する | Evidence | test、exit code、HEAD SHA、artifact |
+
+私が最初に作ったbridgeは、このうち何個かをGitHub Issueへ詰め込もうとしていました。
+
+ここを分けるだけで、かなり見通しがよくなりました。
+
+**受付、通路、作業場、配送センター、検収。全部を同じ仕組みにする必要はありません。**
+
+## 先に結論：身近な例ならこう選ぶ
+
+### READMEの誤字を直したい
+
+GitHub上のファイルだけ見れば終わる仕事です。
 
 ```text
-ChatGPT → GitHub → local PC → Codex → GitHub → ChatGPT
+GitHub
+  ↓
+GitHub Actions
+  ↓
+Codex
+  ↓
+PR / artifact / comment
 ```
 
-実際には、少なくとも次の5つを分けた方が整理できます。
+この場合、わざわざ自宅PCへ仕事を運ぶ理由は薄いです。
 
-| plane | 問い | 代表的な仕組み |
-|---|---|---|
-| Control | 誰が、何を、いつ実行してよいか | Issue、PR、approval、workflow input |
-| Network | private resourceへどう到達するか | Tailscale、Secure MCP Tunnel、VPN |
-| Execution | agentをどこで動かすか | Codex CLI、GitHub Actions、self-hosted runner |
-| Delivery | taskの重複、再試行、ackをどう扱うか | SQS、Pub/Sub、専用queue |
-| Evidence | 何をもって成功とするか | exit code、HEAD SHA、patch、artifact、test result |
+### GitHub Actionsから社内DBを使ってテストしたい
 
-私の最初の設計は、GitHub Issueにこの5つのうち3つほどをまとめて背負わせようとしていました。
+GitHubのrunnerから、インターネットには公開していないDBへ行く「道」が必要です。
 
-比較して分かったのは、**良いagent architectureは「全部を一つのtransportで解く」より、planeごとにauthorityを分ける**ということです。
+```text
+GitHub Actions
+  ↓
+Tailscale
+  ↓
+private DB
+```
 
-## 結論を先に：2026年なら用途ごとに選ぶ
+Tailscaleはこの「道」を担当します。
 
-| 欲しいもの | 第一候補 | 理由 |
-|---|---|---|
-| GitHub上のイベントから再現可能なCodex処理 | GitHub Actions + `openai/codex-action` | repo-native、権限をjob単位で分離できる |
-| GitHub-hosted runnerからprivate PC/APIへ到達 | Tailscale GitHub Action | ephemeral nodeでtailnetへ参加できる |
-| ChatGPT/Codexからprivate MCP serverを直接呼ぶ | OpenAI Secure MCP Tunnel | public inboundを開けずoutbound-onlyで接続できる |
-| 人間がブラウザで読める低頻度の非同期handoff | private GitHub Issue bridge | task/resultを同じ場所で観測しやすい |
-| 高頻度・複数consumer・厳密なretry/ack | SQS / Pub/Sub等 | queue専用の配送セマンティクスがある |
+### ChatGPTから自分のPC上のツールを直接使いたい
 
-重要なのは「どれが最強か」ではありません。
+その機能をMCP serverとして出せるなら、OpenAIのSecure MCP Tunnelが候補です。
 
-**何を解きたいのかを、transport名より先に決めること**です。
+```text
+ChatGPT / Codex
+  ↓
+Secure MCP Tunnel
+  ↓
+private MCP server
+```
 
-## 1. GitHub-nativeな自動化なら、まずActionsを疑う
+### AIに調べてもらったあと、一度自分で読んでから修正させたい
 
-GitHub Actionsには `workflow_dispatch` と `repository_dispatch` があります。
+ここではGitHub Issueが使いやすいです。
 
-`workflow_dispatch` はUI、CLI、APIからmanual workflowを起動でき、`repository_dispatch` はGitHub外で起きたイベントからworkflowを起動するための公式機構です。
+```text
+調査依頼
+  ↓
+Issue
+  ↓
+Codexがread-onlyで調査
+  ↓
+Issueに結果
+  ↓
+人間が読む
+  ↓
+修正を許可
+```
+
+### 毎晩1万件の仕事を複数workerへ配りたい
+
+これはもう「伝言板」の仕事ではありません。
+
+配送センターが必要です。
+
+SQSやPub/Subのような専用message queueを検討する領域です。
+
+## 1. GitHub Actionsは「会社の作業場」
+
+たとえば、PRが作られたら毎回Codexにレビューしてもらいたいとします。
+
+人間の会社なら、受付に毎回メモを置くより、
+
+> 新しい申請書が来たら、この手順で自動的に検査する
+
+という作業手順を決めた方が自然です。
+
+GitHub Actionsはまさにこの役割です。
+
+GitHubには`workflow_dispatch`があり、UI、CLI、APIからworkflowを手動実行できます。また`repository_dispatch`は、GitHub外の出来事をきっかけにworkflowを起動するために使えます。
 
 公式:
 https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows
 
-さらにOpenAIは `openai/codex-action@v1` を公式に提供しており、PR review、release preparation、migrationなどのrepeatable taskをGitHub Actions内でCodexに実行させる用途を説明しています。
+OpenAIもCodex GitHub Actionを公式に提供しています。
 
 公式:
 https://developers.openai.com/codex/github-action
 
-OpenAIのnon-interactive mode文書でも、GitHub ActionsではCLIを自前installして認証するよりCodex GitHub Actionを使うよう案内されています。
+だから、
 
-公式:
-https://developers.openai.com/codex/non-interactive-mode
+> GitHubに置いてあるコードを取ってきて、調べて、テストして、結果をPRへ返す
 
-つまり、処理対象がGitHub repositoryのcheckoutだけで完結するなら、
+だけなら、まずActions側で完結できないか考える方が素直です。
 
-```text
-Issueをpoll
-  → local daemon
-  → Codex
-```
+自宅PCで30秒ごとにIssueを見張る必要はありません。
 
-よりも、
+### ではlocal Codexは要らない？
 
-```text
-GitHub event / dispatch
-  → GitHub Actions
-  → Codex GitHub Action
-  → artifact / PR / comment
-```
+ここで話が変わるのが、**そのPCにしかないものを使いたいとき**です。
 
-の方が一般的です。
+例えば、
 
-workflow run、job、artifact、権限、再実行というGitHub側の既存control planeをそのまま使えるからです。
+- 数百GBのローカルデータ
+- GPU環境
+- USBでつながった実機
+- 社内VPN内のシステム
+- 認証済みのデスクトップアプリ
+- commit前の作業中workspace
 
-### ではlocal daemonは不要か
+です。
 
-そうではありません。
+GitHubのcheckoutを取ってくるだけでは、その状態は再現できません。
 
-**処理したいstateが「GitHub上のcheckout」ではなく、「自分のPCにしかない環境・デバイス・巨大データ・認証済みアプリ・作業中workspace」なら、executionをlocalに残す理由があります。**
+このとき初めて「仕事をローカルへ届ける方法」が重要になります。
 
-ここで次の論点がnetworkです。
+## 2. Tailscaleは「社員証が必要な専用通路」
 
-## 2. Tailscaleは「queue」ではなく「private reachability」を解く
+Tailscaleを初めて比較したとき、Issue bridgeの代わりになるのではと思いました。
 
-Tailscaleを比較対象に入れると、Issue bridgeの役割が明確になります。
+でも役割が違いました。
 
-Tailscale Serveはtailnet内の他deviceからlocal serviceへ到達させる機構です。公開internetから到達させるFunnelとは役割が分かれています。
+Tailscaleは「仕事を何件処理したか」を管理するものではなく、**そもそもその場所へ安全に行けるようにするもの**です。
 
-公式:
-https://tailscale.com/docs/features/tailscale-serve
-https://tailscale.com/docs/features/tailscale-funnel
+たとえば会社の奥に、一般のお客さんは入れない検査室があるとします。
 
-さらにTailscaleはGitHub Actions向け公式Actionを提供しています。GitHub-hosted runnerをtailnetにephemeral nodeとして参加させ、private deviceやinternal APIへアクセスできます。
+GitHub Actionsのrunnerは会社の外にいます。
+
+Tailscaleを使うと、そのrunnerに一時的な社員証を渡して、許可された検査室まで通れるようにするイメージです。
+
+Tailscaleの公式GitHub Actionは、GitHub Actionsのrunnerをtailnetへ参加させ、private deviceや内部サービスへ到達できるようにします。公式文書ではworkload identity federationを推奨しており、GitHubのOIDC tokenを使ってephemeral nodeを作る構成も説明されています。
 
 公式:
 https://tailscale.com/docs/integrations/github/github-action
 
-同文書では、workload identity federationを推奨し、GitHubのOIDC tokenから一時的なnodeを作り、workflow終了後にそのnodeを削除する構成を説明しています。
-
-これはかなり強い選択肢です。
-
 ```text
-GitHub event
+GitHub Actions runner
+  ↓ 一時的にtailnetへ参加
+Tailscale
   ↓
-GitHub-hosted Actions runner
-  ↓  Tailscale ephemeral node
-private workstation / API / DB
+社内API / DB / workstation
 ```
 
-この場合、private infrastructureをpublic internetへ出す必要がありません。
+仕事が終われば、その一時的なnodeは片付けられます。
 
-ただしTailscaleは、taskのack、retry、idempotency、human approvalを提供するmessage queueではありません。
+ここで大事なのは、Tailscaleが教えてくれるのは主に、
 
-**Tailscaleが解くのは「届くか」であり、「何を実行してよいか」「一度だけ処理したか」は別問題です。**
+> このrunnerは、あのprivate serverまで行ける
 
-したがって、TailscaleとGitHub Issueは競合というより、異なるplaneを担当します。
+ということです。
 
-## 3. さらに強い比較対象がOpenAI Secure MCP Tunnelだった
+> この依頼はまだ未処理か
 
-今回もっとも大きな再評価点です。
+> 3回失敗したら隔離するか
 
-OpenAIは Secure MCP Tunnel を提供しており、private network、on-premises、developer machine上のMCP serverをpublic internetへ公開せず、ChatGPT、Codex、Responses APIなど対応OpenAI製品から呼び出せると説明しています。
+> 人間の承認待ちか
+
+まではTailscaleの仕事ではありません。
+
+**Tailscaleは道路。Issueは伝言板。競合というより別の仕事です。**
+
+Tailscale Serveも、tailnet内の他deviceからlocal serviceへ到達させる機能です。公開インターネット向けのFunnelとは用途が分かれています。
+
+公式:
+https://tailscale.com/docs/features/tailscale-serve
+
+## 3. Secure MCP Tunnelは「AI専用の通用口」
+
+もっと直接的な選択肢もありました。
+
+OpenAIはSecure MCP Tunnelを提供しています。
+
+これは、private network、on-premises環境、developer machineなどにあるMCP serverをpublic internetへ公開せず、対応するOpenAI製品から利用するための仕組みです。
 
 公式:
 https://developers.openai.com/api/docs/guides/secure-mcp-tunnels
 
-仕組みはoutbound-onlyです。
+会社の比喩でいえば、受付に伝言を置くのではなく、**AI専用の通用口を作る**感じです。
 
-private側で `tunnel-client` を動かし、OpenAI-hosted endpointへHTTPS接続します。clientがqueued MCP workをlong-pollし、private MCP serverへJSON-RPCをforwardし、responseを同じtunnel経由で返します。
+private側で`tunnel-client`を動かします。外から会社のドアを開けるのではなく、中からOpenAI側へoutbound HTTPS接続を張ります。
 
-これは、私がGitHub Issueで作った構造とかなり似ています。
-
-```text
-Issue bridge
-local daemon --poll--> GitHub --task/result--> ChatGPT
-
-Secure MCP Tunnel
-local tunnel-client --long-poll--> OpenAI --MCP request/response--> ChatGPT/Codex
-```
-
-違いは、後者が **OpenAI製品からprivate toolを呼ぶための公式RPC path** であることです。
-
-したがって、目的が
-
-> ChatGPTからlocal toolを直接呼びたい
-
-であり、そのlocal capabilityをMCP serverとして表現できるなら、2026年時点ではまずSecure MCP Tunnelを検討すべきです。
-
-Issue bridgeが勝つのは、MCP RPCそのものよりも、**人間がGitHub上でtaskとresultを読めること、Issue/PRという既存の意思決定履歴に寄せたいこと、非同期の作業依頼として扱いたいこと**を重視する場合です。
-
-## 4. 「Issueをqueueにする」は、専用queueと何が違うのか
-
-ここは名前を正確にした方がよいです。
-
-Amazon SQSのような専用queueには、messageをconsumerが処理中に他consumerから一時的に見えなくするvisibility timeoutがあります。処理失敗時には再び可視化でき、繰り返し失敗するmessageをdead-letter queueへ送る設計もあります。standard queueはat-least-once deliveryです。
-
-公式:
-https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html
-
-GitHub Issue commentには、これらがqueue primitiveとして備わっているわけではありません。
-
-私のbridgeではtask IDを付け、daemon側で処理済みIDを避けています。しかしこれは自前protocolです。
-
-したがって、GitHub Issueを説明するときは、
-
-**「message queue」より「durable, human-readable control mailbox」**
-
-くらいに位置づける方が正確です。
-
-低頻度なら、この弱さは逆に利点になります。
-
-- browserだけでtask/resultを確認できる
-- repositoryと同じidentity/permission体系を使える
-- controller messageとworker resultを同じthreadに置ける
-- 専用brokerを追加しなくてよい
-
-一方、workerが増える、taskが大量になる、orderingやretryが重要になるなら、専用queueへ移るべきです。
-
-## 5. Webhookならpollingを消せる。しかしprivate endpoint問題が戻る
-
-GitHub webhookを使えば、Issueを30秒ごとにpollする必要はありません。
-
-GitHubの公式best practiceは、webhook secretによるsignature verification、HTTPS、必要最小限のevent subscription、`X-GitHub-Delivery`によるdelivery識別などを推奨しています。またreceiverは10秒以内に2XXを返し、重い処理は非同期queueへ渡す構成を勧めています。
-
-公式:
-https://docs.github.com/en/webhooks/using-webhooks/best-practices-for-using-webhooks
-https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
-
-しかしlocal PCでwebhookを受けるには、外部から到達可能なendpointが必要になります。
-
-そこで再び、
-
-- public HTTPS endpointを持つ
-- reverse tunnelを使う
-- Tailscale等のprivate networkと別のtrusted runnerを組み合わせる
-- OpenAI用途ならSecure MCP Tunnelへ寄せる
-
-というnetwork designが必要です。
-
-**pollingは遅いが、inbound portを開けなくてよい。**
-
-このtrade-offを隠さない方が、記事としては価値があります。
-
-## 6. それでもprivate GitHub Issue bridgeを残す理由
-
-ここまで比較すると、自作bridgeを捨てるべきようにも見えます。
-
-しかし、今回の制約ではまだ合理性があります。
-
-### 理由1：ChatGPTの標準GitHub appはread-only
-
-OpenAIのHelp Centerは、ChatGPTの標準GitHub appはrepositoryを分析・検索するためのread-only接続であり、code/update/PRをpushする用途はCodex側で提供すると説明しています。
-
-公式:
-https://help.openai.com/en/articles/11145903-connecting-github-to-chatgpt
-
-したがって「GitHubがChatGPTから見える」だけでは、双方向controllerになれるとは限りません。
-
-一方、write-capableなGitHub App、plugin、Codex、Enterprise向け構成などを使える環境では事情が変わります。ここを固定仕様として扱わないことが重要です。
-
-### 理由2：local stateをそのまま使いたい
-
-GitHub Actionsのcheckoutではなく、local PCのworkspaceやlocal-only dependencyを使いたい場合があります。
-
-その場合、executionをlocalに残し、GitHubをcontrol mailboxとして使うのは単純です。
-
-### 理由3：人間のレビュー地点を残したい
-
-完全なRPCより、
+OpenAIの公式文書では、`tunnel-client`がqueued MCP workをlong-pollし、local MCP serverへJSON-RPC requestを転送し、responseを同じtunnelで返す構造が説明されています。
 
 ```text
-read-only調査
+ChatGPT
   ↓
-result + evidence
+OpenAI-hosted tunnel endpoint
+  ↑ outbound HTTPS
+local tunnel-client
   ↓
-human / ChatGPT review
-  ↓
-workspace-write
+private MCP server
 ```
 
-の方が適する作業があります。
+目的が、
 
-Issue threadはこの「一度止まって読む」境界を自然に作れます。
+> ChatGPTから自宅PCの検索ツールを呼びたい
 
-## 7. 自作bridgeも、一般的ベストプラクティス側へ寄せる
+> Codexから社内の検査APIを使いたい
 
-比較して終わりではなく、自作側も改善できます。
+のような「tool call」なら、この経路はかなり自然です。
 
-### 原則1：Issueをqueueではなくcontrol planeとして扱う
+ではIssue bridgeは不要でしょうか。
 
-Issueに置くのは、prompt本文だけではなく、少なくとも次です。
+そうとも限りません。
+
+MCPのrequest/responseより、
+
+> まず調査して
+
+> 結果を人間が読む
+
+> よければ次の修正を許可する
+
+という**仕事の受け渡しそのものを履歴として残したい**場合があります。
+
+その場合、Issueという「目で読める伝言板」には別の価値があります。
+
+## 4. GitHub Issueは「受付の伝言板」
+
+ここで最初のbridgeへ戻ります。
+
+GitHub Issueの良いところは、エンジニアなら追加の管理画面を覚えなくても読めることです。
+
+朝PCを開いて、Issueを見る。
+
+```text
+依頼
+「このテストが落ちる理由だけ調べて。修正はしないで」
+
+結果
+「原因はAです。exit_codeは0、HEADはabc123、変更ファイルはありません」
+```
+
+これなら人間も読めます。
+
+次のAIも読めます。
+
+何日か後に「なぜこの修正をしたんだっけ」と振り返ることもできます。
+
+私のbridgeでは、controller commentとworker resultを同じprivate Issueへ残します。
+
+さらに結果は「直しました」だけにしません。
 
 ```json
 {
-  "task_id": "...",
-  "cwd": "...",
-  "sandbox": "read-only",
-  "requested_action": "review",
-  "expected_evidence": ["exit_code", "git_head", "git_status"]
-}
-```
-
-worker resultも自然言語だけにしません。
-
-```json
-{
-  "task_id": "...",
+  "task_id": "task-...",
   "exit_code": 0,
   "sandbox": "read-only",
-  "cwd": "...",
+  "cwd": "D:\\dev\\example",
   "git": {
-    "head": "...",
+    "head": "<実行時のHEAD>",
     "status": []
   }
 }
 ```
 
-OpenAIの`codex exec`はJSONL出力に加え、JSON Schemaでfinal outputを拘束する `--output-schema` も公式にサポートしています。
+これは宅配で言えば、
+
+> 届けました
+
+だけではなく、
+
+> どの荷物を、どこへ、いつ届け、受領状態はどうだったか
+
+まで納品書に残す感覚です。
+
+## 5. SQSは「伝言板」ではなく「配送センター」
+
+ここは名前を混ぜると危険です。
+
+私のbridgeは当初、GitHub Issueをmessage queueと呼んでいました。
+
+でも本物のqueueと比べると、かなり違います。
+
+Amazon SQSにはvisibility timeoutがあります。あるconsumerがmessageを処理している間、そのmessageを一時的に他consumerから見えなくできます。処理されず削除されなければ再び可視になります。standard queueはat-least-once deliveryなので、重複処理を考える必要もあります。
 
 公式:
-https://developers.openai.com/codex/non-interactive-mode
+https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html
 
-今後は自前のMarkdown parsingを増やすより、machine-readable outputをCodex側でも強制する方が堅牢です。
+身近に言えば、巨大な宅配センターです。
 
-### 原則2：readとwriteを別jobにする
+荷物が1000個来ても、
 
-OpenAIのnon-interactive modeは、`codex exec`の既定sandboxをread-onlyとし、automationでは必要最小限のpermissionを使うよう明記しています。編集時は `--sandbox workspace-write` を明示し、`danger-full-access` はcontrolled environmentに限定するよう案内しています。
+- 誰が今持っているか
+- 配達に失敗したらどうするか
+- 同じ荷物が来ても壊れないか
+- 何度も失敗する荷物をどう隔離するか
+
+を考える世界です。
+
+一方GitHub Issueは、オフィスのホワイトボードに近い。
+
+10件の仕事を人間とAIで相談しながら進めるなら、ホワイトボードの方が見やすいことがあります。
+
+1万件の仕事を20 workerへ配るなら、ホワイトボードに付箋を1万枚貼るのはやめた方がいい。
+
+この違いです。
+
+なので今は、GitHub Issue bridgeを
+
+**human-readable control mailbox**
+
+と捉えています。
+
+## 6. Webhookは「受付ベル」。でもベルを置く場所が要る
+
+現在のbridgeはIssueを一定間隔で見に行きます。
+
+```text
+30秒ごとに受付を見る
+「新しい依頼ある？」
+```
+
+少し間抜けに見えます。
+
+Webhookなら、依頼が来た瞬間にベルを鳴らせます。
+
+```text
+Issueに新しい依頼
+  ↓
+Webhook
+  ↓
+worker起動
+```
+
+GitHubはWebhookについて、secretによる検証、HTTPS、必要なeventだけの購読、`X-GitHub-Delivery`による識別などを推奨しています。またreceiverは配信から10秒以内に2XXを返す必要があります。
 
 公式:
-https://developers.openai.com/codex/non-interactive-mode
-https://developers.openai.com/codex/sandboxing
+https://docs.github.com/en/webhooks/using-webhooks/best-practices-for-using-webhooks
 
-自作bridgeもこの思想に合わせ、
+ただし、自宅PCにベルを鳴らすには、GitHubからそのPCへ届く経路が必要です。
 
-```text
-observe / diagnose
-  = read-only
+つまり、
 
-modify
-  = workspace-write
-```
+> pollingをなくしたら、今度はprivate PCへどう到達するか
 
-を別taskにしています。
+という問題が戻ってきます。
 
-### 原則3：network accessとfilesystem accessを別authorityにする
+ここでも、受付と道路は別問題です。
 
-`workspace-write`だからnetworkも許す、とは限りません。
+pollingは遅い。
 
-filesystem boundary、network boundary、GitHub write permissionは別々に制御するべきです。
+でも、外から自宅PCへ入る入口を用意しなくても成立します。
 
-Tailscaleのtag、GitHub Actionsの`permissions:`、Codex sandbox、AllowedRootは、それぞれ異なるauthorityです。
+小さな個人用途では、この単純さが価値になることがあります。
 
-一つの「agentに任せる」フラグへ潰さない方が安全です。
+## 7. 安全性も「家の鍵」に置き換えると分かりやすい
 
-### 原則4：completionは「返事が来た」ではなくevidenceで定義する
+private Issueだから安全、とは言えません。
 
-今回のinstallerは、daemonが起動しただけでは成功にしません。
+もしIssueへ書ける人が、
 
-一時Git repositoryからIssue経由でCodexを実行し、
+> `C:\Windows`を消して
 
-```text
-final message contains BRIDGE_OK
-exit_code == 0
-```
+と書いたら、そのままlocal agentが実行する設計では困ります。
 
-まで確認します。
+これは「家族だけが使う伝言板だから、書いてあることは何でも実行する」と言っているのと同じです。
 
-これは比較後も残す価値があります。
-
-transport、execution、return pathをE2Eで通すsmoke testだからです。
-
-## 8. 実装例：現在のbridge
-
-公開版は次の構成です。
-
-```text
-local send-task.ps1
-  ↓
-private GitHub Issue
-  ↓ polling
-Windows daemon
-  ↓
-codex exec
-  ↓
-private GitHub Issue
-  ↓
-ChatGPT / human reads result
-```
-
-公開sender:
-https://github.com/KAFKA2306/KAFKA2306/blob/23640ccec32355cad91bb7cfeed34845db54824c/scripts/codex-chatgpt-bridge/send-task.ps1
-
-公開daemon:
-https://github.com/KAFKA2306/KAFKA2306/blob/23640ccec32355cad91bb7cfeed34845db54824c/scripts/codex-chatgpt-bridge/bridge-daemon.ps1
-
-公開installer:
-https://github.com/KAFKA2306/KAFKA2306/blob/23640ccec32355cad91bb7cfeed34845db54824c/scripts/codex-chatgpt-bridge/install.ps1
-
-現在の主な境界は次です。
+そこでbridgeでは、仕事を受け取る前にいくつかの鍵を確認します。
 
 ```text
 queue repository must be PRIVATE
@@ -395,98 +464,144 @@ default sandbox = read-only
 danger-full-access = rejected
 ```
 
-daemonはcontroller marker、author、task ID、AllowedRoot、sandboxを確認してから`codex exec`を実行します。
+公開daemon:
+https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/bridge-daemon.ps1
 
-またautonomous runはuser config / app / plugin discoveryから分離し、普段のinteractive環境に依存しすぎないようにしています。
+例えば`AllowedRoot = D:\dev`なら、`C:\Windows`や別の場所へ勝手に移動するtaskは拒否します。
 
-この設計の価値は「GitHub Issueでagentを動かせること」そのものではありません。
+そして、最初の調査はread-onlyです。
 
-**identity、filesystem、execution、completionの境界を明示し、それを人間が読めるcontrol planeに残したこと**です。
+これは同僚に、
 
-## 9. 私なら今、こう選ぶ
+> まず棚を見て原因だけ教えて。物の場所は変えないで。
 
-### ケースA：repositoryだけ触ればよい
+と頼むのに近いです。
 
-```text
-GitHub event
-  → GitHub Actions
-  → openai/codex-action
-  → artifact / PR / comment
-```
+調査結果を見てから、必要なときだけ、
 
-これを第一候補にします。
+> では、この棚だけ直していいよ。
 
-### ケースB：GitHub Actionsからprivate PC/APIへ届きたい
+とworkspace-writeへ上げます。
 
-```text
-GitHub Actions
-  → Tailscale GitHub Action
-  → private service
-```
+OpenAIのCodex non-interactive modeとsandbox関連文書でも、automationではsandboxとpermissionを明示的に扱うための機構が提供されています。
 
-Tailscaleをnetwork planeに使います。
+公式:
+https://developers.openai.com/codex/non-interactive-mode
+https://developers.openai.com/codex/sandboxing
 
-### ケースC：ChatGPT/Codexからprivate local toolを直接呼びたい
+## 8. 「終わりました」を信用しない。レシートを見る
 
-```text
-ChatGPT / Codex
-  → Secure MCP Tunnel
-  → private MCP server
-```
+AIに仕事を頼むと、最後にこう返ってくることがあります。
 
-MCPとして表現できるなら、公式pathを優先します。
+> 修正しました。テストも通っています。
 
-### ケースD：人間が途中で読み、低頻度のtask/resultを残したい
+人間同士でも、この一言だけでは少し不安です。
 
-```text
-GitHub Issue
-  → local worker
-  → evidence
-  → human / agent review
-```
+宅配なら受領印を見る。
 
-ここで初めてIssue bridgeが第一候補になります。
+会計ならレシートを見る。
 
-### ケースE：大量task、複数worker、厳密なretryが必要
+ソフトウェアなら、機械的な証拠を見る方がよい。
 
-GitHub Issueから離れ、専用message queueを使います。
+私のbridgeでは、worker resultに少なくとも次を残します。
 
-## まとめ：「何でつなぐか」より「何を分離するか」
+- exit code
+- sandbox
+- absolute cwd
+- Git repository root
+- HEAD SHA
+- bounded `git status --porcelain=v1`
 
-最初に作ろうとしたのは、private GitHub Issueを30秒ごとにpollしてCodexを呼ぶ小さなdaemonでした。
+さらにinstallerは、daemonを起動できただけでは成功にしていません。
 
-比較後の結論は、もっと一般的です。
+temporary Git repositoryを作り、Issue経由で実際にCodexへ仕事を送り、
 
 ```text
-Control plane
-  誰が何を実行してよいか
-
-Network plane
-  private resourceへどう到達するか
-
-Execution plane
-  どこでagentを動かすか
-
-Delivery plane
-  retry / duplicate / ackをどう扱うか
-
-Evidence plane
-  何をもって成功とするか
+BRIDGE_OK
+exit_code == 0
 ```
 
-Tailscaleはnetworkを強くする。
-GitHub Actionsはexecutionとworkflow controlを強くする。
-Secure MCP TunnelはOpenAI製品からprivate MCPへの公式到達経路を作る。
-SQSやPub/Subはdelivery semanticsを提供する。
-GitHub Issueは、人間可読なcontrol mailboxとして使える。
+まで戻ってきて初めて成功とします。
 
-この役割を混ぜない方がよい。
+公開installer:
+https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/install.ps1
 
-私のbridgeも、「Issueが最良のqueueだった」という話ではありません。
+「店員を雇えた」ではなく、**実際に注文して、商品が届き、レシートまで返ってきた**ところまで確認するsmoke testです。
 
-**小さな自律化を作るとき、transportを発明する前にauthorityとfailure semanticsを分解した方が、後から別の技術へ置き換えやすい。**
+## 9. 私なら今、こう使い分ける
 
-それが、GitHub Issue、Actions、Tailscale、MCP Tunnelを横に並べて初めて見えた結論です。
+### GitHubにあるコードだけを触る
+
+**GitHub Actions + Codex**を先に検討します。
+
+### GitHub Actionsから社内・自宅のprivate serviceへ行く
+
+**Tailscale**を「道路」として使います。
+
+### ChatGPT/Codexからprivate MCP toolを直接呼ぶ
+
+**Secure MCP Tunnel**を先に検討します。
+
+### 人間が途中で読んで、次へ進むか決めたい
+
+**GitHub Issue**を「伝言板」として使います。
+
+### 大量のtaskを複数workerへ確実に配りたい
+
+**専用message queue**へ移ります。
+
+こうすると、「TailscaleとGitHub Issueのどっちが強い？」という比較自体が少し変だと分かります。
+
+道路と受付を比べても仕方がありません。
+
+## まとめ：AIが増えても、仕事の基本は意外と普通だった
+
+AI agentという言葉を使うと、急に未来のシステムを設計している気分になります。
+
+でも、実際に困ったことを並べると、昔からある仕事の流れとかなり似ています。
+
+```text
+受付
+  誰が何を頼んだか
+
+通路
+  その人はどこまで入ってよいか
+
+作業場
+  誰が実際に手を動かすか
+
+配送
+  大量の仕事をどう配るか
+
+検収
+  本当に終わったと何で確認するか
+```
+
+GitHub Issueは受付として便利でした。
+
+Tailscaleは通路を作る。
+
+GitHub ActionsやCodexは作業する。
+
+Secure MCP Tunnelはprivate toolへのAI専用通路を作る。
+
+SQSのようなqueueは大量配送を扱う。
+
+test、exit code、HEAD SHAは検収に使える。
+
+最初の私は、GitHub Issueという一枚の伝言板に、これらを全部やらせようとしていました。
+
+比較して得た一番大きな学びは、特定の新しいツールではありません。
+
+**AIに仕事を任せるときも、「誰が頼む」「どこまで入れる」「誰が作業する」「どう届ける」「何をもって完了とする」を分ければよい。**
+
+そう考えると、agent architectureは少し身近になります。
+
+そしてGitHub Issue bridgeも、万能なAI基盤ではなく、
+
+> 人間とAIが同じ伝言板を見ながら、小さな仕事を安全に受け渡す
+
+ための道具として、ちょうどよい位置に落ち着きました。
 
 ## 一次情報・実装証拠
 
@@ -497,9 +612,7 @@ GitHub Issueは、人間可読なcontrol mailboxとして使える。
 - OpenAI Help — Connecting GitHub to ChatGPT: https://help.openai.com/en/articles/11145903-connecting-github-to-chatgpt
 - GitHub Actions events (`workflow_dispatch`, `repository_dispatch`): https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows
 - GitHub webhook best practices: https://docs.github.com/en/webhooks/using-webhooks/best-practices-for-using-webhooks
-- GitHub webhook signature validation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
 - Tailscale GitHub Action: https://tailscale.com/docs/integrations/github/github-action
 - Tailscale Serve: https://tailscale.com/docs/features/tailscale-serve
-- Tailscale Funnel: https://tailscale.com/docs/features/tailscale-funnel
-- Amazon SQS visibility timeout / retry / DLQ: https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html
+- Amazon SQS visibility timeout: https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html
 - 公開bridge: https://github.com/KAFKA2306/KAFKA2306/tree/main/scripts/codex-chatgpt-bridge
