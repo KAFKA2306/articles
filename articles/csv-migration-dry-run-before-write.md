@@ -1,5 +1,5 @@
 ---
-title: "雑なメモ・OCR・CSVを、LLMと一次情報で信頼できるデータ基盤に変える"
+title: "雑データをLLM時代のデータ基盤に変える。455件→414件、60件中24件を止めた実例"
 emoji: "🧠"
 type: "tech"
 topics: ["llm", "dataengineering", "ai", "testing"]
@@ -7,497 +7,356 @@ published: false
 published_at: 2026-08-12 12:30
 ---
 
-手元のデータが最初からきれいなら、データ基盤づくりはそれほど難しくない。
+生成AIを使えば、汚いCSVやOCRをJSONにすること自体はかなり簡単になった。
 
-実際にはそうならない。
+しかし、データ基盤づくりで本当に難しいのはそこではない。
 
-例えば業務データなら、同じ対象がこんな形で混在する。
+**AIが作った「もっともらしい候補」を、何件まで正準データとして採用してよいのか。**
 
-```text
-customer_name: 株式会社ABC
-customer_name: (株)ABC
-customer_name: ABC Co., Ltd.
+今回のケーススタディ `KAFKA2306/books` では、実データを処理した結果がかなり分かりやすかった。
 
-part_no: AB-0123
-part_no: AB0123
-part_no: 0123
+| 実処理 | 入力 | 自動処理・採用 | 止めた / 別扱いにした |
+|---|---:|---:|---:|
+| 初期データ統合 | 455件 | 414 Work | 41件を同一作品側へ統合 |
+| OCR由来データ追加 | 60件 | 36件を新規所蔵として追加 | 24件を既存所蔵として追加停止 |
+| Kindle XML取込 | 690行 | 685 acquisition records | 完全重複5行を除去 |
+| NDL分類の直近25件バッチ | 25件 | 9件を採用 | 16件は自動採用しなかった |
+| 書誌タイトル修正候補 | 5件 | 4件を採用 | 1件をidentity collisionで停止 |
 
-equipment: Line-3
-machine: 3号機
-asset_name: LINE03
+重要なのは、AIや自動化で**採用件数を最大化したことではない**。
 
-result: OK
-result: 合格
-result: PASS
-result: 1
-```
+60件中24件、つまり40%を「追加しない」と判断した処理がある。
 
-これは異常なデータではない。
+直近の分類バッチでも25件中9件、36%しか自動採用していない。残り16件、64%は曖昧・候補なし・分類コードなし・provider errorとして確定を見送った。
 
-Excel、CSV、OCR、旧システム、メール添付、手入力、外部サービスのexportを数年つなげれば、普通にこうなる。
+これがこの記事の主題である。
 
-人間には同じ意味だと分かる。しかしそのままでは、検索、集計、JOIN、重複除去、機械学習、AIエージェントの入力には使いにくい。
+> **LLM時代のデータ基盤では、AIに正解を生成させる能力より、AIが作った候補を正準データへ昇格させない能力が重要になる。**
 
-ここでLLMはかなり役に立つ。
-
-表記揺れを見つける。自由記述をフィールドへ分解する。候補となるIDやカテゴリを抽出する。似たレコードをまとめる。JSON Schemaに合わせて構造化候補を返す。
-
-OpenAI APIもStructured Outputsとして、JSON Schemaに沿う構造化出力を公式に提供している。
-
-https://platform.openai.com/docs/api-reference
-
-しかし、**構造化できたことと、正しいデータになったことは別である。**
-
-LLMがもっともらしく `AB0123` と `0123` を同じ品番だと判断しても、本当に同一品かは別問題だ。旧番と新番かもしれないし、工場ごとに意味が違うかもしれない。
-
-LLMの出力をそのまま正準DBへ書けば、誤った補完や誤統合を高速に量産できる。
-
-そこで今回のケーススタディでは、雑な入力を一気に「きれいなCSV」にするのではなく、
-
-```text
-雑な入力
-↓
-LLM / OCRで候補化・構造化
-↓
-一次情報でidentityを確認
-↓
-正準モデルへ分解
-↓
-重複・衝突・参照整合を機械検証
-↓
-安全なものだけ採用
-↓
-APIとして再利用
-```
-
-という順番でデータ基盤を作った。
-
-この記事の主題はCSV importerではない。
-
-**LLM/AIを使って、長年たまった雑なデータを「再利用できるデータ資産」へ変えるとき、どこをAIに任せ、どこから先を一次情報と機械検証に任せるべきか**である。
-
-ケーススタディには、公開リポジトリ `KAFKA2306/books` を使う。題材は書誌データだが、扱っている問題はマスタ統合、identity、provenance、重複、分類、配布APIであり、顧客マスタ、設備台帳、商品マスタ、研究データにもそのまま持ち出せる。
-
-一次情報:
+ケーススタディ:
 
 - Repository: https://github.com/KAFKA2306/books
-- 初期データモデル: https://github.com/KAFKA2306/books/pull/2
-- OCR由来60件の統合: https://github.com/KAFKA2306/books/pull/3
-- Kindle XML 685件の統合: https://github.com/KAFKA2306/books/pull/16
-- NDL/NDC分類: https://github.com/KAFKA2306/books/pull/18
-- 書誌表示正規化: https://github.com/KAFKA2306/books/pull/46
-- collision audit: https://github.com/KAFKA2306/books/pull/52
-- 非衝突データだけを採用: https://github.com/KAFKA2306/books/pull/53
-- 書き込み前診断: https://github.com/KAFKA2306/books/pull/43
+- 455件→414 Work: https://github.com/KAFKA2306/books/pull/2
+- OCR 60件の統合: https://github.com/KAFKA2306/books/pull/3
+- Kindle XML 690行の取込: https://github.com/KAFKA2306/books/pull/16
+- NDL/NDC分類実装: https://github.com/KAFKA2306/books/pull/18
+- 直近の分類25件レポート: https://github.com/KAFKA2306/books/blob/main/data/category-enrichment-report.json
+- collision gate: https://github.com/KAFKA2306/books/pull/52
+- 5候補中4件だけを採用した実例: https://github.com/KAFKA2306/books/pull/53
 
-## 最初に決めるのは「AIモデル」ではなく、何を同一とみなすか
+## 455件を「455件の正解」にしなかった
 
-最初のデータには455件の入力があった。
+最初にあったのは455件の入力だった。
 
-PR #2では、それを414作品へ統合した。
+PR #2では、この455件をそのまま455件のentityとして登録せず、**414 Workへ統合した**。
+
+- 入力: 455件
+- Work: 414件
+- 統合された入力: 41件
 
 https://github.com/KAFKA2306/books/pull/2
 
-ここで重要なのは、455行を455entityとしてDBへ入れなかったことだ。
+41 / 455、約9%は「入力行数」と「実体数」が一致しなかったことになる。
 
-同じ対象でも、作品そのもの、版、実際の所蔵は意味が違う。
+原因は単なる重複文字列ではない。
 
-そこで最初から、
+同じ作品でも、巻、版、形式、所蔵状態が異なる。
 
-```text
-Work    = 作品
-Edition = ISBN・版・形式
-Holding = 実際の所蔵
-```
-
-へ分けた。
-
-後にKindle履歴を取り込む段階では `Acquisition` も分離した。
+そこで、
 
 ```text
-作品として同じ
-≠
-同じ版
-≠
-実際に所有している
-≠
-取得履歴がある
+Work        作品そのもの
+Edition     ISBN・版・形式
+Holding     実際の所蔵
+Acquisition 取得履歴
 ```
 
-これは業務データでも同じである。
+へ意味を分離した。
+
+これは本に限らない。
 
 ```text
-企業
-≠
-事業所
-≠
-設備
-≠
-設備に対する保全履歴
+顧客 ≠ 契約 ≠ 請求 ≠ 問い合わせ
+製品 ≠ 品番 ≠ Lot ≠ 検査結果
+設備 ≠ 部品 ≠ 故障イベント ≠ 保全作業
 ```
 
-```text
-製品
-≠
-品番
-≠
-Lot
-≠
-検査結果
-```
+という業務データと同じ問題である。
 
-**AIで正規化を始める前に、identityの境界を決める。**
+**LLMに表記揺れを直させる前に、「何を同一entityとみなすか」を決めないと、きれいな誤データができる。**
 
-ここが最初のデータ基盤設計だった。
+## OCRで60件取れた。しかし40%は追加してはいけなかった
 
-## OCRで60件読めても、60件追加してはいけない
+次に、スクリーンショットから構造化した60件を既存カタログへ統合した。
 
-次にOCR由来の60件を追加した。
+PR #3の実測結果はこうだった。
 
-結果は「60件追加」ではなかった。
-
-PR #3の確定値では、
-
-- 60件を処理
-- 24件は既存所蔵との重複として追加停止
-- 36件を新規所蔵として追加
-- 35件の新規Workを作成
-- 61件のISBNを検証済みEditionとして登録
-
-となった。
+| 判定 | 件数 | 構成比 |
+|---|---:|---:|
+| 入力 | 60 | 100% |
+| 既存所蔵として追加停止 | 24 | 40% |
+| 新規所蔵として追加 | 36 | 60% |
+| 新規Work | 35 | - |
 
 https://github.com/KAFKA2306/books/pull/3
 
-ここで重要なのは、OCR精度そのものではない。
+もし「OCRで60件読めた」ことを成功条件にして、そのまま60件を書き込んでいたら、24件は二重登録側へ進んでいた。
 
-**AI/OCRが60件を読めたとしても、正準DBへ60件追加してよいとは限らない。**
+つまりこのケースでは、**入力精度よりprecheckの方がデータ品質への寄与が大きい**。
 
-入力を高速化するのがAIの価値なら、追加してはいけない24件を止めるのがデータ基盤の価値である。
+LLMも同じである。
 
-企業マスタなら同一法人、設備台帳なら同一asset、商品マスタなら旧品番と新規登録候補の衝突が同じ問題になる。
+Structured Outputsを使えば、非構造データをJSON Schemaへ合わせて出力させることができる。OpenAIも非構造データからの構造化を主要ユースケースとして説明している。
 
-## LLMには「正解」ではなく「候補」を作らせる
+https://openai.com/index/introducing-structured-outputs-in-the-api/
 
-雑な自由記述を構造化する仕事はLLMと相性がいい。
+ただしOpenAI自身も、Structured OutputsはJSON Schemaへの適合を強くできても、**JSON内部の値そのものの誤りまでは防がない**と明記している。
 
-例えば、次は説明用の架空例である。
-
-```text
-ABC-1200 3号機 8/1 圧力異常 要確認
-```
-
-LLMに、
-
-```json
-{
-  "equipment_model_candidate": "ABC-1200",
-  "machine_no_candidate": 3,
-  "date_candidate": "2026-08-01",
-  "event_candidate": "圧力異常",
-  "status_candidate": "review"
-}
-```
-
-のような候補を作らせることはできる。
-
-ここまではLLMに向いている。
-
-しかし、`ABC-1200` がasset master上のどのequipment_idなのか、3号機がライン番号なのか装置番号なのか、8/1が何年なのかは、周辺データや一次情報なしには確定できない。
-
-だからcandidateとcanonicalを分ける。
-
-`books` の継続正規化でも、一括の推測置換を禁止し、ISBN、出版社公式、国立国会図書館などで確認できるものだけを採用する運用にしている。
-
-https://github.com/KAFKA2306/books/issues/25
-
-一意に決められない場合は保留する。
-
-authorityは、
+だから、
 
 ```text
-LLMの候補
-< 一次情報
-< 正準モデルの整合性
-< CIで検証された現在状態
+LLM output
+=
+canonical data
 ```
 
-とした。
-
-LLMは強力なcandidate generatorだが、master data authorityにはしない。
-
-## 「文字列をきれいにする」だけではデータ基盤にならない
-
-国立国会図書館のメタデータ流通ガイドラインは、タイトル、巻次、シリーズタイトル、版を独立した項目として扱う。
-
-https://ndlsearch.ndl.go.jp/guideline/main
-
-DC-NDL（RDF）ver.3.0も、書誌情報を構造化された項目として定義している。
-
-https://ndlsearch.ndl.go.jp/renkei/dcndl/version3
-
-つまり正規化は、
+にはしない。
 
 ```text
-汚い文字列
-→
-きれいな文字列
+LLM output
+=
+candidate
 ```
 
-だけでは足りない。
+とする。
 
-本質は、
+## 690行を685件にしただけではない。685件を5種類の意味へ分けた
 
-```text
-一つのセルに混ざった複数の意味
-→
-意味ごとのフィールド / entityへ分離
-```
+次の実例はKindle XMLだった。
 
-である。
+PR #16では、raw XMLの `meta_data` が690行あった。
 
-業務データなら、
-
-```text
-"ABC-1200 / 3号機 / 2026-08-01 / 圧力異常"
-```
-
-を単に整形するのではなく、
-
-```text
-asset_id
-machine_no
-event_date
-event_type
-source_record_id
-```
-
-へ分ける。
-
-この境界を決めるのがschemaであり、LLMはそのschemaへ入力を寄せる補助になる。
-
-## 690行の履歴も、そのまま690件の「所有物」にはしなかった
-
-さらにKindleの実データを投入した。
-
-PR #16の入力監査では、raw XMLの `meta_data` が690件あった。
-
-完全重複5件を除き、685レコードになった。
-
-内訳は、
-
-```text
-purchase           455
-sample             204
-prime               10
-kindle_dictionary    1
-unknown              15
-```
-
-だった。
+- raw: 690行
+- 完全重複: 5行
+- 正規化後: 685 records
 
 https://github.com/KAFKA2306/books/pull/16
 
-ここでも685件を同じ意味で扱っていない。
+完全重複の除去率だけなら5 / 690、約0.7%しかない。
 
-PurchaseだけをHoldingへ反映し、Sample / Prime / Dictionary / unknownはAcquisitionとして履歴を残した。
+しかし、この処理の価値は重複除去ではない。
 
-これは一般化できる。
+685 recordsの意味を調べると、次のように分かれた。
+
+| origin | 件数 | 扱い |
+|---|---:|---|
+| purchase | 455 | 所有としてHoldingへ反映 |
+| sample | 204 | Acquisitionのみ |
+| prime | 10 | Acquisitionのみ |
+| kindle_dictionary | 1 | Acquisitionのみ |
+| unknown | 15 | Acquisitionのみ |
+
+685件中、Purchaseは455件で約66%。Sampleだけで204件、約30%あった。
+
+もし「Kindle XMLに存在する = 所有」と単純化すると、少なくともSample 204件を所有物として誤分類する。
+
+これは業務データなら、
 
 ```text
-問い合わせ
-≠ 契約
-
-見積
-≠ 受注
-
-試験実施
-≠ 合格
-
-検知
-≠ 故障確定
+見積 = 受注
+問い合わせ = 契約
+アラート = 故障
+試験実施 = 合格
 ```
 
-LLMは曖昧な入力にも何らかのラベルを返せる。
+と扱うのと同じである。
 
-だからこそ、**null、unknown、review、ambiguousを正規状態として残せるデータモデル**が必要になる。
+**雑データを整えるとは、欠損を埋めることではない。異なる意味を分離することである。**
 
-## AIで分類するより、一次情報から分類を生成できるならその方が強い
+## 「AIなら全部分類できる」は、実データ25件で成立しなかった
 
-カテゴリ分類にも同じ境界を置いた。
+カテゴリ分類では、LLMの自由分類ではなく、国立国会図書館サーチからNDCを取得し、明示ルールでカテゴリへ変換する経路を作った。
 
-PR #18では、国立国会図書館サーチのAPIからNDCを取得し、明示的なNDC→カテゴリmappingで分類する実装を追加した。
-
+実装:
 https://github.com/KAFKA2306/books/pull/18
 
-NDL Search API仕様:
-
+NDL Search API公式仕様:
 https://ndlsearch.ndl.go.jp/help/api/specifications
 
-ISBNが確認済みならISBN一致を優先する。
+国立国会図書館は2026年3月31日付の外部提供インタフェース仕様書 第1.4版を掲載しており、OpenSearchを含む検索APIを提供している。
 
-ISBNがない場合は書名類似度0.97以上のみ採用する。
+直近の `data/category-enrichment-report.json` は2026-08-15に生成された25件バッチで、結果はこうだった。
 
-候補カテゴリが競合した場合は `ambiguous` として未分類のまま残す。
+| outcome | 件数 |
+|---|---:|
+| attempted | 25 |
+| accepted | 9 |
+| ambiguous | 1 |
+| no_ndc | 1 |
+| no_candidate | 7 |
+| provider_error | 7 |
 
-これはLLMに「分類して」と頼むより地味である。
+https://github.com/KAFKA2306/books/blob/main/data/category-enrichment-report.json
 
-しかし、後から
+自動採用は9 / 25 = **36%**。
+
+逆に16 / 25 = **64%は、そのrunでは正準カテゴリへ自動昇格しなかった**。
+
+ここで `provider_error` 7件を「データが間違っている」とは扱っていない。外部providerが失敗しただけなので、失敗状態を残して再試行できるようにする。
+
+`ambiguous` も無理に多数決で埋めない。
+
+`no_candidate` もLLMに推測させて穴埋めしない。
+
+データ基盤では、
 
 ```text
-なぜこのレコードはこのカテゴリになったのか
+unknown
+ambiguous
+no_candidate
+provider_error
+review
 ```
 
-を追跡できる。
+も正常な状態である。
 
-AIが便利になるほど、**説明可能な決定論レイヤーをどこに残すか**がデータ基盤の品質を決める。
+## 一次情報で正しい5候補でも、1件は書き込めなかった
 
-## 一次情報で正しくても、そのまま書くと壊れることがある
+さらに重要なのが、書誌タイトルの修正で起きたcollisionである。
 
-もっと重要な失敗もあった。
+出版社公式などの一次情報で確認した5候補を適用しようとしたところ、1候補が既存の正準Workと `title_key` で衝突した。
 
-一次書誌で確認できた正しい正規化候補でも、既存データへ適用するとidentity collisionが起きるケースがあった。
-
-PR #52では、正規化候補によって既存Workの `title_key` が衝突する問題を検出し、修正を強行せずcollision diagnosticを追加した。
+PR #52では、この種の衝突をfail-closedで検出するdiagnosticを追加した。
 
 https://github.com/KAFKA2306/books/pull/52
 
-続くPR #53では、一次情報で確認した候補をcollision auditに通し、衝突しないものだけを採用した。
+続くPR #53では、5候補中、非衝突の4件だけを採用し、1件は適用しなかった。
+
+- source-backed candidates: 5
+- applied: 4
+- collisionで停止: 1
 
 https://github.com/KAFKA2306/books/pull/53
 
-つまり、
+つまり、**一次情報で正しいことと、現在のDBへ安全に書けることも別問題**である。
 
 ```text
-一次情報で正しい
-```
-
-と
-
-```text
-現在のDBへ安全に適用できる
-```
-
-は別問題である。
-
-LLMに検索や照合を任せても、この最後の整合性検査は消えない。
-
-## dry-runは主役ではなく、最後の安全弁
-
-`books` には、入力CSVをcanonicalへ書き込まずに、各行がどの状態になるかを返す診断がある。
-
-```text
-existing_holding
-safe_new_work
-safe_new_edition
-invalid_isbn
-insufficient_metadata
-duplicate_in_batch
-review_similar_title
-```
-
-実装:
-https://github.com/KAFKA2306/books/blob/main/src/migration-diagnosis.mjs
-
-テスト:
-https://github.com/KAFKA2306/books/blob/main/tests/migration-diagnosis.test.mjs
-
-Browser版:
-https://github.com/KAFKA2306/books/pull/43
-
-Browser版は選択したCSVをbrowser memory内で処理し、公開catalogだけを取得する。ユーザーのCSV自体をuploadしない。
-
-dry-runの価値は「CSV importerが安全」だからではない。
-
-**LLMや自動処理が大量に作った候補を、正準データへ入れる直前にもう一度止められる**ことにある。
-
-## 最終的に作りたいのは「きれいなCSV」ではなく、再利用できる基盤
-
-正規化したデータをUIで表示して終わりにはしなかった。
-
-PR #4では、同じ正準catalogからversioned JSON/CSV APIを生成し、件数、bytes、SHA-256をmanifestで監査する構成にした。
-
-https://github.com/KAFKA2306/books/pull/4
-
-PR #46では、raw値を残しながら公開API/UI用のdisplay fieldを正規化した。
-
-https://github.com/KAFKA2306/books/pull/46
-
-```text
-raw
+LLMがもっともらしい
 ↓
-candidate
+一次情報で確認できた
 ↓
-verified canonical
-↓
-API / UI / agent / analysis
+それでもDB整合性で止まることがある
 ```
 
-という再利用経路ができる。
+ここまでgateを分けて初めて、AIをデータ整備へ安全に組み込める。
 
-ここまで来ると、本棚アプリ固有の話ではない。
+## LLMには「候補生成」を任せる
 
-CRMの顧客名、設備台帳、商品マスタ、研究データ、経費履歴、文書OCR、社内Excelでも同じ構造になる。
+ここでLLMの役割が明確になる。
 
-## LLM時代のデータ基盤は、この7層にすると扱いやすい
+得意なのは、例えば次である。
 
-今回の実装を一般化すると、次の7層になる。
+- OCRや自由記述からfield candidateを抽出する
+- 表記揺れ候補を列挙する
+- entity分割候補を作る
+- 検索queryを作る
+- JSON Schemaへ合わせる
+- 人間レビューが必要な候補を説明する
 
-### 1. Rawを確保する
-
-CSV、Excel、XML、画像、OCR、ログ、exportを入力として扱う。元データの由来を失わない。
-
-### 2. LLMに候補を作らせる
-
-抽出、分割、表記揺れ検出、検索query生成、schemaへの変換を任せる。
-
-### 3. 一次情報でidentityを確定する
-
-公式ID、マスタ、出版社、公的API、メーカー仕様など、その領域のauthorityを使う。
-
-### 4. Canonical modelへ分解する
-
-1行を1entityと決めつけず、意味ごとにentityとrelationへ分ける。
-
-### 5. 決定論的gateを通す
-
-duplicate、ID validity、referential integrity、collision、thresholdをコードで検証する。
-
-### 6. Ambiguousを無理に埋めない
-
-unknown / review / ambiguousを正規状態として残す。
-
-### 7. APIとprovenanceへ変える
-
-人間が見ても、分析コードが読んでも、AIエージェントが再利用しても、同じ意味を取得できる形で配布する。
-
-この順番なら、LLMはデータ整備の速度を上げられる。
-
-一方でLLMの誤りが、そのまま正準DBの誤りになることを防げる。
-
-## AIに全部任せるのではなく、AIが働ける土台を作る
-
-LLMが登場する前、雑なデータを整える仕事はコストが高かった。
-
-表記揺れを探し、フィールドを分け、重複を調べ、外部マスタを照合し、分類し、例外を人間へ戻す。
-
-その多くをAIは高速化できる。
-
-だから今まで放置していたExcel、CSV、OCR、旧システムexportにも、再び価値が出てくる。
-
-ただし、LLMへ全部渡して「きれいなJSONが返ったから完成」とすると、データ基盤にはならない。
-
-必要なのは、
+一方、正準データへの昇格条件は別レイヤーに置く。
 
 ```text
-AIが候補を大量に作れること
-×
-一次情報で確定できること
-×
-コードが危険な変更を止めること
-×
-provenanceを後から追えること
+raw / OCR / CSV / XML
+        ↓
+LLM candidate
+        ↓
+primary-source lookup
+        ↓
+canonical schema
+        ↓
+duplicate / ID / collision / reference gate
+        ↓
+safe write or review
+        ↓
+API / UI / agent
 ```
+
+国立国会図書館のDC-NDL（RDF）ver.3.0も、書誌情報と個体情報を区別し、構造化されたメタデータ項目として表現している。
+
+https://ndlsearch.ndl.go.jp/renkei/dcndl/version3
+
+2026年4月1日からver.3系の提供が開始されている。
+
+https://ndlsearch.ndl.go.jp/news/20260401_dcndl_ver3
+
+ここから得られる一般則は、**1セルをきれいにするのではなく、1セルに混ざっていた意味を別entity・別fieldへ戻す**ことである。
+
+## 実測値を見ると、「全部自動化」がKPIではない
+
+今回の5つの実測を並べると、共通点が見える。
+
+```text
+455 inputs
+→ 414 Works
+→ 41 inputsは別entityとして増やさなかった
+
+60 OCR records
+→ 36 added
+→ 24 duplicates blocked
+
+690 XML rows
+→ 685 acquisition events
+→ 455 purchase / 204 sample / 26 other
+
+25 classification attempts
+→ 9 accepted
+→ 16 not auto-promoted
+
+5 verified normalization candidates
+→ 4 applied
+→ 1 collision blocked
+```
+
+データ整備AIのKPIを「何件自動処理できたか」だけにすると、危険な方向へ最適化される。
+
+見るべきなのは少なくとも、
+
+- candidate数
+- automatically accepted数
+- duplicateとして止めた数
+- ambiguousとして保留した数
+- external evidenceが取れなかった数
+- collisionで止めた数
+- 人間reviewへ送った数
 
 である。
 
-**AI時代に価値が上がるのは、データを生成する能力だけではない。雑な過去データを、AIが安全に使える正準データへ変換する能力である。**
+**拒否率・保留率も品質指標になる。**
+
+## 雑な過去データは、AI時代になって価値が上がった
+
+以前なら、数百・数千件のExcel、OCR、CSV、XML、メール由来データを人間が一件ずつ整理するコストは高かった。
+
+LLMによって、候補生成のコストは急激に下げられる。
+
+だから、これまで放置されていたデータを再利用できる可能性は大きくなった。
+
+ただし、価値を作るのはLLM単体ではない。
+
+```text
+LLMが候補を大量に作る
+×
+一次情報でidentityを確認する
+×
+canonical schemaで意味を分離する
+×
+deterministic gateが危険な変更を止める
+×
+provenanceを残す
+```
+
+という組み合わせである。
+
+今回の実データでは、60件中24件を止め、25件中16件を自動分類せず、一次情報で確認済みの5修正候補のうち1件もcollisionで止めた。
+
+**AI時代のデータ基盤で重要なのは、「全部埋められること」ではない。分からないものを分からないまま残し、確定できるものだけを正準データへ昇格させられることだ。**
