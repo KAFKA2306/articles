@@ -1,6 +1,5 @@
 name: Zenn Production Verification
 
-# Diagnostic pushes to this file perform an immediate RSS snapshot because no article diff is present.
 on:
   push:
     branches: [main]
@@ -18,7 +17,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: zenn-production-diagnostic-${{ github.sha }}
+  group: zenn-production-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
