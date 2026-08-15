@@ -17,6 +17,9 @@ on:
           - validate-before-pages-deploy
           - why-i-could-buy-the-crash
 
+env:
+  ZENN_DEPLOY_BRANCH: zenn-release
+
 permissions:
   contents: write
 
@@ -27,10 +30,11 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 22
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: main
           fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
@@ -52,54 +56,6 @@ jobs:
         shell: bash
         env:
           SLUG: ${{ inputs.slug }}
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import os
-          from pathlib import Path
-
-          slug = os.environ["SLUG"]
-          path = Path("articles") / f"{slug}.md"
-          if not path.is_file():
-              raise SystemExit(f"unknown article: {slug}")
-          text = path.read_text(encoding="utf-8")
-          parts = text.split("---\n", 2)
-          if len(parts) != 3:
-              raise SystemExit(f"invalid front matter: {path}")
-          front = parts[1]
-          if front.count("published: false") == 1 and "published: true" not in front:
-              front = front.replace("published: false", "published: true", 1)
-              path.write_text(f"---\n{front}---\n{parts[2]}", encoding="utf-8")
-              mode = "promote"
-          elif front.count("published: true") == 1 and "published: false" not in front:
-              mode = "reconcile"
-          else:
-              raise SystemExit(f"ambiguous publication state: {path}")
-          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as handle:
-              handle.write(f"mode={mode}\n")
-          print(f"publication_mode={mode} slug={slug}")
-          PY
-
-      - name: Push publication intent
-        if: steps.state.outputs.mode == 'promote'
-        shell: bash
-        env:
-          SLUG: ${{ inputs.slug }}
-        run: |
-          set -euo pipefail
-          python -m pipeline.zenn_slug
-          git diff --check
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "articles/${SLUG}.md"
-          git commit -m "publish: release ${SLUG} through verified gate"
-          git push origin HEAD:main
-
-      - name: Retrigger targeted Zenn deploy
-        if: steps.state.outputs.mode == 'reconcile'
-        shell: bash
-        env:
-          SLUG: ${{ inputs.slug }}
           RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
@@ -111,11 +67,25 @@ jobs:
           slug = os.environ["SLUG"]
           run_id = os.environ["RUN_ID"]
           path = Path("articles") / f"{slug}.md"
+          if not path.is_file():
+              raise SystemExit(f"unknown article: {slug}")
           text = path.read_text(encoding="utf-8")
           parts = text.split("---\n", 2)
-          if len(parts) != 3 or parts[1].count("published: true") != 1:
-              raise SystemExit(f"cannot reconcile non-publication-intent article: {path}")
+          if len(parts) != 3:
+              raise SystemExit(f"invalid front matter: {path}")
+          front = parts[1]
           body = parts[2].lstrip("\n")
+          if front.count("published: false") == 1 and "published: true" not in front:
+              front = front.replace("published: false", "published: true", 1)
+              mode = "promote"
+          elif front.count("published: true") == 1 and "published: false" not in front:
+              mode = "reconcile"
+          else:
+              raise SystemExit(f"ambiguous publication state: {path}")
+
+          # Every release attempt changes exactly the target article so that the
+          # deploy branch receives a new commit even when publication intent was
+          # already true. The marker is non-rendering HTML metadata.
           body = re.sub(
               r"^<!-- zenn-deploy-sync: [^>]+ -->\n+",
               "",
@@ -124,17 +94,69 @@ jobs:
           )
           marker = f"<!-- zenn-deploy-sync: {run_id} -->\n\n"
           path.write_text(
-              f"---\n{parts[1]}---\n{marker}{body}",
+              f"---\n{front}---\n{marker}{body}",
               encoding="utf-8",
           )
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as handle:
+              handle.write(f"mode={mode}\n")
+          print(f"publication_mode={mode} slug={slug}")
           PY
+
+      - name: Validate exact release mutation
+        shell: bash
+        env:
+          SLUG: ${{ inputs.slug }}
+        run: |
+          set -euo pipefail
           python -m pipeline.zenn_slug
           git diff --check
+          changed="$(git diff --name-only)"
+          test "$changed" = "articles/${SLUG}.md" || {
+            echo "unexpected release diff: $changed"
+            exit 1
+          }
+
+      - name: Commit publication intent on main
+        shell: bash
+        env:
+          SLUG: ${{ inputs.slug }}
+        run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "articles/${SLUG}.md"
-          git commit -m "deploy: retrigger Zenn sync for ${SLUG}"
-          git push origin HEAD:main
+          git commit -m "publish: reconcile ${SLUG} through release branch"
+
+          # Preserve concurrent editorial work without force-pushing. The release
+          # commit is rebased onto the latest main and must win a normal FF push.
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main
+            if git push origin HEAD:main; then
+              pushed=1
+              break
+            fi
+          done
+          test "$pushed" = "1" || {
+            echo "main moved too quickly; release aborted without force push"
+            exit 1
+          }
+          echo "release_target_sha=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Advance dedicated Zenn deploy branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "$ZENN_DEPLOY_BRANCH"
+          release_sha="$(git rev-parse "origin/${ZENN_DEPLOY_BRANCH}")"
+          target_sha="$release_target_sha"
+          if ! git merge-base --is-ancestor "$release_sha" "$target_sha"; then
+            echo "${ZENN_DEPLOY_BRANCH} diverged from main; refusing force update"
+            exit 1
+          fi
+          git push origin "${target_sha}:refs/heads/${ZENN_DEPLOY_BRANCH}"
+          echo "ZENN_DEPLOY_TRIGGERED branch=${ZENN_DEPLOY_BRANCH} sha=${target_sha}"
 
       - name: Verify Zenn production
         id: verify

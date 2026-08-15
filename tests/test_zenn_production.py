@@ -61,27 +61,31 @@ class ZennProductionTests(unittest.TestCase):
         )
         self.assertFalse(mismatch[0].ok)
 
-    def test_workflow_enforces_production_verifier(self) -> None:
+    def test_production_verifier_observes_only_release_branch(self) -> None:
         workflow = (
             zenn_production.ROOT / ".github" / "workflows" / "zenn-production-verify.yml"
         ).read_text(encoding="utf-8")
         self.assertIn("python -m pipeline.zenn_production", workflow)
         self.assertIn("cron:", workflow)
-        self.assertIn("branches: [main]", workflow)
-        self.assertIn("wait-seconds", workflow)
-        self.assertIn("grep -q '^published: true$'", workflow)
+        self.assertIn("branches: [zenn-release]", workflow)
+        self.assertIn("ref: zenn-release", workflow)
+        self.assertIn("wait_seconds=900", workflow)
+        self.assertNotIn("branches: [main]", workflow)
         self.assertNotIn("cancel-in-progress", workflow)
 
-    def test_manual_release_converges_without_rollback_oscillation(self) -> None:
+    def test_manual_release_advances_dedicated_deploy_branch(self) -> None:
         workflow = (
             zenn_production.ROOT / ".github" / "workflows" / "zenn-manual-release.yml"
         ).read_text(encoding="utf-8")
-        self.assertIn("Retrigger targeted Zenn deploy", workflow)
-        self.assertIn("zenn-deploy-sync", workflow)
+        self.assertIn("ZENN_DEPLOY_BRANCH: zenn-release", workflow)
+        self.assertIn("Advance dedicated Zenn deploy branch", workflow)
+        self.assertIn('git push origin "${target_sha}:refs/heads/${ZENN_DEPLOY_BRANCH}"', workflow)
+        self.assertIn("git merge-base --is-ancestor", workflow)
         self.assertIn("DEPLOY_PENDING", workflow)
         self.assertIn("no rollback push is emitted", workflow)
         self.assertNotIn("Roll back failed release", workflow)
-        self.assertNotIn("rollback: Zenn production did not verify", workflow)
+        self.assertNotIn("git push --force", workflow)
+        self.assertNotIn("git push -f", workflow)
 
 
 if __name__ == "__main__":

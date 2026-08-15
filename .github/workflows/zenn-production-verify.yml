@@ -2,13 +2,7 @@ name: Zenn Production Verification
 
 on:
   push:
-    branches: [main]
-    paths:
-      - "articles/**"
-      - "pipeline/zenn_production.py"
-      - "tests/test_zenn_production.py"
-      - "docs/PUBLICATION.md"
-      - ".github/workflows/zenn-production-verify.yml"
+    branches: [zenn-release]
   schedule:
     - cron: "17 * * * *"
   workflow_dispatch:
@@ -23,6 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: zenn-release
           fetch-depth: 2
       - uses: actions/setup-python@v6
         with:
@@ -37,18 +32,8 @@ jobs:
           set -euo pipefail
           wait_seconds=0
           if [ "${{ github.event_name }}" = "push" ]; then
-            before="${{ github.event.before }}"
-            if git cat-file -e "$before^{commit}" 2>/dev/null; then
-              while IFS= read -r path; do
-                [ -n "$path" ] || continue
-                # A changed/deleted public article can require asynchronous Zenn convergence.
-                # Draft-only edits should not create long-running production polls.
-                if [ ! -e "$path" ] || grep -q '^published: true$' "$path"; then
-                  wait_seconds=900
-                  break
-                fi
-              done < <(git diff --name-only "$before" "${{ github.sha }}" -- articles/)
-            fi
+            # Every push to zenn-release is an intentional deploy event.
+            wait_seconds=900
           fi
           python -m pipeline.zenn_production \
             --wait-seconds "$wait_seconds" \
