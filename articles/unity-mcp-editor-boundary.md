@@ -1,5 +1,5 @@
 ---
-title: "2026年、Unity MCPはどこまで実用になったのか――14件の公開実例と自前repoで見る完成境界"
+title: "2026年、Unity MCPはどこまで実用になったのか――14件で見えた『生成できる、でも監査できない』壁"
 emoji: "🛠️"
 type: "tech"
 topics: ["unity", "mcp", "codex", "claudecode", "ai"]
@@ -7,20 +7,34 @@ published: false
 published_at: 2026-08-12 16:03
 ---
 
-# 2026年、Unity MCPはどこまで実用になったのか――14件の公開実例と自前repoで見る完成境界
+# 2026年、Unity MCPはどこまで実用になったのか――14件で見えた「生成できる、でも監査できない」壁
 
-「AIがUnity Editorを操作できる」は、もう面白デモだけの話ではありません。
+2026年、AIがUnity Editorを操作すること自体は、もう珍しくありません。
 
-2026年には、自然言語から数分〜十数分で小さなゲームを作った例、既存projectのbugを直した例、EditMode / PlayMode testまで通した例、複数sessionにまたがって一本のゲームを完成させた例まで公開されています。
+自然言語からGameObjectを置く。scriptを書く。componentをattachする。Play Modeを起動する。consoleを読む。EditMode / PlayMode testを作る。buildする。数日にまたがってgameを作り続ける。
 
-一方で、49分かけて7回自己テストし5件を自己修正したのに、実際のplayerは最初の部屋から出られなかった例があります。Visual Effect Graphに長時間使って完成しなかった例、Editorでは変更されたように見えても保存されなかった例、「Connected」と表示されていても操作不能だった例もあります。
+ここまでは、公開例がかなり増えました。
 
-さらに私たち自身のrepoでも、同じ構造の失敗を経験しています。
+しかし実例を追うと、別の問題が残っています。
 
-- `image2outfit`では、Blender MCP + Unity MCP + Codex integrationを実装しても、live Blender / Unity MCP接続とend-to-end callが`NOT_RUN`なら成功とは呼べなかった
-- `vrmine`では、84 commits、48 changed files、約4,000 additionsまで進んでも、2-client、late join、owner leave、private uploadを証明できずreleaseは`BLOCKED`のままだった
+**AIは作れるようになった。しかし、自分が作ったものの「見た目」と「実際の挙動」を最後まで監査する能力は、生成能力ほど伸びていません。**
 
-2026年に知りたいのは、もはや
+たとえば2026年には、
+
+- 12個のobjectを正しく生成したのに、既存壁がdoorwayを塞いで部屋へ入れなかった
+- 7回Play Mode testし、5件を自己修正したのに、playerは最初の部屋から出られなかった
+- EditMode 4件 + PlayMode 3件が全部PASSしても、camera framingは人間が直した
+- shader / VFXは「処理した」ことと「見た目が良い」ことが一致しなかった
+
+という例が出ています。
+
+私たち自身のrepoでも同じでした。
+
+`image2outfit`では、201 tests、Blender hosted execution、numeric fit/build gateまでPASSした衣装を、5面と6ポーズで直接見ると袖が肩から離れ、衿が浮いていたためREJECTしました。
+
+`vrmine`では、3ゲームworld、static CI、two-client verification logic、release gateまで作っても、real multi-client、late join、owner leave、private uploadでの挙動を監査し切れず、releaseは`BLOCKED`のままです。
+
+つまり2026年に問うべきなのは、
 
 ```text
 UnityをAIから操作できるか？
@@ -29,21 +43,14 @@ UnityをAIから操作できるか？
 ではありません。
 
 ```text
-何なら本当に任せられるのか？
-どこで人間が介入したのか？
-何をもって「完成」と呼んだのか？
-自分の開発へ導入する価値があるのか？
+AIが作ったものを、AI自身はどこまで正しく監査できるのか？
 ```
 
 です。
 
-この記事では、2026年8月15日までに公開されたUnity MCP / Unity Editor agentの実運用記録14件を同じ物差しで読み直し、最後に私たち自身のBlender / Unity / VRChat系repoの失敗記録を重ねます。
-
-14件は14人の独立再現ではありません。越井琢巳氏とmiya氏がそれぞれ2件を公開しているため、中心サンプルは**12の発信主体による14事例**です。
-
 結論を先に書きます。
 
-**prototype生成、Scene操作、script実装、既存bug修正、console / testを使った反復修正はすでに実用域です。問題は「AIがUnityを触れるか」から「何を証拠に完成と判定するか」へ移っています。**
+**Unity MCPはauthoring toolとしてはすでに実用域です。最大の未解決点はauthoringではなくauditです。Sceneやcodeの内部状態はかなり監査できますが、「見た目として破綻していないか」「playerが本当に遊べるか」「real runtimeで同期するか」は、別のobserverとcompletion gateを必要とします。**
 
 ---
 
@@ -54,26 +61,28 @@ UnityをAIから操作できるか？
 - `> 「……」` は原文からの**直接引用**
 - 直接引用の直下に、著者名・記事名・公開日・URLを明記
 - 引用符を付けていない説明は、原文に基づく**筆者要約**または本記事の分類
-- 数字、日付、version、test件数などは元記事または一次情報で確認できたものだけを使用
+- 数字、日付、version、test件数は、元記事または一次情報で確認できたものだけを使用
 - 体験談は「その環境で起きた観測」であり、製品全体の成功率には読み替えない
-- 私たち自身のrepoについても、Issue / PRに残っている状態とevidenceを根拠にし、未実行を成功へ昇格させない
+- 私たち自身のrepoもPR / Issueに残っているevidenceを基準とし、未実行を成功へ昇格させない
 
-この記事の「実用域」「不安定」「完成境界」というラベルは引用ではなく、複数事例を比較した本記事の判断です。
+この記事でいう「実用域」「監査できない」「完成境界」は、引用ではなく複数事例を比較した本記事の判断です。
 
 ---
 
 ## これはsystematic reviewではない
 
-対象は次を満たす公開記録を優先しました。
+対象は2026年8月15日までに公開され、次を満たす実運用記録を優先しました。
 
 - Unity EditorをAI agent / MCPから実際に操作している
 - setup紹介だけで終わらず、Scene、game、test、build、debug等の結果がある
-- 成功だけでなく、失敗、修正、人間介入の情報を読み取れる
+- 成功だけでなく、失敗、修正、人間介入を読み取れる
 - 公開日、環境、成果のいずれかを確認できる
 
-note、Zenn、Qiita、DevelopersIO、企業・個人blog、GitHub、Unity公式情報を調査しました。Redditも探索しましたが、中心表では環境・成果物・失敗条件まで追える記録を優先しました。
+note、Zenn、Qiita、DevelopersIO、企業・個人blog、GitHub、Unity公式情報を調査しました。Redditも探索しましたが、中心表では実行条件と成果を追いやすい記録を優先しています。
 
-無作為抽出ではなく、成功体験を公開しやすいselection biasもあります。そのため、
+無作為抽出ではありません。成功体験を公開しやすいselection biasもあります。
+
+したがって、
 
 ```text
 14件中10件成功 → 成功率71%
@@ -81,46 +90,65 @@ note、Zenn、Qiita、DevelopersIO、企業・個人blog、GitHub、Unity公式�
 
 のような数字は出しません。
 
-代わりに、**どのtask classで、どの到達段階まで、どれくらい人間が介入したか**を比較します。
+代わりに、**何を生成できたかではなく、何を監査できたか**を比較します。
 
 ---
 
-## 誰が試したのか――肩書きより「証拠密度」を見る
+## 誰が試したのか――作者の多様性と証拠密度
 
-作者の属性も無視できません。ただし「会社員だから信頼できる」「個人blogだから弱い」とは扱いません。
+14件は14人による独立再現ではありません。越井琢巳氏とmiya氏がそれぞれ2件を公開しているため、中心サンプルは**12の発信主体による14事例**です。
 
-中心サンプルには、個人開発者、企業技術blog、会社名義の検証、Qiita上の技術記録、長期の個人ゲーム開発記が混在しています。目的もtutorial、既存project修正、game prototype、長期game制作、workflow設計と異なります。
+発信主体も一様ではありません。
 
-そこで本記事では知名度より、第三者が観測を追跡できるかを重く見ます。
+- 個人game developer
+- Zenn / note上の個人技術検証
+- DevelopersIOの企業技術blog
+- 企業名義のUnity検証
+- Qiita上のworkflow / tutorial検証
+- 複数日・複数stageにまたがる長期開発記録
+
+本記事では肩書きそのものをauthorityにはしません。見るのは、第三者が「何が起きたか」を追える証拠量です。
 
 ```text
 E3  高い証拠密度
-    environment / task / 所要時間 / failure / test / screenshot・video・code等が複数ある
+    environment / task / failure / test / screenshot・video・code等が複数ある
 
 E2  中程度
-    実際の操作結果と画像・動画はあるが、再現条件やfailure記録が限定的
+    実操作と成果物は見えるが、再現条件やfailure記録が限定的
 
 E1  低い
-    感想や完成報告が中心で、環境・検証条件・失敗情報が少ない
+    感想・完成報告中心で、検証条件や失敗情報が少ない
 ```
 
-E3だから主張が正しいという意味ではありません。**何が起きたかを第三者が追いやすい**という意味です。
+E3は「正しい」の意味ではなく、**観測を追跡しやすい**という意味です。
 
-| 発信の種類 | 本記事での扱い | 信頼性を見るポイント |
+---
+
+## 先に整理する：「操作できる」と「監査できる」は別能力
+
+Unity MCPの能力を一列に並べると誤解しやすいので、authoringとauditを分けます。
+
+| 層 | AIがやりやすいこと | 監査上の弱点 |
 | --- | --- | --- |
-| 企業技術blog | 実務寄りの検証記録 | 実行条件、失敗、再試行、画像・数値 |
-| 個人の長期開発記 | production frictionを見る材料 | 複数日・複数feature、失敗の具体性 |
-| 個人の単発検証 | task別の成立可否を見る材料 | prompt、環境、成果物、動画・screenshot |
-| workflow / code公開 | 再現可能な運用設計を見る材料 | test、commit、gate、公開code |
-| 公式情報 | capability / support範囲の確認 | version、beta status、正式仕様 |
+| Source | C#生成、asset編集 | requirement自体が間違っていてもcompileできる |
+| Editor state | GameObject、component、serialized field確認 | scene全体の意味・使いやすさは別 |
+| Test | EditMode / PlayMode assertion | test oracleに書かれていない欠陥は見えない |
+| Screenshot | 静止画capture | 視点外、時間変化、操作中の破綻を見逃す |
+| Visual | silhouette、deformation、composition | 「良い見た目」の定義が曖昧で機械化しにくい |
+| Gameplay | 実際のinputによるplayer path | warpやstate injectionでは代替できない |
+| Network/runtime | ownership、late join、serialization | simulatorとreal clientが同じとは限らない |
 
-同じ「成功」でも、10分のtutorialと複数sessionの製品開発は同じ重さでは扱いません。
+この記事の中心命題は単純です。
+
+```text
+CAN_GENERATE
+≠
+CAN_AUDIT_THE_RESULT
+```
 
 ---
 
 ## 「成功」を5段階に分ける
-
-Unity MCPの記事を読むとき、最も危険なのは全部を「成功」でまとめることです。
 
 ```text
 L1 EDITOR_OPERATED
@@ -130,62 +158,66 @@ L2 PLAYABLE
    Play Modeで最低限遊べた
 
 L3 VERIFIED
-   console / test / build等の検証を通した
+   console / test / build等の機械検証を通した
 
 L4 SUSTAINED
-   複数feature・複数sessionを跨ぐ開発を継続できた
+   複数feature・複数sessionを跨いで開発を継続できた
 
 L5 RUNTIME_COMPLETED
-   公開物・実機・外部player等、最終利用環境まで確認した
+   実利用環境・外部player・real client等まで確認した
 ```
 
-`MCP tool returned success`はL1ですらありません。単なるtransport / operation successです。
+ここで重要なのは、**L3は「見た目と挙動が正しい」を意味しない**ことです。
+
+`test passed`は、書かれたtestに対してPASSしたというだけです。
 
 ---
 
-## 14件を先に一覧する
+## 14件を一覧する
 
-| 日付 | 発信主体 | 実例 | 到達 | 証拠密度 | 人間介入 | 観測された境界 |
+| 日付 | 発信主体 | 実例 | 到達 | 証拠 | 最後に人間が見たもの | 観測された境界 |
 | --- | --- | --- | --- | --- | --- | --- |
-| 2/19 | 増田恭隆 / note | Unity MCP vs CoPlayでブロック崩し | L2 | E2 | bug修正あり | MCP実装による差が大きい |
-| 2/24 | unsoluble_sugar / Zenn | uLoopMCPで2D→3Dブロック崩し | L2〜L3 | E3 | 動作確認・修正指示 | 観測→修正loopが効く |
-| 2/28 | よなよな@AIゲーム開発 / note | Unity 6 + Codexでヴァンサバ系 | L2 | E3 | 接続・画面・初期化を復旧 | Connected ≠ operable |
-| 3/8 | 越井琢巳 / DevelopersIO | Unity公式MCPでTPS scene改造 | L1 | E3 | 人間がPlay確認 | object生成 ≠ usable space |
-| 3/11 | miya / note | CatchGame全自動生成 | L2 | E2 | 公開記録上は小さい | 単純gameは自然言語から成立 |
-| 3/13 | 越井琢巳 / DevelopersIO | 2D game 3テーマ比較 | L2〜L3 | E3 | 最終playで人間が欠陥発見 | self-test ≠ playability |
-| 3/22 | umezu_y / Qiita | 企画→WebGL公開workflow | 運用設計 | E3 | phase間で承認 | completion contractが重要 |
-| 4/5 | 四駒アイ / note | Claude Code→Codexでgame改修・build | L2 + build | E2 | setupと操作性調整 | draft生成には有効 |
-| 4/11 | ティー / note | 神経衰弱 + Unity CLI Loop | L2 | E2 | 別観測toolを追加 | generationよりobservationが重要 |
-| 4/17 | miya / note | マグネットスイーパー移植 | L2未満〜L2 | E2 | UI等の追加修正必要 | 自動実装しても未完成 |
-| 5/7 | 株式会社ユニスポット | 既存3D projectのbug / shader / VFX | task依存 | E3 | 目視評価 | bug fix強、art/VFX不安定 |
-| 6/20 | zuqqhi2 / 個人blog | Codexで3D鬼ごっこ + tests | L3 | E3 | cameraを追加修正 | test条件を先に渡すと強い |
-| 6/24 | TsuchiyaK / Qiita | Unity公式MCPでRoll-a-Ball | L2 | E2 | 追加prompt | tutorial規模は短時間で成立 |
-| 7/5〜9 | bunnoneta / note | 『昭和サバイバル』継続開発 | L4 | E3 | balance・debug・判断を人間が担当 | 長期開発可能、完成判断は人間 |
+| 2/19 | 増田恭隆 / note | Unity MCP vs CoPlayでブロック崩し | L2 | E2 | bug | MCP実装差が大きい |
+| 2/24 | unsoluble_sugar / Zenn | uLoopMCPで2D→3Dブロック崩し | L2〜L3 | E3 | 反射・めり込み | observation loopが効く |
+| 2/28 | よなよな@AIゲーム開発 / note | Unity 6 + Codexでヴァンサバ系 | L2 | E3 | 接続・画面・UI | Connected ≠ operable |
+| 3/8 | 越井琢巳 / DevelopersIO | Unity公式MCPでTPS scene改造 | L1 | E3 | 実際の移動空間 | object生成 ≠ usable space |
+| 3/11 | miya / note | CatchGame全自動生成 | L2 | E2 | play結果 | 単純gameは成立 |
+| 3/13 | 越井琢巳 / DevelopersIO | 2D game 3テーマ | L2〜L3 | E3 | actual traversal | self-test ≠ playability |
+| 3/22 | umezu_y / Qiita | 企画→WebGL workflow | 運用設計 | E3 | phase acceptance | completion contractが重要 |
+| 4/5 | 四駒アイ / note | game改修・build | L2 + build | E2 | 操作性 | draft生成には有効 |
+| 4/11 | ティー / note | 神経衰弱 + Unity CLI Loop | L2 | E2 | Play中error | observation追加で改善 |
+| 4/17 | miya / note | マグネットスイーパー移植 | L2未満〜L2 | E2 | UI / 完成度 | 自動実装 ≠ 完成 |
+| 5/7 | 株式会社ユニスポット | bug / shader / VFX | task依存 | E3 | 視覚品質 | bug fix強、VFX不安定 |
+| 6/20 | zuqqhi2 / 個人blog | 3D鬼ごっこ + tests | L3 | E3 | camera framing | tests PASS ≠ visual PASS |
+| 6/24 | TsuchiyaK / Qiita | Roll-a-Ball | L2 | E2 | play結果 | tutorial規模は成立 |
+| 7/5〜9 | bunnoneta / note | 『昭和サバイバル』継続開発 | L4 | E3 | balance / fun / debug | 長期開発可能、完成判断は人間 |
 
-重要なのはL2の件数ではありません。
+一覧だけでも傾向が見えます。
 
-**taskの複雑さが上がるほど、agentの「観測方法」と人間の「完成基準」が支配的になる**ことです。
+**AIが苦戦するのは、C#を生成する場面より「最終結果をどう見るべきか」が曖昧な場面です。**
 
 ---
 
-# 1. 同じブロック崩しでも3時間と1時間
+# 1. 同じブロック崩しでも、MCP実装差で体験が変わる
 
-増田恭隆氏は、同じブロック崩しを異なるUnity MCP系で比較しています。前者は実装約3時間、CoPlay側は約1時間で、人間が4箇所のbugを修正したと報告しています。
+増田恭隆氏は、同じブロック崩しを異なるUnity MCP系で比較しました。
 
 ### 直接引用
 
-> 「実質的な実装時間は3時間。率直な感想は『使い物にならない』。」
+> 「率直な感想は『使い物にならない』。」
 
 — 増田恭隆「Unity本家のAI参入と、これまでのUnityでのノーコード検証」2026-02-19  
 https://note.com/yasutaka_masuda/n/n74397dbf2abf
 
-**本記事の判断:** 「Unity MCP」というカテゴリ名だけで性能を語れません。modelだけでなく、agentへUnity操作をどう見せるかが結果を左右します。
+同じmodel family、同じUnityでも、agentにどのEditor操作をどう見せるかで結果が変わります。
+
+**本記事の判断:** model intelligenceだけでなく、observation / action interface自体が性能です。
 
 ---
 
-# 2. 2D→3D化で効いたのは生成より観測
+# 2. 2D→3D化で効いたのは、生成より観測
 
-uLoopMCPをClaude Codeから使った検証では、白紙projectから数字付きブロック崩しを作り、2D版から3D版へ拡張しています。3D化では壁へのめり込みや反射不良があり、人間が動作確認しながら修正を投げています。
+uLoopMCP + Claude Codeの検証では、2Dから3Dへ拡張したあと壁へのめり込みや反射不良が発生しました。人間が動作を見て修正を投げています。
 
 ### 直接引用
 
@@ -194,17 +226,13 @@ uLoopMCPをClaude Codeから使った検証では、白紙projectから数字付
 — unsoluble_sugar「uLoopMCP × Claude Code、AI駆動でUnityゲーム開発がどこまで自走できるか試してみた」2026-02-24  
 https://zenn.dev/unsoluble_sugar/articles/cd8d59be7b8f85
 
-Hierarchy取得、capture、test結果取得があるため、AI自身も失敗を観測して修正できます。
-
-**本記事の判断:** Unity agentの価値は「C#を書くこと」だけではなく、`Editor state → observation → repair`を閉ループ化することにあります。
+**本記事の判断:** 生成能力より、`observe → detect → repair`を何で閉じるかが重要です。
 
 ---
 
 # 3. 「Connected」でも操作できない
 
-よなよな@AIゲーム開発氏は、Unity 6 + Codex + MCPでVampire Survivors系gameを作る過程を記録しています。
-
-Unity側はConnectedでもCodex側からprojectを操作できない状態、Main Camera消失、初期化順序、freeze、UI責務重複などを解消して、最終的に遊べる状態まで進めています。
+Unity側がConnectedでも、Codex側からprojectを正しく操作できない状態がありました。Main Camera、初期化順序、画面、UI等を復旧してplayableへ進んでいます。
 
 ### 直接引用
 
@@ -213,15 +241,15 @@ Unity側はConnectedでもCodex側からprojectを操作できない状態、Mai
 — よなよな@AIゲーム開発「Unity 6 × Codex × MCPで『30分ヴァンサバ』を作るつもりが、白画面から始まった話」2026-02-28  
 https://note.com/yonayona_ai_game/n/nb1ec6a528bbd
 
-**本記事の判断:** connection healthはproduct completionとは別の監視対象です。
+**本記事の判断:** connection healthはoperationの証拠ですらありません。まして完成の証拠ではありません。
 
 ---
 
 # 4. 12 objectを作れても、部屋には入れない
 
-DevelopersIOはUnity公式MCPとClaude Code / Claude Opus 4.6でTPS templateを改造しています。
+DevelopersIOのTPS改造では、AIは壁、床、天井、doorway、柱、高台、slopeなど12 objectを生成しました。
 
-AIは壁、床、天井、doorway、柱、高台、slopeを生成しました。しかしPlay Modeで確認すると既存壁がdoorwayを塞ぎ、部屋へ侵入できませんでした。内部light不足、scale不整合、material不統一等も残っています。
+しかしPlayすると既存壁がdoorwayを塞いでいました。
 
 ### 直接引用
 
@@ -230,20 +258,18 @@ AIは壁、床、天井、doorway、柱、高台、slopeを生成しました。
 — 越井琢巳「Unity MCP で TPS ゲームを Claude Code に改造させたら何が起きたか」2026-03-08  
 https://dev.classmethod.jp/articles/unity-mcp-tps-game-claude-code-modification/
 
-AIは外部視点をcaptureしていましたが、playerが実際に部屋へ入れるかを見ていませんでした。
-
 ```text
-geometry generated: PASS
-human traversal: FAIL
+objects created: PASS
+scene usable by player: FAIL
 ```
 
-**本記事の判断:** screenshotの枚数ではなく、**何を観測したか**が重要です。
+**本記事の判断:** Hierarchyや生成件数を監査しても、空間として使えるかは監査できません。
 
 ---
 
 # 5. 自然言語だけでCatchGameを生成
 
-miya氏はUnity MCPのAssistant windowからCodexを使い、簡単なcasual game「CatchGame」を自然言語のみで全自動開発したと報告しています。
+miya氏は簡単なcasual gameを自然言語のみで全自動開発したと報告しています。
 
 ### 直接引用
 
@@ -252,19 +278,17 @@ miya氏はUnity MCPのAssistant windowからCodexを使い、簡単なcasual gam
 — miya「〖UnityMCP〗簡単なUnityゲームを全自動で実装させました。」2026-03-11  
 https://note.com/miya19/n/n4503e377dc45
 
-記事には生成過程、play、生成codeのvideo timelineがあります。
-
-**本記事の判断:** tutorial / casual game規模でL2 PLAYABLEへ到達すること自体は、すでに珍しい成功ではありません。ただしproduction qualityへ一般化はできません。
+**本記事の判断:** tutorial / casual規模の「作る」はかなり成立しています。問題は、そこからproduction品質をどう監査するかです。
 
 ---
 
 # 6. 7回test、5件自己修正。それでも最初の部屋から出られない
 
-この14件の中で、completion oracleの重要性を最も分かりやすく示す事例です。
+この事例は2026年のUnity agentを理解するうえで最も重要です。
 
-DevelopersIOは弾幕shooting、athletics、探索型dungeonの3テーマを比較しました。単純な前2つは短時間で成立しましたが、複雑なdungeonは約49分。Claude Codeは7回Play Mode testを実行し、5件を自己修正しました。
+複雑なdungeon生成に約49分。agentは7回Play Mode testを行い、5件を自己修正しました。
 
-しかし人間がplayすると、初期jumpでは出口へ届かず、最初の部屋から出られませんでした。
+それでも人間が普通にplayすると、最初の部屋から出られませんでした。
 
 ### 直接引用
 
@@ -273,20 +297,22 @@ DevelopersIOは弾幕shooting、athletics、探索型dungeonの3テーマを比�
 — 越井琢巳「Unity MCP × Claude Code に 2D ゲームの弾幕処理・アスレチック生成・ダンジョン生成をさせて破綻するかどうか観察してみた」2026-03-13  
 https://dev.classmethod.jp/articles/unity-mcp-claude-code-2d-game-verification/
 
-agentはplayerをMCP経由でwarpさせて各部屋を検査していました。
+agentはMCPでplayerをwarpしながら各部屋を検査していました。
 
 ```text
-state consistency: PASS
-actual traversal: FAIL
+room state inspection: PASS
+actual player traversal: FAIL
 ```
 
-**本記事の判断:** 間違ったoracleを高速に回すと、「何度も検証した未完成品」ができます。
+これは「testが少なかった」のではありません。
+
+**監査対象を間違えていました。**
 
 ---
 
-# 7. 強いworkflowは「AIに任せる」よりcompletion contractを固定する
+# 7. workflow化の価値は、監査条件を先に固定できること
 
-umezu_y氏はCoplayDev/unity-mcp + Claude Code向けworkflowを公開し、接続確認、企画、仕様、test仕様、task list、実装、検証、releaseを分離しています。
+umezu_y氏は企画、仕様、test仕様、task、実装、検証、releaseをphase化しています。
 
 ### 直接引用
 
@@ -295,15 +321,13 @@ umezu_y氏はCoplayDev/unity-mcp + Claude Code向けworkflowを公開し、接�
 — umezu_y「Claude Code × unity-mcp でゲーム開発の企画→公開をワークフロー化した話」2026年3月  
 https://qiita.com/umezu_y/items/090a0fd25f9f915ad375
 
-**本記事の判断:** productionではmodel intelligenceを期待するだけより、completion contractを強くする方が再現性を上げやすいです。
+**本記事の判断:** 強いworkflowは「AIにたくさん任せる仕組み」ではなく、**何を見てPASSとするかを先に固定する仕組み**です。
 
 ---
 
-# 8. 雑な指示からgameを作れても、setupには1〜2時間かかった
+# 8. 「ゲーム完成」と「良い操作感」は別
 
-四駒アイ氏はWindows 11 / Unity 6.4 / Cursor環境でClaude CodeとCodexの両方からUnity MCPを利用しています。
-
-接続設定へ辿り着くまで1〜2時間かかった一方、接続後はかなり雑な指示からgameを生成し、Codexから修正・buildまで進めています。
+四駒アイ氏はsetup後、かなり粗い指示からgame生成、修正、buildまで進めています。
 
 ### 直接引用
 
@@ -312,30 +336,30 @@ https://qiita.com/umezu_y/items/090a0fd25f9f915ad375
 — 四駒アイ「2026/4/5 UnityのMCPサーバ設定をしてみる in Cursor」2026-04-05  
 https://note.com/4komaai/n/nafd4090dc068
 
-同じ記事で作者は「叩き台」としての評価も残しています。
+同じ記事では操作性などに改良余地があることも述べられています。
 
-**本記事の判断:** 「完成」という一語だけを抜き出さず、同じ記事の留保まで読む必要があります。
+**本記事の判断:** build artifactの存在とUXの監査は別です。
 
 ---
 
-# 9. 生成したら大量error。観測toolを足すと遊べた
+# 9. 生成後のerrorを観測できると、一段強くなる
 
-ティー氏はCoplayDev/unity-mcpに神経衰弱を依頼しました。一見完成したものの、Playすると大量errorが発生。その後Unity CLI Loopを追加してPlay Modeとerrorを観測させ、遊べる状態まで修正しています。
+ティー氏の神経衰弱では、最初に大量errorが出ました。その後、Unity CLI Loopを追加してPlay Modeとerrorを観測させることでplayableへ修正しています。
 
 ### 直接引用
 
-> 「いざプレイしてみるとエラーが大量に出力されてしまいました。」
+> 「無事にエラーを修正してくれました。問題なく遊べるところまで持っていけました。」
 
 — ティー「Unityに関するMCPを実際に入れてみた所感」2026-04-11  
 https://note.com/mindpower/n/nba514492f5a5
 
-**本記事の判断:** generation能力ではなく、observation / repair能力を足したことが効いています。
+**本記事の判断:** machine-readableなfailureはAIが直しやすい。これはAIが強い監査領域です。
 
 ---
 
-# 10. 全自動移植できても作者自身が「未完成」と評価
+# 10. 自動実装できても、作者自身が「未完成」と評価
 
-miya氏は既存game「マグネットスイーパー」をUnityへ全自動移植しています。実装自体は進みましたが、UI等の修正が必要でした。
+miya氏は既存game「マグネットスイーパー」をUnityへ自動移植しましたが、UI等の修正が残りました。
 
 ### 直接引用
 
@@ -344,54 +368,50 @@ miya氏は既存game「マグネットスイーパー」をUnityへ全自動移�
 — miya「〖UnityMCP〗マグネットスイーパーの移植を試しました。」2026-04-17  
 https://note.com/miya19/n/n8df417077cb0
 
-**本記事の判断:** 「自動実装」と「完成」は同義ではありません。
+**本記事の判断:** implementation coverageとfinished qualityは別の指標です。
 
 ---
 
-# 11. 既存bug fixは強い。shader / VFXは不安定
+# 11. bug fixは強い。shader / VFXの「見た目」は弱い
 
-株式会社ユニスポットはClaude Code + Unity MCPで既存3D projectを検証しています。
-
-VRM characterのanimation不具合では修正へ到達した一方、shader調整は期待した変化が出ず、Visual Effect Graphも長時間処理したものの完成しませんでした。
+株式会社ユニスポットの検証では、既存3D projectのbug修正には有効だった一方、shaderやVFXは期待する視覚結果へ安定して到達しませんでした。
 
 ### 直接引用
 
-> 「『既存の処理や不具合の修正』はかなり得意」
+> 「大量のトークンと時間を失うので、自分で作ったほうが良さそうです！」
 
 — 株式会社ユニスポット「本当にゲーム開発もAIで出来る?『Claude Code + Unity MCP』でどこまで出来るか試してみた。」2026-05-07  
 https://www.uni-spot.com/blog_post/claude-unity-mcp/
 
-```text
-existing bug fix    → strong
-structured editing  → strong
-art direction       → variable
-complex VFX graph   → high-cost / unstable
-```
-
-**本記事の判断:** Unity MCPを一つのscoreで評価するのは雑です。task classで分けるべきです。
+**本記事の判断:** error messageがあるbugと、「もっと良い見た目にする」は違うtaskです。後者はvisual oracleが弱い。
 
 ---
 
-# 12. EditMode 4件 + PlayMode 3件が全PASS
+# 12. 7 tests全部PASSでも、cameraは人間が直した
 
-zuqqhi2氏はCoplayDev版unity-mcp + Codexで最小限の3D鬼ごっこを作らせ、promptの時点でEditMode / PlayMode test作成も要求しています。
-
-生成後、EditMode 4件、PlayMode 3件がすべてPASSしました。一方、camera framingは追加修正が必要でした。
+zuqqhi2氏は3D鬼ごっこを作らせ、EditMode 4件、PlayMode 3件をすべてPASSさせました。
 
 ### 直接引用
 
-> 「EditModeをみると、ちゃんと4つテストケースがあって全部通りますね。」
+> 「EditMode を見ると、ちゃんと 4 つテストケースがあって全部通りますね。」
 
 — zuqqhi2「CoplayDev 版 unity-mcp を使用して Codex に Unity を操作させてテスト込みの開発をさせる」2026-06-20  
 https://zuqqhi2.com/coplaydev-unity-mcp-codex-game-dev
 
-**本記事の判断:** completion conditionをpromptに含めるのは有効です。ただしtest coverageと視覚品質は別です。
+一方、camera framingは追加修正が必要でした。
+
+```text
+tests: 7/7 PASS
+visual framing: human correction
+```
+
+**本記事の判断:** test suiteが強くても、視覚監査のcoverageは自動では増えません。
 
 ---
 
-# 13. Roll-a-Ballは約10分でplayable
+# 13. tutorial規模なら約10分でplayable
 
-花王株式会社のTsuchiyaK氏はUnity公式MCP Server + Claude CodeでRoll-a-Ballを作らせています。作業開始から約10分でPlayでき、その後の追加promptで演出やenemy等を追加しています。
+TsuchiyaK氏はUnity公式MCP Server + Claude CodeでRoll-a-Ballを作らせています。
 
 ### 直接引用
 
@@ -400,15 +420,13 @@ https://zuqqhi2.com/coplaydev-unity-mcp-codex-game-dev
 — TsuchiyaK「Unity AI × Claude Code でゲームを作ってみた」2026-06-24  
 https://qiita.com/TsuchiyaK/items/a3de1ac034bf94cf905b
 
-**本記事の判断:** tutorial規模・既知patternでは、自然言語→playableまでの摩擦はかなり小さくなっています。
+**本記事の判断:** 既知patternのprototype生成はかなり実用的です。これは「生成できる」の強い証拠です。
 
 ---
 
-# 14. 全6stageのgameを継続開発した例
+# 14. 全6stageまで継続開発できた。それでも面白さの判断は人間
 
-「小さいdemoしか作れないのでは？」への強い反例が、bunnoneta氏の『昭和サバイバル』です。
-
-Unity MCPを使いながらbalance調整、bug修正、gamepad対応、演出等を進め、全6stageまで継続開発しています。
+bunnoneta氏は『昭和サバイバル』を複数stageにわたって継続開発しています。
 
 ### 直接引用
 
@@ -417,130 +435,147 @@ Unity MCPを使いながらbalance調整、bug修正、gamepad対応、演出等
 — bunnoneta「〖開発記〗Unity製サバイバルゲーム『昭和サバイバル』全6ステージ完成までにClaudeと乗り越えた壁」2026-07-05  
 https://note.com/bunnoneta/n/ndd6c132b1abf
 
-同じ開発記録には、型解決、`EditorUtility.SetDirty()`、Prefab保存、C# version差、改行差、compile/domain reload待ち、freeze調査など、Unity実運用特有のfrictionが多数記録されています。
+同じ開発記には保存、compile待ち、freeze、debug等のfrictionも記録されています。
 
-**本記事の判断:** L4 SUSTAINEDは実例があります。ただしその実態は一発生成ではなく、**生成→観測→failure発見→修正→再検証**です。
+**本記事の判断:** L4 SUSTAINEDはすでに可能です。ただし長期自律開発が可能であることと、fun / balance / feelを自律監査できることは同じではありません。
 
 補助:
 https://note.com/bunnoneta/n/n91bbcd3fd700
 
 ---
 
-# 私たち自身のrepoを同じ物差しで見る
+# 自前repoで一番痛かったのは「作れない」ではなく「監査できない」こと
 
-外部事例だけなら、「他人はそうだった」で終わります。
+外部事例だけなら、「他人の環境ではそうだった」で終わります。
 
-当初は自前の失敗を5例に分けていましたが、記事の論点を最もよく示す**2と5の2例だけ**に集約します。
+私たち自身のrepoでも、同じ境界に当たりました。
 
-- `image2outfit`: integration codeとstatic contractが揃っても、live MCP E2Eが未実行ならoperation成功ではない
-- `vrmine`: verificationを作り込んでも、real multi-client evidenceまで閉じなければruntime completionではない
-
----
-
-## 自前失敗例2：MCP integrationを実装しても、live E2Eが`NOT_RUN`なら成功ではない
-
-`KAFKA2306/image2outfit` PR #212では、Blender MCP + Unity MCP + Codex integrationを実装しました。
-
-PR #212:
-https://github.com/KAFKA2306/image2outfit/pull/212
-
-PRには、Windows setup entry point、version pin、localhost限定、doctor command、Blender-side Assistant UI、static tests等が入り、9 files / 859 additionsまで進んでいます。
-
-しかしPR自身が次を`NOT_RUN`としています。
-
-- local Windows PowerShell setup
-- live Blender MCP connection
-- live Unity MCP connection / package resolution
-- Blender Assistant → Codex → MCP end-to-end call
-
-PRはDraftのままです。
+ここでは当初の自前5例を、論点が最もはっきりする**2と5の2例**へ集約します。
 
 ```text
-integration code exists
-static contract exists
-        ↓
-live editor operation: NOT_RUN
+自前失敗例2 = 見た目を監査し切れない
+自前失敗例5 = 挙動を監査し切れない
 ```
-
-この例で問題なのは、設定やadapterを書くことに失敗した点ではありません。むしろstatic integrationはかなり進んでいます。
-
-失敗したのは、**「実装した」ことを「実際のEditorで動いた」ことへ昇格できる証拠がまだない**点です。
-
-外部の「Connected表示でも操作不能だった」事例と同じく、connection/configurationの存在とactual operationは別のstateです。
-
-**感想:** MCPを扱う側ほど、「設定ファイルがある」「toolが登録されている」「CIが通った」をoperation successと錯覚しやすい。live callを実行して、その結果を再観測するまで成功とは呼ばない方が安全です。
 
 ---
 
-## 自前失敗例5：`vrmine`――約4,000行追加しても、releaseはBLOCKEDだった
+## 自前失敗例2：`image2outfit`――201 testsを通しても、見た目は壊れていた
 
-`KAFKA2306/vrmine`は、この記事に最も近い**runtime completion failure**です。
+`KAFKA2306/image2outfit`のSiroinoSotai_PC向け青い法被では、Blender上の生成pipelineをかなり機械化しました。
+
+PR #197:
+https://github.com/KAFKA2306/image2outfit/pull/197
+
+検証はここまで通っています。
+
+- JSON/schema / repository audits
+- 201 unit tests
+- Architecture / release-policy checks
+- Production contract / Ruff
+- Blender 4.4.3 hosted execution
+- numeric fit / build gates
+
+数字だけを見るとかなり強い状態です。
+
+しかし生成した**5面と6ポーズを直接見ると**、
+
+- sleeve headが肩から視覚的に離れている
+- collar bridgeが浮いている
+- arms-up / arm-cross時のdeformationが許容できない
+
+ことが分かりました。
+
+numeric gateをPASSしたrunも`Evidence/Rejected/`へ送り、manifestは`WORKING`のままにしています。
+
+```text
+201 tests                 PASS
+numeric fit/build         PASS
+Blender hosted execution  PASS
+
+5-view / 6-pose visual audit
+                          FAIL
+```
+
+ここで足りなかったのは生成能力ではありません。
+
+**見た目を正しく採点するoracleです。**
+
+mesh count、weight normalization、clearance、collision、file existenceは機械的に監査できます。
+
+しかし、
+
+- 袖が自然に肩から生えて見えるか
+- 衿が浮いて見えないか
+- pose時のシルエットが不自然でないか
+- referenceとして欲しい衣服に見えるか
+
+は、同じtestでは監査できません。
+
+PR #212ではBlender MCP + Unity MCP + Codexのlocal authoring integrationも作っています。
+
+https://github.com/KAFKA2306/image2outfit/pull/212
+
+ただしこのPR自身も、MCPをcompletion authorityにはしていません。live E2Eも別証拠として扱っています。
+
+**感想:** AIへBlender / Unityの操作権限を渡すほど、「作れる」問題は小さくなります。代わりに最後に残るのは、生成物を見て「これはおかしい」と止める能力です。
+
+---
+
+## 自前失敗例5：`vrmine`――codeとCIを作れても、実際の挙動を監査できなかった
+
+`KAFKA2306/vrmine`は、見た目ではなく**behavior audit**側の失敗例です。
 
 PR #18:
 https://github.com/KAFKA2306/vrmine/pull/18
 
-このPRはRULEFORGE、ECHO MINE、CHESSの3ゲームworldをrelease-gatedにする大きな変更です。現在でも、
+RULEFORGE、ECHO MINE、CHESSの3ゲームworldに対して、
 
 - 84 commits
 - 48 changed files
 - +3,989 / -338
-- three-game implementation
-- two-client verification logic
+- game logic
+- scene generation
 - static repository integrity CI
+- two-client verification logic
 - fail-closed upload-readiness gate
-- GitHub Pages landing page
 
-まで実装されています。
+まで作りました。
 
-それでもPRは**open / Draft**で、release statusは明示的に`BLOCKED`です。
+それでもPRはDraft、release statusは`BLOCKED`です。
 
-理由は単なる慎重さではありません。PR本文には、以前のG3について次の事実が記録されています。
+理由は、「codeが足りない」からではありません。
 
-- previous G3はfailed
-- 旧実装はclient evidenceがなくてもPASSを書ける経路があった
-- recent run同士のevidenceを混ぜ得た
-- そのため過去のG1/G2/G3 evidenceをinvalidatedした
+**real VRChat上での挙動をまだ監査し切れていないからです。**
 
-つまり、ここでは実際に
-
-```text
-verification implementation exists
-report can say PASS
-```
-
-と
-
-```text
-current runの2-client runtimeを本当に証明した
-```
-
-が一致していませんでした。
-
-release blocker Issue #19もopenです。
+release blocker Issue #19では、次のような確認が残っています。
 
 https://github.com/KAFKA2306/vrmine/issues/19
 
-残っているのは、たとえば次です。
+- two distinct real clientsで状態が一致するか
+- ownership transfer後も動くか
+- late joinしたclientへstateが復元されるか
+- owner leave後も継続またはsafe resetできるか
+- 3P / 4P / 5Pの各player countで進行するか
+- private upload後も同じ挙動か
 
-- exact Unity 2022.3.22f1 / Worlds SDK 3.10.4でcompile
-- G1 / G2
-- two-client Build & Test
-- 同一`RunToken`で2 distinct player IDsを確認
-- ownership transfer / republish / restoration
-- G4 upload readiness
-- private world upload
-- delayed second-account join
-- late-join state restoration
-- current owner leave
-- RULEFORGE 3P/4P/5P
-- ECHO MINE 2P/3P/4P/5P
-- CHESSの各runtime path
+さらに重要なのは、旧G3 verification自体にも穴があったことです。
 
-Issue #43では、multi-client、late join、owner leave、PC/Questを独立したregression matrixとして残しています。
+PR本文では、以前のG3がfailedだったことに加えて、旧実装にはclient evidenceなしでPASSを書ける経路や、recent runのevidenceを混ぜ得る問題があったため、過去evidenceを無効化したと記録しています。
+
+```text
+verification code exists
+report can say PASS
+        ↓
+real multiplayer behavior correct ?
+        ↓
+NOT PROVEN
+```
+
+Issue #43では、multi-client、late join、owner leave、PC/Questを独立したregression matrixとして管理しています。
 
 https://github.com/KAFKA2306/vrmine/issues/43
 
-さらに2026年8月には、それらをU1〜U4へ分解して自動化するEpic #54まで作りました。
+さらにIssue #54では、検証を段階化しました。
 
 https://github.com/KAFKA2306/vrmine/issues/54
 
@@ -552,105 +587,161 @@ U4 real Windows + VRChat multi-client
 U5 private upload smoke
 ```
 
-ここで重要なのは、`vrmine`を「AI開発は失敗した」と雑にまとめないことです。
+この分割の意味は、**U3までPASSしてもU4の挙動は監査できていない**と明示することです。
 
-Editor code、scene generation、static verification、game logic、release gate設計には大量の成果があります。
+ClientSimでlocal behaviorを見ても、real networking、ownership、late joinを同じ証拠として扱いません。
 
-失敗したのは、**それらをL5 RUNTIME_COMPLETEDと呼べるところまで証拠を閉じること**です。
-
-```text
-L1 Editor操作       → かなり進んだ
-L2 Playable         → 実装あり
-L3 Verification     → 多数あり。ただし旧G3に偽陽性経路
-L4 Sustained        → 長期開発できている
-L5 Runtime complete → BLOCKED
-```
-
-**感想:** 実装量が増えるほど「ほぼ完成」に見えます。しかしVRChatでは、late join、ownership、real serialization、multi-client、Quest、private uploadというEditor外のauthorityが最後に残ります。
-
-`vrmine`から得た教訓は、
-
-> GitHub CIが全部緑でも、VRChat worldが完成したとは限らない。
-
-というだけではありません。
-
-より正確には、
-
-**証拠を生成するコード自体にもbugが入り得るため、verification pipelineにもprovenance、freshness、run isolation、runtime authorityが必要**
-
-ということです。
+**感想:** Unity agentがsceneもlogicもtestも作れるほど、「実際に複数人で遊んだらどうなるか」という最後の挙動監査が相対的に大きなボトルネックになります。
 
 ---
 
-# 外部事例と自前repoは同じ場所で壊れた
+# 2つの自前失敗を並べると、問題はかなり単純になる
 
-2つに絞ると対比が明確になります。
+```text
+image2outfit
+    AI / pipelineは衣装を作れる
+    ↓
+    見た目が正しいかを監査し切れない
 
-| 観測 | 外部事例 | 自前repo |
+vrmine
+    AI / pipelineはgame logicを作れる
+    ↓
+    real multiplayer挙動が正しいかを監査し切れない
+```
+
+つまり、私たちが実運用で困ったのは、
+
+```text
+AI cannot create
+```
+
+ではなく、
+
+```text
+AI cannot reliably judge what it created
+```
+
+でした。
+
+---
+
+## 外部14件と自前repoは、同じ場所で壊れている
+
+| 監査対象 | 外部事例 | 自前repo |
 | --- | --- | --- |
-| connection/config ≠ operation | ConnectedでもCodexから操作不能 | `image2outfit`: static integration後もlive MCP E2Eは`NOT_RUN` |
-| tool registration ≠ editor evidence | toolが見えてもcall/状態確認で失敗例 | `image2outfit`: Blender / Unityのactual live call未証明 |
-| simulation ≠ real networking | 公開事例では証拠が薄い | `vrmine`: ClientSimではlate join / ownershipを証明しない |
-| report PASS ≠ valid evidence | test oracleの欠陥 | `vrmine`: 旧G3にclient evidenceなしでPASSし得る経路 |
-| L3 VERIFIED ≠ L5 RUNTIME_COMPLETED | test/build成功例でも最終runtimeは別 | `vrmine`: 長期実装後もrelease `BLOCKED` |
+| 見た目 | camera / shader / VFXを人間が修正 | `image2outfit`: 201 tests後にvisual REJECT |
+| 空間 | 12 object生成後もdoorway blocked | `image2outfit`: geometry metrics PASSでもsilhouette FAIL |
+| player挙動 | 7 tests後も最初の部屋から出られない | `vrmine`: real client behavior未証明 |
+| networking | 公開例では強い証拠が少ない | `vrmine`: late join / ownershipがrelease blocker |
+| verification自体 | test oracleがplayer pathを見ていない | `vrmine`: 旧G3にfalse-positive経路 |
 
-外部レビューの結論は、自前repoを足しても変わりません。
+この一致は重要です。
 
-むしろ、**「設定された」「検証された」「実runtimeで成立した」を別stateにする必要**が具体化されます。
+**MCPの弱点というより、AI開発全体の「observer problem」です。**
 
 ---
 
-## 一番重要な発見：AIの弱点は「操作」より「oracle」
+## AIにとって監査しやすいもの、しにくいもの
 
-14件と自前repoを並べると、より深い問題が見えます。
+### 監査しやすい
 
 ```text
-AIが操作できない
+compile error
+exception
+missing component
+serialized reference
+exact numeric threshold
+unit test assertion
+schema violation
+file existence
+known invariant
 ```
 
-より、
+正解がmachine-readableです。
+
+### 監査しにくい
 
 ```text
-AIが何を確認すべきかを間違える
+自然なシルエットか
+見づらくないか
+cameraが気持ちいいか
+操作して詰まらないか
+面白いか
+networkで本当に同期するか
+late joinで違和感なく復元するか
+Quest実機で同じように見えるか
 ```
 
-方がproductionでは危険です。
+正解がscene stateだけに存在しません。
 
-3月13日のdungeonでは7回testしてもplayer traversalを見ていませんでした。
+**視覚・時間・操作・複数client・実deviceという別observerが必要です。**
 
-`image2outfit`ではMCP integration codeとstatic testsが存在しても、live Blender / Unity callを実行していない以上、Editor operationを証明できません。
+---
 
-`vrmine`ではverification reportを作る実装そのものに、current client evidenceなしでPASSし得る穴がありました。
+## 「AIにもっとtestさせる」だけでは解決しない
 
-つまり、
+3月13日のdungeonは7回testしています。
+
+`image2outfit`は201 testsを通しています。
+
+`vrmine`はverification framework自体を作り込んでいます。
+
+それでも欠陥は残りました。
+
+だから問題はtest数ではありません。
 
 ```text
-more tool calls
 more tests
-more screenshots
-more CI
 ```
 
-だけでは完成へ近づきません。
+ではなく、
 
-必要なのは、**正しいcompletion oracleと、そのoracle自身の証拠設計**です。
+```text
+better oracle
+better observer
+```
+
+が必要です。
+
+### 見た目なら
+
+```text
+render
+→ fixed viewpoints
+→ representative poses
+→ temporal deformation
+→ vision / human review
+→ explicit accept/reject
+```
+
+### game behaviorなら
+
+```text
+spawn normally
+→ use only legal player input
+→ complete actual path
+→ repeat state transitions
+→ real client / device where required
+→ retain evidence
+```
+
+MCP tool callのsuccessは、このどちらの代わりにもなりません。
 
 ---
 
 ## 2026年5月、Unity自身もMCPを公式toolchainへ入れた
 
-Unityは2026年にAI toolsをopen betaとして公開し、その構成要素に公式MCP Serverを含めています。
+Unityは2026年にAI toolsをopen betaとして公開し、その構成要素に公式MCP Serverを含めました。
 
 公式一次情報:
+
 https://unity.com/blog/unity-ai-how-to-get-started
 https://unity.com/blog/unity-ai-mcp-how-to-get-started
 https://unity.com/blog/mcp-servers-game-development
 
-これは大きな変化です。
+したがってMCPそのものを「toy」と切り捨てる段階ではありません。
 
-MCPそのものを「toyだからproductionでは無意味」と切り捨てる段階ではありません。
-
-一方、official integrationが存在することと、個々のprojectでL5まで証明できることは別です。
+むしろauthoringが実用化したからこそ、**auditの弱さが次の主要課題として露出した**と見る方が実態に近いです。
 
 ---
 
@@ -658,165 +749,154 @@ MCPそのものを「toyだからproductionでは無意味」と切り捨てる�
 
 | task class | 2026年の観測 | 本記事の判断 |
 | --- | --- | --- |
-| GameObject / Scene生成 | 多数の成功例 | 実用域 |
-| script生成・attach | 多数の成功例 | 実用域 |
-| tutorial / casual prototype | 10分前後の例もある | 実用域 |
-| 既存bug調査・修正 | animation等で成功 | 強い |
-| console-driven repair | 成功例複数 | 強い |
-| EditMode / PlayMode tests | 全PASS例あり | 有効。ただしcoverage依存 |
+| GameObject / Scene生成 | 成功例多数 | 実用域 |
+| script生成・attach | 成功例多数 | 実用域 |
+| tutorial prototype | 10分前後の例あり | 実用域 |
+| compile / console repair | 成功例複数 | 強い |
+| known bug fix | 成功例あり | 強い |
+| EditMode / PlayMode tests | 全PASS例あり | 強いがcoverage依存 |
 | build | 実例あり | 利用可能 |
-| 複雑なprogression | self-test後も詰み例 | human play必須 |
-| visual consistency | 見落とし例あり | human / vision review必須 |
-| art direction | 成功・失敗が混在 | 不安定 |
+| visual appearance | 人間修正・失敗例が複数 | 弱いaudit領域 |
+| deformation / silhouette | `image2outfit`でnumeric PASS後REJECT | visual observer必須 |
+| complex traversal | 7 tests後も詰み | actual player path必須 |
+| game feel / balance | 最終判断は人間 | human/player側 |
 | shader / VFX | 高コスト失敗例 | 不安定 |
-| connection lifecycle | Connectedでも失敗例 | 運用監視が必要 |
-| MCP integration / registration | `image2outfit`でstatic実装まで | live E2Eを別gateにする |
-| save / reload persistence | 公開事例で境界あり | 明示gateが必要 |
-| real VR networking | `vrmine`で未完了 | ClientSimだけでは不可 |
-| late join / owner leave | `vrmine`でrelease blocker | real clients必要 |
-| external playerの面白さ | 強い自動評価証拠なし | 人間 / player側 |
+| real networking | `vrmine`で未完了 | real clients必要 |
+| late join / owner leave | `vrmine` release blocker | simulatorでは不足 |
+| final production completion | 強い自動証拠が少ない | human/runtime authority必要 |
 
 ---
 
-## 導入するなら、MCPをcompletion gateにしない
+## 導入するなら、MCPを「作る手」にして、「見る目」は別に持つ
 
-現実的な構造はこれです。
+実務では次の分離が必要です。
 
 ```text
 Codex / Claude Code
         ↓
-Unity MCP
+Unity / Blender MCP
         ↓
-Unity Editor
+authoring
         ↓
-compile / console
+compile / structural checks
         ↓
-EditMode / PlayMode tests
+render / Play Mode
         ↓
-save → reload
+VISUAL AUDIT
         ↓
-actual player traversal / visual review
-        ↓
-build
+BEHAVIOR AUDIT
         ↓
 real target runtime
         ↓
-external user / multi-client / device-specific checks
+completion
 ```
 
 最低でもstateを分けます。
 
 ```text
 TOOL_SUCCESS
-EDITOR_VALIDATED
-PERSISTENCE_VALIDATED
-PLAYABLE_VALIDATED
-BUILD_VALIDATED
-RUNTIME_COMPLETED
+STRUCTURE_VALIDATED
+VISUAL_VALIDATED
+BEHAVIOR_VALIDATED
+RUNTIME_VALIDATED
+COMPLETED
 ```
 
-例えば、
+たとえば、
 
 ```json
 {
   "tool_success": true,
-  "editor_validated": true,
-  "persistence_validated": true,
-  "playable_validated": false,
-  "runtime_completed": false,
-  "reason": "NOT_RUN"
+  "structure_validated": true,
+  "visual_validated": false,
+  "behavior_validated": false,
+  "runtime_validated": false,
+  "completed": false
 }
 ```
 
-ならcompletedではありません。
-
-VRChatのようにruntime authorityが強いprojectなら、さらに分けます。
-
-```text
-STATIC_VALID
-UNITY_VALID
-CLIENTSIM_VALID
-REAL_MULTICLIENT_VALID
-PRIVATE_UPLOAD_VALID
-RELEASED
-```
+これを`SUCCESS`一語で潰してはいけません。
 
 ---
 
-## 読者別：2026年8月に導入する価値はあるか
+## 読者別：導入する価値はあるか
 
 ### Unity初心者
 
-**価値あり。ただしAIの出力を正解教材にしない。**
+**価値はある。ただしAIが作った画面を正解教材にしない。**
 
-小規模prototypeはかなり作りやすくなっています。一方、serialization、Prefab、physics、lifecycleを知らないと偽成功を見抜きにくいです。
+prototypeは速い一方、何が不自然かを自分で判断できないとfalse completionに気づきにくいです。
 
 ### Unity engineer
 
-**かなり価値あり。特に反復作業、既存bug、test、variant生成。**
+**かなり価値がある。**
 
-architectureとacceptance criteriaを人間側が持てるため、恩恵を受けやすい層です。
+特にstructured editing、反復作業、known bug、compile / console / test-driven repairは強いです。
 
-### game designer / planner
+ただしvisual / behavior acceptance criteriaは別に設計する必要があります。
 
-**prototype速度には価値あり。完成判断は握り続ける。**
+### game designer
 
-「面白い」「難しい」「見づらい」は機械testだけでは決まりません。
+**prototype速度には大きな価値がある。**
+
+その代わり、camera、feel、difficulty、funのauthorityは渡さない方がよいです。
 
 ### VRChat / networked-world developer
 
-**Editor automationだけ見て採用判断しない。**
+**Editor内で動くことを完成条件にしない。**
 
-ClientSim、real multi-client、late join、ownership、PC/Quest、uploadを別gateとして設計する必要があります。`vrmine`はその境界を越えられずreleaseが止まった実例です。
+ClientSim、real multi-client、late join、ownership、PC/Quest、private uploadを分けて監査する必要があります。
 
 ### production team
 
-**version pin、logs、test、provenance、human review、target-runtime evidenceを前提にする。**
+**MCPをcompletion authorityにしない。**
 
-MCPをproduction gateにせず、authoring adapterとして扱う方が安全です。
+MCPはauthoring adapterとして使い、visual evidence、runtime evidence、provenance、human reviewを別gateにします。
 
 ---
 
 ## 結論
 
-14件の公開実例と、自分たちのBlender / Unity / VRChat repoを並べて見えてきたのは、「Unity MCPはすごい」でも「まだ使えない」でもありません。
+14件の公開実例と自前repoを並べて、2026年のUnity MCPについて最も重要だと感じたのは、modelの賢さでもtool call数でもありませんでした。
 
-すでにAIは、
+AIはすでにかなり作れます。
 
 ```text
 Sceneを作る
 scriptを書く
+componentを繋ぐ
 Playする
 errorを読む
-testする
-直す
+testを書く
+修正する
 buildする
-複数sessionで開発を続ける
+複数sessionで開発する
 ```
 
-ところまで来ています。
+ここは実用域に入っています。
 
-だから、
+しかしproductionで最後に残るのは、
 
-> Unity MCPは実用になったのか？
+```text
+これは見た目として正しいか？
+これは人間が実際に操作して正しく動くか？
+```
 
-への答えは、かなりの範囲で**Yes**です。
+です。
 
-しかし、
+外部では、7回testしたgameが最初の部屋から出られませんでした。
 
-> Unity MCPに完成を任せられるのか？
+自分たちでは、201 testsとnumeric gateを通した衣装を目視でREJECTしました。
 
-への答えは別です。
+`vrmine`では、約4,000行の変更とverification infrastructureがあっても、real multiplayer挙動を監査できるまでreleaseを止めています。
 
-外部では7回testしても最初の部屋から出られないgameがありました。
+したがって、2026年8月時点の結論はこれです。
 
-自分たちの`image2outfit`では、Blender / Unity MCP integrationを実装しても、live E2Eが`NOT_RUN`ならoperation successとは呼びませんでした。
+**Unity MCPは「作る」ためにはかなり実用になった。まだ弱いのは「見る」ことと「遊んで確かめる」ことだ。**
 
-そして`vrmine`では約4,000行を追加し、verificationとrelease gateを作っても、real multi-client / late join / owner leave / private upload evidenceを閉じられずreleaseは`BLOCKED`のままです。
+そしてproductionで重要なのは、AIにもっと作らせることより、
 
-したがって2026年8月時点の最も実務的な結論はこれです。
-
-**Unity MCPは「使えるか？」の段階を越えた。次の問題は、AIに何を操作させるかではなく、何を証拠に完成と判定し、その証拠自体をどう信頼するかである。**
+**AIが作ったものを誰が、どの視点で、どのruntimeで監査するのかを設計すること**です。
 
 ---
 
@@ -879,7 +959,9 @@ https://github.com/CoplayDev/unity-mcp
 
 ### 私たち自身のfield evidence
 
-- image2outfit PR #212 — Blender + Unity MCP integration, live E2E still `NOT_RUN`  
+- image2outfit PR #197 — 201 tests / numeric gates PASS後に5面・6ポーズvisual reviewでREJECT  
+https://github.com/KAFKA2306/image2outfit/pull/197
+- image2outfit PR #212 — Blender + Unity MCP authoring integration。completion authorityにはしない  
 https://github.com/KAFKA2306/image2outfit/pull/212
 - vrmine PR #18 — three-game release remains `BLOCKED`  
 https://github.com/KAFKA2306/vrmine/pull/18
