@@ -2,236 +2,277 @@
 
 ## Goal
 
-公開するのは、**一次情報と公開実装を追った結果、読者の判断を更新する一つの発見が残った記事だけ**とする。
+公開するのは、**広い読者が自分事にできる問題を入口に、書き手固有の実体験・実測・失敗から、読後の判断や行動を一段よくする一つの発見が残った記事だけ**とする。
 
-このrepoは記事数、更新頻度、tool coverage、word countを最適化しない。
+このrepoは記事数、更新頻度、tool coverage、word count、SEO trafficを最適化しない。
 
-正確さは必要条件であって十分条件ではない。良い記事は、読者に新しい知識を渡すだけでなく、
+正確さ・一次情報・監査可能性は必要条件だが、記事そのものの価値ではない。
+
+Canonical shorthand:
 
 ```text
-何を信じてよいか
-何をまだ信じてはいけないか
-どこまで機械へ任せてよいか
-何を満たしたら次へ進んでよいか
+Broad door
+  -> Original insight
+  -> Concrete proof
+  -> Useful exit
 ```
 
-を判断できる状態へ変える。
+## People-first editorial principles
+
+Google Search Centralのpeople-first content自己評価から、次を採用する。
+
+- intended audienceが直接訪れても有用か
+- first-hand expertise / depth of knowledgeが見えるか
+- original information / research / analysisがあるか
+- 他の検索結果より実質的な価値があるか
+- 読後に目的達成に十分な情報を得られるか
+- titleが内容を正確かつ有用に要約しているか
+
+Primary:
+
+- https://developers.google.com/search/docs/fundamentals/creating-helpful-content
+- https://developers.google.com/search/docs/fundamentals/creating-helpful-content?hl=ja
+
+Zennの現行ガイドラインから、次を採用する。
+
+- 具体的な試行錯誤
+- 書き手ならではの視点
+- 実体験に基づく知見
+- 読者が理解しやすい構成
+- 内容に合うtitle
+- 未検証AI contentの乱造を避ける
+
+Primary:
+
+- https://zenn.dev/guideline
+- https://info.zenn.dev/2026-02-03-community-guidelines-update
+- https://info.zenn.dev/2026-03-10-ai-contents-guideline
+
+これらはSEO攻略ではなく、**読者価値の自己監査**として使う。
 
 ## Canonical article shape
 
 ```text
-1. observed scene / failure / number
-2. natural initial interpretation
-3. current primary evidence + public artifact
-4. falsification / boundary
-5. hypothesis update
-6. portable decision rule
-7. non-goal / unproven area
+1. broadly recognizable problem / desire / friction
+2. concrete scene / number / failure / comparison
+3. natural expectation
+4. first-hand experience / measurement / public artifact
+5. non-obvious finding / reframing
+6. practical consequence
+7. useful exit
+8. proof limits / non-goal
 ```
 
-技術名、framework名、製品名は入口ではなく、この問いを解くために必要な位置で登場させる。
+技術名・framework名・製品名は、読者がproblemを理解した後に必要な位置で登場させる。
 
 ## Required candidate fields
 
 執筆前に最低限次を定義する。
 
-- `reader_job`: 読者が実際に決めたいこと・進めたいこと。
+### Reach
+
+- `intended_audience`: 誰が読むと得をするか。
+- `broad_entry`: 技術名を知らなくても分かるproblem / desire。
+- `stakes`: time / money / risk / effort / quality / capabilityの何が効くか。
+
+### Customer value
+
+- `reader_job`: 読者が達成・判断したいこと。
 - `reader_before`: 読む前の摩擦・損失・不確実性・false confidence。
-- `observed_anomaly`: 実測された異常、失敗、矛盾、数字、反例。
-- `central_question`: 1本で答える問い。
-- `initial_hypothesis`: 調査前にもっともらしかった解釈。
-- `surprising_finding`: 証拠で更新された発見。
-- `hypothesis_update`: 何を見て考えが変わったか。
-- `proof_of_value`: この文章固有の公開証拠・実測・失敗・比較。
-- `boundary`: 証拠が許可する結論と、許可しない結論。
-- `decision_rule`: 別の現場へ持ち帰れる判定規則。
+- `customer_value`: 何が安く、速く、安全に、明確に、新しく可能になるか。
 - `reader_after`: 読後に可能になる具体的な判断・行動。
-- `desired_reader_action`: 読後に自然に試せる次action。
-- `non_goal`: 証明しないこと、未実証範囲。
-- `half_life`: 価格・quota・仕様など再検証が必要な事実。
+- `useful_exit`: checklist / decision rule / design pattern / stop condition / adoption rule / reproducible next step。
+
+### Originality / experience
+
+- `original_observation`: 実測・失敗・比較・運用・実装・artifactなど書き手固有の観測。
+- `initial_hypothesis`: 調査前の自然な予想。
+- `surprising_finding`: 一般docs / generic AI summaryでは得にくい発見。
+- `hypothesis_update`: 実際の観測で何が変わったか。
+- `why_this_article`: 単独記事にする理由。
+
+### Proof / trust
+
+- `proof_of_value`: public evidence / measurement / implementation / primary source。
+- `claim_boundary`: 証拠がsupportする結論とsupportしない結論。
+- `non_goal`: 証明しないこと。
+- `half_life`: volatile factと再検証trigger。
+
+### Portfolio
+
 - `portfolio_overlap`: 既存記事で代替できない理由。
+- `durable_value`: immediate product/news momentを越えて読む理由。
 
-既存pipeline互換のため、`design_philosophy` / `why_this_article` / `why_interesting` / `stakes` / `story_type` / `evidence_urls` も保持する。
+既存pipeline互換のため、`central_question` / `design_philosophy` / `why_interesting` / `story_type` / `evidence_urls` も保持してよい。
 
-## Question gate
+## Reach gate
 
-文章を書く前に、問い自体を査読する。
+「間口が広い」は万人向けという意味ではない。
+
+合格条件:
+
+- intended audienceがtitleだけでproblemを認識できる
+- niche technologyを知らなくても、なぜ読む価値があるか分かる
+- niche記事でも、そのaudienceにとってjob / stakesが明確
+
+例:
+
+```text
+弱い:
+Unity MCPのEDITOR_VALIDATED境界
+
+強い:
+AIに作らせたものを、誰が「完成」と判定するのか？
+```
+
+本文は専門的でよい。**入口だけを実装詳細で閉じない。**
+
+## Customer-value gate
+
+`reader_after` が `理解できる` / `学べる` / `知識が増える` だけなら不合格。
+
+最低1つ必要:
+
+- 調査時間を減らせる
+- 手戻り・failureを避けられる
+- risk / uncertaintyを減らせる
+- 採用・導入・委任・停止を判断できる
+- 再現できる
+- 新しいcapabilityを使える
+- 何をしないか決められる
+
+記事のproofが強くても、customer valueを説明できなければpublishしない。
+
+## Originality / experience gate
+
+最低1つ必要:
+
+- 自分で使った結果
+- 自分で作ったartifact
+- 自分で測った数字
+- 自分で遭遇したfailure
+- 自分で比較した条件
+- 自分で長期運用して見えた変化
+- 一次情報で当初前提を撤回した記録
+
+公式docsの要約、二次情報の編集、AI要約だけでは通さない。
+
+`why_this_article` は「分かりやすく説明する」では不合格。
+
+## Question / discovery gate
 
 次の最低1つが必要。
 
-- 読者の自然な予想と観測結果がずれた。
-- 一次情報によって当初前提を撤回した。
-- 実測値に無視できない桁差・変化量がある。
-- 簡単だと思った場所とは別の場所が本当の難所だった。
-- successに見えた結果が、別のverification layerでは未完だった。
-- 同じ言葉で潰れていた2つ以上のauthority / stateを分離した。
-- failureから一般化可能なdecision ruleが更新された。
+- 読者の自然な予想と観測結果がずれた
+- 一次情報によって当初前提を撤回した
+- 実測値に意味のある差がある
+- 簡単だと思った場所とは別の場所が難所だった
+- successに見えた結果に別のfailureが残った
+- 一見無関係な事象が実測可能な構造でつながった
+- failureからreaderの行動が変わる知見を得た
+- product / toolの使い方より「何のために使うか」が変わった
 
-次は原則不採用。
+弱い問いを長文・図・引用・文体で救済しない。
 
-- 公式docsの要約。
-- setup / install手順だけ。
-- link集。
-- tool比較表だけ。
-- 「Aを使ってBを作った」だけ。
-- repository changelog。
-- generic best practice。
-- secondary-source collage。
-- 実装・測定・反証のない独自framework。
-- magic number / arbitrary thresholdを中心にした記事。
-- 読む前から結論が常識的に予想できる記事。
+## Useful-exit gate
 
-**弱い問いを長文・図・引用・文体で救済しない。topic selectionへ戻す。**
+記事の最後に最低1つ、読者が自分の仕事へ持ち帰れるものを作る。
 
-## Authority / boundary gate
+- decision rule
+- checklist
+- design principle
+- experiment protocol
+- adoption / rejection rule
+- stop condition
+- reproducible minimal procedure
+- comparison lens
+- mental model
+
+CTAはuseful exitではない。
+
+## Evidence / trust gate
+
+Evidence is quality infrastructure, not the product.
 
 material claimごとに次を確認する。
 
 ```text
-この証拠は何を証明する？
-この証拠では何を証明できない？
-この結果を根拠に、読者はどのactionまで進めてよい？
+What does this prove?
+What does it NOT prove?
+Why does the reader need this proof?
 ```
-
-記事は、通常ひとつ以上の境界を明示する。
-
-- capability != authority
-- implementation != validation
-- runner != policy / oracle
-- build != release != production verification
-- test pass != user-visible correctness
-- tool success != runtime completion
-- detection != independent verification
-- current value != provenance
-- agent ability != delegated permission
-- generated artifact != visually/runtime accepted artifact
-
-境界がない記事は、単なる説明記事になっていないか再検討する。
-
-## Evidence gate
-
-原則として公開時点のprimary / official sourceを使う。
-
-最低source countは `pipeline/config.json` を正準とする。
 
 必須原則:
 
-1. material external claimは実HTTP取得で検証する。
-2. vendor仕様はvendor公式、標準はstandards body、製品価格・quotaは現行公式pageを優先する。
-3. KAFKA2306固有の成果はpublic commit / PR / Issue / Actions / artifactで検証する。
-4. historical stateが重要ならmutable branchよりfixed commit/runを使う。
+1. changeable external claimはcurrent primary / official sourceで確認する。
+2. vendor仕様はvendor公式、標準はstandards bodyを優先する。
+3. KAFKA2306固有の成果はpublic commit / PR / Issue / Actions / artifactで確認する。
+4. historical stateが重要ならfixed commit/runを使う。
 5. 数字にはtarget / period / unit / scope / comparison basisを付ける。
 6. observation / inference / speculationを分離する。
-7. sourceが取得不能・矛盾・古い場合はclaimを弱めるか削除する。
-8. 未実行をPASS、unknownを0、candidateをproductionへ昇格させない。
-9. 別providerの実装を使って未公開vendor内部を推測しない。
-10. citation countは品質の代理にならない。
+7. inaccessible / contradictory / stale sourceならclaimを弱めるか削除する。
+8. NOT_RUN / unknown / pendingをPASS / 0 / completeへ昇格しない。
+9. citation countは品質の目的関数にしない。
 
-## Reader value gate
-
-`reader_after` は次のようなactionable stateを要求する。
-
-- 採否を決められる
-- 止める条件を決められる
-- 委任範囲を決められる
-- 何を追加検証すべきか決められる
-- failure stateを分類できる
-- 変更前後を説明できる
-- 同じmistakeを別domainで避けられる
-
-`理解できる` / `学べる` だけでは不合格。
-
-`why_this_article` は一般tutorial / docs / AI要約で代替できない、実測・失敗・比較・反証・判断変更の最低1つへ接地する。
-
-`proof_of_value` が空ならpublish不可。
-
-## Portability and durability
-
-一回の特殊事例を記事化する場合、少なくとも一つのportable abstractionを抽出する。
-
-良い抽象化:
-
-```text
-GitHub Pagesが無効だった
-  -> deploy availabilityとartifact validityを分ける
-
-Unity MCPがsuccessを返した
-  -> authoring successとvisual/runtime auditを分ける
-```
-
-悪い抽象化:
-
-```text
-このrepositoryではこのfileをこのように直した
-```
-
-さらに`half_life`を持たせる。
-
-- price / quota / provider lineup: short
-- current product behavior / API: medium, version-sensitive
-- immutable experiment at fixed commit: long
-- stable principle supported by multiple primary sources: long
-
-volatile factが記事の価値の中心なら `REVALIDATE` を前提にする。
+`authority / verification boundary` は読者価値を生む場合だけ本文の中心に置く。
 
 ## Portfolio novelty / overlap
 
-公開前に既存記事を比較する。
+新規記事より `MERGE` を優先する条件:
 
-次の場合は新規公開より `MERGE` を優先する。
+- 同じreader job
+- 同じuseful exit
+- 新しいproofが既存記事の補強にすぎない
+- tool名だけ違う
+- 新記事のReach / customer value / originalityが既存記事以下
 
-- 同じreader jobを扱う。
-- 同じdecision ruleへ収束する。
-- 新記事のproofが既存記事の補強にすぎない。
-- 新しいtool名だけが違う。
-
-**記事数を増やすことは価値ではない。proofを集約してsignalを強くする。**
+**記事数を増やすより、1本の価値密度を上げる。**
 
 ## Title contract
 
-タイトルは技術名より、読者が認識できるproblem / anomalyから始める。
+最低3案を作る。
 
-候補は最低3案作る。
-
-1. `general_problem`
-2. `concrete_anomaly`
+1. `broad_problem`
+2. `concrete_result`
 3. `searchable`
-
-選択titleはこの候補内から選ぶ。
 
 原則:
 
 ```text
-plain-language problem
-  -> concrete proofable anomaly
-  -> technical search term only when useful
+human problem / desire
+  -> concrete proofable result / failure / anomaly
+  -> technical search term when useful
 ```
 
-`MCP`, `Pyrefly`, `Pydantic`, `Zod`, `GitHub Actions` 等を知らないと意味が分からないtitleは、技術名を知らない読者が問題を認識できる入口へ戻す。
+タイトルは内容を正確に表す。誇張clickbaitは禁止。
 
-本文で証明できない数字・強い断定をtitleへ置かない。
+冒頭500文字を目安に、
+
+- 誰のproblemか
+- 何が起きたか
+- なぜ続きを読む価値があるか
+
+が分かること。
 
 ## Story contract
 
-本文は説明順ではなく発見順を優先する。
+説明順より発見順を優先する。
 
 ```text
-scene
-  -> unresolved question
-  -> initial hypothesis
-  -> evidence / experiment
-  -> failure or contradiction
+friction / desire
+  -> scene
+  -> expectation
+  -> experiment / experience
+  -> contradiction / discovery
   -> updated model
-  -> decision rule
+  -> useful exit
 ```
 
-記事冒頭で結論を全部説明して発見を消さない。ただし、意図的に情報を隠してsuspenseを作らない。
-
-中心の問いを前進させない節は削る。
+結論を隠して人工的なsuspenseを作らない。一方、冒頭で全部説明して発見を消さない。
 
 ## Technical quality floor
 
-LAPRAS AI Reviewで公開されている5軸を参考にした**内部proxy**を使用する。LAPRAS上の実測値ではない。
+LAPRAS AI Reviewで公開されている5軸を参考にした内部proxyを使用する。LAPRAS上の実測値ではない。
 
 - `logic`
 - `utility`
@@ -245,62 +286,63 @@ LAPRAS AI Reviewで公開されている5軸を参考にした**内部proxy**を
 
 このscoreは品質床であり、公開価値の目的関数ではない。
 
-## Editorial quality floor
+## Editorial blocking issues
 
-既存pipeline互換の4軸を維持する。
+最低限次をblockingとして扱う。
 
-- `interest`
-- `discovery`
-- `narrative`
-- `context`
-
-`story_overall` は4軸の算術平均。
-
-さらにblocking reviewでは最低限次を確認する。
-
+- `unclear_intended_audience`
+- `narrow_technical_title_entry`
+- `weak_customer_value`
 - `weak_reader_value`
+- `commodity_information`
+- `weak_first_hand_experience`
 - `weak_differentiation`
 - `missing_proof_of_value`
+- `missing_useful_exit`
 - `forced_commercial_cta`
 - `technical_value_as_product`
 - `premature_conclusion_in_opening`
-- `narrow_technical_title_entry`
 - `uncalibrated_claim`
-- `missing_decision_rule`
 - `portfolio_redundancy`
 
-既存実装がまだ新blocking codeを機械判定しない場合も、人間/agent auditではblockingとして扱う。
+既存実装が全codeを機械判定しなくても、人間/agent auditではblockingとして扱う。
+
+## What we do not publish
+
+- official docs summary
+- install/setup only
+- link collection
+- tool/service directory
+- generic best-practice article
+- product roundup without reader decision
+- unsupported "best stack" ranking
+- repository changelog
+- secondary-source AI report
+- framework without first-hand implementation/measurement
+- article whose intended audience is unclear
+- technology-first title hiding the actual problem
+- `Aを使ってBを作った` with no customer value
+- obvious conclusion
+- unsupported numeric guidance
+- duplicate reader job with weaker proof
 
 ## Images
 
-画像はsupporting evidence / explanationでありquotaではない。
+画像はreader comprehension / comparison / proofを改善する場合だけ使う。
 
-追加するのは、次のどれかを満たす場合だけ。
-
-- causal / state flowを短くする
-- measured comparisonを理解しやすくする
-- boundaryを可視化する
-- actual artifactを示す
-
-生成画像に存在しないCI結果、数字、URL、screenshot-like evidenceを描かせない。
-
-articleは画像なしでも成立させる。
+- generated illustrationをscreenshot / measurement / historical evidenceとして扱わない
+- articleは画像なしでも成立
+- visual claimは元artifactへ接地
+- decoration quotaは禁止
 
 ## Publication boundary
 
-Zenn公式方針:
-
-- https://info.zenn.dev/2026-03-10-ai-contents-guideline
-- https://zenn.dev/guideline
-
-このrepoではautomationとpublicationを分離する。
-
 ```text
 schedule
-  -> candidate discovery / drafting / review only
+  -> candidate discovery / research / drafting / review only
 
 manual pipeline selection
-  -> selected candidateをarticles/へ published:false でmaterialize
+  -> articles/へ published:false でmaterialize
 
 explicit human approval
   -> published:true
@@ -308,66 +350,60 @@ explicit human approval
 
 schedule、月末、score、CI green、mergeはpublication authorizationではない。
 
-内部function/CLI名が`publish`でも、`published:false`を作るだけならpublic publicationとは呼ばない。
-
 ## Lifecycle after publication
 
-公開後も次のstateを持つ。
+- `KEEP`: Reach / customer value / originality / experience / utility / trustが強い
+- `REVALIDATE`: insightは強いがvolatile factあり
+- `REWRITE`: core experienceは価値があるが入口・価値・構成が弱い
+- `MERGE`: same reader jobをより強い記事へ集約
+- `RETIRE`: 読む理由・独自性・信頼・durable valueが不足
 
-- `KEEP`
-- `REVALIDATE`
-- `REWRITE`
-- `MERGE`
-- `RETIRE`
+`RETIRE` / `REWRITE` trigger:
 
-`RETIRE` 判定:
-
-- central claimが現在検証できない
-- evidenceより強い結論を誘発する
+- intended audienceが不明
+- titleがimplementation-first
+- commodity information化した
+- first-hand proofが薄い
+- useful exitがない
+- central claimがstale / unverifiable
+- newer articleに上位互換された
 - title/body promise mismatch
-- newer articleにreader jobを完全に上位互換された
-- generic summary / link list / setup guideでunique proofがない
-- unsupported magic numberが主張の中核
-- maintenance costがdurable valueを上回る
-- portfolio signatureを薄める
-
-Zenn上の削除はZenn公式GitHub連携手順に従い、repo-managed articleではdashboardとrepoの両方を扱う。
-
-- https://zenn.dev/zenn/articles/connect-to-github
-
-agentがdashboard操作できない場合は、public deletionを完了したと報告してはいけない。
+- unsupported numberが中心
+- maintenance cost > durable reader value
+- portfolio signalを薄める
 
 ## Publication portfolio review cadence
 
-候補生成とは別に、公開記事を定期的に再監査する。
+公開記事を定期再監査する。
 
-最低確認項目:
+1. public URL
+2. Reach
+3. customer value
+4. originality / first-hand experience
+5. useful exit
+6. source / trust
+7. overlap
+8. half-life
+9. lifecycle state
 
-1. public URLが存在する。
-2. titleとbodyの約束が一致する。
-3. material sourceが現在もclaimを支持する。
-4. volatile factsを再検証した。
-5. newer articleとのoverlapを確認した。
-6. decision ruleが今も再利用可能。
-7. overclaim / hindsight rewriteがない。
-8. lifecycle stateを更新した。
-
-公開記事数を増やすより、弱い記事をretireしてportfolio signalを強くすることを優先する。
+公開記事数を増やすより、弱い記事をretireしてportfolio valueを上げる。
 
 ## Final publication test
 
-公開を承認する前に、次を一文ずつ答えられること。
+公開承認前に一文ずつ答える。
 
 ```text
+Intended audience:
+Broad entry:
 Reader job:
-Observed anomaly:
-Initial hypothesis:
-Strongest public evidence:
-What that evidence proves:
-What it does NOT prove:
-Hypothesis update:
-Decision rule:
-Non-goal:
+Reader before:
+Customer value:
+Original observation:
+Natural expectation:
+Surprising finding:
+Strongest proof:
+Useful exit:
+What the proof does NOT establish:
 Why this deserves a separate article:
 Half-life / revalidation trigger:
 ```

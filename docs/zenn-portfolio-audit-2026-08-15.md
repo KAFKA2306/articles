@@ -1,185 +1,93 @@
-# Zenn Portfolio Audit — 2026-08-15
+# Zenn Portfolio Audit — 2026-08-15 v2
 
 ## Purpose
 
-Zennで公開されている記事を「昔書いたものだから残す」のではなく、**現在の読者へどんな判断能力を渡すか**で再評価する。
+Zenn公開記事を、単なる正確性や「証拠境界」の厳密さではなく、**読者にとって読む理由があるか**で再監査する。
 
-今回の監査は、次の2集合を突き合わせた。
+今回の基準は次の7軸。
 
-1. Zenn上で個別公開URLを確認できたlegacy記事 10本
-2. current `KAFKA2306/articles` で `published: true` のZenn同期記事 9本
+1. **Reach** — intended audienceがproblemを自分事にできる入口か
+2. **Customer value** — 時間・失敗・risk・uncertaintyを減らすか、capabilityを増やすか
+3. **Originality** — docs / generic AI summaryで代替しにくいか
+4. **Experience** — 実体験・実測・失敗・運用が見えるか
+5. **Utility** — 読後に持ち帰れるdecision / checklist / patternがあるか
+6. **Trust** — 一次情報・公開artifact・claim calibrationが十分か
+7. **Portfolio value** — 残すことで著者のsignalが強くなるか
 
-合計 **19 public records** をportfolio review対象とした。
+編集原則はGoogle Search Centralのpeople-first content自己評価とZennの現行ガイドラインを参照する。
 
-Zenn profileの集計表示はcache/取得時点で差が出る可能性があるため、本監査ではprofile上の総数ではなく、**個別URLとcurrent repository stateを正準**にした。
-
-## External publication policy
-
-Zenn公式の2026-03-10 AIコンテンツ方針は、AI利用自体ではなく、著者が主体となって正確性を検証し、経験・洞察を含めることを求めている。また、著者の確認が追いつかない速度の投稿や機械生成spamを問題視している。
-
-- https://info.zenn.dev/2026-03-10-ai-contents-guideline
+- https://developers.google.com/search/docs/fundamentals/creating-helpful-content
+- https://developers.google.com/search/docs/fundamentals/creating-helpful-content?hl=ja
 - https://zenn.dev/guideline
+- https://info.zenn.dev/2026-02-03-community-guidelines-update
+- https://info.zenn.dev/2026-03-10-ai-contents-guideline
 
-ZennのGitHub連携では、repository側の変更は同期される一方、記事の完全削除はZenn dashboard側の削除も必要と公式手順にある。
+Googleはintended audience、first-hand expertise、original information/research/analysis、読後のgoal completion、他ページより実質的な価値を自己評価項目としている。Zennは具体的な試行錯誤・書き手固有の視点・実体験を重視している。
 
-- https://zenn.dev/zenn/articles/connect-to-github
+## Portfolio thesis
 
-したがって本監査では、agentがdashboardを操作できないlegacy記事は `RETIRE_PENDING_ZENN_DASHBOARD` とする。public URLが消えるまで「削除済み」とは扱わない。
+今回の再読で、現在出したい記事を次のように定義し直す。
 
-## What the portfolio is actually about
+> **広い読者が自分事にできる問題を入口に、書き手固有の実体験・実測・失敗から、AI要約や公式docsだけでは得にくい見方を渡し、読後の判断や行動を一段よくする記事。**
 
-強い記事から抽出されるsignatureは、AI、GitHub、Unity、投資、CI/CDそのものではない。
-
-**「ある証拠が、どの判断までを許可するか」を分離する記事**である。
-
-反復している境界:
+短縮すると:
 
 ```text
-implementation != validation
-capability != authority
-runner != policy / oracle
-build != release != production verification
-detection != independent verification
-value != provenance
-agent ability != delegated permission
-artifact exists != visual/runtime completion
-latest knowledge != decision-time evidence
+Broad door
+  -> Original insight
+  -> Concrete proof
+  -> Useful exit
 ```
 
-強い記事は、toolを説明するのではなく、次の順で読者の判断を変える。
+`authority / verification / decision boundary` は重要なproof techniqueであるが、portfolioの主題そのものではない。
 
-```text
-失敗 / 異常 / 数字
-  -> もっともらしい誤解
-  -> 一次情報 / public artifact
-  -> 証明できる範囲の境界
-  -> 仮説更新
-  -> decision rule
-```
+## Lifecycle
 
-## Lifecycle rubric
-
-- `KEEP`: 現在のportfolio signatureに強く一致し、証拠・reader job・decision ruleが十分。
-- `REVALIDATE`: 核は残すが、価格・quota・product stateなど短いhalf-lifeを持つ。
-- `REWRITE`: 核は価値があるが、現在の証拠/編集基準に不足。
-- `MERGE`: reader jobが別記事に上位互換されている。
-- `RETIRE_PENDING_ZENN_DASHBOARD`: current portfolioから外す。dashboard削除待ち。
+- `KEEP` — Reach / customer value / originality / utility / trustが強い
+- `REVALIDATE` — core valueは強いがvolatile factを再確認
+- `REWRITE` — core experience/insightは残すが入口・価値・構成を再設計
+- `MERGE` — stronger articleへ統合
+- `RETIRE_PENDING_ZENN_DASHBOARD` — public portfolioから外す。Zenn dashboard deletion待ち
 
 ## Current repo-managed public articles — 9
 
-| Article | Public URL | Decision | Why |
+| Article | URL | Decision | Reader-value review |
 |---|---|---|---|
-| 人は他人を「何を任せられるか」で圧縮する——成果物が仕事の証拠になるまで | https://zenn.dev/kafka2306/articles/2026-08-13-02-how-people-compress-a-person | `KEEP` | skill列挙よりwork sample / verification / reuseで委任可能性を示す。career論ではなく「何を任せられるか」を証拠へ変換するdecision modelになっている。 |
-| Claude Codeにテストを全部任せるなら、先に「合格条件」を固定する | https://zenn.dev/kafka2306/articles/2026-08-15-hook-runner-is-not-policy | `KEEP` | runnerとpolicy/oracleを分離し、agent実行能力と合格条件を別authorityとして扱う。current signatureの中心。 |
-| 個人開発が123個になって分かった。ChatGPTに任せるべきはコードより「次の1件」だった | https://zenn.dev/kafka2306/articles/chatgpt-multiproject-autonomy | `KEEP` | PR数を自慢で終わらせず、state / contract / evidenceを外部化して「次を選ぶ」制御loopへ抽象化している。 |
-| AIの文章に「透かし」があると言われたら、誰がそれを証明できるのか | https://zenn.dev/kafka2306/articles/claude-watermark-secret-key-detection | `KEEP` | vendor未公開仕様を推測せず、embedding / secret / detection / verification interfaceを分離。未確認を正しいstateとして残す。 |
-| GitHub IssueからAIにローカルPCを任せてよいのか？ Unity・Blender・動画生成で考える安全な橋 | https://zenn.dev/kafka2306/articles/codex-chatgpt-github-issue-bridge | `KEEP` | coding-agent紹介ではなくlocal state / binary asset / GPUへ責務が広がるときの権限・証拠・completion boundaryを扱う。 |
-| ChatGPTを使い倒している私に、月10ドルのOpenCode Goが刺さった理由 | https://zenn.dev/kafka2306/articles/opencode-go-deepseek-v4-chatgpt-usage-scale | `REVALIDATE` | 「reasoning/control planeとlocal executionを分ける」という核は再利用可能。ただしprice / request estimate / provider planは短いhalf-lifeを持つため定期再検証が必要。 |
-| 2026年、Unity MCPはどこまで実用か――14件で見えた「作れるが、見た目と挙動を監査し切れない」壁 | https://zenn.dev/kafka2306/articles/unity-mcp-editor-boundary | `KEEP` | 複数の実運用例と自前repoを比較し、CAN_GENERATE != CAN_AUDIT_THE_RESULTを示す。authoringとvisual/gameplay/runtime auditを分離。 |
-| 速く出すために、勝手に出さない。GitHubとShopifyに学ぶRelease Engineering | https://zenn.dev/kafka2306/articles/validate-before-pages-deploy | `KEEP` | GitHub/Google/Shopifyの一次情報と自前追試を接続し、build / validate / release / verifyを分離。一般CI/CD解説よりdecision ruleが強い。 |
-| 第二の脳の次に必要なのは「意思決定のGit」だ——投資判断を後知恵バイアスから守る | https://zenn.dev/kafka2306/articles/why-i-could-buy-the-crash | `KEEP` | 知識保存ではなくdecision-time uncertaintyを固定するという別reader jobを持ち、結果を知った後の物語と当時の判断をdiff可能にする。 |
+| 人は他人を「何を任せられるか」で圧縮する——成果物が仕事の証拠になるまで | https://zenn.dev/kafka2306/articles/2026-08-13-02-how-people-compress-a-person | `KEEP` | 技術者以外にも通じる「能力をどう伝えるか」が入口。複数domainの公開成果をwork sampleへ変換する独自性があり、career/portfolio設計へ持ち帰れる。 |
+| Claude Codeにテストを全部任せるなら、先に「合格条件」を固定する | https://zenn.dev/kafka2306/articles/2026-08-15-hook-runner-is-not-policy | `KEEP` | 「AIに全部任せたい」という広い欲求から入り、agent利用者のfalse confidenceを減らす。Claude Code固有記事に見えて、automation全般へ移植可能。 |
+| 個人開発が123個になって分かった。ChatGPTに任せるべきはコードより「次の1件」だった | https://zenn.dev/kafka2306/articles/chatgpt-multiproject-autonomy | `KEEP` | 123 repo / 813 PRという具体性が強く、AI codingの速度論を「次を決める仕事」へreframeする。独自運用データと広いproblemが接続している。 |
+| AIの文章に「透かし」があると言われたら、誰がそれを証明できるのか | https://zenn.dev/kafka2306/articles/claude-watermark-secret-key-detection | `KEEP` | AI生成判定という一般的な関心から入り、公開仕様の不確実性を含めて検証可能性へ整理する。技術・採用・教育・mediaに横展開できる。 |
+| GitHub IssueからAIにローカルPCを任せてよいのか？ Unity・Blender・動画生成で考える安全な橋 | https://zenn.dev/kafka2306/articles/codex-chatgpt-github-issue-bridge | `KEEP` | titleはやや技術寄りだが「AIに自分のPCをどこまで任せるか」というproblemは広い。Unity/Blender/GPU実運用が固有proof。次回はさらにproblem-first titleを優先。 |
+| ChatGPTを使い倒している私に、月10ドルのOpenCode Goが刺さった理由 | https://zenn.dev/kafka2306/articles/opencode-go-deepseek-v4-chatgpt-usage-scale | `REWRITE + REVALIDATE` | reasoning/controlとlocal executionを分ける発見は価値がある。一方、商品名・価格・request estimateが入口を支配しhalf-lifeも短い。「AI作業で最後までPCに残る仕事をどう渡すか」へ再設計した方がdurable valueが高い。 |
+| 2026年、Unity MCPはどこまで実用か――14件で見えた「作れるが、見た目と挙動を監査し切れない」壁 | https://zenn.dev/kafka2306/articles/unity-mcp-editor-boundary | `KEEP` | nicheだがAI game/3D developerにはstakesが明確。14外部事例＋自前repoというfirst-hand/field-review価値が高く、setup記事では得られない判断材料を渡す。 |
+| 速く出すために、勝手に出さない。GitHubとShopifyに学ぶRelease Engineering | https://zenn.dev/kafka2306/articles/validate-before-pages-deploy | `KEEP` | 「速く出したい」という普遍的欲求から入り、安全確認を減らさず待ちを減らすreframeがある。Google/GitHub/Shopify一次情報＋自前追試でuseful exitが強い。 |
+| 第二の脳の次に必要なのは「意思決定のGit」だ——投資判断を後知恵バイアスから守る | https://zenn.dev/kafka2306/articles/why-i-could-buy-the-crash | `KEEP` | Obsidian/Notionという広い入口から、knowledge managementではなくdecision-time uncertainty保存へreframe。個人の実判断ログと研究を接続し、独自性・顧客価値とも強い。 |
 
-### Current-public conclusion
+### Current set conclusion
 
-現行9本は、8本を`KEEP`、1本を`REVALIDATE`とする。
+- `KEEP`: 8
+- `REWRITE + REVALIDATE`: 1
 
-削除対象を作るために基準を厳しくするのではない。現行群は2026-08の刷新を繰り返した結果、旧群より明確に現在のsignatureへ収束している。
+現行群の強い記事は、**技術名より先に人間のproblem / desireがあり、その後に固有proofへ降りている**。
 
 ## Legacy public articles — 10
 
-### 1. Crash-Driven Development
+legacy 10本は前回auditの`RETIRE_PENDING_ZENN_DASHBOARD`を維持する。新しいreader-value基準で見ても、残す理由は強くならない。
 
-- URL: https://zenn.dev/kafka2306/articles/11cd731eebded1
-- Published: 2026-01-30
-- Decision: `RETIRE_PENDING_ZENN_DASHBOARD`
-
-価値の核は「失敗を隠さずstack traceを観測可能にする」にある。しかし記事全体は独自doctrineとして強く一般化され、現在の基準で必要なclaim calibration / public experiment / non-goalが弱い。
-
-**Reuse:** fail-loud / observable failureの核だけを、将来の検証可能な記事へ統合する。旧page自体は残さない。
-
-### 2. Astral Toolchain / Modern Python Zero-Fat
-
-- URL: https://zenn.dev/kafka2306/articles/2005501fe91754
-- Published: 2026-02-22
-- Decision: `RETIRE_PENDING_ZENN_DASHBOARD`
-
-Ruff/uv等のtoolchain紹介と独自「Zero-Fat」frameworkが中心。現在の基準では、どのfaultをどのauthorityが検出したかというcontrolled evidenceが不足し、tool stack自体が価値になっている。
-
-**Superseded by:** verification-stack系のcontrolled experimentsと、個別authorityを測る現在の方針。
-
-### 3. AAARTS autonomous alpha system
-
-- URL: https://zenn.dev/kafka2306/articles/c599b0556555a7
-- Published: 2026-03-01
-- Decision: `RETIRE_PENDING_ZENN_DASHBOARD`
-
-複数概念を束ねた大きなarchitecture提案だが、記事の中心価値に対して実運用・失敗fixture・再現証拠が薄い。現在なら「frameworkを提案した」では公開しない。
-
-**Reuse:** 個別componentが公開実験で反証可能になった場合のみ、別記事として再発見する。
-
-### 4. agent-resources article with biographical/AI policy report body
-
-- URL: https://zenn.dev/kafka2306/articles/9f9997babac335
-- Published: 2026-03-08
-- Decision: `RETIRE_PENDING_ZENN_DASHBOARD` — highest priority
-
-タイトルがagent-resourcesのdeveloper hubを約束する一方、本文は別人物の経歴・AI方針等を扱う長いreportへ逸脱しており、**title/body promise mismatch**が大きい。現在のportfolioに残す合理性がない。
-
-### 5. Windows Docker × Gemini CLI × everything-claude-code install commands
-
-- URL: https://zenn.dev/kafka2306/articles/cd6f21d4a26bdd
-- Published: 2026-03-19
-- Decision: `RETIRE_PENDING_ZENN_DASHBOARD`
-
-導入command中心で、version / provider / package stateに強く依存する短寿命how-to。固有experimentやportable decision ruleが弱い。
-
-### 6. AI agent directory-management guidelines
-
-- URL: https://zenn.dev/kafka2306/articles/5c21f4d010baeb
-- Published: 2026-03-27
-- Decision: `RETIRE_PENDING_ZENN_DASHBOARD`
-
-一般的best practiceと推奨値の組み合わせが中心。どのdirectory failureを何件観測し、どのruleで改善したかというground truthが不足する。
-
-**Reuse:** 実repoでcontext rot / file discovery / residueのfaultを測った記事へ統合可能。
-
-### 7. Zero-trust contract
-
-- URL: https://zenn.dev/kafka2306/articles/77e6af7be1d527
-- Published: 2026-05-13
-- Decision: `RETIRE_PENDING_ZENN_DASHBOARD` / `MERGE concept`
-
-「LLMの自己申告を受け入れずartifact / test / proofで完了判定する」という核は現在のsignatureそのもの。一方、旧稿は絶対表現・独自principle命名が強く、現在の `hook-runner-is-not-policy` 等が、より狭く・証拠付きで同じreader jobを上位互換している。
-
-**Superseded by:** https://zenn.dev/kafka2306/articles/2026-08-15-hook-runner-is-not-policy
-
-### 8. Adaptive Survivable Verification System (ASVS)
-
-- URL: https://zenn.dev/kafka2306/articles/5c3c93f798da3f
-- Published: 2026-05-17
-- Decision: `RETIRE_PENDING_ZENN_DASHBOARD`
-
-大きな独自verification frameworkを先に提示する構成で、現在の「failure first / boundary first / controlled evidence」方針と逆。frameworkそのものをauthorityにしてしまうリスクがある。
-
-### 9. AI活用してそうな情報サイトのクオリティがすごい
-
-- URL: https://zenn.dev/kafka2306/articles/1436dad81ab3ac
-- Published: 2026-06-11
-- Decision: `RETIRE_PENDING_ZENN_DASHBOARD` — highest priority
-
-実体は外部websiteのcategory別link list。固有の観測、比較protocol、検証、decision ruleがなく、現在のarticle contractではcandidate段階で不採用になる。
-
-### 10. GEO / AEO operations guideline
-
-- URL: https://zenn.dev/kafka2306/articles/6dd453d941b99f
-- Published: 2026-06-13
-- Decision: `RETIRE_PENDING_ZENN_DASHBOARD` — highest priority
-
-generic SEO/GEO checklistと多数の数値的推奨が中心。現在の基準では、各数値のprimary evidence / scope / reproductionを確認できない限り公開claimにしない。
+| URL | Decision | Reader-value reason |
+|---|---|---|
+| https://zenn.dev/kafka2306/articles/9f9997babac335 | `RETIRE_PENDING_ZENN_DASHBOARD` | title/body promise mismatch。Reach以前にreader expectationを壊す。 |
+| https://zenn.dev/kafka2306/articles/1436dad81ab3ac | `RETIRE_PENDING_ZENN_DASHBOARD` | link collection中心。generic AI/searchで代替しやすくoriginal valueが弱い。 |
+| https://zenn.dev/kafka2306/articles/6dd453d941b99f | `RETIRE_PENDING_ZENN_DASHBOARD` | generic GEO/AEO checklist。first-hand evidenceとunsupported-number riskの問題。 |
+| https://zenn.dev/kafka2306/articles/2005501fe91754 | `RETIRE_PENDING_ZENN_DASHBOARD` | toolchain自体が主役。読者problemよりstack名が入口で、現在のcontrolled experiment型記事に劣る。 |
+| https://zenn.dev/kafka2306/articles/c599b0556555a7 | `RETIRE_PENDING_ZENN_DASHBOARD` | large framework proposalが先行し、読者の具体的job・first-hand proofが薄い。 |
+| https://zenn.dev/kafka2306/articles/cd6f21d4a26bdd | `RETIRE_PENDING_ZENN_DASHBOARD` | install/how-to中心でhalf-lifeが短く、commodity化しやすい。 |
+| https://zenn.dev/kafka2306/articles/5c21f4d010baeb | `RETIRE_PENDING_ZENN_DASHBOARD` | generic guideline。具体的failureとcustomer outcomeが弱い。 |
+| https://zenn.dev/kafka2306/articles/5c3c93f798da3f | `RETIRE_PENDING_ZENN_DASHBOARD` | framework-first。読者problemより独自概念が前面に出る。 |
+| https://zenn.dev/kafka2306/articles/11cd731eebded1 | `RETIRE_PENDING_ZENN_DASHBOARD` / `MERGE concept` | fail-loudの核は有用だがdoctrine-first。具体problem+experimentに分解して再利用する方が強い。 |
+| https://zenn.dev/kafka2306/articles/77e6af7be1d527 | `RETIRE_PENDING_ZENN_DASHBOARD` / `MERGE concept` | zero-trust completionの核は有用だが抽象principleが先行。現在のClaude Code/Release Engineering記事が同じreader jobをより具体的に満たす。 |
 
 ## Retirement order
-
-Zenn dashboardで削除する順序:
 
 1. https://zenn.dev/kafka2306/articles/9f9997babac335
 2. https://zenn.dev/kafka2306/articles/1436dad81ab3ac
@@ -192,43 +100,39 @@ Zenn dashboardで削除する順序:
 9. https://zenn.dev/kafka2306/articles/11cd731eebded1
 10. https://zenn.dev/kafka2306/articles/77e6af7be1d527
 
-最初の3本は、title/body mismatch、純link集、unsupported-number-heavy guidelineという理由で、現在のportfolio signalを最も強く薄める。
+Complete deletion must not be reported until the public Zenn URL is actually absent. The GitHub connector cannot perform Zenn dashboard deletion.
 
-## Exact human action for legacy deletion
+## New portfolio rules
 
-旧10本はcurrent `articles/` に対応sourceが存在しないweb-created legacy postsとして扱うため、available GitHub toolsだけではpublic deletionを完了できない。
-
-Zenn公式手順に従い、人間が各記事についてdashboardで削除を実行する。
+### We optimize for
 
 ```text
-Zenn dashboard
-  -> 記事の管理
-  -> 対象article
-  -> 削除
+Reach
++ customer value
++ first-hand originality
++ useful exit
++ trust
 ```
 
-削除後はpublic URLを再取得し、404/非公開を確認して初めてretirementを完了とする。
-
-**この監査documentを作っただけでは削除完了ではない。**
-
-## New portfolio rule
-
-今後、公開前に次の問いへ全部答える。
+### We do not optimize for
 
 ```text
-Reader job:
-Observed anomaly:
-Initial hypothesis:
-Strongest public evidence:
-What the evidence proves:
-What it does NOT prove:
-Hypothesis update:
-Decision rule:
-Non-goal:
-Why this deserves a separate article:
-Half-life / revalidation trigger:
+article count
+citation count
+tool coverage
+framework naming
+AI-generated volume
+SEO traffic by itself
 ```
 
-公開後も同じ問いで再監査する。
+### The crucial distinction
 
-**公開記事を増やすことより、弱い記事を退役させ、1本あたりの信頼密度を上げることを優先する。**
+Old framing:
+
+> ある証拠がどの判断までを許可するかを明らかにする。
+
+New framing:
+
+> 読者にとって意味のあるproblemを、書き手固有の観測で新しく見せ、読後の行動を良くする。証拠はその価値を信頼できるものにする。
+
+この順序をREADME / AGENTS / article contractの正準とする。
