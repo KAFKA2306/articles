@@ -1,20 +1,20 @@
 ---
-title: "型チェックが通っても、APIの入力はまだ信用できない"
+title: "型チェックはgreen。それでも壊れたJSONは通る"
 emoji: "🚧"
 type: "tech"
 topics: ["python", "typescript", "pydantic", "zod", "testing"]
 published: false
 ---
 
-API、JSON、環境変数、ファイル入力を扱うコードで型チェックがgreenになると、入力まで安全になったように感じる。
+型チェックが全部greenでも、APIから壊れたJSONが来れば、その値は普通に実行時へ入ってくる。
 
-しかし外から届く値は、実行時に初めて存在する。
+今回、PythonとTypeScriptでruntime-boundary faultを1件ずつ固定した。結果は単純だった。**validationなしでは両方通過し、Pydantic/Zodを置いた経路だけが拒否した。**
 
-今回、PythonとTypeScriptでruntime-boundary faultを1件ずつ固定したところ、validationなしのcontrol pathは両方とも通過し、Pydantic/Zodを置いたpathだけが不正値を拒否した。
+つまり、型安全に見えるコードでも「外から来る値をどこで信用するか」を決めていなければ、最後の境界が抜ける。
 
-読者が持ち帰る判断は1つでよい。
+この記事で持ち帰る判断は1つだけだ。
 
-**外部値は、business logicへ渡す直前ではなく、入ってきた境界で`unknown → validated value`へ変換する。**
+**外部値は、入ってきた瞬間に`unknown → validated value`へ変換する。**
 
 ## 何が実際に起きたか
 
