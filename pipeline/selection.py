@@ -107,14 +107,13 @@ def generate_public_candidate() -> Path:
 
 
 def is_month_end(moment: datetime) -> bool:
+    """Calendar helper retained for historical reports/tests, not publication authority."""
     return (moment + timedelta(days=1)).month != moment.month
 
 
 def scheduled_publish_allowed() -> bool:
-    return (
-        os.environ.get("ARTICLE_MANUAL") == "1"
-        or is_month_end(core.now_jst())
-    )
+    """Only an explicit human-triggered pipeline run may select a Zenn draft."""
+    return os.environ.get("ARTICLE_MANUAL") == "1"
 
 
 def evaluate_monthly_candidates(paths: list[Path]) -> list[dict[str, object]]:
@@ -227,7 +226,7 @@ JSONのみ返してください。
 
 
 def finalize_publication_filename(old_path: Path, article: str) -> Path:
-    """Rename only the newly generated artifact; existing publications are untouched."""
+    """Rename only the newly generated unpublished draft; existing publications are untouched."""
     policy = core.CONFIG["filename_policy"]
     moment = core.now_jst()
     file_title = publication_file_title(article)
@@ -259,9 +258,15 @@ def finalize_publication_filename(old_path: Path, article: str) -> Path:
 
 
 def publish_best() -> Path | None:
+    """Select the strongest current candidate into articles/ as published:false.
+
+    Despite the historical function name, this function is not authorized to
+    publish publicly on Zenn. Explicit ARTICLE_MANUAL=1 is required even for
+    draft selection/materialization.
+    """
     if not scheduled_publish_allowed():
         print(
-            "publish=skipped reason=not_month_end "
+            "publish=skipped reason=explicit_human_selection_required "
             f"date={core.now_jst():%Y-%m-%d}"
         )
         return None
@@ -305,7 +310,7 @@ def publish_best() -> Path | None:
     save_monthly_selection_report(
         evaluated,
         selected=selected,
-        status="selected",
+        status="selected_unpublished_draft",
     )
     old_path = core.publish(
         str(selected["article"]),

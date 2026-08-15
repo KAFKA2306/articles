@@ -1,402 +1,260 @@
 # KAFKA2306/articles
 
-**証拠から「なぜこうなった？」を見つけ、読者が追体験できる一つの発見へ変える技術記事repository。**
+**観測された失敗・異常・数字から、読者が「何を信じてよいか」「どこまで任せてよいか」「次へ進んでよいか」を判断できる技術記事を作るrepository。**
 
-一般知識をAIで量産するためのrepoではありません。
-公開GitHub活動とprivacy-safeなprivate seedから問いを見つけ、一次情報へ再接地し、仮説更新・reader value・proofまで揃った記事だけを公開候補にします。
+このrepoは、技術ニュース、ツール紹介、AI要約、ベストプラクティス集を量産するための場所ではありません。
 
-> **Discover one surprising fact. Prove it. Turn it into something the reader can use.**
+公開する価値があるのは、一次情報と公開実装を追った結果、最初の予想が更新され、読者が別の現場へ持ち帰れる**判断規則**が残った記事です。
 
-## Vision
+> **Observe the failure. Find the boundary. Prove the boundary. Give the reader a decision rule.**
 
-記事を読んだ人が得るのは、技術名の知識ではなく、**「自分なら次にどう判断・実装・運用するか」を決められる状態**です。
+## What we are trying to publish
 
-このrepoでは、1本の記事を次の変化として設計します。
+過去のZenn記事を読み直すと、現在の強い記事には共通した形があります。
 
 ```text
-読む前
-  └─ 何が起きているか分からない / 失敗理由が曖昧 / どこまで信じてよいか分からない
+具体的なscene / failure / number
         ↓
-具体的なscene・数字・失敗
+もっともらしい最初の解釈
         ↓
-自然な予想
+現在の一次情報 + 公開artifactで検証
         ↓
-公開証拠で検証
+何が証明でき、何が証明できないかを分離
         ↓
-仮説更新
+最初の解釈を更新
         ↓
-読む後
-  └─ 判断できる / 試せる / 止められる / 説明できる / 運用へ持ち込める
+別の現場でも使えるdecision rule
 ```
 
-「正しく説明した」で終わらず、reader before → after を本文で成立させます。
+主題は技術名ではなく、**authority / verification / decision boundary** です。
 
-## Design philosophy
+典型的には次を分離します。
 
-### 1. 技術名より現象を先にする
+- implementation と validation
+- capability と authority
+- runner と policy / oracle
+- build と release と production verification
+- detection と independent verification
+- value と provenance
+- AIが実行できること と AIへ許可してよいこと
+- artifactが存在すること と visual / runtimeで完成していること
+- 最新ノート と 判断時点の証拠
 
-`MCP`、`Provenance`、`Pyodide`、`GitHub Actions` から記事を始めません。
+記事の価値は「詳しく説明した」ではなく、**読者がその境界を使って誤った判断を避けられること**です。
 
-先に、
+## The article signature
 
-- 61件目だけが消えた
-- 856件が7,699件になった
-- CIが自分でmanifestを直してからgreenになった
-- AI生成図に実行していない `CI SUCCESS` が描かれた
+公開候補は最低でも次を持ちます。
 
-のような、読者が意味を理解できる現象を置きます。
+1. **Reader job** — 読者は何を決めたいのか。
+2. **Observed anomaly** — 実際に何が起きたのか。数字、失敗、矛盾、反例のどれかを置く。
+3. **Initial hypothesis** — 最初は何が原因・正解だと思ったか。
+4. **Evidence** — 現在取得できる一次情報と公開artifact。
+5. **Boundary** — その証拠が許可する結論と、許可しない結論。
+6. **Hypothesis update** — 何を見て考えを変えたか。
+7. **Decision rule** — 読者が次回使える判定規則。
+8. **Non-goal** — この記事が証明していないこと。
+9. **Half-life** — どの事実が陳腐化しやすく、再検証が必要か。
 
-技術は、その謎を解くために必要になった位置でだけ登場させます。
-
-### 2. 一記事一発見
-
-候補は次のいずれかへ収束させます。
-
-- anomaly
-- contradiction
-- failure
-- unexpected connection
-- counterintuitive result
-- magnitude
-
-複数の正しい論点を詰め込むより、中心の問いを前進させない節を削ります。
-
-### 3. private contextはidea seed、public evidenceはclaim source
-
-private Graphiti weeklyは、題材候補を見つけるためのread-only seedです。
+### 良い記事の例となる問い
 
 ```text
-private seed
-   ↓ idea only
-public GitHub / official primary source
-   ↓ re-ground
-public claim
+「テストが通った」なら、誰が合格条件を決めたのか？
+「Unityを操作できた」なら、見た目と実挙動まで誰が監査したのか？
+「AI生成だと検出できる」なら、誰が独立して検証できるのか？
+「deployできた」なら、build / validation / release / productionのどこまで成功したのか？
+「数字が増えた」なら、source / scope / methodの何が変わったのか？
 ```
 
-private diary本文、個人情報、税務、資産、健康、旅行、私生活、勤務先内部情報、未公開情報をpublic evidenceへ昇格させません。
+## What we do not publish
 
-### 4. 「動いた」を完成にしない
+次は、正しく書けても原則として公開しません。
 
-必要に応じて、
+- 公式docsの要約
+- インストール手順だけの記事
+- リンク集・サービス一覧
+- 「2026年の最強stack」のような比較表だけの記事
+- tool / libraryの紹介だけの記事
+- repoの変更履歴を記事へ変えただけのもの
+- 二次情報を大量に並べたAIレポート
+- 実装・測定・反証がない独自framework
+- 根拠のない閾値、magic number、成功率
+- 「Aを使ってBを作った」で終わる成功談
+- 読む前から結論が常識的に決まっている記事
+- weak questionを長文・図・引用で救った記事
+- CTAを足しただけの営業記事
+
+**技術的に正しいことは必要条件であって、公開理由ではありません。**
+
+## Portfolio value
+
+記事数はKPIではありません。
+
+弱い記事は0点ではなく、読者から見た著者のsignalを薄め、古い主張の再検証コストを増やすため、**負のportfolio value** を持ち得ます。
+
+公開後も記事を次のstateで監査します。
+
+| State | 意味 |
+|---|---|
+| `KEEP` | 現在も証拠・判断規則・読者価値が強い |
+| `REVALIDATE` | 核は強いが、価格・仕様・市場など陳腐化しやすい事実を再確認する |
+| `REWRITE` | 核と証拠は残す価値があるが、現在の編集基準へ書き直す |
+| `MERGE` | より強い記事へ統合し、単独記事を残さない |
+| `RETIRE` | 誤解・重複・陳腐化・弱い証拠によりportfolioから外す |
+
+公開済みだから永久保存、とは扱いません。
+
+現行監査: [`docs/zenn-portfolio-audit-2026-08-15.md`](docs/zenn-portfolio-audit-2026-08-15.md)
+
+## Evidence contract
+
+外部事実は、公開時点で取得できる一次情報を優先します。
+
+最低条件は `pipeline/contracts/article.md` と `pipeline/config.json` を正準とします。原則は次です。
+
+- material claimのURLを実際に取得する
+- vendor仕様はvendor公式、標準はstandards body、GitHub固有事実はGitHub上のartifactで確認する
+- repo固有の主張は公開commit / PR / Issue / Actions / artifactへ接地する
+- 数字には対象、期間、単位、比較基準を残す
+- observation / inference / speculationを混ぜない
+- inaccessible / stale / contradictoryなsourceはfail-closeする
+- 取得できない事実を文章力で補完しない
+
+**証拠が許可する以上の結論を書かない**ことを最優先します。
+
+## Reader value contract
+
+記事は、読者の状態を変えなければ公開価値がありません。
 
 ```text
-tool success
-runtime compatibility
-validation
-allowed use
-production / public verification
+reader_before
+  ↓
+この記事固有のproof / failure / comparison
+  ↓
+reader_after
 ```
 
-を別stateとして扱います。
+`reader_after` は「理解した」「学んだ」では不十分です。
 
-未実証範囲を明示できない記事は、強い営業資産にはなりません。
+- 判断できる
+- 止められる
+- 採否を決められる
+- 検証できる
+- 再現できる
+- 安全に委任できる
+- 何が未確認か説明できる
 
-### 5. 弱い記事を長文化して救わない
+のように、次のactionへ接続させます。
 
-問い・reader value・proofが弱ければ、文章を足して合格にしません。
+## Publication is human-controlled
 
-- rewrite
-- merge
-- keep private
-- archive / delete
+Zenn公式は、AI利用時も**著者自身が正確性を検証し、経験・洞察を含めること**を「人が主体」として求めています。また、著者の確認が追いつかない速度の自動投稿や機械生成spamを問題視しています。
 
-を正規のlifecycleとして扱います。
+- https://info.zenn.dev/2026-03-10-ai-contents-guideline
+- https://zenn.dev/guideline
 
-**記事数はKPIではありません。**
-
-## Why / 差別化
-
-このrepoの差別化は、LLM、Graphiti、Copilot CLI、Pyodide、GitHub Actionsそのものではありません。
-
-一般的なAI記事生成と違い、公開前に次を要求します。
-
-1. **何が意外だったか** — `central_question` / `surprising_finding`
-2. **何を最初に予想したか** — `initial_hypothesis`
-3. **何を見て考えが変わったか** — `hypothesis_update`
-4. **読者の何が変わるか** — `reader_before` / `reader_after`
-5. **なぜこの記事なのか** — `why_this_article`
-6. **本当に使える根拠は何か** — `proof_of_value`
-7. **何を証明しないか** — `non_goal`
-8. **読者が次に何を試せるか** — `desired_reader_action`
-
-これらを公開証拠から作れない候補は記事化しません。
-
-営業価値もCTAでは作りません。
-「お問い合わせください」を足す代わりに、本文から自然に使えるchecklist、template、decision table、最小導入手順へ変換します。
-
-正準contract:
-[`pipeline/contracts/article.md`](pipeline/contracts/article.md)
-
-編集設計:
-[`docs/EDITORIAL_DESIGN.md`](docs/EDITORIAL_DESIGN.md)
-
-現行portfolio監査:
-[`docs/article-portfolio-audit-2026-08-14.md`](docs/article-portfolio-audit-2026-08-14.md)
-
-## Discovery journey
+したがって、このrepoではautomationの責務を次に限定します。
 
 ```text
-Graphiti weekly (private, optional) ─┐
-                                    ├─> candidate discovery
-Public GitHub evidence ─────────────┘
-        ↓
-find one anomaly / contradiction / failure /
-unexpected connection / counterintuitive result / magnitude
-        ↓
-central question + initial hypothesis
-        ↓
-reader before / after + differentiation + proof
-        ↓
-draft as discovery story
-        ↓
-source gate
-        ↓
-technical review + editorial review + reader-value blocking gate
-        ↓
-revision by cutting weak sections
-        ↓
-best-of-month selection by story quality first
-        ↓
-articles/*.md
+scheduled automation
+  = discover / draft / source-check / review / compare / report
+
+manual selection
+  = candidateをZenn-compatible draftへ昇格する
+
+explicit human publication
+  = published: true を許可する
 ```
 
-候補生成時点で価値を定義するため、「書き終わってから営業っぽい一文を足す」という順序にはしません。
+**scheduleだけを理由に `published: true` へ変更してはいけません。**
 
-## Evidence / privacy boundary
+`pipeline publish` という内部command名は「公開候補を `articles/` のunpublished draftへmaterializeする」意味であり、Zennでpublicにする権限を持ちません。
 
-### Public claimに使えるもの
-
-- KAFKA2306 public GitHub code / commit / PR / issue / artifact
-- vendor / standards body / official documentation
-- 公開データの一次資料
-- 本文で再現できるfixture・test・measurement
-
-### Idea seedに留めるもの
-
-- private Graphiti weekly
-- private diary
-- 個人情報を含むconversation
-- 未公開業務情報
-- private financial / health / travel context
-
-private seedで気づいたテーマでも、公開記事のclaimはpublic evidenceへ再接地します。
-
-### Evidence gate
-
-最低条件:
-
-- primary-source URLs: 3件以上
-- KAFKA2306 GitHub evidence: 2件以上
-- external official primary source: 1件以上
-- URLは実HTTP取得で検証
-- 未確認を0件・成功・completeへ変換しない
-
-## Editorial contract
-
-### Story fields
-
-- `central_question`
-- `surprising_finding`
-- `initial_hypothesis`
-- `hypothesis_update`
-- `stakes`
-- `story_type`
-- `evidence_urls`
-- `why_interesting`
-
-### Reader-value fields
-
-- `reader_before`
-- `reader_after`
-- `design_philosophy`
-- `why_this_article`
-- `proof_of_value`
-- `desired_reader_action`
-- `non_goal`
-
-次はcandidate段階で不合格です。
-
-- `reader_after` が「理解する」「学ぶ」だけ
-- `why_this_article` が「詳しく説明する」「分かりやすく解説する」だけ
-- `proof_of_value` が空
-- 技術名・repository名・CI追加を価値そのものにしている
-
-本文査読では次をblocking issueとして扱います。
-
-- `weak_reader_value`
-- `weak_differentiation`
-- `missing_proof_of_value`
-- `forced_commercial_cta`
-- `technical_value_as_product`
-- `premature_conclusion_in_opening`
-- `narrow_technical_title_entry`
-
-technical / story scoreが高くても、blocking issueが残れば公開できません。
-
-## Quality gate
-
-### Technical floor
-
-| Axis | Minimum |
-|---|---:|
-| overall | 3.8 |
-| logic | 3.5 |
-| utility | 3.5 |
-| readability | 3.5 |
-| originality | 3.5 |
-| clarity | 3.5 |
-
-Target overall: **4.1**
-
-### Editorial floor
-
-| Axis | Minimum |
-|---|---:|
-| story overall | 4.0 |
-| interest | 4.1 |
-| discovery | 3.8 |
-| narrative | 3.8 |
-| context | 3.8 |
-
-Target story overall: **4.3**
-
-月末比較では、technical scoreより先に、
+## Repository state
 
 ```text
-story_overall
-→ interest
-→ discovery
-→ technical overall
+artifacts/candidates/YYYY-MM/
+  unpublished candidate。公開safeだがZenn sync surfaceではない。
+
+artifacts/reports/YYYY-MM/
+  source / review / selection evidence。
+
+articles/
+  Zenn-compatible source。published:true と明示承認された記事、および人間が選んだ published:false draftだけ。
+
+pipeline/
+  discovery / evaluation / audit implementation。
+
+pipeline/contracts/article.md
+  canonical editorial contract。
 ```
 
-を見ます。
+`published: false` はhard boundaryです。merge、CI green、選定、完成はpublication authorizationではありません。
 
-「他のエンジニアに役立つ」は品質床であり、「読みたい」の代用にはしません。
-
-## Candidate → review → publish
-
-### Weekly candidate
-
-**毎週月曜 09:00 JST** にcandidate modeを起動します。
-
-現行workflow:
-[`.github/workflows/article-pipeline.yml`](.github/workflows/article-pipeline.yml)
-
-処理:
-
-1. private Graphiti weeklyをread-onlyで取得できる場合だけ読む
-2. public GitHub evidenceを探索
-3. story + reader-value contractを満たす候補だけ残す
-4. source gateを実行
-5. technical / editorial / reader-value review
-6. 不合格なら最大3回、論点を増やさず改稿
-7. `artifacts/candidates/YYYY-MM/` と `artifacts/reports/YYYY-MM/` に保存
-
-### Month-end selection
-
-**実月末 23:30 JST** のwindowでpublish modeを起動します。
-`28–31日`にscheduleし、実際の月末かどうかは`pipeline.selection.is_month_end()`でfail-close判定します。
-
-1. 当月候補を全件再検証
-2. 査読を3回独立実行し中央値で判定
-3. source / technical / editorial / reader-value gateを全通過した集合だけ残す
-4. 最高品質1本だけ選ぶ
-5. 合格0本なら公開0本
-
-月1本は上限でありノルマではありません。
-
-## Zenn publication boundary
-
-`articles/*.md` は **Zenn-compatibleな正準article source** です。
-`published: false` のdraftもここに存在します。
-
-候補・査読証跡は `artifacts/` に隔離します。
-
-Zenn公式では、GitHub連携時のarticle slugは `articles/[slug].md` のファイル名で決まり、slugは半角英小文字・数字・ハイフン・アンダースコアの **12〜50文字**です。一度Zenn上で作成したslugは変更できないため、公開済みarticleを管理目的だけでrenameしません。
-
-一次仕様:
-
-- https://zenn.dev/zenn/articles/what-is-slug
-- https://zenn.dev/zenn/articles/markdown-guide
-
-### Filename policy
-
-新規公開article:
+## Candidate lifecycle
 
 ```text
-YYYY-MM-DD-NN-title.md
+public/private-safe idea seed
+  ↓
+current primary evidence
+  ↓
+reader job + anomaly
+  ↓
+question + initial hypothesis
+  ↓
+evidence / experiment
+  ↓
+boundary + hypothesis update
+  ↓
+decision rule + non-goal
+  ↓
+technical / editorial / reader-value review
+  ↓
+KEEP_PRIVATE / REWRITE / MERGE / RETIRE / human-selected draft
+  ↓
+explicit human publication only
+  ↓
+post-publication revalidation
+```
+
+候補が0本でも正常です。公開本数を埋めるために基準を下げません。
+
+## Title rule
+
+タイトルはtool名ではなく、読者が認識できる問題から入ります。
+
+```text
+一般語で分かるproblem
+  → 本文で証明できる具体的な異常・失敗・数字
+  → 必要なら検索用の正式技術名
 ```
 
 例:
 
 ```text
-2026-08-13-01-codex-chatgpt-github-issue-bridge.md
+弱い: Pyrefly / Ruff / Pydanticの比較
+強い: 型チェックが通っても、外部入力は検証されていない
 ```
 
-- `YYYY-MM-DD`: 公開処理を行うJST日付
-- `NN`: 同日内 `01`, `02`, ...
-- `title`: 短いASCII kebab-case
-- config上のtitle部分最大: 36文字
-- 既存公開slugはrenameしない
+タイトルで約束した異常を本文で証明できなければ不採用です。
 
-## Interactive examples are optional
+## Images and demos
 
-Zenn本文が成立するためにinteractive demoを必須にしません。
+画像は装飾quotaではなく、理解または証拠密度を上げる場合だけ使います。
 
-Zenn公式Markdown guideはリンクカードや対応済み外部サービスのembedを定義していますが、このrepoは**任意custom JavaScript / 独自Web Workerを記事本文へ注入できることを前提にしません**。
-
-Pyodide等を使う場合も別の静的Web成果物として扱い、次を要求します。
-
-- static本文だけで主張・再現方法が完結する
-- Python sourceをJavaScriptへ再実装しない
-- runtime / packageは実行操作までlazy load
-- demoごとのpackageを明示
-- 公開URLのE2E前に「実行できる」と記事へ書かない
-
-つまりinteractive demoは、**理解を明確に改善し、全体complexityを下げる場合だけのprogressive enhancement**です。
-
-関連Issue: #31
-
-## Repository structure
-
-```text
-.github/workflows/
-  article-pipeline.yml       # weekly candidate / month-end selection
-  article-pipeline-ci.yml    # compile + tests + repository/privacy audit
-  branch-hygiene.yml         # merged/redundant work branch cleanup
-
-pipeline/
-  cli.py                     # candidate / publish entry point
-  core.py                    # collection, source verification, persistence
-  editorial.py               # story/value shaping, drafting, review, revision
-  filenames.py               # Zenn-compatible publication filename contract
-  runtime.py                 # Copilot CLI fail-close response adapter
-  graphiti.py                # private weekly → in-memory seed
-  selection.py               # candidate maturation + month-end selection
-  audit.py                   # repository/privacy/editorial audit
-  config.json                # quality / value / path contract
-  contracts/article.md       # canonical article contract
-
-artifacts/
-  candidates/YYYY-MM/        # unpublished public-safe candidates
-  reports/YYYY-MM/           # source + review evidence
-  archive/                   # retired reusable notes, not article candidates
-
-articles/                    # Zenn-compatible canonical article sources
-
-docs/
-  ARCHITECTURE.md
-  EDITORIAL_DESIGN.md
-  article-portfolio-audit-2026-08-14.md
-
-tests/
-```
+- generated illustrationをscreenshot / measurement / historical evidenceとして扱わない
+- 本文は画像がなくても成立させる
+- diagramは1枚1messageを基本にする
+- visual claimは元artifactへ接地する
+- interactive demoは本文の代替にしない
 
 ## Quick verification
 
 ```bash
-python -m compileall pipeline
+python -m compileall pipeline demos/python-syntax-gate/syntax_gate.py
 python -m unittest discover -s tests -v
+node --check demos/_shared/pyodide-worker.mjs
+node --check demos/python-syntax-gate/app.mjs
 python -m pipeline.audit
 ```
 
@@ -406,70 +264,22 @@ Candidate generation:
 python -m pipeline.cli candidate
 ```
 
-Month-end selection:
+Human-triggered selection to an unpublished Zenn draft:
 
 ```bash
-python -m pipeline.cli publish
+ARTICLE_MANUAL=1 python -m pipeline.cli publish
 ```
 
-## Automation / runtime
+## Canonical documents
 
-GitHub Actionsの生成backendは **GitHub Copilot CLI** です。
-
-- `copilot-requests: write`
-- built-in `GITHUB_TOKEN`
-- CLIのread/write/shell/url/memory toolsは許可せず、text generation boundaryとして使う
-- `runtime.py` はJSON contractをfail-closeで正規化
-- private Graphiti readは別のread-only `GRAPHITI_READ_TOKEN`
-- token未設定時はGraphiti入力だけskip
-
-モデルやtoolが価値なのではなく、**同じeditorial contractを再現可能に実行するためのruntime**として扱います。
-
-## Branch lifecycle
-
-`main` だけを長寿命branchにします。
-
-- content pipelineの正準outputは`main`
-- pipeline / CI / contractのレビュー価値がある変更だけ短命branch + PR
-- merged branchはcleanup対象
-- open PRなし・unique patchなしのbranchは`branch-hygiene.yml`で整理
-- unique patchがあるbranchは自動で捨てない
-
-branch数を進捗指標にしません。
-
-## Issue workflow
-
-Issueは「記事を増やす依頼」ではなく、editorial contractとして扱います。
-
-最低限、
-
-```text
-reader problem
-→ value
-→ proof
-→ differentiation
-→ lifecycle decision / acceptance criteria
-```
-
-を持たせます。
-
-記事化できない場合も、`KEEP_PRIVATE / MERGE / DELETE-ARCHIVE` を正常な完了として扱います。
-
-## Editorial references
-
-- Zenn community guideline update 2026-02-03  
-  https://info.zenn.dev/2026-02-03-community-guidelines-update
-- Zenn guideline  
-  https://zenn.dev/guideline
-- Zenn AI content policy 2026-03-10  
-  https://info.zenn.dev/2026-03-10-ai-contents-guideline
-- Zenn Publication 2026/Q2  
-  https://info.zenn.dev/2026-07-02-publication-quarterly-award-2026q2
-- Zennfes Spring 2026 results  
-  https://info.zenn.dev/2026-07-24-zennfes-spring-2026-result
+- Editorial contract: [`pipeline/contracts/article.md`](pipeline/contracts/article.md)
+- Agent contract: [`AGENTS.md`](AGENTS.md)
+- Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- Current Zenn portfolio audit: [`docs/zenn-portfolio-audit-2026-08-15.md`](docs/zenn-portfolio-audit-2026-08-15.md)
+- Historical audit: [`docs/article-portfolio-audit-2026-08-14.md`](docs/article-portfolio-audit-2026-08-14.md)
 
 ---
 
-**このrepoで最終的に残したいのは、記事数ではありません。**
+**最終成果は記事数ではありません。**
 
-読者が「なぜそうなった？」を追い、公開証拠で確かめ、最後に自分の仕事へ持ち帰れる一つの発見です。
+読者が、誤った成功判定・過剰な一般化・権限の与えすぎ・証拠の読み違いを避け、次の判断を一段良くできる記事だけを残します。
