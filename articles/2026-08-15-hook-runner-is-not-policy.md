@@ -1,111 +1,185 @@
 ---
-title: "自動化を増やしても、品質は増えない"
-emoji: "🪝"
+title: "Claude Codeにテストを全部任せるなら、「何を正しいとするか」を先に固定する"
+emoji: "🧪"
 type: "tech"
-topics: ["git", "ci", "automation", "testing", "developerexperience"]
+topics: ["claudecode", "testing", "ai", "ci", "automation"]
 published: true
 published_at: 2026-08-15 09:33
 ---
 
-目覚まし時計を2個にしても、**「何時に起きるべきか」というルールは2倍にはならない**。
+「実装して。テストも書いて。失敗したら直して。全部通ったらPRまで作って」
 
-ソフトウェアの自動化でも、同じことが起きる。
+Claude Codeを使っていると、ここまでまとめて任せられる。
 
-チェックを走らせる仕組みを増やす。CIを増やす。hook runnerを2つ残す。新しいagentやschedulerを追加する。すると、なんとなく「安全性が増えた」ように見える。
+Anthropic自身もClaude Codeを、コードベースを読み、複数ファイルを変更し、テストを実行し、commitされたコードまで届けるagentic coding systemとして説明している。
 
-しかし本当に増えたのが**実行経路**だけなら、正しさを決める能力は増えていない。
+- [Claude Code | Anthropic](https://www.anthropic.com/product/claude-code)
 
-この記事の結論は単純だ。
+さらにClaude Code Hooksでは、Claudeが作業を終える前にunit testがすべて通ることを検証する `Stop` hook の例まで公式に示されている。
 
-> **実行する仕組みと、正しさを決める仕組みを分けて考える。**
+- [Automate workflows with hooks | Claude Code Docs](https://code.claude.com/docs/en/hooks-guide)
+- [Hooks reference | Claude Code Docs](https://code.claude.com/docs/en/hooks)
 
-この区別ができると、ツール移行で「何を残すべきか」「何を消してよいか」「何を比較すべきか」がかなり明確になる。
+では、テスト実行も修正も再実行もClaude Codeに任せられるようになったとき、人間側に何が残るのか。
 
-ここでは `pre-commit` と `prek` のcontrolled experimentを使って、この原則を実測する。
+この記事の答えは1つだ。
 
-## 3分でわかる要点
+> **「何をすればpassなのか」を、実行するagentとは別に固定する。**
 
-ソフトウェア品質の自動化には、少なくとも2種類の責務がある。
+Claude Codeにテストを任せることが問題なのではない。
 
-```text
-Git event
-   ↓
-hook runner          ← いつ・どこで・何を起動するか
-   ↓
-Ruff / formatter / tests / custom checker
-   ↓                  ← 何を正しいと判定するか
-pass / fail / patch
-```
+むしろ、反復的な実行と修正はagentに委譲しやすい。
 
-この記事では前者を **trigger authority**、後者を **policy authority** と呼ぶ。
+問題になるのは、**実装する主体・テストを選ぶ主体・合格を宣言する主体が全部同じになったとき、何を根拠に「終わった」と判断するのかが曖昧なままになること**だ。
 
-`pre-commit` を `prek` に置き換えるとき、本当に確認したいのは「新しいrunnerを入れたか」ではない。
+## 「テストが全部通った」は、何を証明したのか
 
-**同じpolicyを起動した結果が保存されるか**である。
+緑色のtest resultは重要だ。
 
-今回のcontrolled fixtureでは、同じhook policyを `pre-commit` と `prek` から実行した結果、次の4条件がすべて一致した。
+しかし、それが直接意味するのは、**実行されたテストが定義した条件を満たした**ということまでである。
 
-- changed files
-- 最終content SHA-256
-- diff SHA-256
-- 2回目の実行で変更を生まないこと（idempotence）
-
-つまり、このfixtureで観測された範囲では、runnerの交換は**品質policyの変更ではなく、trigger実装の置換**として扱えた。
-
-これは「prekが常に優れている」という話ではない。
-
-もっと再利用可能な結論は、**ツール名ではなく、そのツールが何のauthorityを持っているかを比較する**ことだ。
-
-## なぜこの区別に価値があるのか
-
-ツールを増やすことは簡単だ。
-
-難しいのは、増えたツールが本当に新しい能力を追加したのか、それとも既存能力を別経路でもう一度起動しているだけなのかを見分けることだ。
-
-この区別をしないと、移行のたびに次のような状態になりやすい。
+たとえば、Claude Codeに次のように頼める。
 
 ```text
-旧runner + 新runner
-旧formatter + 新formatter
-旧lint + 新lint
-旧CI job + 新CI job
+この機能を実装して。
+必要なテストを追加して。
+失敗したテストを直して。
+全部通るまで続けて。
 ```
 
-見た目のチェック数は増える。しかし同じconcernに複数のblocking authorityを残すと、設定・実行時間・失敗理由・保守対象も増える。
+ここでClaude Codeは、実装、テスト作成、test commandの実行、失敗解析、再修正を1つのloopにまとめられる。
 
-一方、authorityを分解して考えると判断が変わる。
+便利である。
+
+ただし、このloopの外側に次の問いが残る。
 
 ```text
-何を正しいとするか？      → policy
-いつ実行するか？          → trigger
-どの範囲に適用するか？    → scope
-結果をどこでblockingするか？ → enforcement
+そもそも何を守るべきか？
+どのテストを必須にするか？
+何を壊してはいけないか？
+どの条件を満たしたらmergeしてよいか？
 ```
 
-この4つを分けるだけで、「新しいツールを追加した」という事実を「品質が上がった」という代理指標にしなくて済む。
+この層まで暗黙のままagentに渡すと、「テストが通った」という観測と「欲しかったものが正しい」という判断が同じものに見えやすくなる。
 
-## 今回、何を証明したのか
+そこで、実行とpolicyを分ける。
 
-Verification Stack v2では、結果を見る前に `HOOK-PATCH-PARITY-001` を固定した。
+## Claude Code時代の4層
 
-比較対象に求めたのは次の4点だけだ。
+私は自動化を次の4層に分けて考えるのがよいと思っている。
+
+```text
+1. Outcome / Contract
+   何を実現し、何を壊してはいけないか
+
+            ↓
+
+2. Policy Authority
+   tests / type checks / schema / invariants / custom checks
+   何をpass・failとするか
+
+            ↓
+
+3. Execution / Trigger
+   Claude Code / hooks / CI / runner
+   いつ、どのcheckを実行するか
+
+            ↓
+
+4. Evidence
+   test result / diff / hash / artifact / CI result
+   何が実際に起きたか
+```
+
+Claude Codeは3層目を非常に強くできる。
+
+実装して、commandを実行し、失敗を読み、直して、もう一度実行するloopを高速化できるからだ。
+
+しかし3層目が強くなったことと、2層目の**「正しさの定義」**が増えたことは同じではない。
+
+ここを混ぜないことが重要になる。
+
+## これはClaude Code公式の設計とも整合する
+
+Claude CodeのHooks guideは、hooksを「user-defined shell commands」と説明し、LLMが実行するかどうかを選ぶことに依存せず、特定のactionを必ず起こすための **deterministic control** と位置づけている。
+
+さらに、project rulesのenforcementやrepetitive taskのautomationを用途として明記している。
+
+- [Automate workflows with hooks | Claude Code Docs](https://code.claude.com/docs/en/hooks-guide)
+
+Hooks referenceでは、agent-based hooksは現在experimentalであり、production workflowではcommand hooksを優先するよう明記されている。
+
+- [Hooks reference | Claude Code Docs](https://code.claude.com/docs/en/hooks)
+
+つまりClaude Code自身の拡張モデルにも、次の区別がある。
+
+```text
+LLMに判断させる
+        ≠
+決定的なcommandを必ず実行する
+```
+
+AI agentを信用するか、しないかという話ではない。
+
+**判断が必要な場所と、決定的に強制したい場所を分ける**という話だ。
+
+## では、Claude Codeには何を任せるのか
+
+テスト自動化をClaude Codeへ委譲するとき、私は次のように分ける。
+
+| 委譲しやすい | repo側に固定したい |
+|---|---|
+| test commandの反復実行 | 必須test suite |
+| failure logの解析 | acceptance criteria |
+| 実装修正 | invariant |
+| regression testの追加案 | mergeをblockする条件 |
+| lint / type checkの実行 | lint / type ruleそのもの |
+| 修正後の再検証 | 最終的に保存するevidence |
+
+ここで重要なのは、右側を必ず人間が毎回手作業で実行することではない。
+
+**右側をagentのその場の判断から独立した、再実行可能な形にしておく**ことだ。
+
+たとえば、
+
+```text
+./scripts/verify
+```
+
+の1commandに、必須test、lint、type check、schema validation、必要なcustom checkerを集約する。
+
+Claude CodeにもCIにも同じcommandを実行させる。
+
+すると「Claudeが大丈夫と言った」ではなく、
+
+```text
+同じpolicyを
+Claude Codeでも
+local hookでも
+CIでも
+再実行できる
+```
+
+状態になる。
+
+これがagentを安心して働かせるための境界になる。
+
+## 小さな実験で、runnerとpolicyを分離してみた
+
+この考え方を確認するために、Verification Stack v2では `pre-commit` と `prek` を使ったcontrolled fixtureを作った。
+
+これはClaude Codeそのものの比較実験ではない。
+
+**「実行するrunnerを替えたとき、同じpolicyのobservable effectが保存されるか」**を測るための小さな実験だ。
+
+結果を見る前に `HOOK-PATCH-PARITY-001` として、次の4条件を固定した。
 
 1. 同じファイルが変更される
 2. 最終content SHA-256が一致する
 3. diff SHA-256が一致する
 4. 再実行がidempotentである
 
-raw diagnosticの件数は欠陥数として数えない。速度もcorrectnessを上書きする条件にはしない。
-
-このfixtureで問うたのは、**runnerを交換しても既存policyのobservable effectを保存できるか**だった。
-
-再現用のcontrolled summaryは固定commitに残している。
-
-- https://github.com/KAFKA2306/articles/blob/aa33a88e5bf165ac4085c7462e67f23283647926/benchmarks/verification-stack-v2/results/controlled/summary.json
-
-## 観測結果
-
-`hook_patch_parity` は4条件をすべて満たした。
+controlled resultは次の通りだった。
 
 | 観測 | 結果 |
 |---|---|
@@ -114,113 +188,142 @@ raw diagnosticの件数は欠陥数として数えない。速度もcorrectness�
 | same diff SHA-256 | true |
 | both idempotent | true |
 
-ここから言えることは限定的だ。
+証跡は固定commitに保存している。
 
-**このfixtureでは、runnerを `pre-commit` から `prek` に交換しても、hookが作ったpatchのobservable resultは変わらなかった。**
+- [controlled summary](https://github.com/KAFKA2306/articles/blob/aa33a88e5bf165ac4085c7462e67f23283647926/benchmarks/verification-stack-v2/results/controlled/summary.json)
+- [experiment protocol and artifacts](https://github.com/KAFKA2306/articles/tree/aa33a88e5bf165ac4085c7462e67f23283647926/benchmarks/verification-stack-v2)
 
-一方、全repo・全hookで完全互換だとは証明していない。language-specific hook、network依存hook、特殊stage、CI環境差は今回のground truth外だ。
+このfixtureで観測された範囲では、runnerを `pre-commit` から `prek` に交換しても、hookが作ったpatchのobservable resultは変わらなかった。
 
-## 公式ドキュメントでも責務は分かれている
+つまり、このケースではrunnerの変更を**policy変更ではなくtrigger実装の置換**として扱えた。
 
-`pre-commit` の公式ドキュメントは、自身をmulti-language pre-commit hooksを管理・保守するframeworkと説明している。設定したhookをインストールし、Git eventに応じて実行するのが中心責務だ。
+全repo・全hookで完全互換だと証明したわけではない。language-specific hook、network依存hook、特殊stage、CI環境差は今回のground truth外である。
 
-https://pre-commit.com/
+しかし、この小さな実験はClaude Code時代にも使える1つの見方を与える。
 
-`prek` も既存の `.pre-commit-config.yaml` をそのまま利用できるdrop-in replacementを志向している。互換性ドキュメントでも、既存configや一般的なworkflowを継続利用できることを明示している。
+> **実行主体が変わっただけなら、正しさの定義が増えたとは限らない。**
 
-https://prek.j178.dev/configuration/
-https://prek.j178.dev/compatibility/
+## Claude Codeを追加しても、品質ルールが自動的に増えるわけではない
 
-一方、たとえばRuffでは、lint ruleの有効化・無効化は `lint.select`、`lint.extend-select`、`lint.ignore` などの設定で決まる。
-
-https://docs.astral.sh/ruff/linter/
-
-つまり、少なくともこの構成では責務を次のように分けられる。
+たとえば、既にCIで次を実行しているとする。
 
 ```text
-pre-commit / prek
-  → hookを起動する
-
-Ruff / formatter / tests / custom checker
-  → pass / fail / patchを決める
+Ruff
+Pyright
+test suite
+schema validation
 ```
 
-Ruffのlint ruleを変えたならpolicyが変わる。formatter設定を変えたなら生成patchが変わる。
+そこへClaude Codeを追加して、同じcommandを実装中にも実行させる。
 
-しかし、同じ設定と同じtoolを別runnerから起動しただけなら、policyを二重化したことにはならない。
+これは大きな価値がある。
 
-## 「両方残す」は安全策とは限らない
+feedback loopが短くなり、失敗をagent自身が修正できるからだ。
 
-移行時に旧runnerと新runnerを永久に併存させると、一見安全に見える。
+ただし、新しく増えたのは主に**実行能力**である。
 
-しかし同じhook集合を二重に起動するだけなら、品質authorityは増えない。
+Ruff rule、type policy、test oracle、schema invariantが同じなら、policy authorityそのものが自動的に増えたわけではない。
 
-確認すべきなのは**parity**だ。
+逆に、Claude Codeに新しいregression testを作らせ、そのtestをレビューして正準suiteへ追加したなら、そこで初めてrepositoryが検出できるfailure conditionが増える可能性がある。
 
-1. fixtureを固定する
-2. 旧runnerでpatchを保存する
-3. 新runnerで同じfixtureを実行する
-4. changed filesとcontent/diff hashを比較する
-5. 2回目がidempotentか確認する
-6. parityを満たした範囲だけ旧runnerを削除する
+見るべきなのは「Claude Codeを導入したか」ではない。
 
-この順なら「新しいrunnerを追加したから安全」という代理指標を使わずに済む。
+**repositoryが昨日より何を検出できるようになったか**である。
 
-## この考え方はhook runner以外にも持ち込める
+## 「agentに全部任せる」を成立させるのは、強いpromptではなく外部化されたpolicy
 
-今回の実証対象は `pre-commit` と `prek` だけだ。
+Claude Codeへ長いpromptを書けば、かなり多くのことを任せられる。
 
-ただし、**authorityを分離してから比較する**という判断方法そのものは、他の自動化にも持ち込める。
+しかし、毎回promptの中で、
 
-たとえば、新しいCI runner、task runner、test runner、formatter、agent、schedulerを導入するとき、最初にこう問える。
+```text
+必ずtestして
+lintして
+type checkして
+このファイルは触らないで
+この条件を壊さないで
+```
 
-> この新しい仕組みは、何を新しく判断できるようにするのか？
+と頼み続けるより、決定的に強制できる条件はrepository側へ外部化した方が再利用しやすい。
 
-答えが「同じものを別経路で実行する」だけなら、それは品質能力の追加ではなく、実行基盤の変更かもしれない。
+AnthropicのHooks documentationも、まさにLLMが実行を選択することに依存しないdeterministic controlをhooksの用途として説明している。
 
-逆に、新しいpolicy、検出能力、境界条件、runtime validation、blocking ruleが追加されるなら、それは実際に判断能力を増やしている可能性がある。
+Claude Codeを賢くするだけではなく、**Claude Codeが働く環境そのものを賢くする**。
 
-この問いを先に置くと、流行しているツールを集めることより、**システムが何を判断できるようになったか**を設計の中心にできる。
+この方が、agentを増やしてもpolicyが散らばりにくい。
 
-## changed-file ratchetでlegacy migrationを止めない
+## 最小構成ならこうする
 
-大きなrepoでは、全ファイルを一度に新policyへ合わせることが現実的でない場合がある。
+Claude Codeに実装とテストloopをかなり委譲するなら、最小でも次の形にする。
 
-その場合もrunnerをpolicy authorityに昇格させる必要はない。
+```text
+明示したOutcome / Acceptance Criteria
+             ↓
+正準verification command
+             ↓
+Claude Codeが実装・修正・再実行
+             ↓
+Hooks / CIが同じpolicyを再実行
+             ↓
+Evidenceを残す
+```
 
-新policyをchanged filesにだけ適用するratchetを置き、既存違反は別のbacklogとして縮小する。重要なのは、同じconcernに旧policyと新policyのblocking authorityを永久併存させないことだ。
+たとえば、終了条件を、
 
-移行完了条件は「新toolを導入した」ではなく、**predeclared parityを満たし、superseded configを削除できた**ことに置く。
+```text
+Claude Codeが「完了」と言った
+```
 
-## 何を測っていないか
+ではなく、
 
-今回のcontrolled evidenceはhook patch parityを測ったもので、runnerの普遍的な速度順位、全pre-commit featureの互換性、全repositoryでのmigration costは測っていない。
+```text
+正準verification commandがexit 0
++ 必須artifactが生成された
++ diffが許可scope内
+```
 
-したがって「prekは常にpre-commitより優れている」という結論には使えない。
+のような観測可能な条件へ寄せる。
 
-また、real-repo observationはexternal validityの確認用であり、ground truthがないdiagnostic量を品質ランキングには使っていない。
+Claude Codeはその条件を満たすために自由に試行できる。
 
-## 判断を反転させる反証条件
+しかし、**完了条件そのものは試行loopの外側に置く**。
 
-この結論は、runner自身が他方にはないblocking policyを持ち、そのpolicyがrepositoryの必須要件であると実証された場合には反転する。
+この分離があるほど、より大きな仕事をagentへ渡しやすくなる。
 
-また、同一fixtureでchanged files、最終content、diff、idempotenceのいずれかが一致しないなら、runner交換を単なるtrigger置換とは扱えない。
+## 誤解しないでほしいこと
 
-それまでは、hook runnerの選択と品質policyの選択を別の意思決定として扱う方が証拠に忠実だ。
+この記事は「Claude Codeにテストを任せるな」という話ではない。
+
+逆である。
+
+**もっと任せるために、正しさの定義をagentの外へ出す。**
+
+反復実行、failure解析、修正、再検証はagentが強い領域だ。
+
+その能力を活かすほど、
+
+```text
+何を正しいとするか
+何がblocking conditionか
+何を証拠として残すか
+```
+
+を明示する価値が上がる。
 
 ## 持ち帰るべき1文
 
-**自動化を増やす前に、「何を実行する仕組みなのか」と「何を正しいと決める仕組みなのか」を分ける。**
+**Claude Codeにテストを全部任せるなら、テストの実行ではなく「何をpassとするか」を先に固定する。**
 
-runnerはpolicyを起動する。
+agentは何度でも実行できる。
 
-**policyそのものではない。**
+だからこそ、**正しさの定義は実行loopの外に置く。**
 
-## 一次情報
+## 一次情報・実験証跡
 
-- pre-commit documentation: https://pre-commit.com/
-- prek configuration: https://prek.j178.dev/configuration/
-- prek compatibility: https://prek.j178.dev/compatibility/
-- Ruff linter documentation: https://docs.astral.sh/ruff/linter/
-- controlled evidence: https://github.com/KAFKA2306/articles/blob/aa33a88e5bf165ac4085c7462e67f23283647926/benchmarks/verification-stack-v2/results/controlled/summary.json
-- experiment protocol and artifacts: https://github.com/KAFKA2306/articles/tree/aa33a88e5bf165ac4085c7462e67f23283647926/benchmarks/verification-stack-v2
+- [Claude Code | Anthropic](https://www.anthropic.com/product/claude-code)
+- [Automate workflows with hooks | Claude Code Docs](https://code.claude.com/docs/en/hooks-guide)
+- [Hooks reference | Claude Code Docs](https://code.claude.com/docs/en/hooks)
+- [pre-commit documentation](https://pre-commit.com/)
+- [prek compatibility](https://prek.j178.dev/compatibility/)
+- [controlled evidence](https://github.com/KAFKA2306/articles/blob/aa33a88e5bf165ac4085c7462e67f23283647926/benchmarks/verification-stack-v2/results/controlled/summary.json)
+- [experiment protocol and artifacts](https://github.com/KAFKA2306/articles/tree/aa33a88e5bf165ac4085c7462e67f23283647926/benchmarks/verification-stack-v2)
