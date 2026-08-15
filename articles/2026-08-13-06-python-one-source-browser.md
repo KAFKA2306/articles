@@ -1,289 +1,338 @@
 ---
-title: "ブラウザとテストで答えが違うをなくす。業務計算の正解を1つだけにした"
-emoji: "🐍"
+title: "業務ロジックをUIにコピーするな。GoogleとO'Reillyに学ぶ「正解を1か所に置く」設計"
+emoji: "🎯"
 type: "tech"
-topics: ["python", "javascript", "webassembly", "architecture"]
+topics: ["architecture", "python", "javascript", "webassembly"]
 published: false
 published_at: 2026-08-14 00:20
 ---
 
-同じデータを見ているのに、Pythonのテストとブラウザ画面で答えが違う。
+画面が増えるほど、**正解まで増えてはいけない。**
 
-こういう事故は、難しいアルゴリズムより、**同じ計算を2回書いたこと**から起きやすい。
+たとえば、同じ金利データを比較した結果が、Pythonのテストでは `11 bp`、ブラウザでは別の値になったとする。
 
-`KAFKA2306/finBI` では、金融データの比較ロジックをPythonへ置いていた。
+利用者にとって問題なのは、PythonかJavaScriptかではない。
 
-Web UIを作るとき、最短ならJavaScriptにも同じ式を書ける。
+> この数字は信じてよいのか。
 
-```python
-basis_points = round(delta * 100, 4)
+それだけである。
+
+この問題を「PyodideでPythonをブラウザ実行した話」と捉えると、対象読者は狭い。
+
+しかし設計原則まで引き上げると、金融、価格計算、製造条件、スコアリング、KPI、AIの判断根拠まで同じ問題になる。
+
+**同じ意味を持つ業務判断を複数箇所へ手書きで複製すると、変更のたびにauthorityが分裂する。**
+
+`KAFKA2306/finBI` では、この問題に対して「検証済みPythonを正準ロジックにし、ブラウザは同じPythonを呼ぶ」という小さな実装を採った。
+
+そして改めてGoogleとO'Reillyの一次情報で監査すると、結論はかなり近かった。ただし、重要な補足もある。
+
+**Single Source of Truthは「必ず同じソースファイルを実行しろ」という意味ではない。重要なのは、正しい意味を決めるauthorityを1つにすることである。**
+
+## GoogleとO'Reillyは本当に同じ方向を向いているか
+
+### Google: SSOTは「誰が変更できるか」を1つにする
+
+GoogleのAndroid公式アーキテクチャガイドは、データ型ごとにSingle Source of Truth（SSOT）を割り当て、そのSSOTだけがデータを変更できる構成を推奨している。
+
+公式説明では、この設計によって変更を1か所へ集中させ、追跡可能性を高め、他のコンポーネントによる勝手な変更を防げるとしている。
+
+- Guide to app architecture: https://developer.android.com/topic/architecture
+- Data layer / Source of truth: https://developer.android.com/topic/architecture/data-layer
+
+さらにGoogleは、再利用されるbusiness logicをdomain layerへ集約する理由として、**code duplicationを避け、変更を中央の1か所へ適用でき、単体テストしやすくすること**を挙げている。
+
+- Domain layer: https://developer.android.com/topic/architecture/domain-layer
+
+UIについても、business logicとUI behavior logicを分けている。異なるform factorでもbusiness logicは同じであり得る一方、表示やnavigationのようなUI logicは異なってよい、という整理である。
+
+- UI events: https://developer.android.com/topic/architecture/ui-layer/events
+
+つまりGoogleの視点は、
+
+```text
+business meaning / mutation authority
+              ↓
+      data / domain layer
+              ↓
+           UI state
+              ↓
+             UI
 ```
 
-```js
-const basisPoints = Math.round(delta * 10000) / 100;
+であり、**UIに業務判断を散らさない**という点で `finBI` の狙いと一致する。
+
+### O'Reilly: 「定義が複数ある」は保守問題ではなくbusiness risk
+
+O'Reilly Radarは2026年5月7日の記事で、売上などのmetric definitionがTableau、Power BI、Python notebookなどに別々に存在する状態を、単なる開発上の不便ではなく、accuracy・governance・change managementのリスクとして扱っている。
+
+そこでsemantic layerを、metric definition、business logic、calculationを一か所で管理し、複数の利用ツールから同じ定義を参照するための仕組みとして論じている。
+
+- O'Reilly Radar, *The Best Risk Mitigation Strategy in Data? A Single Source of Truth* (2026-05-07): https://www.oreilly.com/radar/the-best-risk-mitigation-strategy-in-data-a-single-source-of-truth/
+
+O'Reillyから刊行されている *Learning Domain-Driven Design* でも、business logicがUIやdatabaseへ拡散したり、複数コンポーネントへ重複したりすると、変更時に修正箇所が分からなくなり、保守コストが上がるという問題が説明されている。
+
+- *Learning Domain-Driven Design*, Chapter 8: https://www.oreilly.com/library/view/learning-domain-driven-design/9781098100124/ch08.html
+
+O'Reilly側の視点を一言で言えば、
+
+```text
+同じmetric / business ruleを複数箇所で定義する
+                    ↓
+               driftが起きる
+                    ↓
+      数字への信頼と変更能力を失う
 ```
 
-最初は同じ答えが出る。
+である。
 
-しかし業務計算は式だけではない。
+これは `finBI` で避けたかった事故そのものだった。
 
-- 入力schema
-- 日付存在確認
-- 単位
-- timezone
-- 欠損値
-- 丸め
+## 共通点と、混同してはいけない点
+
+Google、O'Reilly、今回の実装を並べると、共通点は明確である。
+
+| 視点 | 1か所に置くもの | 目的 |
+| --- | --- | --- |
+| Google | data ownership / reusable business logic | consistency、traceability、testability |
+| O'Reilly | metric definition / business logic / calculation | accuracy、governance、change management |
+| finBI | 金融比較のvalidationとcalculation | offline testとbrowser resultのdrift防止 |
+
+ただし、ここで**「SSOT = 1ファイル」へ短絡してはいけない。**
+
+Google自身、異なるrepositoryが異なるsource of truthを持つ場合を説明している。O'Reillyのsemantic layerも、すべての処理を1プロセスへ押し込む話ではない。
+
+正確には、
+
+> **1つの意味に対して、変更authorityを1つにする。**
+
+である。
+
+実行場所は複数でもよい。
+
+- server APIを唯一の計算authorityにする
+- shared WASMを複数frontendから呼ぶ
+- schema / code generationで複数言語へ生成する
+- semantic layerをBI、Excel、Python、AIから共有する
+- 今回のように同じPython moduleをbrowserでも実行する
+
+問題なのは、**同じ意味を人間が複数箇所へ別々に実装し、どれが正準か分からなくなること**である。
+
+## `finBI` では何を1つにしたのか
+
+現在の正準ロジックは `code/static_bi.py` にある。
+
+- Current implementation: https://github.com/KAFKA2306/finBI/blob/main/code/static_bi.py
+- Browser Worker: https://github.com/KAFKA2306/finBI/blob/main/web/worker.mjs
+- Browser UI: https://github.com/KAFKA2306/finBI/blob/main/web/app.js
+- Offline tests: https://github.com/KAFKA2306/finBI/blob/main/code/tests/test_static_bi.py
+- 実装の起点となったPR: https://github.com/KAFKA2306/finBI/pull/9
+
+`static_bi.py` が持つのは、単なる引き算ではない。
+
+現在は少なくとも、
+
+- snapshot schema version
+- source metadata
+- availability evidence
+- timestampとtimezone
+- observationの時系列順序
+- 重複日付
+- 数値型
+- 選択日の存在
+- start / endの順序
+- unitがPercentかどうか
+- delta
+- basis points
+- direction
+- calendar days
 - provenance
-- 例外条件
 
-のどれかを片方だけ修正すると、**正解が2つになる。**
+を同じ境界で扱っている。
 
-そこで `finBI` では、計算をPythonだけに置き、browserはWeb Worker内のPyodideから同じPython moduleを呼ぶ構成にした。
+つまり正準化したのは「式」ではなく、**その数字を正しいと判定する条件一式**である。
 
-JavaScriptは入力、表示、SVG描画、Worker通信だけを担当する。
+## 現在の実証値
 
-この記事で扱うのは「Pythonをブラウザで動かす方法」ではない。
-
-**テストとUIで同じ入力なら同じ答えになる状態を、どう維持するか**である。
-
-- PR: https://github.com/KAFKA2306/finBI/pull/9
-- 正準計算: https://github.com/KAFKA2306/finBI/blob/71d228ad35228a58d6330896a691bf144bc87f7b/code/static_bi.py
-- Browser Worker: https://github.com/KAFKA2306/finBI/blob/71d228ad35228a58d6330896a691bf144bc87f7b/web/worker.mjs
-- Offline tests: https://github.com/KAFKA2306/finBI/blob/71d228ad35228a58d6330896a691bf144bc87f7b/code/tests/test_static_bi.py
-
-## 1つのfixtureを、テストとUIの両方の正解にする
-
-公開テストには、保存済みsnapshotについて次の比較が固定されている。
+現行の公開テストでは、保存済みsnapshotに対して次が固定されている。
 
 ```python
-result = compare_dates(data, "2026-07-20", "2026-07-24")
-self.assertAlmostEqual(result["delta"], 0.09)
-self.assertAlmostEqual(result["basis_points"], 9.0)
+result = compare_dates(data, "2026-07-20", "2026-07-23")
+
+self.assertAlmostEqual(result["delta"], 0.11)
+self.assertAlmostEqual(result["basis_points"], 11.0)
 self.assertEqual(result["direction"], "up")
-self.assertEqual(result["calendar_days"], 4)
+self.assertEqual(result["calendar_days"], 3)
 ```
 
-このfixtureの価値は、unit testがあることだけではない。
+このfixtureは、単にunit testの期待値ではない。
 
-browser UIも同じ `compare_dates()` へ到達するため、
+browser側のWorkerも同じrepositoryの `static_bi.py` をロードし、`compare_dates_json()` を呼ぶ。
 
 ```text
-2026-07-20 → 2026-07-24
+offline test ─────┐
+                  │
+                  ├──> static_bi.py ──> compare_dates()
+                  │
+browser Worker ───┘
 ```
 
-という入力の正解は1つだけになる。
+ブラウザ側のJavaScriptは、入力、Worker通信、表示、SVG描画を担当する。
+
+計算に失敗した場合も、JavaScript版の似た計算へfallbackしない。エラーとして表示する。
+
+これにより、**runtime failureとbusiness answerを混同しない。**
+
+## なぜPythonをブラウザへ持ってきたのか
+
+ここでPyodideは目的ではなく、選択肢の1つである。
+
+今回の条件は、
+
+1. すでに検証済みPython実装がある
+2. 静的Web UIでも同じ結果が必要
+3. server APIを増やす必要はない
+4. ロジックの二重実装を避けたい
+
+だった。
+
+そのため、Python runtimeをbrowserへ持ってくるコストより、PythonとJavaScriptの2実装を長期同期するコストを大きいと判断した。
+
+Pyodideの公式ドキュメントも、長時間のPython処理をmain threadで行うとUIをblockし得るため、Web Workerで実行する方法を案内している。
+
+- Pyodide / Using Pyodide in a web worker: https://pyodide.org/en/stable/usage/webworker.html
+
+一方でPyodideにはWebAssembly環境固有の制約があり、一部の標準libraryやthreading、multiprocessing、socket等には制約がある。
+
+- Pyodide Python compatibility: https://pyodide.org/en/stable/usage/wasm-constraints.html
+
+したがって、
 
 ```text
-offline test ──┐
-               ├─> static_bi.py
-browser UI ────┘
+Pythonが好き
+→ Pyodide
 ```
 
-**UI向けの別実装を持たない。**
-
-これが中心のcontractである。
-
-## 二重実装が危険なのは、式より「条件」が増えたとき
-
-`static_bi.py` は単純な差分計算だけではない。
-
-例えば、
-
-- snapshot schemaは正しいか
-- source metadataがあるか
-- timestampがあるか
-- 観測順序は正しいか
-- 重複日付がないか
-- 値が数値か
-- 選択日が存在するか
-- unitがPercentか
-
-などを確認する。
-
-JavaScriptへ移植するときに一番漏れやすいのは、この周辺条件である。
-
-例えばPython側だけ、
-
-> `unit == Percent` のときだけbasis pointsを返す
-
-へ変えたとする。
-
-JS側が古い式のままなら、Pythonでは `None`、browserでは数値が表示される可能性がある。
-
-利用者から見れば、
-
-> どちらを信じればいいのか
-
-という問題になる。
-
-だから、計算式ではなく**判断全体をsingle sourceにする。**
-
-## frontendを薄くすると、変更責任が分かりやすくなる
-
-browser側の責務は次へ絞った。
+ではない。
 
 ```text
-input
-  ↓
-Workerへ送る
-  ↓
-Python結果を受け取る
-  ↓
-表示 / SVG描画
+既存の検証済みauthorityを複製せずbrowserから使う価値
+>
+browser runtimeを追加するコスト
 ```
 
-Workerは、
+のときだけ採用する。
 
-```text
-Pyodideをロード
-  ↓
-canonical Python moduleをロード
-  ↓
-入力を渡す
-  ↓
-結果をJSON化して返す
-```
+## では、どの実装方式を選ぶべきか
 
-だけを担当する。
+「正解を1か所にする」という原則と、「Pythonをbrowserで動かす」は分離して考えるべきである。
 
-これにより、
+| 条件 | 選択肢 |
+| --- | --- |
+| 検証済みPythonがあり、client-onlyで再利用したい | Pyodide |
+| 複数言語・高性能runtimeで同じcoreを共有したい | shared WASM |
+| secret、DB、権限制御が必要 | server API |
+| 多数のBI / notebook / AIが同じmetricを使う | semantic layer |
+| schema起点で複数言語に同じcontractを配りたい | code generation |
+| UI内だけの単純なロジック | JavaScript / TypeScriptだけで完結 |
 
-- 計算を直す → Python
-- UIを直す → JavaScript/CSS
-- browser実行境界を直す → Worker
+**重要なのは技術選定より先にauthorityを決めること**である。
 
-と責務が分かれる。
+## UIに残してよいロジック、残してはいけないロジック
 
-**frontendのコード量を減らすことより、どこを直せば正解が変わるかが1か所になること**が重要だった。
+Googleの区分は実務で使いやすい。
 
-## Pyodideを使うこと自体は目的ではない
+### UIに残してよい
 
-この構成にはコストがある。
+- 文字列format
+- responsive layout
+- focus
+- animation
+- navigation
+- SVG描画
+- 表示上のselection state
 
-- 初回loadが重い
-- browserでWASM runtimeを動かす
-- package compatibility制約がある
-- native extensionやOS依存処理は向かない
-- 小さな式ならJS一実装の方が単純なこともある
+### UIへコピーしない
 
-だから、
+- 金額計算
+- 金利差
+- price rule
+- eligibility
+- scoring
+- validation
+- rounding policy
+- 欠損値policy
+- unit conversionの業務定義
+- provenance判定
 
-```text
-Pythonが好きだからPyodide
-```
+境界は、
 
-では採用しない。
+> **そのロジックが変わると、利用者に提示する「意味」や「判断」が変わるか。**
 
-採用理由は、**すでに検証済みのPython業務ロジックがあり、それをbrowser向けに再実装するdrift costが大きい**からである。
+で考えるとよい。
 
-## 使うべき場面
+変わるなら、それはpresentationではなくauthority側へ置く候補である。
 
-このpatternが効きやすいのは、
+## 1つの正解を守るための5つの確認
 
-- Pythonで既にunit testが充実している
-- 計算条件が多い
-- frontendでも同じ結果が必要
-- 静的siteやclient-side UIで使いたい
-- server APIを増やしたくない
+業務ロジックをWeb、mobile、BI、AI agentへ展開するときは、最低限これを確認する。
 
-という場合である。
+### 1. authorityはどこか
 
-例えば、
+「この値の定義を変更するとき、最初に直す場所」を1つ答えられるか。
 
-- 金融計算
-- 科学計算
-- engineering calculator
-- pricing logic
-- data validation
-- scoring logic
-
-などが候補になる。
-
-## 使わない方がよい場面
-
-逆に、
-
-- 計算が数行だけ
-- JS側だけで完結する
-- package loadが大きすぎる
-- server-side secretが必要
-- native library依存が強い
-- mobile環境で初期loadが許容できない
-
-なら、無理にbrowser Pythonへ寄せない。
-
-**single source of truthを守る手段はPyodideだけではない。**
-
-shared WASM、server API、code generationなど別の方法もある。
-
-大事なのは「正解を2か所に置かない」ことである。
-
-## UIへ載せる前に確認する3つ
-
-既存Python logicをbrowserへ持っていくなら、まず次を確認する。
-
-### 1. 何をcanonicalにするか
-
-単なる式ではなく、validationと例外も含めた関数境界を決める。
-
-### 2. UIが独自判断を持っていないか
-
-例えば、
+### 2. UIが独自のbusiness ruleを持っていないか
 
 ```js
 if (!value) return 0;
 ```
 
-のような補正がfrontend側にあると、すぐに二つ目の仕様になる。
+のような一見便利な補正が、第二の仕様になっていないか。
 
-### 3. 同じfixtureを両経路で通せるか
+### 3. validationとerror policyも共有されているか
 
-```text
-canonical test fixture
-   ├─ offline Python test
-   └─ browser E2E
-```
+式だけ一致していても、欠損、丸め、単位、期間、例外条件が違えば答えは分裂する。
 
-同じ入力で同じoutputを確認する。
-
-## browser runtimeが失敗したときも、計算結果を捏造しない
-
-Pyodideのloadに失敗した場合、fallbackとしてJavaScript版計算をこっそり使うとsingle source contractが壊れる。
+### 4. 同じfixtureを複数経路で検証できるか
 
 ```text
-Python unavailable
-→ JS fallbackで似た計算
+canonical fixture
+   ├─ unit test
+   ├─ API contract test
+   └─ browser / app integration test
 ```
 
-ではなく、
+という形で、同じ入力と期待値を使えるか。
+
+### 5. fallbackが別仕様を発明していないか
+
+正準runtimeが失敗したとき、「似たロジック」で成功したふりをするより、利用不能としてfail-closeする方が安全な領域は多い。
+
+## 得られるのは保守性ではなく、変更可能性と信頼である
+
+Single Source of Truthは、コードをきれいにするためだけの設計原則ではない。
+
+Googleは、変更を一か所へ集中させ、追跡とテストをしやすくする設計として扱う。
+
+O'Reillyは、metricとbusiness logicの分裂をaccuracy、governance、change managementのbusiness riskとして扱う。
+
+`finBI` の実装は、その考え方を小さな金融UIで実証した例にすぎない。
+
+本質はもっと広い。
 
 ```text
-Python unavailable
-→ calculation unavailableを表示
+画面が増える
+利用者が増える
+AI agentが増える
+配信先が増える
+
+でも
+
+正解を決めるauthorityは増やさない
 ```
 
-にする方がよい。
+これができると、変更は一度で済み、テストした意味と利用者が見る意味を一致させやすい。
 
-利用者には不便だが、**異なるロジックを同じ機能名で返すより安全**である。
+**ソフトウェアが増えても、真実の定義は増やさない。**
 
-## この構成で得たいのは、保守性より「結果への信頼」
-
-single source of truthは開発者向けの美しいarchitectureに見える。
-
-しかし利用者側の価値はもっと単純だ。
-
-**テストで確認した計算と、画面に出ている計算が同じである。**
-
-そのために、
-
-- Pythonをcanonicalにする
-- JSへ式を複製しない
-- Workerはbridgeにする
-- 同じfixtureを使う
-- runtime failureを別ロジックで隠さない
-
-という設計を採った。
-
-UIが増えても、正解は増やさない。
-
-業務計算をWebへ出すとき、最初に守りたいのはそこだった。
+それが、ブラウザPythonより長く使える設計原則である。
