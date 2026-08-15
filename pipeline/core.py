@@ -11,6 +11,8 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from .zenn_slug import create_article_file, require_valid_slug
+
 ROOT = Path(__file__).resolve().parents[1]
 PIPELINE_DIR = ROOT / "pipeline"
 CONFIG = json.loads((PIPELINE_DIR / "config.json").read_text(encoding="utf-8"))
@@ -449,7 +451,7 @@ def article_title(article: str) -> str:
 
 def slug_for(article: str) -> str:
     digest = hashlib.sha256(article.encode("utf-8")).hexdigest()[:10]
-    return f"engineering-evidence-{now_jst():%Y-%m}-{digest}"
+    return require_valid_slug(f"engineering-evidence-{now_jst():%Y-%m}-{digest}")
 
 
 def sanitize_metadata(meta: dict[str, object]) -> dict[str, object]:
@@ -513,11 +515,12 @@ def publish(
     article: str,
     review: dict[str, object],
     source_report: dict[str, object],
+    *,
+    slug: str | None = None,
 ) -> Path:
     article = strip_internal_meta(article)
+    final_slug = require_valid_slug(slug or slug_for(article))
     out = output_dir("published")
-    out.mkdir(parents=True, exist_ok=True)
-    slug = slug_for(article)
     title = article_title(article).replace('"', "'")
     body = re.sub(
         r"^#\s+.+?\n",
@@ -537,10 +540,10 @@ def publish(
         f"published_at: {now_jst():%Y-%m-%d %H:%M}\n"
         "---\n\n"
     )
-    path = out / f"{slug}.md"
-    path.write_text(
+    path = create_article_file(
+        out,
+        final_slug,
         frontmatter + body.rstrip() + "\n",
-        encoding="utf-8",
     )
 
     report_dir = output_dir("reports") / now_jst().strftime("%Y-%m")
@@ -556,7 +559,7 @@ def publish(
         "sources": source_report,
         "published_path": str(path.relative_to(ROOT)),
     }
-    (report_dir / f"{slug}.json").write_text(
+    (report_dir / f"{final_slug}.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )

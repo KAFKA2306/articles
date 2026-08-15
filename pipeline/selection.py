@@ -225,36 +225,16 @@ JSONのみ返してください。
             return f"article-{digest}"
 
 
-def finalize_publication_filename(old_path: Path, article: str) -> Path:
-    """Rename only the newly generated unpublished draft; existing publications are untouched."""
+def publication_slug(article: str) -> str:
+    """Resolve and validate the final Zenn slug before any article file exists."""
     policy = core.CONFIG["filename_policy"]
-    moment = core.now_jst()
-    file_title = publication_file_title(article)
-    slug = filenames.next_publication_slug(
-        file_title,
-        moment=moment,
-        published_dir=old_path.parent,
+    return filenames.next_publication_slug(
+        publication_file_title(article),
+        moment=core.now_jst(),
+        published_dir=core.output_dir("published"),
         sequence_width=int(policy["sequence_width"]),
         max_slug_length=int(policy["max_slug_length"]),
     )
-    new_path = old_path.with_name(f"{slug}.md")
-    old_path.rename(new_path)
-
-    reports_root = core.output_dir("reports")
-    matches = list(reports_root.rglob(f"{old_path.stem}.json")) if reports_root.exists() else []
-    for old_report in matches:
-        payload = json.loads(old_report.read_text(encoding="utf-8"))
-        payload["published_path"] = str(new_path.relative_to(core.ROOT))
-        payload["filename_policy"] = str(policy["format"])
-        new_report = old_report.with_name(f"{slug}.json")
-        new_report.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
-        if new_report != old_report:
-            old_report.unlink()
-
-    return new_path
 
 
 def publish_best() -> Path | None:
@@ -312,9 +292,11 @@ def publish_best() -> Path | None:
         selected=selected,
         status="selected_unpublished_draft",
     )
-    old_path = core.publish(
-        str(selected["article"]),
+    article = str(selected["article"])
+    slug = publication_slug(article)
+    return core.publish(
+        article,
         dict(selected["review"]),
         dict(selected["source_report"]),
+        slug=slug,
     )
-    return finalize_publication_filename(old_path, str(selected["article"]))

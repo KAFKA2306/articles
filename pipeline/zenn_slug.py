@@ -9,6 +9,10 @@ from pathlib import Path
 ZENN_SLUG_RE = re.compile(r"^[a-z0-9_-]{12,50}$")
 
 
+class InvalidZennSlug(ValueError):
+    """Raised before any filesystem mutation when a proposed Zenn slug is invalid."""
+
+
 def validate_slug(slug: str) -> list[str]:
     if ZENN_SLUG_RE.fullmatch(slug):
         return []
@@ -16,6 +20,34 @@ def validate_slug(slug: str) -> list[str]:
         f"invalid Zenn slug {slug!r}: expected 12-50 characters using only "
         "lowercase a-z, 0-9, hyphen (-), or underscore (_)"
     ]
+
+
+def require_valid_slug(slug: str) -> str:
+    """Return slug unchanged or raise before a file path is materialized."""
+    errors = validate_slug(slug)
+    if errors:
+        raise InvalidZennSlug(errors[0])
+    return slug
+
+
+def article_path_for_slug(articles_dir: Path, slug: str) -> Path:
+    """Build an article path only after validating the exact final slug."""
+    return articles_dir / f"{require_valid_slug(slug)}.md"
+
+
+def create_article_file(articles_dir: Path, slug: str, content: str) -> Path:
+    """Atomically create one Zenn article after validating its final slug.
+
+    Invalid slugs fail before mkdir/open. Existing paths fail rather than overwrite.
+    """
+    path = article_path_for_slug(articles_dir, slug)
+    articles_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        with path.open("x", encoding="utf-8", newline="\n") as handle:
+            handle.write(content)
+    except FileExistsError as exc:
+        raise FileExistsError(f"article already exists: {path}") from exc
+    return path
 
 
 def validate_article_paths(paths: Iterable[str]) -> list[str]:

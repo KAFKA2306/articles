@@ -4,6 +4,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from .zenn_slug import require_valid_slug
+
 
 SAFE_TITLE_RE = re.compile(r"[^a-z0-9]+")
 MANAGED_SLUG_RE = re.compile(
@@ -29,7 +31,7 @@ def next_publication_slug(
     sequence_width: int = 2,
     max_slug_length: int = 50,
 ) -> str:
-    """Return YYYY-MM-DD-NN-title without mutating existing published files."""
+    """Return a validated YYYY-MM-DD-NN-title slug without filesystem mutation."""
     date_prefix = moment.strftime("%Y-%m-%d")
     title_budget = max_slug_length - len(date_prefix) - sequence_width - 2
     if title_budget < 1:
@@ -48,9 +50,7 @@ def next_publication_slug(
         raise ValueError("daily article sequence exhausted")
 
     slug = f"{date_prefix}-{number:0{sequence_width}d}-{title}"
-    if len(slug) > max_slug_length:
-        raise AssertionError("generated slug exceeded configured maximum")
-    return slug
+    return require_valid_slug(slug)
 
 
 def is_managed_slug(slug: str) -> bool:
