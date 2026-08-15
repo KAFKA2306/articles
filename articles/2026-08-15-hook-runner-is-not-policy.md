@@ -4,6 +4,7 @@ emoji: "🪝"
 type: "tech"
 topics: ["git", "ci", "automation", "testing", "developerexperience"]
 published: true
+published_at: 2026-08-15 09:33
 ---
 
 目覚まし時計を2個にしても、**「何時に起きるべきか」というルールは2倍にはならない**。
