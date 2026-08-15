@@ -3,7 +3,7 @@ title: "個人開発が123個になって分かった。ChatGPTに任せるべ�
 emoji: "🛰️"
 type: "tech"
 topics: ["chatgpt", "github", "automation", "githubactions"]
-published: false
+published: true
 published_at: 2026-08-15 09:40
 ---
 
