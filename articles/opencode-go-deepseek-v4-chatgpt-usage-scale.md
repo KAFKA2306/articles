@@ -1,5 +1,5 @@
 ---
-title: "ChatGPTはそのまま、local実行だけOpenCode Goに任せる"
+title: "ChatGPTとOpenCode Goを競合させない。local実行だけを分離する"
 emoji: "♾️"
 type: "tech"
 topics: ["opencode", "chatgpt", "coding", "mcp", "local"]
