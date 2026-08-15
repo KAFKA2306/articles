@@ -1,13 +1,13 @@
 ---
-title: "2026年、Unity MCPはどこまで実用になったのか――14件で見えた『生成できる、でも監査できない』壁"
+title: "2026年、Unity MCPはどこまで実用か――14件で見えた『作れるが、見た目と挙動を監査し切れない』壁"
 emoji: "🛠️"
 type: "tech"
 topics: ["unity", "mcp", "codex", "claudecode", "ai"]
-published: false
-published_at: 2026-08-12 16:03
+published: true
+published_at: 2026-08-15 13:18
 ---
 
-# 2026年、Unity MCPはどこまで実用になったのか――14件で見えた「生成できる、でも監査できない」壁
+# 2026年、Unity MCPはどこまで実用か――14件で見えた「作れるが、見た目と挙動を監査し切れない」壁
 
 2026年、AIがUnity Editorを操作すること自体は、もう珍しくありません。
 
@@ -17,11 +17,11 @@ published_at: 2026-08-12 16:03
 
 しかし実例を追うと、別の問題が残っています。
 
-**AIは作れるようになった。しかし、自分が作ったものの「見た目」と「実際の挙動」を最後まで監査する能力は、生成能力ほど伸びていません。**
+**AIは作れるようになった。しかし、この14件と自前repoでは、自分が作ったものの「見た目」と「実際の挙動」をEditor内部の状態やtestだけで監査し切れない場面が繰り返し現れました。**
 
 たとえば2026年には、
 
-- 12個のobjectを正しく生成したのに、既存壁がdoorwayを塞いで部屋へ入れなかった
+- 12個のobjectを生成したのに、既存壁がdoorwayを塞いで部屋へ入れなかった
 - 7回Play Mode testし、5件を自己修正したのに、playerは最初の部屋から出られなかった
 - EditMode 4件 + PlayMode 3件が全部PASSしても、camera framingは人間が直した
 - shader / VFXは「処理した」ことと「見た目が良い」ことが一致しなかった
@@ -50,7 +50,7 @@ AIが作ったものを、AI自身はどこまで正しく監査できるのか�
 
 結論を先に書きます。
 
-**Unity MCPはauthoring toolとしてはすでに実用域です。最大の未解決点はauthoringではなくauditです。Sceneやcodeの内部状態はかなり監査できますが、「見た目として破綻していないか」「playerが本当に遊べるか」「real runtimeで同期するか」は、別のobserverとcompletion gateを必要とします。**
+**この14件では、Unity MCPはauthoring toolとして実用域に入ったと判断できます。一方、繰り返し弱さが出たのはauditです。Sceneやcodeの内部状態はかなり監査できますが、「見た目として破綻していないか」「playerが本当に遊べるか」「real runtimeで同期するか」は、別のobserverとcompletion gateを必要とします。**
 
 ---
 
@@ -65,7 +65,7 @@ AIが作ったものを、AI自身はどこまで正しく監査できるのか�
 - 体験談は「その環境で起きた観測」であり、製品全体の成功率には読み替えない
 - 私たち自身のrepoもPR / Issueに残っているevidenceを基準とし、未実行を成功へ昇格させない
 
-この記事でいう「実用域」「監査できない」「完成境界」は、引用ではなく複数事例を比較した本記事の判断です。
+この記事でいう「実用域」「監査し切れない」「完成境界」は、引用ではなく複数事例を比較した本記事の判断です。
 
 ---
 
@@ -194,7 +194,7 @@ L5 RUNTIME_COMPLETED
 
 一覧だけでも傾向が見えます。
 
-**AIが苦戦するのは、C#を生成する場面より「最終結果をどう見るべきか」が曖昧な場面です。**
+**この14件で繰り返し苦戦が見えるのは、C#を生成する場面より「最終結果をどう見るべきか」が曖昧な場面です。**
 
 ---
 
@@ -209,7 +209,7 @@ L5 RUNTIME_COMPLETED
 — 増田恭隆「Unity本家のAI参入と、これまでのUnityでのノーコード検証」2026-02-19  
 https://note.com/yasutaka_masuda/n/n74397dbf2abf
 
-同じmodel family、同じUnityでも、agentにどのEditor操作をどう見せるかで結果が変わります。
+同じ題材・同じUnityでも、agentにどのEditor操作をどう見せるかで結果が変わります。
 
 **本記事の判断:** model intelligenceだけでなく、observation / action interface自体が性能です。
 
@@ -236,7 +236,7 @@ Unity側がConnectedでも、Codex側からprojectを正しく操作できない
 
 ### 直接引用
 
-> 「Connected表示だけでは判断できないということです。」
+> 「Connected表示だけでは判断できない」
 
 — よなよな@AIゲーム開発「Unity 6 × Codex × MCPで『30分ヴァンサバ』を作るつもりが、白画面から始まった話」2026-02-28  
 https://note.com/yonayona_ai_game/n/nb1ec6a528bbd
@@ -263,7 +263,7 @@ objects created: PASS
 scene usable by player: FAIL
 ```
 
-**本記事の判断:** Hierarchyや生成件数を監査しても、空間として使えるかは監査できません。
+**本記事の判断:** Hierarchyや生成件数を監査しても、それだけでは空間として使えるかを監査し切れません。
 
 ---
 
@@ -318,7 +318,7 @@ umezu_y氏は企画、仕様、test仕様、task、実装、検証、releaseをp
 
 > 「仕様がないと AI は『なんとなくそれっぽいもの』を作ってしまい、手戻りが大きくなります。」
 
-— umezu_y「Claude Code × unity-mcp でゲーム開発の企画→公開をワークフロー化した話」2026年3月  
+— umezu_y「Claude Code × unity-mcp でゲーム開発の企画→公開をワークフロー化した話」2026-03-22  
 https://qiita.com/umezu_y/items/090a0fd25f9f915ad375
 
 **本記事の判断:** 強いworkflowは「AIにたくさん任せる仕組み」ではなく、**何を見てPASSとするかを先に固定する仕組み**です。
@@ -444,7 +444,7 @@ https://note.com/bunnoneta/n/n91bbcd3fd700
 
 ---
 
-# 自前repoで一番痛かったのは「作れない」ではなく「監査できない」こと
+# 自前repoで一番痛かったのは「作れない」ではなく「監査し切れない」こと
 
 外部事例だけなら、「他人の環境ではそうだった」で終わります。
 
@@ -498,7 +498,7 @@ Blender hosted execution  PASS
 
 ここで足りなかったのは生成能力ではありません。
 
-**見た目を正しく採点するoracleです。**
+**見た目を正しく採点する合否基準（oracle）です。**
 
 mesh count、weight normalization、clearance、collision、file existenceは機械的に監査できます。
 
@@ -509,7 +509,7 @@ mesh count、weight normalization、clearance、collision、file existenceは機
 - pose時のシルエットが不自然でないか
 - referenceとして欲しい衣服に見えるか
 
-は、同じtestでは監査できません。
+は、同じtest群だけでは監査し切れません。
 
 PR #212ではBlender MCP + Unity MCP + Codexのlocal authoring integrationも作っています。
 
@@ -521,7 +521,7 @@ https://github.com/KAFKA2306/image2outfit/pull/212
 
 ---
 
-## 自前失敗例5：`vrmine`――codeとCIを作れても、実際の挙動を監査できなかった
+## 自前失敗例5：`vrmine`――codeとCIを作れても、実際の挙動を監査し切れなかった
 
 `KAFKA2306/vrmine`は、見た目ではなく**behavior audit**側の失敗例です。
 
@@ -612,16 +612,12 @@ vrmine
 つまり、私たちが実運用で困ったのは、
 
 ```text
-AI cannot create
+作れる
+≠
+作った結果を十分に監査できる
 ```
 
-ではなく、
-
-```text
-AI cannot reliably judge what it created
-```
-
-でした。
+という差でした。
 
 ---
 
@@ -637,7 +633,7 @@ AI cannot reliably judge what it created
 
 この一致は重要です。
 
-**MCPの弱点というより、AI開発全体の「observer problem」です。**
+**MCP固有の弱点というより、AI開発全体の「観測器（observer）の問題」です。**
 
 ---
 
@@ -672,7 +668,7 @@ late joinで違和感なく復元するか
 Quest実機で同じように見えるか
 ```
 
-正解がscene stateだけに存在しません。
+正解をscene stateだけから決められません。
 
 **視覚・時間・操作・複数client・実deviceという別observerが必要です。**
 
@@ -729,9 +725,9 @@ MCP tool callのsuccessは、このどちらの代わりにもなりません。
 
 ---
 
-## 2026年5月、Unity自身もMCPを公式toolchainへ入れた
+## 2026年5月、UnityはMCP Serverを公式AI suiteに入れた
 
-Unityは2026年にAI toolsをopen betaとして公開し、その構成要素に公式MCP Serverを含めました。
+Unityは2026年5月5日、Unity 6.0以降の開発者向けにAI toolsをopen betaとして公開し、MCP Serverを構成要素として案内しました。5月11日にはMCPの接続手順も公開しています。
 
 公式一次情報:
 
@@ -741,7 +737,7 @@ https://unity.com/blog/mcp-servers-game-development
 
 したがってMCPそのものを「toy」と切り捨てる段階ではありません。
 
-むしろauthoringが実用化したからこそ、**auditの弱さが次の主要課題として露出した**と見る方が実態に近いです。
+この14件では、authoringが実用化したからこそ、**auditの弱さが次の課題として露出した**と見る方が実態に近いです。
 
 ---
 
@@ -892,7 +888,7 @@ buildする
 
 したがって、2026年8月時点の結論はこれです。
 
-**Unity MCPは「作る」ためにはかなり実用になった。まだ弱いのは「見る」ことと「遊んで確かめる」ことだ。**
+**Unity MCPは「作る」ためにはかなり実用になった。一方、この14件で繰り返し弱さが出たのは「見る」ことと「遊んで確かめる」ことだ。**
 
 そしてproductionで重要なのは、AIにもっと作らせることより、
 
