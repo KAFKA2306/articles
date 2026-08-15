@@ -3,7 +3,7 @@ title: "AIの文章に「透かし」があると言われたら、誰がそれ�
 emoji: "🔐"
 type: "tech"
 topics: ["watermark", "security", "llm", "ai", "provenance"]
-published: false
+published: true
 published_at: 2026-08-13 09:00
 ---
 
@@ -242,5 +242,3 @@ specific_claude_text_watermark_implementation = not established here
 - google-deepmind/synthid-text: https://github.com/google-deepmind/synthid-text
 - C2PA Specifications 2.2: https://spec.c2pa.org/specifications/specifications/2.2/index.html
 - C2PA Content Credentials specification: https://spec.c2pa.org/specifications/specifications/2.2/specs/C2PA_Specification.html
-
-<!-- zenn-deploy-trigger: 2026-08-15T15:17+09:00 -->
