@@ -7,70 +7,77 @@ published: false
 published_at: 2026-08-13 12:09
 ---
 
-OpenCode Goを見て、最初は単純に安いと思った。
+OpenCode Goを見たとき、最初は単純に安いと思った。
 
 初月$5、その後$10/月。DeepSeek V4 Flashは、公式が観測した典型的な利用パターンなら月158,150 requests相当とされている。
 
-でも、いまの自分には「ChatGPTの代わり」が欲しいわけではない。
+ただ、使い道を考えていて気づいた。
 
-**ChatGPTはそのまま使って、local実行だけ別に任せたい。**
+**ChatGPTの代わりにする必要はない。local実行だけ任せればいい。**
 
-これが一番しっくりきた。
+これならかなり欲しい。
 
-## ChatGPTで考えて、localで実行する
+## ChatGPTはもう十分使っている
 
-いまはChatGPTで、GitHubを横断して次に触るrepoを決めたり、IssueやPRを見たり、記事や調査を進めたりしている。
+普段の作業では、ChatGPTにかなり寄せている。
 
-以前の記事でも、123個の個人開発を横断すると、コードを書くこと以上に「次に何を進めるか」を決める仕事が重くなると書いた。
+GitHubを横断して次に触るrepoを決める。IssueやPRを見る。調査する。記事を直す。何を優先するか決める。
+
+以前の記事でも、個人開発が増えるほど重くなるのはコードを書くことより「次に何を進めるか」を決める仕事だと書いた。
 
 - [個人開発が123個になって分かった。ChatGPTに任せるべきはコードより「次の1件」だった](https://zenn.dev/kafka2306/articles/chatgpt-multiproject-autonomy)
 
-この部分はChatGPTでかなり満足している。
+ここは今のままでいい。
 
-困るのは、その先だ。
+欲しいのは、その続きだった。
 
-自分のPCにしかないものを触りたい。
+## 最後にlocal PCへ戻る仕事が残る
 
-- commit前のworkspace
-- 大きなローカルデータ
-- GPU環境
-- 認証済みのデスクトップアプリ
-- Unity EditorやPrefabの実状態
-- local MCPでつないだtool
+ChatGPTで方針を決めても、最後は自分のPCへ戻る仕事がある。
 
-これはGitHub上の状態だけでは完結しない。
+- commit前のworkspaceを触る
+- 大きなローカルデータを読む
+- GPUを使う
+- shellでtestを回す
+- 認証済みのdesktop applicationを触る
+- Unity Editorの実状態を見る
+- local MCPにつないだtoolを使う
 
-以前local Codexとのbridgeを作ったときも、結局ここが残った。
+以前、local Codexとのbridgeを作ったときにも、この境界にぶつかった。
 
 - [GitHub IssueをAIの伝言板にしたら、伝言板に全部やらせてはいけないと分かった](https://zenn.dev/kafka2306/articles/codex-chatgpt-github-issue-bridge)
 
-## OpenCode Goには、その役だけを期待する
+GitHub上で考えられても、GitHub上に存在しない状態までは触れない。
+
+ここをもっと任せたかった。
+
+## OpenCode Goはlocal実行専用で使う
 
 OpenCodeには、project環境でshell commandを実行する`bash`、fileのread/edit/write、MCP serverとの接続がある。
 
-なので使い分けはかなり単純にできる。
+なので、自分の中では役割を増やしすぎないことにした。
 
 ```text
 ChatGPT
-考える / 調べる / 横断する / 次を決める
+調べる / 考える / 横断する / 次を決める
 
 OpenCode Go
-local repoを読む / 直す / testする / shellを回す / local MCPを触る
+local repoを触る / 直す / testする / shellを回す / local MCPを使う
 ```
 
-OpenCode Goに記事を書かせたいわけでも、金融を調べさせたいわけでもない。
+OpenCode Goに調査も記事も全部移したいわけではない。
 
-**local executionだけを担う契約として使う。**
+**local executionだけを担ってもらう。**
 
-そう考えると、自分の中ではかなり整理された。
+この分け方なら、ChatGPTと競合しない。
 
-## 158,150回より、localで何回やり直せるか
+むしろChatGPTで決めたことを、そのまま自分のPC側で進める実行役を追加できる。
 
-OpenCode Goの利用制限はrequest数ではなくドル換算で、公式docsでは5時間$12、週間$30、月間$60のusageとされている。
+## 158,150回より、何回local loopを回せるか
 
-DeepSeek V4 Flashの月158,150 requestsは、そのusageを典型的なtoken/cache patternから換算した推定値で、hard quotaではない。
+OpenCode Goの利用制限はrequest数そのものではなくusageで定義されている。DeepSeek V4 Flashの月158,150 requestsは、公式が典型的なtoken/cache patternから換算した推定値で、hard quotaではない。
 
-でも自分にとって重要なのは、もう158,150という数字ではない。
+でも、ここまで整理すると数字の見え方も変わる。
 
 ```text
 直す
@@ -82,15 +89,17 @@ testする
 また直す
 ```
 
-このlocal loopを、料金をあまり気にせず何度も回せるか。
+欲しいのは大量のチャットではない。
 
-そこに月$10を払う価値を感じている。
+**このlocal loopを、料金をあまり気にせず繰り返せる余裕だ。**
 
-ChatGPTとの役割も競合しない。
+それが月$10なら、かなり試しやすい。
 
-**考える場所は変えない。実行する場所だけ増やす。**
+ChatGPTの使い方は変えない。
 
-今のところ、この使い方が一番試してみたい。
+**考える場所はそのまま。local実行だけ増やす。**
+
+OpenCode Goが刺さったのは、これだった。
 
 ## 注意：local実行とlocal推論は別
 
