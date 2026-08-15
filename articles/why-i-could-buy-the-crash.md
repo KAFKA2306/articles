@@ -87,6 +87,39 @@ Obsidian自身がGitによるversion controlを同期方法の一つとして案
 
 後からなら、いくらでも整った物語を作れる。
 
+### 投資家は市場だけでなく、自分の記憶にも負ける
+
+これは心理学でいう**後知恵バイアス（hindsight bias）**にかなり近い。
+
+Baruch Fischhoffの1975年の実験では、結果を知らされた人は、その結果の事後的な起こりやすさを高く評価し、しかも結果を知ったことが自分の判断へ与えた影響にほとんど気づかなかった。
+
+https://doi.org/10.1037/0096-1523.1.3.288
+
+投資の文脈では、Bruno BiaisとMartin Weberが2009年にさらに直接的な検証をしている。学生を対象にした実験では後知恵バイアスがボラティリティ推定を低下させ、ロンドンとフランクフルトの投資銀行家85人を対象にした実験では、**後知恵バイアスが強い参加者ほど投資課題のperformanceが低かった**。
+
+https://doi.org/10.1287/mnsc.1090.1000
+
+彼らは後知恵バイアスの状態を、短くこう表現している。
+
+> **“they knew it all along.”**
+
+「最初から分かっていた」。
+
+まさに、投資結果を見た後の自分が作りやすい物語である。
+
+行動ファイナンスには、ほかにも再現されてきた失敗パターンがある。ShefrinとStatmanは、利益銘柄を早く売り、損失銘柄を長く保有しやすい**disposition effect**を理論化・検証した。BarberとOdeanは35,000超の家計口座を分析し、overconfidenceの予測と整合的な過剰売買とperformance低下を報告している。
+
+- Disposition effect: https://doi.org/10.1111/j.1540-6261.1985.tb05002.x
+- Overconfidence and trading: https://doi.org/10.1162/003355301556400
+
+ただし、この文章で後知恵バイアスを特に重視する理由は、**失敗する瞬間だけでなく、失敗から学ぶ瞬間まで壊すからだ。**
+
+結果を知った後で「自分は最初から分かっていた」と記憶を書き換えれば、成功からも失敗からも正しいfeedbackを取れない。
+
+だから必要なのは、もっと精密な回顧録ではない。
+
+**結果を知る前のignoranceまで保存しておくことだ。**
+
 そこで判断時に、最低限これだけを分離した。
 
 1. その時点で観測できた事実
@@ -483,6 +516,17 @@ LLMも間違うし、Gitも間違った仮説を正しくしてくれない。
   https://www.notion.com/help/notion-ai-faqs
 - Notion, Version history  
   https://www.notion.com/help/duplicate-delete-and-restore-content
+
+行動ファイナンス・認知バイアスの一次研究:
+
+- Baruch Fischhoff, Hindsight is not equal to foresight: The effect of outcome knowledge on judgment under uncertainty, 1975  
+  https://doi.org/10.1037/0096-1523.1.3.288
+- Bruno Biais & Martin Weber, Hindsight Bias, Risk Perception, and Investment Performance, Management Science, 2009  
+  https://doi.org/10.1287/mnsc.1090.1000
+- Hersh Shefrin & Meir Statman, The Disposition to Sell Winners Too Early and Ride Losers Too Long, The Journal of Finance, 1985  
+  https://doi.org/10.1111/j.1540-6261.1985.tb05002.x
+- Brad M. Barber & Terrance Odean, Boys Will Be Boys: Gender, Overconfidence, and Common Stock Investment, The Quarterly Journal of Economics, 2001  
+  https://doi.org/10.1162/003355301556400
 
 一次資料:
 
