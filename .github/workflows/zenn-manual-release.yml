@@ -8,6 +8,7 @@ on:
         required: true
         type: choice
         options:
+          - 2026-08-15-ai-character-intelligence-muchio
           - chatgpt-multiproject-autonomy
           - claude-watermark-secret-key-detection
           - codex-chatgpt-github-issue-bridge
