@@ -114,3 +114,5 @@ OpenCode Goはlocal LLMの契約ではない。GoのmodelはOpenCode Go provider
 - OpenCode MCP: https://opencode.ai/docs/mcp-servers/
 
 料金・model・利用上限は変更されるため、契約時には現行docsを再確認する。
+
+<!-- zenn-redeploy: 2026-08-15 -->
