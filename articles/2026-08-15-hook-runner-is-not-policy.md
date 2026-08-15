@@ -3,7 +3,7 @@ title: "自動化を増やしても、品質は増えない"
 emoji: "🪝"
 type: "tech"
 topics: ["git", "ci", "automation", "testing", "developerexperience"]
-published: false
+published: true
 ---
 
 目覚まし時計を2個にしても、**「何時に起きるべきか」というルールは2倍にはならない**。
