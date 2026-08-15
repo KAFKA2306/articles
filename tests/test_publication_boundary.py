@@ -34,6 +34,13 @@ class PublicationBoundaryTests(unittest.TestCase):
         self.assertIn("Assert automation never grants publication", workflow)
         self.assertNotIn("bootstrap_publish=attempt", workflow)
 
+    def test_non_release_article_commits_skip_zenn_deploy(self) -> None:
+        workflow = (
+            core.ROOT / ".github" / "workflows" / "article-pipeline.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("[skip ci]", workflow)
+        self.assertIn("without Zenn deploy", workflow)
+
     def test_contract_makes_human_publication_explicit(self) -> None:
         contract = (
             core.ROOT / "pipeline" / "contracts" / "article.md"
