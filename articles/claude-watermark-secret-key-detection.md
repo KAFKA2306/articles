@@ -4,7 +4,7 @@ emoji: "🔐"
 type: "tech"
 topics: ["watermark", "security", "llm", "ai", "provenance"]
 published: true
-published_at: 2026-08-15 09:40
+published_at: 2026-08-13 09:00
 ---
 
 採用課題、レポート、ニュース原稿、社内文書。

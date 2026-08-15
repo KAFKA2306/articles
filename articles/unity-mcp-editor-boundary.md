@@ -4,7 +4,7 @@ emoji: "🛠️"
 type: "tech"
 topics: ["unity", "mcp", "codex", "claudecode", "ai"]
 published: true
-published_at: 2026-08-15 13:18
+published_at: 2026-08-12 16:03
 ---
 
 # 2026年、Unity MCPはどこまで実用か――14件で見えた「作れるが、見た目と挙動を監査し切れない」壁

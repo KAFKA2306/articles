@@ -4,7 +4,7 @@ emoji: "🔁"
 type: "tech"
 topics: ["codex", "github", "unity", "security", "automation"]
 published: true
-published_at: 2026-08-15 13:01
+published_at: 2026-08-12 17:02
 ---
 
 # GitHub IssueからAIにローカルPCを任せてよいのか？ Unity・Blender・動画生成で考える安全な橋

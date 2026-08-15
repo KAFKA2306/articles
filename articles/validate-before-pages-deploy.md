@@ -4,7 +4,7 @@ emoji: "🚦"
 type: "tech"
 topics: ["cicd", "githubactions", "githubpages", "testing", "sre"]
 published: true
-published_at: 2026-08-15 12:44
+published_at: 2026-08-13 16:04
 ---
 
 > **“Sorry, I couldn’t deploy github/my-feature: github and enterprise are still building.”**
