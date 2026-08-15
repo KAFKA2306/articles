@@ -1,31 +1,24 @@
 ---
-title: "GitHub IssueをAIの実行キューにしてよいのか？ Codex・Copilot・Actionsと比べて分かった境界"
+title: "GitHub IssueからAIにローカルPCを任せてよいのか？ Unity・動画・3Dアセット処理で見えた境界"
 emoji: "🔁"
 type: "tech"
-topics: ["codex", "github", "copilot", "security", "automation"]
+topics: ["codex", "github", "unity", "security", "automation"]
 published: false
 published_at: 2026-08-12 17:02
 ---
 
-# GitHub IssueをAIの実行キューにしてよいのか？ Codex・Copilot・Actionsと比べて分かった境界
+# GitHub IssueからAIにローカルPCを任せてよいのか？ Unity・動画・3Dアセット処理で見えた境界
 
 GitHub Issueに仕事を書き、AI coding agentへ渡す。
 
 2026年現在、この発想自体はもう珍しくありません。
 
-GitHub Copilot cloud agentはIssueを割り当てると作業を行い、Pull Requestを作成して人間へレビューを依頼します。GitHubはOpenAI Codexを含むthird-party coding agentsについても、Issueやpromptから非同期に作業を委譲し、PRでレビューする流れを公式に提供しています。
+GitHub Copilotのcoding agentはIssueを割り当てて作業を行い、Pull Requestを作成して人間へレビューを依頼できます。GitHubはOpenAI Codexを含むthird-party coding agentsについても、Issueやpromptから非同期に作業を委譲し、PRでレビューする流れを公式に提供しています。
 
 - GitHub Docs — Kick off a task with Copilot agents:
   https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/kick-off-a-task
 - GitHub Docs — About third-party coding agents:
   https://docs.github.com/en/copilot/concepts/agents/about-third-party-coding-agents
-
-OpenAI側も、Codexをrepositoryに接続し、コードの理解・修正・テスト・レビューを行うcoding agentとして提供しています。
-
-- OpenAI Developers:
-  https://developers.openai.com/
-- OpenAI — Running Codex safely at OpenAI:
-  https://openai.com/index/running-codex-safely/
 
 では、なぜ私はわざわざ
 
@@ -41,15 +34,39 @@ Windowsの常駐daemon
 
 結論から言うと、この仕組みの価値は**「IssueからAIを起動できたこと」ではありません**。
 
-本当に考える価値があったのは、
+repositoryのコードだけを直すなら、cloud上のcoding agent + Pull Requestの方が自然です。
 
-> cloud上のcoding agentではなく、自分のローカルPCまでAIの実行経路を伸ばすなら、どんな安全境界を追加しなければならないか
+local bridgeが意味を持つのは、仕事の対象がrepositoryの外へ出るときです。
 
-という問題でした。
+例えば、
+
+- Unity EditorでFBX、texture、Prefabをimportして検証する
+- Blenderで`.blend`を開き、Python処理やbackground renderを行う
+- local GPUで画像・動画生成modelを動かす
+- FFmpegで生成動画をfilter、transcode、muxする
+- 数GB級の動画、texture、3D assetをlocal disk上で連続処理する
+- local SDK、Editor version、cache、GPU、device、既存認証に依存した処理を行う
+
+といった仕事です。
+
+この場合、AIが扱うのはGit diffだけではありません。
+
+```text
+source code
++ binary asset
++ local cache
++ installed application
++ GPU
++ generated media
++ build artifact
++ preview image / video
+```
+
+までが1つの実行系になります。
 
 この記事では、自作bridgeを単独の成功談として扱いません。
 
-GitHub Issues、Copilot/Codexのagent workflow、GitHub Actionsのself-hosted runner、OpenAIが公開しているCodexの安全設計と比較しながら、**AIへ仕事を委譲するシステムの一般的な設計原則**としてレビューします。
+GitHubのcoding agent、GitHub Actions、OpenAIが公開しているCodexの安全設計に加え、Unity、Blender、FFmpeg、Hugging Face Diffusersの公式仕様と比較しながら、**AIにlocal asset pipelineを任せるときの一般設計**としてレビューします。
 
 公開実装:
 https://github.com/KAFKA2306/KAFKA2306/tree/main/scripts/codex-chatgpt-bridge
@@ -60,22 +77,14 @@ https://github.com/KAFKA2306/KAFKA2306/tree/main/scripts/codex-chatgpt-bridge
 
 2026年時点の選択肢を大きく分けると、次のようになります。
 
-| 方法 | 実行場所 | 向いている仕事 | 主な境界 |
+| 方法 | 実行場所 | 向いている仕事 | 主な成果物 |
 |---|---|---|---|
-| GitHub Copilot / third-party coding agent | cloud | repositoryの調査・修正・テスト・PR | branch / PR / review / agent policy |
-| Codexのrepository workflow | cloud中心 | repositoryを使ったcoding task | environment / sandbox / review |
-| GitHub Actions GitHub-hosted runner | ephemeral VM | 再現可能なCI・build・test | workflow permissions / secrets |
-| GitHub Actions self-hosted runner | 自分のmachine | 特殊hardwareや社内networkが必要なCI | runner access / workflow trust |
-| 自作local bridge | 自分のPC | local file、GUI、device、既存認証などが必要 | controller / path / sandbox / tool / output |
+| GitHub Copilot / third-party coding agent | cloud | repositoryの調査・修正・テスト | branch / PR / CI |
+| GitHub Actions GitHub-hosted runner | ephemeral VM | 再現可能なbuild・test | log / package / artifact |
+| GitHub Actions self-hosted runner | 自分のmachine | 特殊hardware・社内networkが必要なCI | log / artifact |
+| 自作local bridge | 自分のPC | Unity、Blender、動画生成、local asset、device、既存環境 | code + binary asset + render + build evidence |
 
-GitHubは、Issueをcoding agentへ割り当て、agentがPRを作り、人間がその差分をレビューする流れを正式なworkflowとして提供しています。
-
-さらにGitHubは、Copilotが生成したPRについても「通常のcontributionと同じように十分レビューする」よう明記しています。required reviewが設定されているrepositoryでは、Copilot PRに対する本人のapprovalだけではrequired approvalとして数えない仕組みもあります。
-
-GitHub Docs:
-https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/review-copilot-output
-
-したがって、一般的なrepository修正だけが目的なら、
+一般的なrepository修正だけが目的なら、
 
 ```text
 Issue
@@ -91,9 +100,388 @@ CI + human review
 
 という既存の経路を優先する方が自然です。
 
+GitHub自身も、Copilotが生成したPRを通常のcontributionと同じように十分reviewするよう案内しています。
+
+GitHub Docs:
+https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/review-copilot-output
+
 **local PCを直接実行環境にする理由がないなら、local PCを実行環境にしない。**
 
-これが最初のレビュー結論です。
+これは変わりません。
+
+ただしasset pipelineには、repositoryだけでは表現できない状態が大量にあります。
+
+そこがlocal bridgeの本命です。
+
+---
+
+# local bridgeが本当に強いのはasset pipelineだった
+
+## 1. Unity：Gitにあるのはsource assetであって、Editorが見ている状態の全部ではない
+
+Unity projectを考えると、local executionが必要になる理由が分かりやすくなります。
+
+Unityの公式ドキュメントでは、Editorを`-batchmode`で起動し、`-executeMethod`でproject内のstatic methodを実行できます。用途としてCI、unit test、build、data preparationが明示されています。
+
+Unity Manual — Unity Editor command line arguments:
+https://docs.unity3d.com/ja/current/Manual/EditorCommandLineArguments.html
+
+例えば概念的には、
+
+```powershell
+Unity.exe \
+  -quit \
+  -batchmode \
+  -projectPath D:\dev\avatar-project \
+  -executeMethod AssetPipeline.Build
+```
+
+のように、Issueから受けたtaskをlocal Unity Editorへ渡せます。
+
+ここで重要なのは、Unity projectが単なるGit repositoryではないことです。
+
+UnityのAsset Databaseはsource assetをimportしてartifactを生成し、そのdatabaseをprojectの`Library` folderに保持します。Unityは`Library`内のdatabaseをversion controlから除外するよう説明しています。
+
+Unity Manual — Asset Database:
+https://docs.unity3d.com/ja/current/Manual/AssetDatabase.html
+
+つまり、
+
+```text
+GitHub上
+  Assets/model.fbx
+  Assets/material.mat
+  Assets/texture.png
+  ProjectSettings/...
+
+local Unity
+  上記source
+  + import result
+  + Library database
+  + installed Editor
+  + installed modules / SDK
+  + machine固有の実行状態
+```
+
+です。
+
+cloud agentが`.meta`やC#を書き換えるだけでは、**そのassetを実際のUnity Editorが正しくimportし、Prefabやbuildへ到達できたか**までは確認できません。
+
+さらにUnityは、asset fileのmetadataを管理するため、assetの作成・移動・削除を単純なfilesystem操作ではなくAsset Database経由で扱うよう案内しています。
+
+Unity Manual — Asset Database:
+https://docs.unity3d.com/ja/current/Manual/AssetDatabase.html
+
+この性質から、AIへ任せたい仕事は例えば次のようになります。
+
+```text
+Issue
+  ↓
+FBX / texture / configを生成・更新
+  ↓
+Unity batchmodeを起動
+  ↓
+AssetDatabaseでimport
+  ↓
+Editor scriptでPrefab / material / buildを検証
+  ↓
+exit code + Editor log + build artifactを回収
+  ↓
+Issue / PRへ結果を返す
+```
+
+ここではPRのdiffだけでは足りません。
+
+**Unityがそのassetを受理したというruntime evidence**が必要です。
+
+---
+
+## 2. Blender：3D assetはPythonとbackground modeで機械処理できる
+
+Blenderもlocal bridgeと相性がよいtoolです。
+
+Blender 5.0の公式manualでは、`-b` / `--background`でUIなしのbackground executionができ、`-P` / `--python`でPython scriptを実行できます。Python exception時のexit codeもcommand line optionで設定できます。
+
+Blender Manual — Command Line Arguments:
+https://docs.blender.org/manual/ja/5.0/advanced/command_line/arguments.html
+
+例えば、
+
+```powershell
+blender.exe \
+  -b avatar.blend \
+  --python-exit-code 1 \
+  --python pipeline.py
+```
+
+という形にできます。
+
+Blenderはbackground renderも公式にサポートしています。
+
+```powershell
+blender.exe \
+  -b avatar.blend \
+  -o //renders/frame_ \
+  -f 1
+```
+
+Blender Manual — Command Line Arguments:
+https://docs.blender.org/manual/ja/5.0/advanced/command_line/arguments.html
+
+この経路を使えば、例えば
+
+- meshの機械処理
+- scene設定
+- exporterの実行
+- animation frameのrender
+- preview image生成
+- Pythonで定義したproject固有validation
+
+を、local taskとして扱えます。
+
+重要なのは、成果物が`.py`のdiffではなく、
+
+```text
+.blend
+.fbx / .glb
+texture
+rendered PNG / WebP
+validation JSON
+```
+
+になることです。
+
+またBlenderはPython auto executionをcommand lineからenable/disableするoptionも持っています。
+
+Blender Manual — Command Line Arguments:
+https://docs.blender.org/manual/ja/5.0/advanced/command_line/arguments.html
+
+これはasset自体がcode execution surfaceになり得ることを意味します。
+
+したがって、未知の`.blend`をlocal machineで自動処理する場合は、filesystemだけでなく**script execution policyもsecurity boundary**として扱う必要があります。
+
+---
+
+## 3. 画像・動画生成：local GPUそのものが実行環境になる
+
+生成AIも、local executionの理由が明確な領域です。
+
+Hugging Face Diffusersは画像・動画・音声のgeneration pipelineを提供しており、公式ドキュメントではmodelをlocal folderから`from_pretrained()`で読み込めます。local pathを指定した場合、そのload自体のためにHubからfileをdownloadしないことも明記されています。
+
+Hugging Face Diffusers — Loading pipelines:
+https://huggingface.co/docs/diffusers/en/using-diffusers/loading
+
+概念的には、
+
+```python
+pipeline = DiffusionPipeline.from_pretrained(
+    "D:/models/video-model",
+    torch_dtype=torch.bfloat16,
+    device_map="cuda",
+)
+```
+
+のような処理です。
+
+Diffusersはtext-to-videoを含むvideo generation pipelineも提供しています。
+
+Hugging Face Diffusers — Pipelines:
+https://huggingface.co/docs/diffusers/api/pipelines/overview
+
+この場合、local machine上にあるのは
+
+```text
+model weights
+GPU / VRAM
+input image / video
+LoRAや追加weight
+生成途中のframe
+生成済みvideo
+```
+
+です。
+
+これらを毎回cloud coding agentへuploadするより、**taskだけをGitHub経由で送り、dataとcomputeはlocalに置く**方が合理的なケースがあります。
+
+ここでbridgeは「コードを編集するAI」ではなく、
+
+> local GPU workloadを開始し、条件を変え、生成物を検証し、結果だけをcontrol planeへ返すagent
+
+になります。
+
+特にvideo generationは、画像1枚よりもframe数に応じてmemory負荷が大きくなります。DiffusersのStable Video Diffusion guideも、video generationはmemory intensiveであり、CPU offloadやchunkingなどのmemory低減策を説明しています。
+
+Hugging Face Diffusers — Stable Video Diffusion:
+https://huggingface.co/docs/diffusers/main/using-diffusers/svd
+
+つまりGPU model、VRAM、local model cacheまで含めてenvironmentを固定する意味があります。
+
+---
+
+## 4. FFmpeg：生成した後のasset processingもlocal pipelineの一部
+
+動画生成はmodelが`.mp4`を出したら終わりではありません。
+
+実運用では、
+
+- resize
+- crop
+- overlay
+- audio mix
+- subtitle
+- codec変換
+- bitrate調整
+- container変換
+- thumbnail生成
+
+などの後処理が続きます。
+
+FFmpeg公式ドキュメントは、`ffmpeg`をmedia converterとして説明し、複数inputのread、filter、transcode、複数outputへのwriteをサポートしています。`-filter_complex`では複数input/outputを持つfilter graphも構成できます。
+
+FFmpeg Documentation:
+https://ffmpeg.org/ffmpeg.html
+
+FFmpeg Filters Documentation:
+https://ffmpeg.org/ffmpeg-filters.html
+
+例えば、生成動画へ画像を重ねる処理は公式documentationにも示されています。
+
+```text
+video
+  + image
+  ↓
+FFmpeg filter graph
+  ↓
+encoded video
+```
+
+ここでも数百MB〜数GBのmedia fileをGitHubへ運ぶ必要はありません。
+
+GitHub Issueには
+
+```text
+どのinputを
+どのprofileで
+どのoutputへ変換するか
+```
+
+というcontrol情報だけを置き、実mediaはlocal diskで処理できます。
+
+---
+
+## 5. 本当のlocal workflowは1つのtoolではなくchainになる
+
+asset処理では、実際には1つのapplicationで完結しないことが多いです。
+
+例えば、
+
+```text
+Issue
+  ↓
+Codex
+  ↓
+Diffusers / local GPU
+  生成画像・動画
+  ↓
+FFmpeg
+  encode / filter
+  ↓
+Blender
+  mesh / scene / render
+  ↓
+Unity
+  import / Prefab / build
+  ↓
+validation
+  ↓
+evidence bundle
+```
+
+というchainです。
+
+これをcloud coding agentだけで行おうとすると、問題はcode generationではなく、
+
+- tool version
+- binary assetの移動
+- local cache
+- GPU
+- application install
+- license / authentication
+- OS固有tool
+- intermediate artifact
+
+の管理になります。
+
+そのためlocal bridgeの役割は、単なるremote shellではありません。
+
+**repository外のcapabilityを、安全な範囲でagentへ貸し出すbroker**と考えた方が正確です。
+
+---
+
+# asset pipelineでは「PRを作った」が完了条件にならない
+
+coding agentの標準的な成果物はPull Requestです。
+
+しかしasset pipelineでは、source codeに変更がないtaskもあります。
+
+例えば、
+
+```text
+同じBlender scriptで5方向renderを再生成する
+既存modelから動画を再生成する
+FBXをUnityへimportしてcompatibilityを検証する
+FFmpeg profileだけ変えてencode比較する
+```
+
+といった仕事です。
+
+この場合、completion contractを広げる必要があります。
+
+最低でも、
+
+```text
+execution
+  tool exit code
+
+provenance
+  tool version
+  input path / hash
+  model / config identifier
+
+artifact
+  output path
+  output hash
+  file size / format
+
+validation
+  Unity import/build result
+  Blender script result
+  media probe / expected dimensions
+
+visual evidence
+  preview render
+  representative frames
+
+review
+  source変更があればPR
+  binary変更は対応するartifact evidence
+```
+
+のように分けます。
+
+つまり、
+
+```text
+code workflow
+  diff → PR → CI → review
+
+asset workflow
+  input → execution → binary artifact → machine validation → visual evidence → review
+```
+
+です。
+
+AI automationでは、**agentが「終わりました」と言ったことより、再検証できるartifactが残ったこと**を成功条件にします。
 
 ---
 
@@ -104,12 +492,15 @@ GitHubはIssuesを、ideas、feedback、tasks、bugsなどを計画・追跡す�
 GitHub Docs:
 https://docs.github.com/en/issues/tracking-your-work-with-issues/learning-about-issues/about-issues
 
-Projectsのbest practicesでも、IssuesとPull Requestsを作業のsingle source of truthとして使い、仕事を分解し、状態や依存関係を追跡することが推奨されています。
+Issueはcontrol planeとしては便利です。
 
-GitHub Docs:
-https://docs.github.com/en/issues/planning-and-tracking-with-projects/learning-about-projects/best-practices-for-projects
+- 誰が依頼したか残る
+- 何を依頼したか残る
+- commentで状態を追える
+- PRやcommitと関連づけられる
+- 人間が後から監査できる
 
-ここで重要なのは、
+しかしIssue本文やcommentをそのままshell command相当の権限へ変換すれば、Issueはremote execution interfaceになります。
 
 ```text
 Issueに書かれている
@@ -121,51 +512,20 @@ Issueに書かれている
 その内容をmachine上で実行してよい
 ```
 
-ことは別だという点です。
+ことは別です。
 
-Issueはcontrol planeとしては優秀です。
+asset pipelineの場合は特に、commandの先にUnity、Blender、GPU、media encoderまで存在します。
 
-- 誰が依頼したか残る
-- 何を依頼したか残る
-- commentで状態を追える
-- PRやcommitと関連づけられる
-- 人間が後から監査できる
-
-一方で、Issue本文やcommentをそのままshell command相当の権限へ変換すれば、Issueは事実上remote execution interfaceになります。
-
-その瞬間から必要なのは「Issueの使い方」ではなく、**実行系のsecurity design**です。
-
-この区別は、自作bridgeだけの話ではありません。
-
-GitHubのcoding agentsも、Issueを受け取った後はagent sessionとbranch/PRへ作業場所を移します。Issueをそのままproduction変更権限として扱っているわけではありません。
+したがってexecution authorityはIssueとは別に制御します。
 
 ---
 
 ## 一般原則2：agentの能力より先に、実行環境を狭くする
 
-OpenAIが2026年に公開したCodexの安全運用では、中心となる考え方として
+OpenAIが公開しているCodexの安全運用では、managed configuration、constrained execution、network policies、logs、sandboxing、approvalsなどが独立したcontrolとして扱われています。
 
-- managed configuration
-- constrained execution
-- network policies
-- agent-native logs
-- sandboxing
-- approvals
-
-が挙げられています。
-
-OpenAI:
+OpenAI — Running Codex safely at OpenAI:
 https://openai.com/index/running-codex-safely/
-
-特にOpenAIは、sandboxを
-
-- どこへwriteできるか
-- networkへ到達できるか
-- どのpathを保護するか
-
-といった**technical execution boundary**として説明し、approval policyとは分離しています。
-
-これは重要です。
 
 AIへのpromptに
 
@@ -176,107 +536,107 @@ AIへのpromptに
 
 と書くことは、境界ではありません。
 
-境界とは、agentがその指示を無視しても突破できない仕組みです。
-
 ```text
-prompt rule     = AIへの依頼
-sandbox rule    = 実行系による強制
+prompt rule
+  AIへの依頼
+
+sandbox / allowlist
+  実行系による強制
 ```
 
-この2つを混同しないことが、agentic systemの基本になります。
+は別物です。
+
+asset pipelineでは、この境界をfilesystemだけでなくapplicationにも広げます。
+
+```text
+Codexは起動できる
+Unityは起動できる
+Blenderは起動できる
+FFmpegは起動できる
+
+しかし、それ以外のbinaryは起動できない
+```
+
+というprocess allowlistまで持てると、local executionのblast radiusをさらに狭くできます。
 
 ---
 
 ## 一般原則3：「自分のPCで動かす」はcloudより強い理由が必要
 
-local executionには大きな利点があります。
-
-例えば、
+local executionには明確な利点があります。
 
 - cloudへ置けないlocal dataを読む
-- 自宅や社内network上のserviceへ接続する
 - local GPUを使う
-- Windows専用toolやGUI applicationを操作する
+- Unity / Blenderなどinstalled applicationを使う
+- local cacheやSDKを使う
+- large mediaをuploadせず処理する
 - local deviceやhardwareを扱う
-- 既にlocal machine上にある認証済みserviceを使う
 
-といった用途です。
+一方、その代わりに実行環境が長寿命の実machineになります。
 
-しかし、その代わりに実行環境が**長寿命の実machine**になります。
-
-ここはGitHub Actionsのself-hosted runnerに非常に近い問題です。
-
-GitHubはself-hosted runnerについて、ephemeralでcleanなVMである保証がなく、untrusted codeによって継続的にcompromiseされる可能性があると警告しています。public repositoryではself-hosted runnerをほぼ使うべきではなく、private/internal repositoryでもforkやPRを作れる利用者を信頼できるか注意するよう明記しています。
+GitHubはself-hosted runnerについて、ephemeralでcleanなVMである保証がなく、untrusted codeによって継続的にcompromiseされる可能性があると警告しています。
 
 GitHub Docs — Secure use reference:
 https://docs.github.com/en/actions/reference/security/secure-use
 
-GitHub Docs — Adding self-hosted runners:
-https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/add-runners
-
-自作bridgeも本質的には同じです。
+つまり、
 
 ```text
 cloud agent
-  = disposableな作業環境へ仕事を持っていく
+  disposableな作業環境へ仕事を持っていく
 
 local bridge
-  = 普段使っているmachineへ仕事を持ってくる
+  普段使っているmachineへ仕事を持ってくる
 ```
 
-後者の方が、漏洩・誤操作・永続化のblast radiusは大きくなりやすい。
+という差があります。
 
-したがって、local bridgeは便利だから使うのではなく、**localでなければ達成できない仕事があるときだけ使う**のが妥当です。
+local bridgeは便利だから使うのではなく、**local stateそのものが仕事の一部であるときに使う**のが妥当です。
+
+UnityのAsset Database、Blender file、local model weight、GPU、動画assetはその典型です。
 
 ---
 
-## 一般原則4：最小権限は「アカウント」だけでなく5層に分ける
+## 一般原則4：最小権限は5層ではなく、asset pipelineでは6層で見る
 
-least privilegeという言葉はよく使われますが、coding agentでは「token権限を小さくする」だけでは足りません。
-
-少なくとも次の5層があります。
+coding agent向けのleast privilegeをasset処理へ広げると、少なくとも次の6層があります。
 
 ```text
 1. Identity
    誰がtaskを発行できるか
 
 2. Filesystem
-   どこをread/writeできるか
+   どのproject / assetをread/writeできるか
 
 3. Process
-   どのcommand・programを起動できるか
+   Unity / Blender / FFmpegなど何を起動できるか
 
 4. Network / Tool
-   どのservice、MCP、APIへ接続できるか
+   どのAPI、MCP、model repositoryへ接続できるか
 
-5. Output
-   実行結果をどこへ返してよいか
+5. Compute
+   どのGPU、device、resourceを使えるか
+
+6. Output
+   code / binary / log / previewをどこへ返してよいか
 ```
 
-GitHub Copilot cloud agentでもinternet accessはfirewallで制限でき、GitHubはその目的をdata exfiltration riskの管理だと説明しています。
+特にasset pipelineでは`Process`と`Compute`を分ける意味があります。
+
+動画生成jobへGPUを貸すことと、任意のlocal processを起動できることは同じ権限ではありません。
+
+GitHub Copilot coding agentもinternet accessをfirewallで制御でき、GitHubはdata exfiltration riskの管理として説明しています。
 
 GitHub Docs:
 https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-the-firewall
 
-つまり、agent securityは「入力を守る」だけではありません。
-
-**出ていく通信と出力も境界です。**
+AI systemでは、入力だけでなく、**出ていくnetwork trafficとartifactも境界**です。
 
 ---
 
-## 一般原則5：仕事の完了点は「agentが止まった」ではなくreviewable artifactにする
+## 一般原則5：仕事の完了点をreviewable artifactにする
 
-AI automationで最も危険な曖昧さの1つが、成功条件です。
-
-```text
-processが起動した
-agentが返事をした
-fileが変わった
-```
-
-これらは、仕事が正しく完了した証拠ではありません。
-
-GitHubのcoding agent workflowがPR中心になっているのは、この点でも合理的です。
+GitHubのcoding agent workflowではPRがreviewable artifactになります。
 
 PRなら、
 
@@ -287,30 +647,28 @@ PRなら、
 - approvals
 - merge status
 
-を1つのreviewable artifactに集約できます。
+を集約できます。
 
-GitHubはCopilotの出力について、人間が通常のPRと同様にreviewすることを明示しています。またCopilot code reviewについても、すべての問題を発見できる保証はなく、人間のreviewで補完するよう案内しています。
+GitHub Docs — Review output from Copilot:
+https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/review-copilot-output
 
-GitHub Docs:
-https://docs.github.com/en/copilot/concepts/agents/code-review
-
-この考え方を一般化すると、agent taskのcompletion contractは次のようになります。
+asset pipelineでは、これにbinary evidenceを足します。
 
 ```text
 execution success
   + expected behavior
   + machine-verifiable checks
-  + reviewable diff/artifact
+  + binary artifact
+  + visual evidence when needed
+  + source diff / PR when changed
   + human acceptance when required
 ```
 
-単なる`exit_code = 0`より一段強い契約です。
+これがasset automation向けのcompletion contractです。
 
 ---
 
 # では、自作bridgeは何をしているのか
-
-ここまでの一般原則を踏まえて、実際のbridgeをレビューします。
 
 構成は次の通りです。
 
@@ -337,7 +695,11 @@ private GitHub Issue
 実装:
 https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/bridge-daemon.ps1
 
-この設計を、先ほどの5層で見ます。
+現在の公開実装はUnityやBlender専用daemonではありません。
+
+重要なのは、このtransportの先でlocal commandを実行できるため、**Unity / Blender / FFmpeg / local inferenceのようなcapabilityを追加するときにも同じcontrol boundaryを再利用できる**ことです。
+
+ただし、capabilityを増やすたびにattack surfaceも増えます。
 
 ---
 
@@ -345,19 +707,9 @@ https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/br
 
 bridge daemonはIssue commentを順番に読みますが、すべてのcommentを実行するわけではありません。
 
-実装では、comment authorのGitHub loginがinstallerで設定した`ControllerLogin`と一致する場合だけ処理対象にします。
+comment authorのGitHub loginがinstallerで設定した`ControllerLogin`と一致し、所定のmarkerとJSON blockを持つ場合だけtaskとして処理します。
 
-さらに、commentには
-
-```text
-codex-bridge:v1
-role=controller
-task=...
-```
-
-というmarkerとJSON blockが必要です。
-
-つまり、概ね
+概ね、
 
 ```text
 正しい形式
@@ -367,13 +719,13 @@ AND
 comment author == ControllerLogin
 ```
 
-で初めてtaskになります。
+です。
 
-これは一般原則として、
+これは
 
 > collaboration権限とexecution authorityを分離する
 
-という意味があります。
+という設計です。
 
 private repositoryに入れることと、local PCへ命令できることを同一視していません。
 
@@ -383,33 +735,23 @@ private repositoryに入れることと、local PCへ命令できることを同
 
 taskは`cwd`を指定できます。
 
-しかしdaemonは、指定されたpathを正規化した上で、install時に設定した`AllowedRoot`配下かを検査します。
-
-例えば、
+しかしdaemonはpathを正規化し、install時に設定した`AllowedRoot`配下かを検査します。
 
 ```text
 AllowedRoot = D:\dev
-```
 
-なら、
-
-```text
 OK
-D:\dev\project-a
-D:\dev\project-b
+D:\dev\unity-project
+D:\dev\video-pipeline
 
 REJECT
 C:\Users\...
 D:\private-data
 ```
 
-となります。
+この制限はpromptではなくPowerShell側で強制されます。
 
-この制限はpromptではなくPowerShell側で実行されます。
-
-ここはOpenAIが説明するsandboxの考え方と同じ方向です。
-
-**自然言語で「見ないで」と頼むのではなく、path boundaryをprogramで強制する。**
+**自然言語で「見ないで」と頼むのではなく、path boundaryをprogramで拒否する。**
 
 ---
 
@@ -426,25 +768,21 @@ workspace-write
 
 だけです。
 
-それ以外はdaemonが拒否します。
+asset generationやUnity importのようにfileを書き出すtaskでは`workspace-write`が必要になります。
 
-つまり、
+しかし、`workspace-write`を許可したことと、任意のapplicationを自由に起動してよいことは別です。
+
+今後Unity、Blender、FFmpegなどを本格的にbrokerするなら、
 
 ```text
-調査
-→ read-only
-
-変更が必要
-→ workspace-writeを明示
+filesystem sandbox
++
+executable allowlist
++
+argument validation
 ```
 
-という昇格方式です。
-
-これは「agentに何でもできる状態を与え、promptで抑制する」より安全です。
-
-一方で注意も必要です。
-
-`workspace-write`を許可した時点で、AllowedRoot内の対象workspaceに対する変更能力は生まれます。したがって重要なrepositoryでは、最終的な保護をagent sandboxだけに依存せず、Git branch、PR、CI、review rulesで二重化する方がよいでしょう。
+まで分離する方が強い設計になります。
 
 ---
 
@@ -465,76 +803,55 @@ https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VE
 
 を指定し、interactive Codexの設定・apps・pluginsから分離しました。
 
-local MCPもdeny-by-defaultで、daemonにhard-codeしたallowlistとtask側の明示opt-inの両方が必要です。
+local MCPもdeny-by-defaultです。
 
-現在の公開実装で許可されているlocal MCPは`youtube_music`だけです。
+この原則はUnityやBlenderにもそのまま当てはまります。
 
-実装:
-https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/bridge-daemon.ps1
+```text
+普段使いUnity
+  全package / 個人設定 / 開発用tool
 
-この失敗から得られる一般知見は、
+agent用Unity
+  固定version / 固定project / 固定Editor method
+```
 
-> 人間向けの便利なinteractive environmentと、無人実行用のruntime profileを分離する
+```text
+普段使いBlender
+  user preference / add-on / interactive environment
 
-ことです。
+agent用Blender
+  background mode / 明示script / 明示output
+```
 
-便利機能を全部載せるほどagentが賢くなるとは限りません。
-
-無人実行では、tool surfaceが増えるほど
-
-- credential
-- network destination
-- failure mode
-- side effect
-
-も増えます。
+のように、**人間のinteractive profileと無人runtimeを分ける**方が故障原因も権限も減らせます。
 
 ---
 
 ## 5. Output：結果も機密情報になり得る
 
-bridgeはCodexのfinal messageだけでなく、
+bridgeはfinal messageだけでなく、task ID、exit code、sandbox、cwd、Git HEAD、Git statusなどのevidenceを返します。
 
-- task ID
-- exit code
-- sandbox
-- MCP names
-- cwd
-- Git HEAD
-- Git status
+一方、raw JSONL event logはlocal runtimeに保持します。
 
-などのevidenceをworker resultとして返します。
+asset pipelineではさらに、
 
-一方、raw JSONL event logはlocal runtimeにだけ保持します。
+- absolute local path
+- model name
+- private source media
+- render
+- build artifact
+- intermediate file
 
-公開されているE2E verificationも、raw queueそのものではなく、必要最小限の結果だけです。
+がresultへ混ざる可能性があります。
 
-理由は、task outputに
-
-- local path
-- repository state
-- private task内容
-
-などが含まれる可能性があるためです。
-
-検証記録:
-https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VERIFICATION.md
-
-これはGitHub Copilotがagent firewallをdata exfiltration対策として扱っていることとも整合します。
-
-AI systemでは、
+したがってraw artifactをそのままpublic Issueへ返すのではなく、
 
 ```text
-何を読ませるか
+publicに出せるmetadata
+privateに残すraw output
 ```
 
-だけでなく、
-
-```text
-何を外へ送れるか
-```
-
-を同じ重要度で考える必要があります。
+を分ける必要があります。
 
 ---
 
@@ -552,97 +869,100 @@ final Codex message = BRIDGE_OK
 検証記録:
 https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VERIFICATION.md
 
-ここでは、
-
-```text
-Scheduled Taskを登録できた
-
-daemonが起動した
-
-Issue commentを読めた
-```
-
-だけでは成功にしていません。
+Scheduled Task登録、daemon起動、Issue comment読取だけでは成功にしていません。
 
 bring-up中には、
 
 1. unrelated MCP/app layerのOAuth要求
 2. smoke用Git repositoryにvalid HEADがない
 
-という2つのfailure classも記録されています。
+というfailure classも記録され、それぞれruntime isolationとbaseline commitで修正しました。
 
-それぞれ、
+ただしasset pipelineへ広げるなら、次のE2Eはさらに厳しくする必要があります。
 
-- autonomous runからuser config/apps/pluginsを分離
-- smoke repositoryへbaseline commitを作る
+例えばUnityなら、
 
-という形で修正されました。
+```text
+Codex exit 0
++
+Unity process exit 0
++
+Asset import成功
++
+expected Prefab / build artifact存在
++
+artifact hash記録
+```
 
-この部分は単なる実装メモ以上の意味があります。
+Blenderなら、
 
-**agentic workflowは、happy pathのdemoよりfailure boundaryの方が設計情報として価値が高い**からです。
+```text
+Codex exit 0
++
+Blender Python exit 0
++
+expected .blend / export存在
++
+preview render存在
+```
+
+videoなら、
+
+```text
+generation完了
++
+FFmpeg完了
++
+expected codec / resolution / durationをprobe
++
+representative frame確認
+```
+
+までを成功契約にします。
+
+**asset workflowは、agentの返答ではなく生成物を検査して終わる。**
 
 ---
 
 # ただし、このbridgeにも残る弱点がある
 
-自作したからといって、これを「安全」と言い切るべきではありません。
-
-一般的なagent architectureと比べると、まだ重要な差があります。
-
 ## 1. 長寿命のlocal machineである
 
 GitHub-hosted runnerやcloud agentのようなdisposable environmentではありません。
 
-local machineがcompromiseされた場合、影響が次のtaskにも残る可能性があります。
-
-この点はGitHubがself-hosted runnerについて警告している問題と同型です。
+UnityやBlender、model weight、credentialが載ったmachineだからこそ、compromise時のblast radiusは大きくなります。
 
 ## 2. network policyをbridge独自に細かく定義していない
 
-現在の公開daemonはfilesystem root、sandbox、MCP allowlistを明示していますが、bridge側でdomain単位のnetwork allowlistを構築しているわけではありません。
+filesystem root、sandbox、MCP allowlistはありますが、domain単位のnetwork allowlistをbridge独自に構築しているわけではありません。
 
-OpenAIがCodex安全運用でnetwork policyを独立した境界として扱い、GitHubもCopilot cloud agentにfirewallを設けていることを考えると、これは追加hardening候補です。
+model downloadやAPI利用を許すasset pipelineでは、network policyを独立して追加する価値があります。
 
-## 3. `workspace-write`は最終承認ではない
+## 3. process allowlistがasset toolごとに定義されていない
 
-agentがworkspaceを書き換えられることと、その変更を採用してよいことは別です。
+現行bridgeはUnity / Blender / FFmpeg専用brokerではありません。
 
-重要なcode changeでは、
+本格運用なら、許可binary、version、project path、argumentをtask schemaとして固定した方が強くなります。
 
-```text
-workspace-write
-  ↓
-git diff
-  ↓
-commit / branch
-  ↓
-PR
-  ↓
-CI
-  ↓
-human review
-```
+## 4. `workspace-write`は最終承認ではない
 
-まで持っていく方が、現在のcoding agentの標準的な安全モデルに近づきます。
+agentがassetを書き換えられることと、そのassetを採用してよいことは別です。
 
-## 4. GitHub account自体がcontrol credentialになる
+source changeはPR、binary changeはhash・preview・machine validationを残し、人間が採否を判断できる形にします。
 
-`ControllerLogin`を確認しているため、controller accountの認証状態は非常に重要です。
+## 5. GitHub account自体がcontrol credentialになる
 
-Issue commentを実行指示として使う以上、GitHub account、GitHub CLI authentication、repository accessが事実上control planeのcredentialになります。
+Issue commentを実行指示として使う以上、GitHub account、GitHub CLI authentication、repository accessがcontrol planeのcredentialになります。
 
-したがって「private repositoryだから安心」という理解では不十分です。
+「private repositoryだから安心」では不十分です。
 
 ---
 
 # 2026年時点での選び方
 
-最終的には、次の順番で選ぶのが合理的です。
-
 ## A. repositoryだけで完結する
 
-**まずGitHub上のcoding agentを使う。**
+**GitHub上のcoding agentを使う。**
 
 ```text
 Issue / prompt
@@ -654,69 +974,93 @@ branch / PR
 CI + review
 ```
 
-この用途のために、自宅PCへremote execution pathを追加する必要はありません。
+## B. 再現可能なbuild / testだけ必要
 
-## B. build/testだけlocal resourceが必要
+**GitHub-hosted Actionsを優先する。**
 
-**GitHub Actionsのrunner設計を検討する。**
+## C. 特殊hardwareや社内networkだけlocalに必要
 
-ただしself-hosted runnerにはGitHub自身が強いsecurity warningを出しているため、repository trust、workflow trust、runner isolationを先に設計します。
+**self-hosted runnerを検討する。**
 
-## C. local file・device・GUI・既存認証など、localでしかできない
+GitHubのsecurity warningを前提にrunner isolationを設計します。
 
-**そのとき初めてlocal bridgeを検討する。**
+## D. Unity / Blender / 動画 / 3D assetのようにlocal stateそのものが仕事
 
-最低限、
+**local bridgeが有力になる。**
+
+例えば、
+
+```text
+Unity
+  import / Prefab / build
+
+Blender
+  Python / export / render
+
+Diffusers
+  local GPU inference
+
+FFmpeg
+  encode / filter / mux
+```
+
+を1台のasset workstation上で連結する用途です。
+
+この場合の設計対象は、
 
 ```text
 identity allowlist
 filesystem allowlist
 read-only default
 explicit write elevation
-tool / MCP allowlist
+executable allowlist
+tool-specific argument schema
 network boundary
+compute boundary
 bounded output
+artifact hash
 machine-verifiable completion
-PR / human review for important changes
+visual evidence
+PR / human review
 ```
 
-を設計対象にします。
+まで広がります。
 
 ---
 
-# 私たちが作ったのは「AIへの橋」ではなく、小さなcontrol planeだった
+# 私たちが作ったのは「AIへの橋」ではなく、local capability brokerだった
 
 最初は、GitHub Issueを使えばChatGPTとlocal Codexをつなげられる、という発想でした。
 
-しかし、2026年のGitHub/Codex ecosystemと比較すると、Issueからagentへ仕事を渡すこと自体はすでに一般化しています。
+2026年のGitHub ecosystemと比較すると、Issueからagentへ仕事を渡すこと自体はすでに一般化しています。
 
-差が出るのは、その先です。
+このbridgeの独自性が出るのは、その先です。
 
 ```text
-誰が発行できるか
-どこで実行するか
-何を触れるか
-どのtoolを使えるか
-どこへ通信できるか
-何を成果物と呼ぶか
-誰が最後に承認するか
+GitHubだけでは触れない
+Unity Editor
+Blender
+GPU model
+video file
+3D asset
+local SDK
 ```
 
-この7つを明示した瞬間、単なるbridgeではなく**control plane**になります。
+へ到達するときです。
 
-そして、一般知見として最も重要なのは次の1行です。
+その瞬間、bridgeはremote shellではなく、**local capability broker**になります。
 
-> AI coding agentを安全にするのは、賢いpromptではなく、agentの外側に置いた強制可能な境界とreviewableな成果物である。
+そしてasset処理まで含めて考えると、安全性の中心も変わります。
 
-GitHub Issueはそのcontrol planeの入口として使えます。
+> AI coding agentを安全にするのは賢いpromptではない。agentの外側に置いた強制可能な境界と、再検証できる成果物である。
 
-しかし、Issueそのものはsandboxでもapprovalでもありません。
+repositoryだけで仕事が完結するならcloud agent + PRを使う。
 
-repositoryだけで仕事が完結するなら、既存のcloud agent + PR workflowを使う。
+local stateが本当に必要なときだけbridgeを足す。
 
-local PCへ到達する必要があるときだけbridgeを足し、その分だけ境界も増やす。
+そしてlocalへ入った瞬間、codeだけでなくapplication、GPU、asset、network、outputまで権限として設計する。
 
-これが、自作実装と2026年の公式agent workflowを比較して得た結論です。
+Unity、Blender、動画生成を考えると、local bridgeを作る理由はむしろここにあります。
 
 ---
 
@@ -726,33 +1070,51 @@ local PCへ到達する必要があるときだけbridgeを足し、その分だ
 
 - About issues
   https://docs.github.com/en/issues/tracking-your-work-with-issues/learning-about-issues/about-issues
-- Planning and tracking work
-  https://docs.github.com/en/issues/tracking-your-work-with-issues/learning-about-issues/planning-and-tracking-work-for-your-team-or-project
-- Best practices for Projects
-  https://docs.github.com/en/issues/planning-and-tracking-with-projects/learning-about-projects/best-practices-for-projects
 - Kick off a task with Copilot agents
   https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/kick-off-a-task
 - About third-party coding agents
   https://docs.github.com/en/copilot/concepts/agents/about-third-party-coding-agents
 - Review output from Copilot
   https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/review-copilot-output
-- About GitHub Copilot code review
-  https://docs.github.com/en/copilot/concepts/agents/code-review
 - Customize Copilot firewall
   https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-the-firewall
 - Secure use reference for GitHub Actions
   https://docs.github.com/en/actions/reference/security/secure-use
-- Adding self-hosted runners
-  https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/add-runners
 
 ### OpenAI
 
-- OpenAI Developers — Codex
-  https://developers.openai.com/
 - Running Codex safely at OpenAI
   https://openai.com/index/running-codex-safely/
-- Enterprise admin getting started guide for Codex
-  https://help.openai.com/en/articles/11390924
+
+### Unity
+
+- Unity Editor command line arguments
+  https://docs.unity3d.com/ja/current/Manual/EditorCommandLineArguments.html
+- Asset Database
+  https://docs.unity3d.com/ja/current/Manual/AssetDatabase.html
+- AssetDatabase.ImportAsset
+  https://docs.unity3d.com/ja/current/ScriptReference/AssetDatabase.ImportAsset.html
+
+### Blender
+
+- Blender 5.0 Manual — Command Line Arguments
+  https://docs.blender.org/manual/ja/5.0/advanced/command_line/arguments.html
+
+### FFmpeg
+
+- ffmpeg Documentation
+  https://ffmpeg.org/ffmpeg.html
+- FFmpeg Filters Documentation
+  https://ffmpeg.org/ffmpeg-filters.html
+
+### Hugging Face Diffusers
+
+- Loading pipelines
+  https://huggingface.co/docs/diffusers/en/using-diffusers/loading
+- Pipeline overview
+  https://huggingface.co/docs/diffusers/api/pipelines/overview
+- Stable Video Diffusion
+  https://huggingface.co/docs/diffusers/main/using-diffusers/svd
 
 ### このbridgeの実装証拠
 
