@@ -1,0 +1,43 @@
+name: Zenn Production Verification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "articles/**"
+      - "pipeline/zenn_production.py"
+      - "tests/test_zenn_production.py"
+      - "docs/PUBLICATION.md"
+      - ".github/workflows/zenn-production-verify.yml"
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zenn-production-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Verify every published:true article on Zenn production
+        shell: bash
+        env:
+          ZENN_USERNAME: kafka2306
+        run: |
+          wait_seconds=0
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # Zenn deploy starts after the linked branch is pushed and may take time.
+            wait_seconds=600
+          fi
+          python -m pipeline.zenn_production \
+            --wait-seconds "$wait_seconds" \
+            --interval-seconds 15
