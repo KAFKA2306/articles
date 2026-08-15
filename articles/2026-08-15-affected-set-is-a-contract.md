@@ -1,137 +1,130 @@
 ---
-title: "速いCIより、正しいaffected setを先に測る"
+title: "CIを速くしたのに、必要なテストまで消えていないか"
 emoji: "🧭"
 type: "tech"
 topics: ["monorepo", "ci", "nx", "turborepo", "testing"]
 published: false
 ---
 
-モノレポのCI改善では、最初に「何秒短くなったか」を見たくなる。しかし、affected executionで先に決めるべきなのは速度ではない。**変更したprojectから、実行対象に含めるべきproject集合を正しく導けるか**である。
+CI短縮で最初に見るべきなのは秒数ではない。
 
-この順序を逆にすると、速いCIが単に必要な検証を飛ばしているだけでも成功に見える。
+**変更したとき、本当に実行すべきprojectを落としていないか**である。
 
-## 先にground truthを固定した
+affected executionは強力だが、対象集合を間違えると「速くなった」のではなく「必要な検証を飛ばした」だけでもgreenになる。
 
-今回のfixtureは4つの依存projectと、独立したdocs projectからなる。比較前に、変更点ごとの期待affected setを固定した。
+今回、toolを選ぶ前にrepository側の期待affected setを固定した。
 
 - `core`変更 → `core`, `ui`, `web`, `api`
 - `ui`変更 → `ui`, `web`
 - `docs`変更 → `docs`
 
-これはbenchmark結果から作った期待値ではない。fixtureの依存関係から事前に定義したground truthである。1 mutant = 1 root fault、raw diagnostics != defect count、correctness before speedという既存protocolも維持した。
+この3ケースをground truthとして、orchestratorの出力を照合した。
 
-再現用fixtureとraw evidenceは `benchmarks/verification-stack-v2/` に固定している。
+## 速さより先に集合を固定する理由
 
-- protocol: https://github.com/KAFKA2306/articles/blob/f7368d064d1840a5f66d92563d16deaabb5b3285/benchmarks/verification-stack-v2/PROTOCOL.md
-- ground truth: https://github.com/KAFKA2306/articles/blob/f7368d064d1840a5f66d92563d16deaabb5b3285/benchmarks/verification-stack-v2/workspace/ground-truth.json
-- raw workspace result: https://github.com/KAFKA2306/articles/blob/f7368d064d1840a5f66d92563d16deaabb5b3285/benchmarks/verification-stack-v2/results/controlled/workspace.json
+CI時間は観測しやすい。一方、false negativeは見えにくい。
 
-## 同じ「affected」でも、観測対象は同じとは限らない
+```text
+変更
+  ↓
+affected判定を誤る
+  ↓
+必要なtest/buildを実行しない
+  ↓
+CIは速くgreenになる
+```
 
-controlled runでは、Nxの `nx show projects --affected` は3変更すべてで事前ground truthと一致した。
+最悪なのは、性能改善として成功に見えることだ。
+
+だから先に次のcontractを作る。
+
+```text
+f(change) -> expected projects
+```
+
+代表caseが3件でも、速度benchmarkより先に「落としてはいけない対象」を検証できる。
+
+## 今回の観測
+
+Nxの`nx show projects --affected`は、固定した3 caseでproject-level ground truthと一致した。
 
 | change | expected | Nx observed |
-| --- | --- | --- |
+|---|---|---|
 | core | core, ui, web, api | core, ui, web, api |
 | ui | ui, web | ui, web |
 | docs | docs | docs |
 
-一方、Turborepoの `turbo run build --affected --dry=json` は `core` 変更では期待した4 build packageを含んだが、`ui` 変更では `core, ui, web` を返し、事前ground truth `ui, web` より `core` が1つ多かった。
+raw evidence:
+https://github.com/KAFKA2306/articles/blob/f7368d064d1840a5f66d92563d16deaabb5b3285/benchmarks/verification-stack-v2/results/controlled/workspace.json
 
-ここで「Nxの方が優秀」と結論してはいけない。両コマンドは同じauthority surfaceではないからだ。
-
-Nx公式はaffected計算について、Gitで変更fileを特定し、project graphで所属projectと依存projectを導く、と説明している。
+Nx公式はaffected計算を、Gitで変更fileを特定し、project graphから影響projectを求める仕組みとして説明している。
 
 https://nx.dev/docs/features/ci-features/affected
 
-Nxはproject graphとtask graphを別概念として公開している。`nx show projects --affected` はproject集合を観測するsurfaceである。
-
-https://nx.dev/docs/features/explore-graph
-
-対して今回のTurborepo観測は `run build --affected --dry=json` の**task plan**である。つまり「affected project集合そのもの」と「その変更から実際にbuildするtask集合」を、名前が似ているからといって同じmetricにしてはいけない。
-
-TurborepoのCI documentation:
+一方、今回Turborepoで観測した`turbo run build --affected --dry=json`はbuild task planだった。project集合そのものとtask planを同じaccuracy metricへ押し込むと比較を壊す。
 
 https://turborepo.com/docs/crafting-your-repository/constructing-ci
 
-## 速度比較をheadlineにしなかった理由
+## ここで製品ランキングをしない
 
-同じcontrolled artifactにはelapsed timeも残っている。たとえば `core` 変更の単発観測ではNx commandは約518 ms、Turborepo dry-runは約63 msだった。
+同じartifactにはelapsed timeも残っている。しかし「NxよりTurborepoが何倍速い」のようなheadlineには使わなかった。
 
-しかし、この数字を「TurborepoはNxより8倍速い」とは書けない。
+理由は簡単だ。
 
-理由は3つある。
+- 観測したcommandの責務が違う
+- paired timingではない
+- 正しさを満たしていない候補の速さは意味がない
 
-1. 実行したcommandの責務が違う。
-2. これは同一runnerでのpaired timingではない。
-3. project-set correctnessとtask-plan生成時間を混ぜると、速さがauthorityの正しさを上書きする。
+速度は、**同じ責務を正しく満たしたsurvivor同士**で初めて比較する。
 
-この実験protocolではcorrectnessが速度より先である。速度は、同じ責務を満たしたsurvivor同士で初めて意思決定材料になる。
+## 壊れた導入順序
 
-## 3つの物語を同じ証拠で反証した
+```text
+1. fastest toolを選ぶ
+2. affectedを有効化
+3. CIが短くなったので成功
+```
 
-### 1. 「NxはTurborepoより正確だ」
+この順序では、何を落としてはいけないかが未定義である。
 
-棄却する。
+## 改善した導入順序
 
-今回、Nxではproject affected setを、Turborepoではbuild task planを観測した。異なるauthority surfaceの出力差を製品accuracyへ一般化できない。
+```text
+1. dependency graphから代表変更caseを選ぶ
+2. expected affected setをrepoに固定する
+3. candidate toolの出力を照合する
+4. false negativeがない候補だけ残す
+5. その後に速度・cache・運用costを測る
+```
 
-### 2. 「Turborepoの方が速いからCIにはTurborepoを選ぶ」
+## 読者が最初に区別する5つ
 
-棄却する。
+monorepo高速化では、次を同じものとして扱わない。
 
-単発かつ異なるcommandのelapsed timeであり、same-runner paired timing条件を満たさない。さらに速度はground-truth correctnessの代替にならない。
+- changed files
+- affected projects
+- affected tasks
+- task cache
+- architecture boundaries
 
-### 3. 「affected setを先に契約として固定し、orchestratorの出力をその契約に照合する」
+必要なのがbuild/test taskの絞り込みだけなら、project-level architecture authorityまで追加する必要はない。逆にimpact analysisを人間の判断にも使うなら、project集合を直接観測できるsurfaceが重要になる。
 
-これだけが残る。
+## 最小の再現方法
 
-モノレポtoolを選ぶ前に、repository側が「この変更なら何が影響を受けるべきか」を少数の代表caseで宣言できる。toolはその契約を満たす実装候補であり、tool名そのものがground truthではない。
+自分のrepoで3ケース作ればよい。
 
-## NxとTurborepoのauthorityを分ける
+1. shared/core packageを変更する
+2. leafに近いpackageを変更する
+3. 独立package/docsを変更する
 
-Nx公式はproject graphをworkspace projectと依存関係のgraphとして扱い、affected commandはGit historyとproject graphから影響projectを求める。
+各ケースで「絶対に含む」「絶対に含まない」projectを先に書く。その後でNx、Turborepo、独自scriptなど候補の出力を照合する。
 
-https://nx.dev/docs/features/ci-features/affected
+## 証拠の境界
 
-そのため、**project/affected graphそのものを意思決定に使いたい**場合、Nxには明示的なauthority surfaceがある。
+今回のfixtureだけからNxが一般にTurborepoより正確とも、Turborepoが一般に速いとも言えない。real repositoryで同じ差が再現することも証明していない。
 
-一方、Turborepoを採用する理由は「Nxより軽いから」ではなく、既存JS/TS workspaceで必要なのがtask graph、cache、affected task executionである場合に置くべきだ。project-level architectural boundaryまで必要なら、それは別のcapabilityとして検証する。
+ただし、CI高速化の評価順序は変えられる。
 
-この分離は「全部入りtoolを選べ」という話ではない。逆である。**足りないauthorityだけを追加する**ための分離だ。
+**秒数を測る前に、実行対象集合をrepositoryのcontractとして固定する。**
 
-## 読者が先に決めるべきもの
-
-新しいorchestratorを導入する前に、最低でも次を区別する。
-
-- changed filesを知りたいのか
-- affected projectsを知りたいのか
-- 実行すべきtasksを知りたいのか
-- task結果をcacheしたいのか
-- architecture boundaryを強制したいのか
-
-これらは同じ「monorepo高速化」ではない。
-
-特にCI削減では、`f(change) -> expected projects` を数caseだけでもfixture化すると、速度benchmarkより先にfalse negativeと不要なover-runを検出できる。
-
-## 今回、証明していないこと
-
-このfixtureだけから次は言えない。
-
-- Nxが一般にTurborepoより正確である
-- Turborepoが一般にNxより速い
-- どちらか一方がすべてのmonorepoに適する
-- real repositoryで同じaffected差が再現する
-- task cache hit率やremote cache性能の優劣
-
-real repository観測はexternal validityであり、controlled ground truthの代わりにはしない。
-
-## 何が起きれば判断を反転するか
-
-Turborepo側で、今回と同じ**project affected set**を直接かつ同じ意味論で取得する公式surfaceを固定し、それが3 caseすべてでground truthと一致するなら、「project affected authorityのためにNxが必要」という判断は弱くなる。
-
-逆に、必要なのがbuild/test taskの選択とcacheだけで、project-level impactやarchitecture boundaryを意思決定に使わないrepositoryなら、Nxを追加する理由も弱い。
-
-重要なのはブランドではない。
-
-**CIを速くする前に、「何を実行すべきか」をrepository自身の契約として固定する。orchestratorはその契約に従う側である。**
+CIが速くなったとき、「必要なものを落とさず速くなった」と言えるようにするためだ。
