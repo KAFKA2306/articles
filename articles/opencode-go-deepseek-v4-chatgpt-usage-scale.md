@@ -1,5 +1,5 @@
 ---
-title: "ChatGPTを使い倒している私に、月10ドルのOpenCode Goが刺さった理由"
+title: "OpenCode Goを見て、月10ドルなら試したいと思った理由"
 emoji: "♾️"
 type: "tech"
 topics: ["opencode", "chatgpt", "coding", "mcp", "local"]
@@ -11,27 +11,21 @@ OpenCode Goは最初の月$5、その後$10/月。
 
 DeepSeek V4 Flashは、公式が観測した典型的な利用パターンなら **月158,150 requests相当** とされている。
 
-最初は「安いな」で終わっていた。
+数字だけ見たときは、正直「安いな」で終わった。
 
-でも、自分が最近書いた記事を読み返すと、私にとっての価値は別のところにあった。
+でも最近の自分の作業を思い返していたら、これ、かなり欲しかったものに近いかもしれないと思った。
 
-**私はすでに、AIにローカルPCでやらせたい仕事を大量に持っていた。**
+## ChatGPTで決められる。でも、その先がローカルに残る
 
-## ChatGPTはもう「司令塔」になっている
+いまはChatGPTでかなりの仕事をしている。
 
-私はChatGPTで、GitHubの複数repoを横断し、Issue、PR、CI、記事、調査、金融、画像、scheduled taskまで扱っている。
+GitHubを横断して次に触るrepoを決める。IssueやPRを見る。記事を直す。金融データを読む。画像を作る。scheduled taskも回す。
 
-別の記事では、123個の個人開発を横断すると、重要なのはコード生成より「次にどの仕事を進めるか」だと書いた。
+[個人開発が123個になって分かった。ChatGPTに任せるべきはコードより「次の1件」だった](https://zenn.dev/kafka2306/articles/chatgpt-multiproject-autonomy) でも書いたけれど、考えるところ、選ぶところはかなりChatGPTに寄せられるようになった。
 
-- [個人開発が123個になって分かった。ChatGPTに任せるべきはコードより「次の1件」だった](https://zenn.dev/kafka2306/articles/chatgpt-multiproject-autonomy)
+一方で、最後まで寄せきれない仕事がずっと残っている。
 
-この役割はChatGPTから動かしたくない。
-
-一方で、ChatGPTやGitHub上のagentだけでは扱いにくい仕事が残る。
-
-## 私が「localでやりたい」と書いていたもの
-
-Codexとのbridgeを作った記事で、私はローカル実行が必要になる例をすでに列挙していた。
+以前、local Codexとのbridgeを作ったとき、自分でこう書いていた。
 
 - 数百GBのローカルデータ
 - GPU環境
@@ -40,65 +34,67 @@ Codexとのbridgeを作った記事で、私はローカル実行が必要にな
 - 認証済みのデスクトップアプリ
 - commit前の作業中workspace
 
-- [GitHub IssueをAIの伝言板にしたら、伝言板に全部やらせてはいけないと分かった](https://zenn.dev/kafka2306/articles/codex-chatgpt-github-issue-bridge)
+[GitHub IssueをAIの伝言板にしたら、伝言板に全部やらせてはいけないと分かった](https://zenn.dev/kafka2306/articles/codex-chatgpt-github-issue-bridge)
 
-Unityでも同じだった。
+読み返していて、「まさにここだ」と思った。
 
-PrefabのAnimator、PhysBone、Contact、Transform階層、Play Modeでの実挙動は、GitHubのコードだけ読んでも確定できない。実際のUnity Editorとprojectを観測する必要がある。
+ChatGPTで方針を決めたあと、結局自分のPCへ戻って、localの状態を見ながら続きをやる。その部分をもっとAIに任せたかった。
 
-つまり私に足りなかったのは、もう1つの汎用チャットではない。
+Unityも同じで、PrefabのAnimatorやPhysBone、Contact、Transform階層、Play Modeでの実挙動は、GitHub上のコードだけでは決めきれない。実際のEditorを見ないと分からない。
 
-**自分のPC上で、file、shell、test、local toolを触り続けられる実行側だった。**
+## OpenCode Goなら、そこに置けそうだった
 
-## そこでOpenCode Goが刺さる
+OpenCodeにはshellを実行する`bash`、fileのread/edit/write、local MCP serverとの接続がある。
 
-OpenCodeには、project内でshell commandを実行する`bash`、fileを読む・編集するtoolがあり、local MCP serverも接続できる。
+つまり、自分のPC上のrepoを読み、testを回し、fileを直し、必要ならlocal MCP経由でUnityなどに触る、という使い方ができる。
 
-だから私の使い分けはこうなる。
+そこでようやく、月158,150 requests相当という数字が自分に繋がった。
 
-```text
-ChatGPT
-= control plane
-= 調査 / 判断 / repo横断 / 次の仕事を決める
+「そんなに会話できる」のではなく、
 
-OpenCode Go
-= local execution plane
-= file / shell / test / local MCP / 作業中workspace
-```
+**localで何度も試して、直して、testして、また直す余裕があるかもしれない。**
 
-これはChatGPTをOpenCodeへ乗り換える話ではない。
+こっちの方がずっと重要だった。
 
-**ChatGPTでは届きにくいローカル実行面を、月$10の推論容量で埋める話**である。
+## ChatGPTを置き換えたいわけではない
 
-## 他サービスと比べても、私には役割が違う
+ここも自分の中ではかなりはっきりしている。
 
-| Service | 月額 | 私にとっての役割 |
+ChatGPTは今のまま使いたい。
+
+調査したり、複数repoを横断したり、次に何をやるか決めたりする場所として便利だからだ。
+
+OpenCode Goに期待しているのは、その代わりではない。
+
+**ChatGPTで決めたことを、自分のPC側で大量に実行する役。**
+
+この役割なら、月$10はかなり納得しやすい。
+
+## 他と比べるとこう見える
+
+| Service | 月額 | 今の自分なら |
 |---|---:|---|
-| **OpenCode Go** | **$10** | local repo・shell・test・MCPを大量に回すworker |
-| **GitHub Copilot Pro** | **$10** | GitHub/IDE中心のcompletionとCopilot workflow |
-| **Cursor Pro** | **$20** | EditorとAgentを一体で使う |
-| **Claude Pro + Claude Code** | **$20** | Claudeとterminal codingを同じ契約で使う |
-| **ChatGPT Plus + Codex** | **$20** | 私の横断的な調査・判断・agent運用の中心 |
+| **OpenCode Go** | **$10** | local repo・shell・test・MCPを回す |
+| **GitHub Copilot Pro** | **$10** | GitHub/IDE中心なら強い |
+| **Cursor Pro** | **$20** | EditorごとAgent中心にするなら便利 |
+| **Claude Pro + Claude Code** | **$20** | Claudeとterminal codingをまとめたいなら自然 |
+| **ChatGPT Plus + Codex** | **$20** | 今の調査・判断・横断作業の中心 |
 
 OpenCode Goの158,150回はhard quotaではない。DeepSeek V4 Flashの月$60 usageを、公式の典型的なtoken/cache patternからrequest数へ換算した推定値である。
 
-私にとって重要なのは、その数字自体ではなくなった。
+でも、もうその数字そのものにはあまり惹かれていない。
 
-**すでに「この仕事はlocalでやりたい」と感じていた領域へ、安価なagent capacityを置ける。**
+**自分が何度も「ここはlocalでやりたい」と感じていた場所に、月$10でAIを置ける。**
 
-それなら月$10を払う理由がある。
+それなら試したい。
 
-逆に、実際のrepoやUnity/MCP作業で完了率が低いなら、158,150回使えても意味はない。
-
-私が見るべきKPIはrequest数ではなく、**localで完了できた仕事の数**だ。
+あとは実際にrepoやUnity/MCP作業をやらせてみて、どれだけ仕事が終わるかを見るだけだと思っている。
 
 ## 注意：local実行とlocal推論は別
 
 OpenCode GoはローカルLLMを買うサービスではない。GoのmodelはOpenCode Go provider経由で利用する。
 
-つまりここで言うlocalは、**実行場所とtool accessが自分のPCにある**という意味で、推論まで完全offlineという意味ではない。
-
-外部送信できないデータを扱う場合は、権限・redaction・tool boundaryやlocal modelを別に設計する必要がある。
+ここで言うlocalは、**実行場所とtool accessが自分のPCにある**という意味で、推論まで完全offlineという意味ではない。
 
 ## 公式情報
 
