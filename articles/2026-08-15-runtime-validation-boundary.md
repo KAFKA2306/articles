@@ -1,125 +1,112 @@
 ---
-title: "型チェックが通っても、外部入力は安全にならない"
+title: "型チェックが通っても、APIの入力はまだ信用できない"
 emoji: "🚧"
 type: "tech"
 topics: ["python", "typescript", "pydantic", "zod", "testing"]
 published: false
 ---
 
-CIで型チェックがgreenでも、API、JSON、環境変数、ファイルから来る値まで安全になったわけではない。
+API、JSON、環境変数、ファイル入力を扱うコードで型チェックがgreenになると、入力まで安全になったように感じる。
 
-今回、PythonとTypeScriptで外部入力のfailureを1件ずつ固定し、static checkとruntime validationを分けて観測した。PydanticとZodは各runtime mutantを拒否し、validationなしのcontrol pathは拒否しなかった。
+しかし外から届く値は、実行時に初めて存在する。
 
-ここから得た実務上の結論は、製品選びではない。
+今回、PythonとTypeScriptでruntime-boundary faultを1件ずつ固定したところ、validationなしのcontrol pathは両方とも通過し、Pydantic/Zodを置いたpathだけが不正値を拒否した。
 
-> **外部入力は、runtime boundaryで最後に検証する。**
+読者が持ち帰る判断は1つでよい。
 
-## どこで事故が起きるのか
+**外部値は、business logicへ渡す直前ではなく、入ってきた境界で`unknown → validated value`へ変換する。**
 
-典型例はこれだ。
+## 何が実際に起きたか
 
-```text
-HTTP / JSON / env / file
-        ↓
-アプリ内部の型付きコード
-```
+固定fixtureでは次の2ケースだけを測った。
 
-内部コードが型安全でも、境界から入る値は実行時にしか存在しない。
-
-TypeScript公式は、compile後にtype annotationをeraseしてJavaScriptを生成すると説明している。
-
-https://www.typescriptlang.org/docs/handbook/typescript-from-scratch.html
-
-つまり`unknown`を正しく扱うことと、その値をruntimeで検証することは別である。
-
-Zodはruntime schema validationを提供する。
-
-https://zod.dev/
-
-Pythonでも同じ分離がある。PyreflyはPydantic v2を静的解析できるが、Pydantic自身のruntime validationとは別の責務だ。
-
-https://pyrefly.org/en/docs/pydantic/
-https://docs.pydantic.dev/latest/concepts/validation_decorator/
-
-## 固定fixtureで何が起きたか
-
-今回のcontrolled fixtureでは次の2ケースだけを扱った。
-
-- Python: staticに受理可能だがruntime contractへ違反する外部値
-- TypeScript: compile可能な`unknown` payloadだがruntime schemaへ違反する値
-
-結果は次だった。
-
-| language | runtime validator | fixed runtime fault | unvalidated control |
-|---|---|---:|---:|
+| language | runtime validator | invalid input | validationなし |
+|---|---|---|---|
 | Python | Pydantic | reject | accept |
 | TypeScript | Zod | reject | accept |
 
-summary:
+raw summary:
 https://github.com/KAFKA2306/articles/blob/4c111d27ea193a72238d5ee97d145770cec2109e/benchmarks/verification-stack-v2/results/controlled/summary.json
 
-各言語1件なので「accuracy 100%」とは言わない。実証したのは、**static passでは止まらず、runtime contractで初めて止められるfailure classが両fixtureに存在した**ことだけだ。
+各言語1件なので、Pydantic/Zodのaccuracyを100%と呼ぶ証拠ではない。確認できたのは、**static checkだけでは止まらずruntime validationで初めて止まるfailure classが両fixtureにあった**ことだ。
 
-## 壊れた設計
+## なぜ型注釈だけでは足りないのか
+
+TypeScript公式は、compile後に型をeraseしてJavaScriptを生成し、型によってruntime behaviorを変えないと説明している。
+
+https://www.typescriptlang.org/docs/handbook/typescript-from-scratch.html
+
+Zodは`parse` / `safeParse`で実際の値をschemaへ照合する。
+
+https://zod.dev/basics
+
+PythonでもPydanticの`validate_call()`は、function call前に実際の引数をparse/validateする。
+
+https://docs.pydantic.dev/latest/concepts/validation_decorator/
+
+つまり、static checkerとruntime validatorは代替関係ではない。
+
+```text
+external value
+    ↓
+runtime validation
+    ↓
+validated value
+    ↓
+typed application code
+```
+
+## 置く場所を迷ったら「最初の信用境界」を探す
+
+runtime validationを置く候補は、外部世界から値が入る場所だ。
+
+- HTTP request / webhook
+- environment variables
+- JSON / CSV / config file
+- message queue
+- LLM structured output
+
+内部の深い関数で毎回validateする必要はない。**境界で1回、明示的に信用できる値へ変える**方が、失敗箇所と責務を狭くできる。
+
+## 壊れた形と改善後
+
+壊れやすい形:
 
 ```text
 request.json()
   ↓
 型注釈を付ける
   ↓
-そのままbusiness logicへ渡す
+business logic
 ```
 
-型注釈は入力値そのものを検証しない。
-
-## 改善後
+改善後:
 
 ```text
-external input
+request.json()
   ↓
-runtime schema / parser
+schema.parse / model validation
   ↓
 validated value
   ↓
-application code + static type checker
+business logic
 ```
 
-ここでruntime validatorとtype checkerは競合しない。
+## 導入するときの6問
 
-- static checker: コード上の型整合性
-- runtime validator: 実際に到着した値のcontract
+1. 外部から値が入る入口はどこか
+2. 入口では値を`unknown`相当として扱っているか
+3. schema/modelは境界直後にあるか
+4. validation後の値だけを内部へ渡しているか
+5. invalid payloadのregression testが最低1件あるか
+6. static checkerがgreenでも、そのruntime testを削除していないか
 
-## どこに置くべきか
-
-外部入力の直後に置く。
-
-対象は最低でも次だ。
-
-- HTTP request body
-- webhook payload
-- environment variables
-- config file
-- CSV / JSON import
-- message queue payload
-- LLM structured output
-
-内部処理の奥深くでvalidationするより、境界直後でunknownをvalidated valueへ変換する方がfailure locationを狭くできる。
-
-## 読者向けチェックリスト
-
-1. 外部から入る値を列挙する
-2. 各入力が最初に`unknown`として扱われる場所を探す
-3. runtime schemaを境界直後に置く
-4. validation後の型だけを内部へ渡す
-5. invalid payloadのtestを1件以上固定する
-6. static checkerがgreenでもruntime boundary testを削除しない
+この6問で、型チェックと入力検証を同じ「型安全」という言葉に潰さずに済む。
 
 ## 証拠の境界
 
-この記事は「Pydantic/Zodがすべての入力事故を防ぐ」とは言わない。今回測ったruntime mutantは各言語1件だけで、schema designの完全性も測っていない。
+この記事は、Pydantic/Zodがすべての入力事故を防ぐとは主張しない。schema自体が間違っていればvalidationも間違うし、今回測ったfaultは各言語1件だけだ。
 
-言えるのはもっと実務的なことだ。
+それでも運用判断は変えられる。
 
-**型チェックのgreenを、外部入力のvalidation済みと読み替えない。**
-
-外から来る値には、実際の値を判定するruntime authorityを置く。
+**型チェックのgreenを「外部入力も検証済み」と読み替えない。外から来る値は、最初の信用境界で実際の値を検証する。**
