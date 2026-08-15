@@ -1,5 +1,5 @@
 ---
-title: "CIが終わるまでデプロイしない。GitHubとShopifyに学ぶ「Push on Green」"
+title: "速く出すために、勝手に出さない。GitHubとShopifyに学ぶRelease Engineering"
 emoji: "🚦"
 type: "tech"
 topics: ["cicd", "githubactions", "githubpages", "testing", "sre"]
@@ -9,8 +9,9 @@ published_at: 2026-08-13 16:04
 
 > **“Sorry, I couldn’t deploy github/my-feature: github and enterprise are still building.”**
 
-これは教科書の例ではない。
-GitHubが実際のGitHub.comのdeployで使っていたHubotの応答である。
+これは架空のCI/CD教材ではない。
+
+GitHubがGitHub.comをdeployするとき、実際にHubotが返していたメッセージである。
 
 CIがまだ終わっていない。
 だからdeployしない。
@@ -19,70 +20,151 @@ CIが失敗した場合も同じだった。
 
 > **“Sorry, I couldn’t deploy github/my-feature: github and enterprise failed to build.”**
 
-GitHubはこの仕組みを **Deploy Guards** と呼び、当時このworkflowでWebサイトへ週に数百回deployしていた。
+GitHubはこの仕組みを **Deploy Guards** と呼んでいた。2015年公開、2024年更新のGitHub Engineeringの記事によれば、このworkflowでGitHub.comには週に数百回の変更がdeployされていた。
 
-- GitHub Engineering, *Deploying branches to GitHub.com*: https://github.blog/engineering/engineering-principles/deploying-branches-to-github-com/
+- GitHub Engineering, *Deploying branches to GitHub.com*
+  - https://github.blog/engineering/engineering-principles/deploying-branches-to-github-com/
 
-ここで面白いのは、品質gateを増やした結果「慎重になってdeployが遅くなった」という話ではないことだ。
+一見すると、これは慎重な会社がdeployを遅くするための仕組みに見える。
 
-**deployできる条件を機械が明確にしたから、人間は速くdeployできた。**
+実際は逆である。
 
-この考え方は、その後のGitHubでも形を変えて残っている。
+**「何を満たせば次へ進めるか」を機械に判断させることで、人間は安心して速くshipできる。**
 
-2024年にGitHubが公開したmerge queueの内部運用では、GitHub.comで一般公開前に **30,000超のPull Requestと450万回のCI run** を処理した。その後、大規模monorepoでは月に500人超のengineerが2,500 PRをmergeし、変更をshipする平均待ち時間を **33%短縮** したと報告している。
+この記事では、Google SRE、GitHub、Shopify、DORAの一次情報と実運用を使って、この考え方を確認する。
 
-- GitHub Engineering, *How GitHub uses merge queue to ship hundreds of changes every day*: https://github.blog/engineering/engineering-principles/how-github-uses-merge-queue-to-ship-hundreds-of-changes-every-day/
+最後にGitHub Pagesへ落とし込み、Pagesがまだ使えない状況でも何を検証すべきかを整理する。
 
-merge queueはbuildとtestを起動し、失敗するcommitでmain branchが更新されないようにする。
+## 「速さ」と「安定性」は本当にtrade-offなのか
 
-つまり、これは単なるCI設定の小技ではない。
+CI/CDの議論では、ときどき次の二択になってしまう。
 
-**「検証を先に機械化し、通過した変更だけを次のstageへ進める」ことは、速度と信頼性を両立するためのrelease設計である。**
+```text
+速く出す
+vs
+慎重に検証する
+```
 
-この記事では、その原則をGoogle、GitHub、Shopifyの実運用から確認し、最後にGitHub Pagesの小さなrepositoryへ落とし込む。
+しかしDORAの研究史では、2015年の時点で、高performerはdeliveryの速度と安定性の両方で優れていたと整理されている。
+
+現在のDORAもsoftware delivery performanceを、単なるdeploy回数ではなく、throughputとinstabilityの両方で測る。
+
+- change lead time
+- deployment frequency
+- failed deployment recovery time
+- change fail rate
+- deployment rework rate
+
+- DORA, *A history of DORA’s software delivery metrics*
+  - https://dora.dev/insights/dora-metrics-history/
+- DORA, *DORA’s software delivery performance metrics*
+  - https://dora.dev/guides/dora-metrics/
+
+重要なのは、**速くdeployすること自体が目的ではない**ことだ。
+
+```text
+変更を速く届ける
+        +
+失敗を減らす
+        +
+失敗しても速く戻す
+```
+
+を同時に改善する。
+
+そのために、release processを曖昧な人手判断ではなく、再現可能なstate transitionへ変えていく。
 
 ## Googleの“Push on Green”は「緑なら押す」ではない
 
-Google SREのRelease Engineeringには、よく知られた表現がある。
+Google SREのRelease Engineeringには、有名な表現がある。
 
 > **“Push on Green”**
 
-Googleでは、一部のteamがhourly buildを作り、その中からtest結果と含まれるfeatureを見てproductionへ出すversionを選ぶ。別のteamは、**すべてのtestを通ったbuildをそのままdeployする**Push on Greenを採用している。
+Googleでは、一部のteamがhourly buildの中からtest結果を見てproductionへ出すversionを選び、別のteamはすべてのtestを通ったbuildをdeployするmodelを採用している。
 
-- Google SRE, *Release Engineering*: https://sre.google/sre-book/release-engineering/
+- Google SRE, *Release Engineering*
+  - https://sre.google/sre-book/release-engineering/
 
-Google SRE Workbookがrelease engineeringの基本原則として挙げるのは、次の4つである。
+Google SRE Workbookのrelease engineering原則はさらに明快である。
 
-> **“Reproducible builds / Automated builds / Automated tests / Automated deployments”**
+- reproducible builds
+- automated builds
+- automated tests
+- automated deployments
+- small deployments
 
-- Google SRE Workbook, *Canarying Releases*: https://sre.google/workbook/canarying-releases/
+- Google SRE Workbook, *Canarying Releases*
+  - https://sre.google/workbook/canarying-releases/
 
 順序が重要である。
 
 ```text
+source
+  ↓
 reproducible build
-        ↓
+  ↓
 automated test
-        ↓
+  ↓
 validated artifact
-        ↓
-automated deployment
-        ↓
+  ↓
+deployment
+  ↓
 production evaluation
 ```
 
-**deployは品質確認の代用品ではない。検証を通過した成果物を次へ進めるstageである。**
+**deployは品質検査の代用品ではない。検証を通った成果物を次の環境へ進める操作である。**
 
-Googleのrelease systemであるRapidでも、compileとunit testの後にbuild artifactをsystem testやcanary deploymentへ渡す構造になっている。
+## GitHubはgateを機械化して、ship待ちを33%減らした
 
-大規模なGoogleだけに必要な設計ではない。
-むしろ小さなrepositoryほど、この境界を明示するとfailure reasonが理解しやすくなる。
+GitHubのDeploy Guardsは分かりやすいが、古い事例だけではない。
 
-## Shopifyは5%のproduction trafficで止めてから100%へ進める
+2024年、GitHubはGitHub.comで使うmerge queueの内部運用を公開した。
 
-もう一つ分かりやすい実例がShopifyである。
+一般公開前にGitHub.comで処理した規模は、
 
-Shopifyが公開しているrelease pipelineは、次の順序になっている。
+- **30,000超のPull Request**
+- **450万回のCI run**
+
+だった。
+
+その後、大規模monorepoでは、
+
+- 月に **500人超** のengineer
+- 月に **2,500 Pull Request**
+- 平均ship待ち時間 **33%短縮**
+
+を報告している。
+
+- GitHub Engineering, *How GitHub uses merge queue to ship hundreds of changes every day*
+  - https://github.blog/engineering/engineering-principles/how-github-uses-merge-queue-to-ship-hundreds-of-changes-every-day/
+
+merge queueは候補PRをgroup化し、GitHub Actionsでbuildとtestを実行する。
+失敗するcommitでmain branchが更新されないようbranch protectionも使う。
+conflictするPRは自動でqueueから外す。
+
+以前のdeploy trainでは、developerが8時間以上待った後、conflictによってtrainから外されることもあった。
+
+つまり、ここで得られた33%は、
+
+```text
+gateをなくした結果
+```
+
+ではない。
+
+```text
+gateの判定とqueue運用を自動化した結果
+```
+
+である。
+
+**安全確認をなくすのではなく、安全確認から人間の待ち仕事を減らす。**
+
+これがCI/CD automationの重要な方向である。
+
+## Shopifyは5%で止め、10分見てから100%へ進める
+
+Shopifyが公開しているrelease pipelineも同じ思想を持っている。
 
 ```text
 Pull Request
@@ -94,127 +176,191 @@ Canary
 Production
 ```
 
-Merge Queueが変更を統合可能だと判断するとCanaryへdeployする。
+Merge Queueが変更を統合可能と判断すると、Canaryへdeployする。
+
 Canaryが受けるのは **random 5% of incoming requests** である。
 
-そこでdeveloperは **10分間** 変更をtestでき、manual interventionがなく、automated canary analysisがalertを出さなければProductionへ進む。
+developerはそこで **10分間** 変更をtestできる。
+manual interventionがなく、automated canary analysisがalertを出さなければProductionへ進む。
 
-- Shopify Engineering, *Software Release Culture at Shopify*: https://shopify.engineering/software-release-culture-shopify
+- Shopify Engineering, *Software Release Culture at Shopify*
+  - https://shopify.engineering/software-release-culture-shopify
 
-Shopifyはこのpipelineについて、automationが変更の品質に一定のassuranceを与え、release velocityが問題発生時のrecoveryを速くすると説明している。
+ここで重要なのはCanaryという名前ではない。
 
-重要なのは「Canaryという高度なtoolを使おう」という話ではない。
+Shopifyは、検証できることをstageごとに分けている。
 
 ```text
 CIで分かること
         ↓
-限定されたproduction trafficで初めて分かること
+限定されたproduction trafficで分かること
         ↓
 100% rollout後に分かること
 ```
 
-を同じものとして扱っていないことである。
+unit testがgreenでも、real trafficでしか見つからないfailureはある。
 
-**検証には段階があり、前段を通ったから後段の確認が不要になるわけではない。**
+だから前段のtestを信用しつつ、後段の観測も消さない。
 
-## GitHub自身のdeploy guardは、なぜ説得力があるのか
+**「前で検証したから後ろは見なくてよい」ではなく、「前を通ったものだけ後ろで検証する」。**
 
-GitHubの2015年のdeploy workflowをもう少し見ると、この境界がさらに明確になる。
+## 2026年のGitHubは「障害時にもdeployできるか」まで検証している
 
-当時のworkflowでは、
+release engineeringの境界は、testとdeployだけではない。
 
-1. branchを作る
-2. CIを通す
-3. stagingやbranch labで確認する
-4. productionの一部または全部へdeployする
-5. productionで例外やperformance regressionを監視する
-6. 問題なければmergeする
+2026年4月、GitHubはdeployment toolingの循環依存をeBPFで検出・遮断する仕組みを公開した。
 
-という流れを取っていた。
+GitHubは自社source codeをGitHub.comでhostしている。
+そのため、GitHub.com自体が障害になると、「GitHubを直すためにGitHubへアクセスする」という循環依存が生まれうる。
 
-CIが未完了ならdeploy guardが止める。
-CIが失敗しても止める。
-production environmentが別のdeployでlockされていても止める。
+GitHubはその対策として、source codeのmirrorとrollback用のbuilt assetsを維持している。
+さらにdeployment scriptだけをcGroupへ入れ、eBPFを使って問題のあるnetwork dependencyを検出・blockする仕組みを構築した。
 
-さらにriskの高い変更ではproductionの一部serverだけへdeployし、問題がなければ範囲を広げていた。
+この検出processは **6か月のrollout後にlive** になったとGitHubは報告している。
 
-- GitHub Engineering, *Deploying branches to GitHub.com*: https://github.blog/engineering/engineering-principles/deploying-branches-to-github-com/
+- GitHub Engineering, *How GitHub uses eBPF to improve deployment safety*, 2026-04-16
+  - https://github.blog/engineering/infrastructure/how-github-uses-ebpf-to-improve-deployment-safety/
 
-ここから得るべき一般原則は、
+これは高度なplatform engineeringの例だが、原則は小さなCI/CDにもそのまま使える。
 
-> gateを減らせば速くなる
+**deployが必要な瞬間に、deploy先や外部serviceが利用できるとは限らない。**
 
-ではない。
+だから、
 
-むしろ、
+```text
+artifactは正しいか
+```
 
-> **何を通過すれば次へ進めるかを機械が判断できるほど、releaseは速くなる**
+と、
 
-である。
+```text
+今このenvironmentへdeploy可能か
+```
 
-実際、GitHubが2024年に公開したmerge queueの改善でも、旧deploy trainでは8時間以上待った末にconflictで外れることがあった。一方、merge queueへの移行後は月2,500 PRを処理し、平均ship待ち時間を33%短縮している。
+を同じcontractにしない。
 
-品質gateとvelocityは必ずしもtrade-offではない。
-**曖昧な人手判断を、再現可能なstate transitionへ変えることが両方を改善する。**
+## 4つのcontractに分けるとfailureが読める
 
-## GitHub Pagesの公式workflowもbuildとdeployを分けている
+ここまでのGoogle、GitHub、Shopifyの事例を小さくすると、少なくとも4つに分けられる。
 
-ここまでの話をGitHub Pagesへ落とす。
+| Contract | 問い | 失敗したら |
+|---|---|---|
+| Build | 同じinputから成果物を作れるか | build / dependencyを直す |
+| Validate | 成果物は要求を満たすか | code / testを直す |
+| Release | 今このenvironmentへ出してよいか | permission / approval / environmentを直す |
+| Verify | 出したものが実際に使えるか | routing / runtime / production差分を直す |
 
-GitHub Pages公式ドキュメントには、そのまま
+全部を1個の赤/緑にすると、原因が混ざる。
+
+例えばPagesが無効なだけなのに、unit testまで「失敗」に見える必要はない。
+
+逆にPagesが無効だからといって、unit testやbuildまでskipしてよいわけでもない。
+
+```text
+VALIDATION_FAILED
+
+VALIDATED / RELEASE_BLOCKED
+
+DEPLOYED / PRODUCTION_FAILED
+
+VERIFIED
+```
+
+くらいは意味を分けた方が、次のactionが明確になる。
+
+## GitHub Pages自身もbuildとdeployを別jobにしている
+
+この考え方は大規模企業だけのものではない。
+
+GitHub Pagesの現在の公式ドキュメントには、明示的に
 
 > **“Linking separate build and deploy jobs”**
 
 という節がある。
 
-公式例は `build` と `deploy` を別jobにし、`deploy` に `needs: build` を置く。
-Pagesへのdeploymentは `github-pages` environmentに結びつける。
+公式例では `build` jobがPages artifactを作ってuploadし、`deploy` jobは `needs: build` でその後に動く。
 
-- GitHub Docs, *Using custom workflows with GitHub Pages*: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages
-- GitHub Docs, *Using jobs in a workflow*: https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-jobs
+- GitHub Docs, *Using custom workflows with GitHub Pages*
+  - https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages
 
-GitHubのpublishing sourceの説明でも、Pull Requestではbuildまで実行し、deployは行わない構成が示されている。
-
-- GitHub Docs, *Configuring a publishing source for your GitHub Pages site*: https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site
-
-つまり、小さなPages repositoryでも基本構造は同じである。
+概念的にはこうなる。
 
 ```text
-Pull Request
-    ↓
-validate / build / test
-    ↓
-artifact
-    ↓
-main・permission・environmentなどを満たしたらdeploy
-    ↓
-public URL verification
+build
+  ↓
+test
+  ↓
+upload validated artifact
+  ↓
+deploy
 ```
 
-**「成果物が正しいか」と「今この環境へ公開できるか」は別の問いである。**
+この形の良いところは、**testしたartifactとdeployするartifactの差を小さくできる**ことだ。
 
-## CI/CDでは少なくとも4つのstateを混ぜない
+理想は、
 
-全部を1個の赤/緑で表すと、原因が違うfailureを同じものとして扱ってしまう。
+```text
+build once
+→ test that artifact
+→ store that artifact
+→ promote that artifact
+```
 
-| 状態 | 意味 | 次のaction |
-|---|---|---|
-| validation failed | 成果物が壊れている | code / test / buildを直す |
-| validated, deploy unavailable | 成果物は通ったが公開条件がない | environment / permissionを整える |
-| deployed, production check failed | deployは成功したが公開結果が壊れている | routing / runtime差分を直す |
-| validated and verified | 検証・公開・公開後確認を通過 | release完了 |
+である。
 
-これなら、失敗を見た人が最初から「何を直すべきか」を判断できる。
+## release条件はquality gateへ混ぜない
+
+GitHub ActionsのEnvironmentは、deployment固有の条件を別contractとして扱える。
+
+公式ドキュメントでは、
+
+- required reviewers
+- wait timer
+- deployment branch / tag restrictions
+- custom deployment protection rules
+- environment secrets
+
+をdeployment protectionとして扱っている。
+
+- GitHub Docs, *Deployments and environments*
+  - https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments
+- GitHub Docs, *Deploying with GitHub Actions*
+  - https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/control-deployments
+
+つまり、
+
+```text
+quality gate
+- lint
+- type check
+- unit test
+- build
+- local browser test
+
+release gate
+- branch
+- permission
+- approval
+- secret
+- environment readiness
+```
+
+は別物である。
+
+前者が落ちたらcodeを直す。
+後者が落ちたらrelease条件を直す。
 
 ## production URLがなくてもWebとして検証できる
 
-「まだ公開していないからWeb testできない」も必ずしも正しくない。
+「公開URLがないからWeb testできない」も、多くの場合は言い過ぎである。
 
-Playwrightはlocal web serverをtest前に起動する `webServer` を公式に提供しており、stagingやproduction URLがない場合を明示的なuse caseとして挙げている。
+Playwrightは `webServer` optionを公式に提供している。
+その用途として、stagingやproduction URLがまだない開発時のlocal server testingを明示している。
 
-- Playwright Docs, *Web server*: https://playwright.dev/docs/test-webserver
+- Playwright Docs, *Web server*
+  - https://playwright.dev/docs/test-webserver
 
-静的siteならdeploy前に少なくとも、
+静的siteならdeploy前でも、
 
 ```text
 build outputを作る
@@ -230,58 +376,22 @@ browser testを走らせる
 
 ところまでは確認できる。
 
-build commandがexit 0だったことと、**Webとして配信できることは同じではない。**
+**公開できないことと、検証できないことは同義ではない。**
 
-だから、公開環境がなくても今証明できることは先に証明する。
+## 小さな追試: Pages未設定でもvalidationは通せた
 
-## deployment固有の条件はrelease gateへ分離する
-
-productionへのdeploymentには品質以外の条件もある。
-
-GitHub ActionsのEnvironmentでは、required reviewers、branch制限、wait timer、custom deployment protection rules、environment secretsなどをdeployment gateとして扱える。
-
-- GitHub Docs, *Deployments and environments*: https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments
-
-概念的には次のように分離できる。
-
-```text
-quality gate
-- lint
-- type check
-- unit test
-- build
-- local smoke / browser test
-
-release gate
-- target environmentが存在する
-- deploy可能なbranchである
-- approval済みである
-- permission / secretが利用可能である
-
-production gate
-- public routeが応答する
-- browserで主要操作が成立する
-- error / performance regressionがない
-```
-
-前者が落ちたら成果物を直す。
-release gateが満たせなければ環境を整える。
-production gateが落ちたらdeploy後の実挙動を直す。
-
-同じfailureにしない。
-
-## 小さな実例: Pages未設定でもvalidationを止めなかった
-
-ここまでの一般原則を、小さなrepositoryでも再現できるか試した。
+ここまでの一般原則を、小さなGitHub Pages repositoryでも再現できるか試した。
 
 `KAFKA2306/finBI` では2026年8月13日にworkflowを `validate` と `deploy` に分離した。
 
-- commit: https://github.com/KAFKA2306/finBI/commit/bc928ab7806c727086992df838f8ccae62f58040
-- workflow run #5: https://github.com/KAFKA2306/finBI/actions/runs/31672724045
+- commit
+  - https://github.com/KAFKA2306/finBI/commit/bc928ab7806c727086992df838f8ccae62f58040
+- workflow run
+  - https://github.com/KAFKA2306/finBI/actions/runs/31672724045
 
-この時点ではGitHub Pagesがまだ有効ではなかった。
+この時点ではGitHub Pagesが有効ではなかった。
 
-しかしRun #5では `validate` が成功した。
+それでも `validate` jobでは、
 
 - Python compile
 - offline unit tests
@@ -291,33 +401,33 @@ production gateが落ちたらdeploy後の実挙動を直す。
 - generated residue cleanup
 - clean checkout assertion
 
-一方、deploy job内の
+がすべて成功した。
+
+一方、`deploy` jobではPagesが利用可能かを確認した後、
+
+- Build Pages artifact
+- Configure Pages
+- Upload Pages artifact
+- Deploy Pages
+
+がすべてskipされた。
+
+つまり結果は、
 
 ```text
-Build Pages artifact
-Configure Pages
-Upload Pages artifact
-Deploy Pages
+artifact quality        = passed
+deployment availability = unavailable
 ```
 
-はskipされた。
+だった。
 
-結果として、
+Pages未設定という1つの環境問題のために、検証可能な品質情報まで捨てずに済んだ。
 
-```text
-artifact quality = passed
-deployment capability = unavailable
-```
+## Pagesが有効になると、同じ境界のままproductionまで進んだ
 
-を同時に記録できた。
+その後Pagesが有効になり、workflowには `public-e2e` が追加された。
 
-Pages未設定を理由にtestまで捨てなかった。
-
-## Pagesが有効になった後も、同じ境界のまま先へ進めた
-
-その後Pagesが有効になり、workflowは `public-e2e` まで拡張された。
-
-2026年8月15日のRun #27では、
+Run #27では、
 
 ```text
 validate     success
@@ -327,48 +437,55 @@ deploy       success
 public-e2e   success
 ```
 
-となった。
+まで通った。
 
-- current workflow: https://github.com/KAFKA2306/finBI/blob/main/.github/workflows/static-bi.yml
-- workflow run #27: https://github.com/KAFKA2306/finBI/actions/runs/31825777595
+- current workflow
+  - https://github.com/KAFKA2306/finBI/blob/main/.github/workflows/static-bi.yml
+- workflow run #27
+  - https://github.com/KAFKA2306/finBI/actions/runs/31825777595
 
-この例の価値は「finBIのworkflowがbest practiceだった」ということではない。
+この事例の価値は、`finBI` がbest practiceの起源だったことではない。
 
-Google、GitHub、Shopifyが大規模なrelease engineeringで使っている境界を、**小さなGitHub Pagesでも同じ形で再現できた**ことである。
+**Google、GitHub、Shopifyが大規模releaseで使っている「stageを分ける」という原則を、小さなPagesでも再現できたこと**にある。
 
-## ただしfinBIにも改善余地がある
+## そして追試には改善点もある
 
-現在の `finBI` は `validate` でpublic rootをbuildしてsmoke testした後に削除し、`deploy` でPages artifactをもう一度buildしている。
+現在の `finBI` workflowは、`validate` でpublic rootをbuildしてsmoke testした後に削除し、`deploy` jobでもう一度Pages artifactをbuildしている。
 
-これは動作しているが、より厳密にはGitHub Pages公式例のように、検証したbuild artifactを後段へ渡す方がよい。
+動作はしているが、一般的な設計としてはさらに改善できる。
+
+GitHub Pages公式例のように、
 
 ```text
 build once
     ↓
-test that artifact
+test the artifact
     ↓
-store that artifact
+upload the artifact
     ↓
-deploy that artifact
+deploy the same artifact
 ```
 
-こうすれば「testしたもの」と「productionへ出したもの」の差をさらに小さくできる。
+へ寄せた方がよい。
 
-**自分たちの成功例をbest practiceそのものだと思わず、一般原則と照合して不足を見つける。**
+「検証したもの」と「本番へ出したもの」の差を減らせるからだ。
 
-それも再現可能なengineeringの一部である。
+成功例を載せるときこそ、成功した実装をそのまま正解扱いしない。
 
-## 実務ではこの7項目から始めればよい
+**実例は原則を検証する材料であり、原則そのものではない。**
 
-1. **PRでもvalidationを走らせる**
-2. **deployはvalidation成功後だけにする**
-3. **build/testとdeployment permissionを別gateにする**
-4. **build outputをlocalhostで実際にserveして確認する**
-5. **可能なら検証済みartifactそのものをdeployする**
-6. **production URLはdeploy後に別のtestで確認する**
-7. **failed / validated / deploy unavailable / deployed / production failedを区別する**
+## まず既存CI/CDを直すなら、この8項目を見る
 
-GitHub Pagesなら概念的にはこれで十分である。
+1. PRでもbuild / testが必ず動くか
+2. deploy失敗でtest結果まで意味不明になっていないか
+3. deployはvalidation成功後だけに進むか
+4. buildした成果物をHTTPやbrowserで実際に確認しているか
+5. 可能なら検証したartifactそのものをdeployしているか
+6. release permissionやapprovalをquality testと分離しているか
+7. productionへ出した後にもhealth / E2E確認があるか
+8. failed / validated / blocked / deployed / verifiedを区別できるか
+
+GitHub Pagesなら、最小形はこれでよい。
 
 ```yaml
 jobs:
@@ -393,64 +510,74 @@ jobs:
       - test public URL
 ```
 
+toolは変わってよい。
+
 RuffでもBiomeでもPlaywrightでもcurlでもよい。
-tool名は本質ではない。
 
-変えない方がよいのはstageの意味である。
-
-```text
-validate
-= これは出してよい成果物か
-
-deploy
-= この環境へ今出してよいか
-
-production test
-= 実際に出したものは利用可能か
-```
-
-## Greenは色ではなく、次へ進める根拠である
-
-Googleの **“Push on Green”** を小さなWeb開発へ持ち込むなら、自動deployの格好良さだけを真似しても意味がない。
-
-GitHubはCIがまだ走っているbranchをdeploy guardで止めた。
-ShopifyはCIを通した変更を5%のtrafficへ出し、10分のCanary確認を置いた。
-Googleはtest結果でproductionへ出すbuildを選び、Rapidではartifactをsystem testとcanaryへ渡した。
-GitHub Pagesの公式workflowもbuildとdeployを別jobとして接続している。
-
-共通しているのは、
-
-**次のstageへ進む前に、今のstageで証明できることを証明する**
-
-という設計である。
+守りたいのはtool名ではなく、contractの意味である。
 
 ```text
-Build → Test → Deploy → Verify
+Build    = 同じinputから成果物を作れる
+Validate = その成果物を出してよい
+Release  = 今この環境へ出してよい
+Verify   = 実際に出したものが使える
 ```
 
-公開環境がまだなくてもtestはできる。
-Pagesが無効でもbuildはできる。
-localhostでWebとしてserveできる。
+## 速いreleaseは、gateが少ないreleaseではない
 
-そして環境が整ったら、検証済みの成果物だけを次へ進めればよい。
+GitHubはCIが終わる前のdeployを拒否した。
 
-**公開できないから検証しないのではない。検証できたものだけを公開する。**
+Shopifyは5%のtrafficで止めてからProductionへ進めた。
 
-その方がfailure reasonは明確になり、rollbackもしやすくなり、人間の判断も減る。
+Google SREは再現可能なbuild、自動test、自動deploy、small deploymentをrelease engineeringの原則としている。
 
-GitHubの実例が示したように、guardは速度の敵ではない。
+DORAはdelivery performanceをthroughputだけでなくinstabilityと一緒に測っている。
 
-**再現可能なguardは、速くshipするためのインフラである。**
+2026年のGitHubは、障害時にdeployを妨げる隠れたnetwork dependencyまで機械的に検出している。
+
+共通するのは、慎重さではない。
+
+**次へ進める条件を明示し、その判定を再現可能にすることだ。**
+
+```text
+検証できることは先に検証する
+        ↓
+通った成果物だけをrelease候補にする
+        ↓
+release可能な環境へだけdeployする
+        ↓
+productionでしか分からないことを最後に確認する
+```
+
+公開環境がないからtestしないのではない。
+
+**testを通ったものだけを、公開できるときに公開する。**
+
+それが、速さと安全性を同時に上げるRelease Engineeringの基本形である。
 
 ## 一次情報
 
-- Google SRE, *Release Engineering*: https://sre.google/sre-book/release-engineering/
-- Google SRE Workbook, *Canarying Releases*: https://sre.google/workbook/canarying-releases/
-- GitHub Engineering, *Deploying branches to GitHub.com*: https://github.blog/engineering/engineering-principles/deploying-branches-to-github-com/
-- GitHub Engineering, *How GitHub uses merge queue to ship hundreds of changes every day*: https://github.blog/engineering/engineering-principles/how-github-uses-merge-queue-to-ship-hundreds-of-changes-every-day/
-- Shopify Engineering, *Software Release Culture at Shopify*: https://shopify.engineering/software-release-culture-shopify
-- GitHub Docs, *Using custom workflows with GitHub Pages*: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages
-- GitHub Docs, *Configuring a publishing source for your GitHub Pages site*: https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site
-- GitHub Docs, *Using jobs in a workflow*: https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-jobs
-- GitHub Docs, *Deployments and environments*: https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments
-- Playwright Docs, *Web server*: https://playwright.dev/docs/test-webserver
+- Google SRE, *Release Engineering*
+  - https://sre.google/sre-book/release-engineering/
+- Google SRE Workbook, *Canarying Releases*
+  - https://sre.google/workbook/canarying-releases/
+- DORA, *A history of DORA’s software delivery metrics*
+  - https://dora.dev/insights/dora-metrics-history/
+- DORA, *DORA’s software delivery performance metrics*
+  - https://dora.dev/guides/dora-metrics/
+- GitHub Engineering, *Deploying branches to GitHub.com*
+  - https://github.blog/engineering/engineering-principles/deploying-branches-to-github-com/
+- GitHub Engineering, *How GitHub uses merge queue to ship hundreds of changes every day*
+  - https://github.blog/engineering/engineering-principles/how-github-uses-merge-queue-to-ship-hundreds-of-changes-every-day/
+- GitHub Engineering, *How GitHub uses eBPF to improve deployment safety*
+  - https://github.blog/engineering/infrastructure/how-github-uses-ebpf-to-improve-deployment-safety/
+- Shopify Engineering, *Software Release Culture at Shopify*
+  - https://shopify.engineering/software-release-culture-shopify
+- GitHub Docs, *Using custom workflows with GitHub Pages*
+  - https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages
+- GitHub Docs, *Deployments and environments*
+  - https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments
+- GitHub Docs, *Deploying with GitHub Actions*
+  - https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/control-deployments
+- Playwright Docs, *Web server*
+  - https://playwright.dev/docs/test-webserver
