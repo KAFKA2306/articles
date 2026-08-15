@@ -1,26 +1,34 @@
 ---
-title: "新しいCIツールが同点でも、古いgateを消してはいけないときがある"
+title: "公式が『tscを置き換えられる』と言っても、CI gateはまだ消せない"
 emoji: "🧪"
 type: "tech"
 topics: ["typescript", "oxlint", "ci", "testing", "tooling"]
 published: false
 ---
 
-新しいtoolが、既存のcompilerと同じ固定テストを全部通った。
+CIのtoolを統合するとき、難しいのは新しいcommandを足すことではない。**古いgateを安全に消せるか判断すること**だ。
 
-それでも、すぐに古いgateを削除してよいとは限らない。
+2026年8月15日時点のOxlint公式ドキュメントには、`--type-aware --type-check`について、独立した`tsc --noEmit` stepを置き換えられると書かれている。
 
-今回、TypeScriptの型failureを1つずつ入れた2つのmutantで、`tsc`とOxlintのtype-check機能はどちらも2/2だった。clean baselineのblocking false positiveも0だった。
+https://oxc.rs/docs/guide/usage/linter/type-aware
 
-ここまでは置換候補として強い証拠だ。
+ところが同じ公式ドキュメント群は、`options.typeCheck`を**experimental type checking**とも明記している。
 
-しかし、**「このfixtureで同点」と「CIの最終authorityを移してよい」は別の判断**である。
+https://oxc.rs/docs/guide/usage/linter/config-file-reference
 
-## 読者の本当の仕事は「追加」ではなく「安全に削除できるか」
+では、既存の`tsc --noEmit`をいつ削除してよいのか。
 
-modern toolchainでは1つのbinaryがformatter、linter、type-aware lint、compiler diagnosticsまで持つことがある。
+私は先に固定したTypeScriptの型failure 2件で、`tsc`とOxlint `typeCheck`を同じground truthへ当てた。結果は両方2/2、clean baselineのblocking false positiveも0だった。
 
-すると移行はこう見える。
+それでも`tsc`削除を結論にしなかった。
+
+この小さな実験で見えたのは、**correctness parityはreplacement authorizationではない**ということだった。
+
+## 最初の予想は「同点なら統合候補」だった
+
+modern toolchainでは、1つのbinaryがlint、type-aware lint、compiler diagnosticsまで持つようになっている。Oxlintも現在、通常lintとは別に`--type-aware`と`--type-check`を提供している。
+
+移行案は自然にこう見える。
 
 ```text
 before
@@ -31,11 +39,13 @@ after
   oxlint --type-aware --type-check
 ```
 
-commandが減る。管理対象も減る。だが、古いgateを消すには「新しいtoolが動く」以上の証拠が必要だ。
+commandが1本減り、CI設定も単純になる。
 
-## 今回、correctness gateは通った
+だから最初に確認したのは「新しいsurfaceが、既存compiler gateで止めていた既知failureを止められるか」だった。
 
-固定したTypeScript type mutantでは次だった。
+## 2つのroot faultでは、両方2/2だった
+
+比較前にmutantを固定し、1 mutant = 1 root faultとして数えた。raw diagnostic数はdefect数として合算していない。
 
 | candidate | in-scope type mutants | detected | clean blocking FP |
 |---|---:|---:|---:|
@@ -45,100 +55,146 @@ commandが減る。管理対象も減る。だが、古いgateを消すには「
 controlled summary:
 https://github.com/KAFKA2306/articles/blob/81848adca34e077835735a1f8586c6e8cd8cd511/benchmarks/verification-stack-v2/results/controlled/summary.json
 
-2件だけなのでTypeScript全体のaccuracyを示さない。それでも「この2 faultをOxlintが見逃した」とは言えなくなった。
+protocol:
+https://github.com/KAFKA2306/articles/blob/81848adca34e077835735a1f8586c6e8cd8cd511/benchmarks/verification-stack-v2/PROTOCOL.md
 
-## それでも削除しなかった理由
+この結果から言えるのは狭い。
 
-TypeScript公式は`noEmit`を、出力せずsourceをtype-checkする用途として説明している。
+- 固定した2つの型failureは両方が検出した
+- clean baselineでは両方ともblocking false positiveが0だった
+- 少なくともこのcorpusではOxlint `typeCheck`を「型failureを検出できない」とは言えない
+
+逆に、**TypeScript compiler conformance全体が同等**とは言えない。2 mutantを全言語機能へ外挿する証拠はない。
+
+## ここで公式仕様が判断を難しくする
+
+TypeScriptの`noEmit`は、JavaScript等を出力せずにtype checkingを行う用途を公式に持つ。
 
 https://www.typescriptlang.org/tsconfig/noEmit.html
 
-Oxlint公式は`--type-aware`と`--type-check`を別surfaceとして扱い、configuration referenceでは`options.typeCheck`をexperimentalとしている。
+Oxlintの現行公式ドキュメントは、type-aware lintingとtype checkingを分けている。`--type-aware`は型情報を必要とするlint ruleを有効にし、`--type-check`はTypeScript compiler diagnosticsを追加する。
 
-https://oxc.rs/docs/guide/usage/linter/type-aware.html
+https://oxc.rs/docs/guide/usage/linter/type-aware
+
+そして同じページは、`--type-aware --type-check`によって独立した`tsc --noEmit` stepを置き換える例を示す。一方、configuration referenceとCLI referenceでは`--type-check` / `options.typeCheck`をexperimentalと明記している。
+
 https://oxc.rs/docs/guide/usage/linter/config-file-reference
+https://oxc.rs/docs/guide/usage/linter/cli.html
 
-さらに今回のfrozen real-repo probeでは`tsc`と通常の`oxlint`は実行したが、Oxlintの`--type-check`自体はexternal-validity未検証だった。
+これは矛盾として処理する必要はない。
 
+「置換できる」はcapabilityの説明であり、「自分のrepositoryでdefault blocking authorityとして今すぐ置換してよい」はadoption decisionだからだ。
+
+## real repoで未実行なら、2/2を削除許可へ昇格しない
+
+このbenchmarkにはfrozen real-repository probeもある。ただしreal repoは完全なdefect ground truthがないため、recallやfalse-positive rateの証明には使っていない。見るのはexecution compatibility、diagnosticの実用性、latency、migration frictionなどである。
+
+external summary:
 https://github.com/KAFKA2306/articles/blob/81848adca34e077835735a1f8586c6e8cd8cd511/benchmarks/verification-stack-v2/results/external/summary.json
 
-つまり、correctnessの小さなground truthでは通ったが、**default authorityを置き換えるための運用証拠はまだ揃っていなかった**。
+ここで重要なのは、frozen probeでは`tsc`と通常の`oxlint`は実行したが、**Oxlint `--type-check`そのものはexternal-validity未検証**だったことだ。
 
-## migrationを3段階に分ける
-
-### 1. Candidate
-
-公式にその責務を持つか確認する。
-
-「型情報を使えるlinter」だからcompiler replacement候補、と推測しない。実際にcompiler diagnosticsを担当する公式surfaceを確認する。
-
-### 2. Evidence-qualified challenger
-
-自分のrepoで絶対に落としたくないfailure classを固定し、clean baselineとmutantの両方で比較する。
-
-今回の2/2はここまでを支持する。
-
-### 3. Default authority
-
-ここで初めて旧gate削除を検討する。
-
-最低限見るのは次だ。
-
-- stability status
-- 必要なfailure corpus
-- real-repo compatibility
-- config/compiler surfaceの欠落
-- upgrade時のregression gate
-- superseded authorityを削除できるか
-
-## 壊れた判断
+したがって証拠はこう分かれる。
 
 ```text
-new tool: 2/2
-old tool: 2/2
-↓
-同等
-↓
-old gate削除
+controlled correctness
+  Oxlint typeCheck: 2/2
+  tsc:              2/2
+
+real-repo compatibility
+  tsc:              observed
+  Oxlint typeCheck: NOT_RUN
 ```
 
-この推論は、2件のmutantをcompiler conformance全体へ外挿している。
+`NOT_RUN`をPASSへ読み替えない限り、ここから`tsc`削除までは進めない。
 
-## 改善した判断
+## 同じ証拠から3つの物語を潰す
+
+### 1. 「Oxlint typeCheckは不正確だからtscを残す」
+
+棄却した。
+
+今回の固定2 mutantでは2/2だった。不正確さを示す観測ではない。
+
+### 2. 「公式がreplacement例を出していて2/2だからtscを消す」
+
+棄却した。
+
+2件はcompiler conformance全体ではなく、real repoでは`--type-check`自体がNOT_RUNで、公式statusもexperimentalである。capability確認とdefault-authority移行を混同している。
+
+### 3. 「旧gate削除には、parityとは別のreplacement contractが要る」
+
+これだけが残る。
+
+この命題なら、今回の2/2、external-validityの空欄、現行公式statusを同時に説明できる。
+
+## migrationは「追加」ではなく「削除条件」を先に書く
+
+新tool導入時にありがちな順序はこうだ。
 
 ```text
-fixed correctness corpus PASS
-        ↓
-real-repo / config / statusを確認
-        ↓
-replacement contract PASS
-        ↓
-old gateを削除
+1. new toolを追加
+2. CIがgreen
+3. しばらく二重実行
+4. いつ消せるか分からず両方残る
 ```
 
-重要なのは「新しいtoolを足せるか」ではなく、**古いauthorityを安全に消せるか**である。
+これではtool consolidationがtool accumulationになる。
 
-## 読者向けの削除チェックリスト
+先にreplacement contractを書く。
 
-既存CI gateを1本消す前に、次の6問を確認する。
+```text
+1. 旧gateが所有するfailure classを列挙
+2. clean baseline + 固定mutantでchallengerを照合
+3. real repoでchallengerの同じsurfaceを実行
+4. 必要なconfig / diagnostic surfaceを照合
+5. stability boundaryを受け入れられるか決める
+6. 全条件PASSなら旧gateを削除
+```
 
-1. 新toolの公式責務は旧gateと同じか
+ポイントは、**新toolを採用できる条件ではなく、旧toolを削除できる条件**を定義することだ。
+
+## 6問だけ持ち帰ればよい
+
+既存CI gateを消す前に、次を確認する。
+
+1. 新toolの公式責務は旧gateと本当に同じか
 2. repo固有の重要failureをclean baseline付きで通したか
-3. real repoで新しいsurfaceそのものを実行したか
-4. 必要なconfig/diagnostic surfaceに欠落はないか
-5. feature statusはdefault blocking authorityに適するか
-6. 移行後、二重authorityを恒久化せず旧gateを削除できるか
+3. real repoでreplacementに使う**同じsurface**を実行したか
+4. 必要なconfig / diagnostic / language surfaceに欠落はないか
+5. feature statusはdefault blocking authorityとして受け入れられるか
+6. 条件を満たしたら二重authorityを残さず旧gateを削除できるか
 
-1〜4が未確認ならreplacement以前。5がexperimentalなら、採用判断もexperimental adoptionとして限定する。
+この6問はOxlint固有ではない。formatter、linter、type checker、hook runner、workspace orchestratorを統合するときにも使える。
 
-## 証拠の境界
+たとえばRuffはformatterとlinterを同じCLIに持つが、公式にも両者は独立して利用でき、formatterはimport sortingを行わない。binaryが同じでもauthority surfaceは同じではない。
 
-この記事はOxlintのtype checkingが不正確だとは主張しない。今回の2 mutantではむしろ2/2だった。
+https://docs.astral.sh/ruff/formatter/
+https://docs.astral.sh/ruff/linter/
 
-主張はもっと狭い。
+同様に、TypeScriptの型はcompile後にeraseされ、runtime behaviorを型によって変えない。compiler gateを統合しても、外部入力のruntime validationまで消えるわけではない。
 
-**correctness parityは、replacement authorizationの必要条件になり得ても十分条件ではない。**
+https://www.typescriptlang.org/docs/handbook/typescript-from-scratch.html
+https://zod.dev/
 
-commandを1本減らすことより、判定権限をどこまで移してよい証拠があるかを見る。
+## 何を測っていないか
 
-新しいtoolが同点だったときこそ、次に問うべきは「勝ったか」ではなく、**古いgateを消しても同じ安全性を説明できるか**である。
+この記事は次を証明していない。
+
+- Oxlint `typeCheck`と`tsc`の一般的なaccuracy parity
+- 全`tsconfig` option / TypeScript language featureのcompatibility
+- Oxlint `typeCheck`のreal-repo compatibility
+- repo-local cold/warm timingの優劣
+- Oxlintが将来もexperimentalであること
+
+特に最後は変わり得る。Oxlint公式がtype checkingをstableなdefault-authority候補へ昇格し、重要failure corpusとreal-repo probeで同じsurfaceが通れば、この記事の「今は`tsc`を消さない」という判断は反転する。
+
+## 結論
+
+今回、Oxlint `typeCheck`は固定2 mutantで`tsc`と同じ2/2だった。だから「新しいtoolだから信用しない」という結論にはしない。
+
+一方、公式がreplacement例を示していても、experimental statusとreal-repo NOT_RUNを無視して旧gateを削除する根拠にもならない。
+
+**parityはchallengerになる条件であって、authorityを移す許可ではない。**
+
+CIを統合するときは「何を追加するか」より先に、「何が確認できたら古いgateを消すか」を契約にする。そうすれば、toolchainを安全に減らせる。
