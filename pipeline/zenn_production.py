@@ -10,16 +10,16 @@ import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime
-from html.parser import HTMLParser
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 JST = ZoneInfo("Asia/Tokyo")
 DEFAULT_USERNAME = "kafka2306"
-USER_AGENT = "KAFKA2306/articles zenn-production-verifier/1.0"
+USER_AGENT = "KAFKA2306/articles zenn-production-verifier/2.0"
 
 
 @dataclass(frozen=True)
@@ -40,36 +40,6 @@ class Verification:
     detail: str
 
 
-class _PageMetadata(HTMLParser):
-    def __init__(self) -> None:
-        super().__init__(convert_charrefs=True)
-        self.og_title: str | None = None
-        self._in_title = False
-        self._title_parts: list[str] = []
-
-    @property
-    def html_title(self) -> str:
-        return "".join(self._title_parts).strip()
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag.lower() == "title":
-            self._in_title = True
-            return
-        if tag.lower() != "meta":
-            return
-        values = {key.lower(): value for key, value in attrs if value is not None}
-        if values.get("property", "").lower() == "og:title":
-            self.og_title = values.get("content")
-
-    def handle_endtag(self, tag: str) -> None:
-        if tag.lower() == "title":
-            self._in_title = False
-
-    def handle_data(self, data: str) -> None:
-        if self._in_title:
-            self._title_parts.append(data)
-
-
 def _normalize(value: str) -> str:
     value = html.unescape(value)
     value = unicodedata.normalize("NFKC", value)
@@ -87,13 +57,11 @@ def parse_front_matter(path: Path) -> dict[str, str]:
     text = path.read_text(encoding="utf-8")
     if not text.startswith("---\n"):
         raise ValueError("missing front matter")
-    try:
-        raw = text.split("---\n", 2)[1]
-    except IndexError as exc:
-        raise ValueError("unterminated front matter") from exc
-
+    parts = text.split("---\n", 2)
+    if len(parts) < 3:
+        raise ValueError("unterminated front matter")
     result: dict[str, str] = {}
-    for line in raw.splitlines():
+    for line in parts[1].splitlines():
         if not line or line.lstrip().startswith("#") or ":" not in line:
             continue
         key, value = line.split(":", 1)
@@ -116,7 +84,6 @@ def collect_published_articles(
     now = (now or datetime.now(JST)).astimezone(JST)
     articles: list[Article] = []
     errors: list[str] = []
-
     for path in sorted((root / "articles").glob("*.md")):
         try:
             front = parse_front_matter(path)
@@ -125,7 +92,6 @@ def collect_published_articles(
             continue
         if front.get("published", "").strip().lower() != "true":
             continue
-
         title = front.get("title", "").strip()
         published_at_raw = front.get("published_at", "").strip()
         if not title:
@@ -148,73 +114,67 @@ def collect_published_articles(
                 f"({published_at.isoformat()}); keep it published:false until release"
             )
             continue
-        articles.append(
-            Article(
-                path=path,
-                slug=path.stem,
-                title=title,
-                published_at=published_at,
-            )
-        )
+        articles.append(Article(path, path.stem, title, published_at))
     return articles, errors
 
 
-def _title_matches(page_html: str, expected: str) -> tuple[bool, str]:
-    parser = _PageMetadata()
-    parser.feed(page_html)
-    expected_norm = _normalize(expected)
-    candidates = [value for value in (parser.og_title, parser.html_title) if value]
-    for candidate in candidates:
-        normalized = _normalize(candidate)
-        if normalized == expected_norm or normalized.startswith(expected_norm + " |"):
-            return True, candidate
-    return False, " / ".join(candidates) if candidates else "no og:title or <title>"
-
-
-def verify_article(
-    article: Article,
-    *,
-    username: str,
-    timeout_seconds: float = 20.0,
-) -> Verification:
-    url = article.url(username)
+def fetch_public_catalog(
+    username: str, *, timeout_seconds: float = 20.0
+) -> dict[str, str]:
+    """Return {article_slug: title} from Zenn's documented public user RSS feed."""
+    url = f"https://zenn.dev/{username}/feed?all=1"
     request = urllib.request.Request(
         url,
         headers={
             "User-Agent": USER_AGENT,
             "Cache-Control": "no-cache",
             "Pragma": "no-cache",
-            "Accept": "text/html,application/xhtml+xml",
+            "Accept": "application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.1",
         },
     )
-    try:
-        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
-            status = getattr(response, "status", None) or response.getcode()
-            final_url = response.geturl()
-            body = response.read(2_000_000).decode("utf-8", errors="replace")
-    except urllib.error.HTTPError as exc:
-        return Verification(article, False, f"HTTP {exc.code}")
-    except urllib.error.URLError as exc:
-        return Verification(article, False, f"network error: {exc.reason}")
-    except TimeoutError:
-        return Verification(article, False, "network timeout")
+    with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+        status = getattr(response, "status", None) or response.getcode()
+        if status != 200:
+            raise RuntimeError(f"public RSS returned HTTP {status}")
+        payload = response.read(5_000_000)
 
-    if status != 200:
-        return Verification(article, False, f"HTTP {status}")
+    root = ET.fromstring(payload)
+    catalog: dict[str, str] = {}
+    for item in root.findall(".//item"):
+        title = (item.findtext("title") or "").strip()
+        link = (item.findtext("link") or "").strip()
+        parsed = urllib.parse.urlparse(link)
+        parts = [part for part in parsed.path.split("/") if part]
+        if parsed.netloc != "zenn.dev" or len(parts) != 3:
+            continue
+        if parts[0] != username or parts[1] != "articles":
+            continue
+        catalog[parts[2]] = title
+    return catalog
 
-    expected_path = urllib.parse.urlparse(url).path.rstrip("/")
-    parsed_final = urllib.parse.urlparse(final_url)
-    if parsed_final.netloc != "zenn.dev" or parsed_final.path.rstrip("/") != expected_path:
-        return Verification(article, False, f"unexpected redirect: {final_url}")
 
-    title_ok, observed_title = _title_matches(body, article.title)
-    if not title_ok:
-        return Verification(
-            article,
-            False,
-            f"title mismatch: expected={article.title!r} observed={observed_title!r}",
+def compare_catalog(
+    articles: list[Article], catalog: dict[str, str]
+) -> list[Verification]:
+    results: list[Verification] = []
+    for article in articles:
+        observed = catalog.get(article.slug)
+        if observed is None:
+            results.append(Verification(article, False, "missing from Zenn public RSS"))
+            continue
+        if _normalize(observed) != _normalize(article.title):
+            results.append(
+                Verification(
+                    article,
+                    False,
+                    f"title mismatch: expected={article.title!r} observed={observed!r}",
+                )
+            )
+            continue
+        results.append(
+            Verification(article, True, "public RSS entry + canonical slug + title match")
         )
-    return Verification(article, True, "HTTP 200 + canonical URL + title match")
+    return results
 
 
 def verify_until_settled(
@@ -223,56 +183,66 @@ def verify_until_settled(
     username: str,
     wait_seconds: int,
     interval_seconds: int,
-) -> list[Verification]:
+) -> tuple[list[Verification], str | None]:
     deadline = time.monotonic() + max(wait_seconds, 0)
-    pending = {article.slug: article for article in articles}
-    latest: dict[str, Verification] = {}
-
-    while pending:
-        for slug, article in list(pending.items()):
-            result = verify_article(article, username=username)
-            latest[slug] = result
-            if result.ok:
-                del pending[slug]
-        if not pending or time.monotonic() >= deadline:
+    latest: list[Verification] = []
+    latest_error: str | None = None
+    while True:
+        try:
+            catalog = fetch_public_catalog(username)
+            latest = compare_catalog(articles, catalog)
+            latest_error = None
+        except (urllib.error.URLError, TimeoutError, ET.ParseError, RuntimeError) as exc:
+            latest = []
+            latest_error = f"catalog fetch failed: {exc}"
+        if latest_error is None and all(result.ok for result in latest):
+            break
+        if time.monotonic() >= deadline:
             break
         time.sleep(max(interval_seconds, 1))
-
-    return [latest[article.slug] for article in articles]
+    return latest, latest_error
 
 
 def _render_summary(
-    articles: list[Article], errors: list[str], results: list[Verification], username: str
+    articles: list[Article],
+    errors: list[str],
+    results: list[Verification],
+    username: str,
+    catalog_error: str | None,
 ) -> str:
     lines = [
         "## Zenn production verification",
         "",
-        f"Invariant: every `published: true` article must already be public under `zenn.dev/{username}/articles/<slug>`.",
+        f"Authority: Zenn documented public user RSS `https://zenn.dev/{username}/feed?all=1`.",
+        "Invariant: every `published: true` article must be present there with the canonical slug and matching title.",
         "",
         "| slug | result | detail |",
         "| --- | --- | --- |",
     ]
     by_slug = {result.article.slug: result for result in results}
     for article in articles:
-        result = by_slug[article.slug]
-        mark = "PASS" if result.ok else "FAIL"
-        detail = result.detail.replace("|", "\\|")
-        lines.append(f"| `{article.slug}` | **{mark}** | {detail} |")
+        result = by_slug.get(article.slug)
+        if result is None:
+            mark, detail = "FAIL", catalog_error or "verification unavailable"
+        else:
+            mark = "PASS" if result.ok else "FAIL"
+            detail = result.detail
+        lines.append(
+            f"| `{article.slug}` | **{mark}** | {detail.replace('|', '\\|')} |"
+        )
     if errors:
         lines.extend(["", "### Contract errors", ""])
         lines.extend(f"- {error}" for error in errors)
-    lines.extend(
-        [
-            "",
-            f"Verified: {sum(result.ok for result in results)}/{len(articles)} production URLs",
-        ]
-    )
+    if catalog_error:
+        lines.extend(["", "### Catalog error", "", f"- {catalog_error}"])
+    verified = sum(result.ok for result in results)
+    lines.extend(["", f"Verified: {verified}/{len(articles)} published:true articles"])
     return "\n".join(lines) + "\n"
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Fail closed unless every published:true article is live on Zenn."
+        description="Fail closed unless every published:true article is public on Zenn."
     )
     parser.add_argument(
         "--username", default=os.environ.get("ZENN_USERNAME", DEFAULT_USERNAME)
@@ -282,22 +252,22 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     articles, errors = collect_published_articles()
-    results = verify_until_settled(
+    results, catalog_error = verify_until_settled(
         articles,
         username=args.username,
         wait_seconds=args.wait_seconds,
         interval_seconds=args.interval_seconds,
     )
-    summary = _render_summary(articles, errors, results, args.username)
+    summary = _render_summary(
+        articles, errors, results, args.username, catalog_error
+    )
     sys.stdout.write(summary)
-
     github_summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if github_summary:
         with open(github_summary, "a", encoding="utf-8") as handle:
             handle.write(summary)
-
     failures = [result for result in results if not result.ok]
-    return 1 if errors or failures else 0
+    return 1 if errors or catalog_error or failures or len(results) != len(articles) else 0
 
 
 if __name__ == "__main__":
