@@ -3,7 +3,7 @@ title: "ChatGPTを使い倒している私に、月10ドルのOpenCode Goが刺�
 emoji: "♾️"
 type: "tech"
 topics: ["opencode", "chatgpt", "coding", "mcp", "local"]
-published: false
+published: true
 published_at: 2026-08-13 12:09
 ---
 
