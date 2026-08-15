@@ -1,0 +1,116 @@
+name: Zenn Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: "Release exactly one approved pending article"
+        required: true
+        type: choice
+        options:
+          - chatgpt-multiproject-autonomy
+          - claude-watermark-secret-key-detection
+          - codex-chatgpt-github-issue-bridge
+          - opencode-go-deepseek-v4-chatgpt-usage-scale
+          - unity-mcp-editor-boundary
+          - validate-before-pages-deploy
+          - why-i-could-buy-the-crash
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zenn-manual-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Preflight contracts
+        run: |
+          python -m unittest tests.test_publication_diff tests.test_zenn_production -v
+
+      - name: Promote exactly one pending article
+        id: promote
+        shell: bash
+        env:
+          SLUG: ${{ inputs.slug }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          slug = os.environ["SLUG"]
+          path = Path("articles") / f"{slug}.md"
+          if not path.is_file():
+              raise SystemExit(f"unknown article: {slug}")
+          text = path.read_text(encoding="utf-8")
+          parts = text.split("---\n", 2)
+          if len(parts) != 3:
+              raise SystemExit(f"invalid front matter: {path}")
+          front = parts[1]
+          if front.count("published: false") != 1 or "published: true" in front:
+              raise SystemExit(f"article is not in the approved pending state: {path}")
+          front = front.replace("published: false", "published: true", 1)
+          path.write_text(f"---\n{front}---\n{parts[2]}", encoding="utf-8")
+          print(f"promoted: {slug}")
+          PY
+          git diff --check
+          python -m pipeline.publication_diff --base HEAD --head HEAD >/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "articles/${SLUG}.md"
+          git commit -m "publish: release ${SLUG} through verified gate"
+          git push origin HEAD:main
+
+      - name: Verify Zenn production
+        id: verify
+        continue-on-error: true
+        env:
+          ZENN_USERNAME: kafka2306
+        run: |
+          python -m pipeline.zenn_production --wait-seconds 600 --interval-seconds 15
+
+      - name: Roll back failed release
+        if: steps.verify.outcome != 'success'
+        shell: bash
+        env:
+          SLUG: ${{ inputs.slug }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          slug = os.environ["SLUG"]
+          path = Path("articles") / f"{slug}.md"
+          text = path.read_text(encoding="utf-8")
+          parts = text.split("---\n", 2)
+          if len(parts) != 3 or parts[1].count("published: true") != 1:
+              raise SystemExit(f"cannot safely roll back {path}")
+          front = parts[1].replace("published: true", "published: false", 1)
+          path.write_text(f"---\n{front}---\n{parts[2]}", encoding="utf-8")
+          PY
+          git diff --check
+          git add "articles/${SLUG}.md"
+          git commit -m "rollback: Zenn production did not verify ${SLUG}"
+          git push origin HEAD:main
+          echo "Zenn production did not verify; article returned to pending state."
+          exit 1
+
+      - name: Confirm release
+        if: steps.verify.outcome == 'success'
+        run: echo "PUBLISHED_VERIFIED ${{ inputs.slug }}"
