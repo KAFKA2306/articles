@@ -1,5 +1,5 @@
 ---
-title: "Claude Codeにテストを任せるなら、合格条件だけは別に固定する"
+title: "Claude Codeにテストを全部任せるなら、先に「合格条件」を固定する"
 emoji: "🧪"
 type: "tech"
 topics: ["claudecode", "testing", "ai", "ci", "automation"]
