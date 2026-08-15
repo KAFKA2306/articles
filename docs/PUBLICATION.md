@@ -40,8 +40,33 @@ PRODUCTION_VERIFICATION
 
 GitHub push直後はZenn同期に時間差があるため、production verificationは最大10分retryできる。定期reconciliationは毎時1回、現在 `published:true` の全記事を即時判定する。
 
+## Zenn slug contract
+
+Zennでは `articles/<slug>.md` のファイル名（拡張子を除く）がそのまま記事slugになる。slugは次をすべて満たす必要がある。
+
+- 12〜50文字
+- 半角英小文字 `a-z`
+- 半角数字 `0-9`
+- ハイフン `-`
+- アンダースコア `_`
+
+このrepositoryでは `pipeline.zenn_slug` をslugのcanonical validatorとする。
+
+```bash
+# repository内の全記事を検査
+python -m pipeline.zenn_slug
+
+# 新規slug候補を作成前に検査
+python -m pipeline.zenn_slug --slug my-valid-article-slug
+```
+
+`Article Pipeline CI` はPR/pushの最初に全 `articles/**/*.md` を検査し、1件でも不正ならZenn CLIやpublication処理へ進まない。`pipeline.publication_diff` と `Zenn Manual Release` も同じvalidatorを再利用する。
+
+公開済みslugはファイル名変更で修正しない。Zenn上では別記事扱いになるため、公開前の不正slugだけをリネームする。
+
 ## Pre-deploy fail-closed rules
 
+- 全記事のfilename/slugが `pipeline.zenn_slug` を通過すること。
 - 新規の `published:false -> true` は1変更につき最大1記事。
 - 既存記事で一度指定された `published_at` は変更・削除しない。Zenn公式の公開日時immutable契約に合わせる。
 - Zenn公式CLIで全記事をrenderし、`data-body-error` を含む本文は公開不可。
@@ -65,11 +90,12 @@ GitHub push直後はZenn同期に時間差があるため、production verificat
 
 workflowは次を行う。
 
-1. 1記事だけ `published:false -> true` にする。
-2. mainへpushする。
-3. Zenn公開RSSで現在の全 `published:true` を最大10分照合する。
-4. 全件PASSなら対象記事を `PUBLISHED_VERIFIED` とする。
-5. FAILなら対象記事を `published:false` に自動rollbackし、`PENDING_RELEASE` を維持する。
+1. repository全体と入力slugを `pipeline.zenn_slug` で検査する。
+2. 1記事だけ `published:false -> true` にする。
+3. mainへpushする。
+4. Zenn公開RSSで現在の全 `published:true` を最大10分照合する。
+5. 全件PASSなら対象記事を `PUBLISHED_VERIFIED` とする。
+6. FAILなら対象記事を `published:false` に自動rollbackし、`PENDING_RELEASE` を維持する。
 
 次の記事へ進めるのは前の記事が `PUBLISHED_VERIFIED` になった後だけとする。
 
@@ -104,22 +130,22 @@ Zennはユーザーごとに期間あたりの投稿上限数を持ち、上限�
 
 ## Canonical implementation
 
+- slug validator: `pipeline/zenn_slug.py`
 - pre-deploy transition guard: `pipeline/publication_diff.py`
 - official renderer check: `.github/workflows/article-pipeline-ci.yml`
 - manual one-at-a-time release: `.github/workflows/zenn-manual-release.yml`
 - production verifier: `pipeline/zenn_production.py`
 - production observer: `.github/workflows/zenn-production-verify.yml`
 - recovery tracker: GitHub Issue #140
-- regression tests: `tests/test_publication_diff.py`, `tests/test_zenn_production.py`
+- regression tests: `tests/test_zenn_slug.py`, `tests/test_publication_diff.py`, `tests/test_zenn_production.py`
 
-同じ判定ロジックを別workflowへ複製しない。
+slug判定ロジックは `pipeline.zenn_slug` に集約し、別workflowへregexを複製しない。
 
 ## External authority
 
+- Zenn slug: https://zenn.dev/zenn/articles/what-is-slug
 - Zenn GitHub連携: https://zenn.dev/zenn/articles/connect-to-github
 - Zenn CLI / publish / published_at: https://zenn.dev/zenn/articles/zenn-cli-guide
 - Zenn RSS: https://zenn.dev/zenn/articles/zenn-feed-rss
 - Zenn AIコンテンツ方針・投稿上限: https://info.zenn.dev/2026-03-10-ai-contents-guideline
 - Zenn問い合わせ: https://zenn.dev/inquiry
-
-<!-- production-snapshot: 2026-08-15T15:36+09:00 -->

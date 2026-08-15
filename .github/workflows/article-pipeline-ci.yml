@@ -13,6 +13,7 @@ on:
       - "AGENTS.md"
       - ".github/workflows/article-pipeline.yml"
       - ".github/workflows/article-pipeline-ci.yml"
+      - ".github/workflows/zenn-manual-release.yml"
   push:
     branches:
       - main
@@ -27,6 +28,7 @@ on:
       - "AGENTS.md"
       - ".github/workflows/article-pipeline.yml"
       - ".github/workflows/article-pipeline-ci.yml"
+      - ".github/workflows/zenn-manual-release.yml"
 
 permissions:
   contents: read
@@ -41,6 +43,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+      - name: Zenn article slug contract
+        run: python -m pipeline.zenn_slug
       - uses: actions/setup-node@v6
         with:
           node-version: "22"
