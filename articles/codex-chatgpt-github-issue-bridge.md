@@ -1,5 +1,5 @@
 ---
-title: "GitHub IssueからAIにローカルPCを任せてよいのか？ Unity・動画・3Dアセット処理で見えた境界"
+title: "GitHub IssueからAIにローカルPCを任せてよいのか？ Unity・Blender・動画生成で考える安全な橋"
 emoji: "🔁"
 type: "tech"
 topics: ["codex", "github", "unity", "security", "automation"]
@@ -7,20 +7,16 @@ published: false
 published_at: 2026-08-12 17:02
 ---
 
-# GitHub IssueからAIにローカルPCを任せてよいのか？ Unity・動画・3Dアセット処理で見えた境界
+# GitHub IssueからAIにローカルPCを任せてよいのか？ Unity・Blender・動画生成で考える安全な橋
 
-GitHub Issueに仕事を書き、AI coding agentへ渡す。
+GitHub Issueに仕事を書き、AI coding agentに渡す。
 
-2026年現在、この発想自体はもう珍しくありません。
+2026年現在、この部分だけなら珍しい仕組みではありません。GitHub Copilotのcoding agentはIssueを受け取って作業し、Pull Requestを作成できます。GitHubはOpenAI Codexを含むthird-party coding agentsについても、Issueやpromptから仕事を委譲し、PRで人間がレビューする流れを提供しています。
 
-GitHub Copilotのcoding agentはIssueを割り当てて作業し、Pull Requestを作成して人間へレビューを依頼できます。GitHubはOpenAI Codexを含むthird-party coding agentsについても、Issueやpromptから非同期に仕事を委譲し、PRでレビューする流れを公式に提供しています。
+- [GitHub Docs — Kick off a task with Copilot agents](https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/kick-off-a-task)
+- [GitHub Docs — About third-party coding agents](https://docs.github.com/en/copilot/concepts/agents/about-third-party-coding-agents)
 
-- GitHub Docs — Kick off a task with Copilot agents
-  https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/kick-off-a-task
-- GitHub Docs — About third-party coding agents
-  https://docs.github.com/en/copilot/concepts/agents/about-third-party-coding-agents
-
-では、なぜわざわざ
+では、なぜ私はわざわざ次のような仕組みを作ったのでしょうか。
 
 ```text
 GitHub Issue
@@ -30,24 +26,20 @@ Windowsの常駐daemon
 ローカルCodex CLI
 ```
 
-というbridgeを作るのでしょうか。
+理由は単純です。
 
-repositoryのコードだけを直すなら、cloud上のcoding agent + Pull Requestの方が自然です。
+**コードだけならcloudで扱える。しかし、仕事がUnity、Blender、GPU、動画、3Dアセットまで広がると、リポジトリの外にあるローカル環境そのものが必要になる。**
 
-local bridgeが意味を持つのは、**仕事の対象がrepositoryの外へ出るとき**です。
+たとえば、こんな仕事です。
 
-例えば、
-
-- Unity EditorでFBX、texture、Prefabをimportして検証する
-- Blenderで`.blend`を開き、Python処理やbackground renderを行う
-- local GPUで画像・動画生成modelを動かす
+- Unity EditorでFBXやTextureをimportし、Prefabやbuildを確認する
+- Blenderで`.blend`を開き、Python処理やrenderを実行する
+- ローカルGPUで画像・動画生成modelを動かす
 - FFmpegで動画をfilter、transcode、muxする
-- 数GB級の動画、texture、3D assetをlocal disk上で連続処理する
-- local SDK、Editor version、cache、GPU、device、既存認証に依存する処理を行う
+- 数GB級の動画や3D assetをローカルディスク上で処理する
+- 特定versionのEditor、SDK、cache、device、認証済み環境を使う
 
-といった仕事です。
-
-この場合、AIが扱うのはGit diffだけではありません。
+このときAIが触るものは、Gitのdiffだけではありません。
 
 ```text
 source code
@@ -60,27 +52,28 @@ source code
 + preview image / video
 ```
 
-までが1つの実行系になります。
+までが1つの実行環境になります。
 
-この記事では、自作bridgeを単独の成功談として扱いません。
+この記事では、この自作bridgeを「AIからPCを操作できた」という成功談としては扱いません。
 
-GitHubのcoding agent、GitHub Actions、OpenAIが公開しているCodexの安全設計に加え、Unity、Blender、FFmpeg、Hugging Face Diffusersの公式仕様、さらに実際に公開している3D衣装制作・動画制作repositoryを比較しながら、**AIにlocal asset pipelineを任せるときの一般設計**としてレビューします。
+GitHubのcoding agentやActions、OpenAIが公開しているCodexの安全設計、Unity・Blender・FFmpeg・Hugging Face Diffusersの公式仕様、さらに実際に運用している3D衣装制作と動画制作の公開repositoryを照らし合わせながら、**AIにローカルのasset pipelineを任せるとき、何を境界として設計すべきか**を整理します。
 
-bridge実装:
-https://github.com/KAFKA2306/KAFKA2306/tree/main/scripts/codex-chatgpt-bridge
+公開実装: [KAFKA2306/KAFKA2306 — codex-chatgpt-bridge](https://github.com/KAFKA2306/KAFKA2306/tree/main/scripts/codex-chatgpt-bridge)
 
 ---
 
-## 先に結論：repositoryだけで完結するなら、自作bridgeは第一選択ではない
+## 先に結論：コードだけならcloud、ローカル状態が必要ならlocal
+
+最初に、使い分けを整理します。
 
 | 方法 | 実行場所 | 向いている仕事 | 主な成果物 |
 |---|---|---|---|
-| GitHub Copilot / third-party coding agent | cloud | repositoryの調査・修正・テスト | branch / PR / CI |
+| GitHub Copilot / third-party coding agent | cloud | コード調査・修正・テスト | branch / PR / CI |
 | GitHub Actions GitHub-hosted runner | ephemeral VM | 再現可能なbuild・test | log / package / artifact |
-| GitHub Actions self-hosted runner | 自分のmachine | 特殊hardware・社内networkが必要なCI | log / artifact |
-| local bridge | 自分のPC | Unity、Blender、動画生成、local asset、device、既存環境 | code + binary asset + render + build evidence |
+| GitHub Actions self-hosted runner | 自分のmachine | 特殊hardware・社内networkを使うCI | log / artifact |
+| local bridge | 自分のPC | Unity、Blender、動画生成、local asset、device | code + binary asset + render + build evidence |
 
-一般的なrepository修正だけが目的なら、
+リポジトリの中だけで完結するなら、まず既存のcoding agentを使う方が自然です。
 
 ```text
 Issue
@@ -94,31 +87,27 @@ Pull Request
 CI + human review
 ```
 
-を優先する方が自然です。
+GitHubも、Copilotが生成したPRを通常のcontributionと同じように十分reviewするよう案内しています。
 
-GitHub自身も、Copilotが生成したPRを通常のcontributionと同じように十分reviewするよう案内しています。
+[GitHub Docs — Review output from Copilot](https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/review-copilot-output)
 
-GitHub Docs:
-https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/review-copilot-output
+つまり、**ローカルPCを実行環境にする理由がないなら、ローカルPCを使わない**。
 
-**local PCを直接実行環境にする理由がないなら、local PCを実行環境にしない。**
+ここは重要です。
 
-ただしasset pipelineには、repositoryだけでは表現できない状態が大量にあります。
-
-そこがlocal bridgeの本命です。
+一方、asset制作ではGitHub上のsourceだけでは表せない状態が大量にあります。その代表例がUnity、Blender、GPUによる生成処理、FFmpegです。
 
 ---
 
-# local bridgeが本当に強いのはasset pipelineだった
+# なぜasset pipelineではローカル実行が必要になるのか
 
-## Unity：Gitにあるのはsource assetであって、Editorが見ている状態の全部ではない
+## Unity：Gitにあるassetと、Editorが見ている状態は同じではない
 
-Unityの公式ドキュメントでは、Editorを`-batchmode`で起動し、`-executeMethod`でproject内のstatic methodを実行できます。用途としてCI、unit test、build、data preparationが明示されています。
+Unity Editorはcommand lineから`-batchmode`で起動し、`-executeMethod`でproject内のstatic methodを実行できます。Unity公式は、CI、test、build、data preparationなどの用途を案内しています。
 
-Unity Manual — Unity Editor command line arguments:
-https://docs.unity3d.com/ja/current/Manual/EditorCommandLineArguments.html
+[Unity Manual — Unity Editor command line arguments](https://docs.unity3d.com/ja/current/Manual/EditorCommandLineArguments.html)
 
-概念的には、
+たとえば、概念的には次のように実行できます。
 
 ```powershell
 Unity.exe \
@@ -128,74 +117,61 @@ Unity.exe \
   -executeMethod AssetPipeline.Build
 ```
 
-のように、Issueから受けたtaskをlocal Unity Editorへ渡せます。
-
 ここで重要なのは、Unity projectが単なるGit repositoryではないことです。
 
-UnityのAsset Databaseはsource assetをimportしてartifactを生成し、そのdatabaseをprojectの`Library` folderに保持します。Unityは`Library`内のdatabaseをversion controlから除外するよう説明しています。
+UnityのAsset Databaseはsource assetをimportしてartifactを生成し、そのdatabaseをprojectの`Library` folderに保持します。Unityは`Library`をversion controlから除外するよう説明しています。
 
-Unity Manual — Asset Database:
-https://docs.unity3d.com/ja/current/Manual/AssetDatabase.html
+[Unity Manual — Asset Database](https://docs.unity3d.com/ja/current/Manual/AssetDatabase.html)
 
-つまり、
+つまり、GitHubにある状態と、実際のUnity Editorが扱う状態には差があります。
 
 ```text
-GitHub上
+GitHub
   Assets/model.fbx
   Assets/material.mat
   Assets/texture.png
   ProjectSettings/...
 
-local Unity
+ローカルUnity
   上記source
-  + import result
+  + import結果
   + Library database
   + installed Editor
-  + installed modules / SDK
+  + modules / SDK
   + machine固有の実行状態
 ```
 
-です。
+cloud agentがC#やasset metadataを書き換えただけでは、**Unity Editorが本当にそのassetをimportできたか、Prefabやbuildまで到達できたか**は分かりません。
 
-cloud agentがC#やasset metadataを書き換えるだけでは、**実際のUnity Editorがそのassetをimportし、期待するPrefabやbuildへ到達したか**までは確認できません。
-
-さらにUnityはasset fileのmetadataを管理するため、assetの作成・移動・削除を単純なfilesystem操作ではなくAsset Database経由で扱うよう案内しています。
-
-Unity Manual — Asset Database:
-https://docs.unity3d.com/ja/current/Manual/AssetDatabase.html
-
-したがって、local taskは例えばこうなります。
+だからUnityでは、最終的にEditorを実行して確かめる工程が必要になります。
 
 ```text
 Issue
   ↓
-FBX / texture / configを生成・更新
+FBX / Texture / configを更新
   ↓
 Unity batchmode
   ↓
-AssetDatabase import
+Asset Databaseでimport
   ↓
-Editor scriptでPrefab / material / buildを検証
+Prefab / material / buildを検証
   ↓
-exit code + Editor log + artifact
-  ↓
-Issue / PRへevidenceを返す
+Editor log + artifactを回収
 ```
 
-ここではPRのdiffだけでは足りません。
+ここではPRのdiffだけでは不十分です。
 
-**Unityがそのassetを受理したというruntime evidence**が必要です。
+必要なのは、**Unityがそのassetを実際に受理したという証拠**です。
 
 ---
 
-## Blender：3D assetはPythonとbackground modeで機械処理できる
+## Blender：3D assetはscriptとrenderまで含めて検証する
 
-Blender 5.0の公式manualでは、`-b` / `--background`でUIなしのbackground executionができ、`-P` / `--python`でPython scriptを実行できます。Python exception時のexit codeもcommand line optionで設定できます。
+Blenderもローカル自動化と相性がよいtoolです。
 
-Blender Manual — Command Line Arguments:
-https://docs.blender.org/manual/ja/5.0/advanced/command_line/arguments.html
+Blender 5.0の公式manualでは、`-b` / `--background`でUIなしの実行ができ、`-P` / `--python`でPython scriptを起動できます。Python exception時のexit codeも指定できます。
 
-例えば、
+[Blender Manual — Command Line Arguments](https://docs.blender.org/manual/ja/5.0/advanced/command_line/arguments.html)
 
 ```powershell
 blender.exe \
@@ -204,9 +180,7 @@ blender.exe \
   --python pipeline.py
 ```
 
-のようにできます。
-
-background renderもcommand lineから実行できます。
+renderもcommand lineから実行できます。
 
 ```powershell
 blender.exe \
@@ -215,18 +189,18 @@ blender.exe \
   -f 1
 ```
 
-この経路では、
+この仕組みを使えば、
 
 - mesh処理
 - scene設定
 - exporter実行
 - animation render
 - preview生成
-- project固有validation
+- project固有のvalidation
 
-をlocal taskへできます。
+をローカルtaskとして扱えます。
 
-成果物は`.py`のdiffだけではなく、
+そして成果物は`.py`のdiffだけではありません。
 
 ```text
 .blend
@@ -236,25 +210,21 @@ rendered PNG / WebP
 validation JSON
 ```
 
-です。
+まで含まれます。
 
-BlenderはPython auto executionをcommand lineからenable/disableするoptionも持っています。
-
-Blender Manual:
-https://docs.blender.org/manual/ja/5.0/advanced/command_line/arguments.html
-
-したがって未知の`.blend`を無人処理する場合は、filesystemだけでなく**script execution policy**も境界になります。
+BlenderはPython auto executionをcommand lineからenable / disableするoptionも持っています。つまり、未知の`.blend`を無人で処理するなら、filesystemだけでなく**script executionも権限境界**として考える必要があります。
 
 ---
 
-## 画像・動画生成：local GPUそのものが実行環境になる
+## 画像・動画生成：GPUとmodel cacheも環境の一部になる
 
-Hugging Face Diffusersは画像・動画・音声のgeneration pipelineを提供しており、modelをlocal folderから`from_pretrained()`で読み込めます。公式documentationはlocal pathを指定した場合、そのloadのためにHubからfileをdownloadしないことも説明しています。
+生成AIでは、ローカル実行が必要になる理由がさらに分かりやすくなります。
 
-Hugging Face Diffusers — Loading pipelines:
-https://huggingface.co/docs/diffusers/en/using-diffusers/loading
+Hugging Face Diffusersは画像・動画・音声のgeneration pipelineを提供しており、modelをlocal folderから`from_pretrained()`で読み込めます。公式documentationでは、local pathを指定した場合、その読み込みのためにHubからfileをdownloadしないことも説明されています。
 
-概念的には、
+[Hugging Face Diffusers — Loading pipelines](https://huggingface.co/docs/diffusers/en/using-diffusers/loading)
+
+概念的には、次のような処理です。
 
 ```python
 pipeline = DiffusionPipeline.from_pretrained(
@@ -264,14 +234,11 @@ pipeline = DiffusionPipeline.from_pretrained(
 )
 ```
 
-です。
+Diffusersはvideo generation用pipelineも提供しています。
 
-Diffusersはtext-to-videoを含むvideo generation pipelineも提供しています。
+[Hugging Face Diffusers — Pipeline overview](https://huggingface.co/docs/diffusers/api/pipelines/overview)
 
-Hugging Face Diffusers — Pipelines:
-https://huggingface.co/docs/diffusers/api/pipelines/overview
-
-local machine側には、
+このときローカル側には、
 
 ```text
 model weights
@@ -284,20 +251,19 @@ input image / video
 
 があります。
 
-これらを毎回cloud coding agentへ運ぶのではなく、**taskだけをcontrol planeから送り、dataとcomputeはlocalに残す**設計が合理的な場合があります。
+これらを毎回cloud側へ移すより、**指示だけを送って、dataとcomputeはローカルに残す**方が合理的な場合があります。
 
-DiffusersのStable Video Diffusion guideも、video generationをmemory intensiveな処理として扱い、CPU offloadやchunkingなどのmemory低減策を説明しています。
+Stable Video Diffusionのguideでも、video generationをmemory intensiveな処理として扱い、CPU offloadやchunkingなどのmemory低減策が説明されています。
 
-Hugging Face Diffusers — Stable Video Diffusion:
-https://huggingface.co/docs/diffusers/main/using-diffusers/svd
+[Hugging Face Diffusers — Stable Video Diffusion](https://huggingface.co/docs/diffusers/main/using-diffusers/svd)
 
-ここではGPU、VRAM、model cacheまでがenvironmentです。
+つまり、GPU、VRAM、model cacheまで含めて「実行環境」です。
 
 ---
 
-## FFmpeg：生成した後のasset processingもpipelineの一部
+## FFmpeg：動画は「生成した後」にも大量の処理がある
 
-動画生成はmodelが`.mp4`を出したら終わりではありません。
+動画生成modelが`.mp4`を出したら終わり、ということはほとんどありません。
 
 実際には、
 
@@ -311,17 +277,16 @@ https://huggingface.co/docs/diffusers/main/using-diffusers/svd
 - container変換
 - thumbnail生成
 
-などの後処理が続きます。
+といった後処理が続きます。
 
-FFmpeg公式documentationは、複数inputをreadし、filter・transcodeしてoutputへwriteできるmedia converterとして`ffmpeg`を説明しています。`-filter_complex`では複数input/outputを持つfilter graphも構成できます。
+FFmpegは複数inputを読み込み、filterやtranscodeを行い、outputへ書き出せます。`-filter_complex`では複数のinput / outputを持つfilter graphも構成できます。
 
-FFmpeg Documentation:
-https://ffmpeg.org/ffmpeg.html
+- [FFmpeg Documentation](https://ffmpeg.org/ffmpeg.html)
+- [FFmpeg Filters Documentation](https://ffmpeg.org/ffmpeg-filters.html)
 
-FFmpeg Filters Documentation:
-https://ffmpeg.org/ffmpeg-filters.html
+この種の処理では、数百MBから数GBのmedia fileをGitHubへ移す必要はありません。
 
-数百MB〜数GBのmedia fileをGitHubへ運ばず、Issueには
+Issueには、
 
 ```text
 どのinputを
@@ -329,25 +294,21 @@ https://ffmpeg.org/ffmpeg-filters.html
 どのoutputへ変換するか
 ```
 
-というcontrol情報だけを置くことができます。
+という指示だけを置き、実データはローカルで処理できます。
 
 ---
 
-# 公開実例1：image2outfitでは、exit codeではなく「実画像」まで完了条件にした
+# 実例1：image2outfitでは「Blenderが終了した」だけでは完成にしない
 
-一般論だけでは弱いので、実際の公開repositoryを見ます。
+一般論だけでは分かりにくいので、実際の公開projectを見ます。
 
-`KAFKA2306/image2outfit`は、SiroinoSotai_PC向け衣装をBlenderで制作し、編集可能source、FBX、Prefab宣言、render、研究記録を再現可能なworkspaceとして管理しています。
+[`KAFKA2306/image2outfit`](https://github.com/KAFKA2306/image2outfit)は、SiroinoSotai_PC向け衣装をBlenderで制作し、編集可能source、FBX、Prefab宣言、render、研究記録を1つの再現可能なworkspaceで管理するprojectです。
 
-公開repository:
-https://github.com/KAFKA2306/image2outfit
+[image2outfit README](https://github.com/KAFKA2306/image2outfit/blob/main/README.md)
 
-README:
-https://github.com/KAFKA2306/image2outfit/blob/main/README.md
+このprojectでは、Blender processが正常終了しただけでは`COMPLETE`になりません。
 
-このprojectの`COMPLETE`は、単にBlender processが終了したことではありません。
-
-READMEで要求しているものには、
+必要なのは、
 
 - Blender生成成功
 - 編集可能な制作source
@@ -358,9 +319,9 @@ READMEで要求しているものには、
 - 研究手法の試行記録
 - 実画像を直接開いて確認する`visualAppearanceReview`
 
-が含まれます。
+です。
 
-さらに、各工程はresult JSONへ証拠fileのSHA-256を記録し、runner側で実fileのSHA-256を再計算して一致を確認します。
+さらに各工程はresult JSONへ証拠fileのSHA-256を記録し、runnerが実fileのSHA-256を再計算して一致を確認します。
 
 つまり、
 
@@ -386,17 +347,15 @@ direct visual review
 COMPLETE
 ```
 
-です。
+このprojectから得られる教訓は明快です。
 
-これはlocal asset agentのcompletion contractとしてかなり重要です。
+**binary assetは「存在する」だけでは足りない。生成経路、hash、見た目まで確認する。**
 
-**binary assetは「存在する」だけではなく、生成経路・hash・見た目まで検証する。**
+もう1つ重要なのは、確認していないことを「確認済み」と扱わないことです。
 
-さらにこのrepositoryは、Unity import/save/reload、Modular Avatar、VRChat Build & Testなどを現在の`COMPLETE`条件から明示的に`OUT_OF_SCOPE`へ置いています。
+image2outfitでは、Unity import/save/reload、Modular Avatar、VRChat Build & Testなどを現在の`COMPLETE`条件から明示的に`OUT_OF_SCOPE`へ置いています。
 
-つまり、実際にUnityを実行していない段階では「Unityで動作確認済み」と表現しません。
-
-この区別は、agent workflowで非常に重要です。
+そのため、実際にUnityを実行していない段階では「Unityで動作確認済み」とは表現しません。
 
 ```text
 生成した
@@ -405,42 +364,47 @@ COMPLETE
 ≠ 人間が見て採用した
 ```
 
-を混ぜないからです。
+この状態を混ぜないことが、agent workflowでは重要です。
 
 ---
 
-# 公開実例2：yt3では、FFmpegによる動画生成と「公開成功」を分離している
+# 実例2：yt3では「動画ができた」と「公開できた」を分ける
 
-動画asset側にも公開実例があります。
+動画側の実例が[`KAFKA2306/yt3`](https://github.com/KAFKA2306/yt3)です。
 
-`KAFKA2306/yt3`は、research、script、audio/visual production、audit、YouTube publishまでを扱うmedia production systemです。
+YT3はresearch、script、audio / visual production、audit、YouTube publishまでを扱うmedia production systemです。
 
-README:
-https://github.com/KAFKA2306/yt3/blob/main/README.md
+[YT3 README](https://github.com/KAFKA2306/yt3/blob/main/README.md)
 
-production flowは、
+production flowは次のように分離されています。
 
 ```text
 source / event
-  → research
-  → verified facts
-  → script
-  → audio / visual production
-  → audit
-  → channel routing audit
-  → publish
-  → publish receipt
-  → public visibility audit
+  ↓
+research
+  ↓
+verified facts
+  ↓
+script
+  ↓
+audio / visual production
+  ↓
+audit
+  ↓
+channel routing audit
+  ↓
+publish
+  ↓
+publish receipt
+  ↓
+public visibility audit
 ```
 
-として分離されています。
+video composerの実装では`fluent-ffmpeg`を使い、audio、複数overlay、thumbnail、subtitleをinputとしてcomplex filterを組み、動画を書き出しています。
 
-video composerの実装では`fluent-ffmpeg`を使い、audio、複数overlay、thumbnail、subtitleをinputとしてcomplex filterを組み、codec・pixel format・audio codecを指定してoutput pathへ動画を書き出しています。
+[YT3 — video_composer.ts](https://github.com/KAFKA2306/yt3/blob/main/src/domain/media/video_composer.ts)
 
-実装:
-https://github.com/KAFKA2306/yt3/blob/main/src/domain/media/video_composer.ts
-
-つまり、ここには実際に
+つまり実際に、
 
 ```text
 local / workspace media files
@@ -452,27 +416,18 @@ video artifact
 
 というasset processing layerがあります。
 
-しかしYT3のREADMEでは、video file生成をpublication successとは扱いません。
+しかし、YT3ではvideo file生成をpublication successとは扱いません。
 
-公開成功には、少なくとも
+公開成功には、少なくとも次を要求しています。
 
-- content artifact存在
-- content audit pass
-- profile / bucketの明示
-- authenticated channel identityとの一致
-- publish receipt
-- public visibility audit
+- content artifactが存在する
+- content auditを通過する
+- publish先のprofile / bucketが明示されている
+- 認証済みchannel identityと意図が一致する
+- publish receiptが残る
+- public visibilityを確認する
 
-を要求しています。
-
-これは動画系agentでありがちな
-
-```text
-mp4ができた
-→ 成功
-```
-
-を否定しています。
+つまり、
 
 ```text
 video generated
@@ -482,77 +437,46 @@ video generated
   ≠ publicly visible
 ```
 
-だからです。
+です。
 
-image2outfitとYT3は対象が違いますが、共通する設計原則があります。
+image2outfitとYT3は対象が違いますが、設計思想は共通しています。
 
-> agentの説明ではなく、artifactとevidenceがstateを決める。
+> **agentの説明ではなく、artifactとevidenceがstateを決める。**
+
+これがlocal asset automationの中心原則です。
 
 ---
 
-# 本当のlocal workflowは1つのtoolではなくchainになる
+# コードとassetでは「完了」の形が違う
 
-asset処理は1つのapplicationで完結しないことが多いです。
+coding agentの標準的な成果物はPull Requestです。
 
-例えば、
+コードなら、
 
 ```text
-Issue
+diff
   ↓
-Codex
+PR
   ↓
-Diffusers / local GPU
+CI
   ↓
-FFmpeg
-  ↓
-Blender
-  ↓
-Unity
-  ↓
-validation
-  ↓
-evidence bundle
+review
 ```
 
-というchainです。
-
-ここで問題になるのはcode generationだけではありません。
-
-- tool version
-- binary asset
-- local cache
-- GPU
-- application install
-- SDK
-- license / authentication
-- intermediate artifact
-
-の管理です。
-
-したがってlocal bridgeは、単なるremote shellというより、
-
-**repository外のcapabilityを、安全な範囲でagentへ貸し出すbroker**
-
-と考えた方が正確です。
-
----
-
-# asset pipelineでは「PRを作った」が完了条件にならない
-
-coding agentの標準的なreviewable artifactはPull Requestです。
+でかなりの部分を検証できます。
 
 しかしasset pipelineでは、source codeに変更がないtaskもあります。
 
-```text
-同じBlender scriptで5方向renderを再生成する
-既存modelから動画を生成する
-FBXをUnityへimportしてcompatibilityを検証する
-FFmpeg profileだけ変えてencode比較する
-```
+たとえば、
+
+- 同じBlender scriptで5方向renderを再生成する
+- 既存modelから動画を生成する
+- FBXをUnityへimportしてcompatibilityを確認する
+- FFmpeg profileだけ変えてencodeを比較する
 
 といった仕事です。
 
-この場合、completion contractを広げます。
+この場合、完了条件は次のように広げる必要があります。
 
 ```text
 execution
@@ -569,7 +493,7 @@ artifact
   file format
 
 validation
-  Unity import/build result
+  Unity import / build result
   Blender script result
   expected dimensions / codec / duration
 
@@ -578,11 +502,11 @@ visual evidence
   representative frames
 
 review
-  source変更があればPR
-  binary変更はartifact evidence
+  source変更ならPR
+  binary変更ならartifact evidence
 ```
 
-つまり、
+要するに、
 
 ```text
 code workflow
@@ -597,26 +521,31 @@ asset workflow
 
 です。
 
-AI automationでは、agentが「終わりました」と言ったことより、**再検証できるartifactが残ったこと**を成功条件にします。
+**agentが「終わりました」と返したことではなく、あとから再検証できる成果物が残ったことを成功条件にする。**
+
+ここがコード中心の自動化との大きな違いです。
 
 ---
 
-# 一般原則1：Issueは「仕事の記録」であって「実行権限」ではない
+# local bridgeは何を守るべきか
 
-GitHubはIssuesを、ideas、feedback、tasks、bugsなどを計画・追跡する仕組みとして説明しています。
+ここまでの具体例から、安全設計を整理します。
 
-GitHub Docs:
-https://docs.github.com/en/issues/tracking-your-work-with-issues/learning-about-issues/about-issues
+## 1. Issueは仕事の記録であって、実行権限ではない
 
-Issueはcontrol planeとして便利です。
+GitHub Issuesは、ideas、feedback、tasks、bugsなどを計画・追跡するための機能です。
+
+[GitHub Docs — About issues](https://docs.github.com/en/issues/tracking-your-work-with-issues/learning-about-issues/about-issues)
+
+Issueはcontrol planeの入口として便利です。
 
 - 誰が依頼したか残る
 - 何を依頼したか残る
 - commentで状態を追える
 - PRやcommitと関連づけられる
-- 人間が後から監査できる
+- 後から監査できる
 
-しかしIssue commentをそのままshell command相当の権限へ変換すれば、Issueはremote execution interfaceになります。
+ただし、Issue commentをそのままshell command相当の権限に変換すれば、Issueはremote execution interfaceになります。
 
 ```text
 Issueに書かれている
@@ -630,31 +559,32 @@ Issueに書かれている
 
 ことは別です。
 
-asset pipelineの場合、commandの先にUnity、Blender、GPU、media encoderまで存在します。
+特にasset pipelineでは、その先にUnity、Blender、GPU、media encoderまで存在します。
 
-execution authorityはIssueとは別に制御します。
+**collaboration権限とexecution権限は分ける必要があります。**
 
 ---
 
-# 一般原則2：promptより外側に境界を置く
+## 2. 「危ないことをしないで」は安全境界ではない
 
 OpenAIが公開しているCodexの安全運用では、managed configuration、constrained execution、network policies、logs、sandboxing、approvalsなどが独立したcontrolとして扱われています。
 
-OpenAI — Running Codex safely at OpenAI:
-https://openai.com/index/running-codex-safely/
+[OpenAI — Running Codex safely at OpenAI](https://openai.com/index/running-codex-safely/)
 
-AIへのpromptに
+AIへのpromptに、
 
 ```text
-危ないことはしないで
 他のfolderは見ないで
+危険な操作はしないで
 ```
 
-と書くことは、強制境界ではありません。
+と書くことはできます。
+
+しかし、これはお願いです。
 
 ```text
 prompt rule
-  AIへの依頼
+  AIへの指示
 
 sandbox / allowlist
   実行系による強制
@@ -662,20 +592,13 @@ sandbox / allowlist
 
 は別物です。
 
-asset pipelineではfilesystemだけでなくapplicationにも広げます。
-
-```text
-Codex
-Unity
-Blender
-FFmpeg
-```
-
-だけを許可し、それ以外のbinaryを拒否するprocess allowlistまで持てると境界はさらに明確になります。
+asset pipelineなら、filesystemに加えて「どのapplicationを起動してよいか」まで制御対象になります。
 
 ---
 
-# 一般原則3：asset pipelineでは最小権限を6層で見る
+## 3. 最小権限は6層に分ける
+
+local asset agentでは、少なくとも次の6層を分けて考えると整理しやすくなります。
 
 ```text
 1. Identity
@@ -697,54 +620,50 @@ FFmpeg
    code / binary / log / previewをどこへ返してよいか
 ```
 
-動画generationへGPUを貸すことと、任意のlocal processを起動できることは同じ権限ではありません。
+たとえば、「動画生成のためにGPUを使ってよい」と「任意のlocal processを起動してよい」は同じ権限ではありません。
 
 GitHub Copilot coding agentもinternet accessをfirewallで制御でき、GitHubはdata exfiltration riskの管理として説明しています。
 
-GitHub Docs:
-https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-the-firewall
+[GitHub Docs — Customize the firewall](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-the-firewall)
 
-入力だけでなく、**出ていくnetwork trafficとartifactも境界**です。
+入力だけでなく、**外へ出ていくnetwork trafficとartifactも境界**です。
 
 ---
 
-# 一般原則4：「自分のPCで動かす」はcloudより強い理由が必要
+## 4. local machineは長寿命だからこそ慎重に扱う
 
-local executionには明確な利点があります。
+local executionには、cloudにはない強みがあります。
 
 - cloudへ置けないlocal data
 - local GPU
-- Unity / Blenderなどinstalled application
+- Unity / Blenderなどのinstalled application
 - local cache / SDK
 - large media
 - device / hardware
 
-一方で実行環境は長寿命の実machineです。
+しかし、そのmachineはcloud agentのような使い捨て環境ではありません。
 
-GitHubはself-hosted runnerについて、ephemeralでcleanなVMである保証がなく、untrusted codeによって継続的にcompromiseされる可能性があると警告しています。
+GitHubもself-hosted runnerについて、ephemeralでcleanなVMである保証がなく、untrusted codeによって継続的にcompromiseされる可能性があると警告しています。
 
-GitHub Docs — Secure use reference:
-https://docs.github.com/en/actions/reference/security/secure-use
+[GitHub Docs — Secure use reference for GitHub Actions](https://docs.github.com/en/actions/reference/security/secure-use)
+
+違いを単純化すると、こうです。
 
 ```text
 cloud agent
   disposableな作業環境へ仕事を持っていく
 
 local bridge
-  普段使っているmachineへ仕事を持ってくる
+  長寿命のmachineへ仕事を持ってくる
 ```
 
-という差があります。
-
-local bridgeは便利だから使うのではなく、**local stateそのものが仕事の一部であるときに使う**のが妥当です。
-
-UnityのAsset Database、Blender file、local model weight、GPU、動画assetはその典型です。
+だからlocal bridgeは「便利だから使う」のではなく、**local stateそのものが仕事の一部であるときに使う**のが妥当です。
 
 ---
 
-# 自作bridgeをこの基準でレビューする
+# 実際のbridgeをこの基準で見る
 
-現在のbridgeは、
+現在のbridgeは次の構成です。
 
 ```text
 ChatGPT / sender
@@ -760,14 +679,23 @@ final response + exit code + git evidence
 private GitHub Issue
 ```
 
-という構成です。
+実装: [bridge-daemon.ps1](https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/bridge-daemon.ps1)
 
-実装:
-https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/bridge-daemon.ps1
+安全境界を表にすると、現在は次のようになっています。
 
-## Identity
+| 境界 | 現在の実装 |
+|---|---|
+| 誰が命令できるか | `ControllerLogin`と一致するGitHub userだけ |
+| どこを触れるか | `AllowedRoot`配下だけ |
+| 通常のsandbox | `read-only` |
+| 書き込み | 明示した`workspace-write`だけ |
+| Codex profile | user config / apps / pluginsから分離 |
+| local MCP | hard-coded allowlist + task単位opt-in |
+| raw result | local/private側に保持 |
 
-comment authorのGitHub loginがinstallerで設定した`ControllerLogin`と一致し、所定のmarkerとJSON blockがある場合だけtaskとして扱います。
+### Identity
+
+所定のmarkerとJSON blockがあり、comment authorが`ControllerLogin`と一致した場合だけtaskになります。
 
 ```text
 正しい形式
@@ -777,11 +705,9 @@ AND
 comment author == ControllerLogin
 ```
 
-です。
+private repositoryに入れることと、ローカルPCへ命令できることを同一視していません。
 
-private repositoryに入れることと、local PCへ命令できることを同一視しません。
-
-## Filesystem
+### Filesystem
 
 `cwd`はinstall時に設定した`AllowedRoot`配下だけです。
 
@@ -797,22 +723,20 @@ C:\Users\...
 D:\private-data
 ```
 
-promptではなくPowerShell側で拒否します。
+これはpromptではなくPowerShell側で拒否します。
 
-## Sandbox
+### Sandbox
 
-既定は`read-only`で、許可値も
+既定は`read-only`で、許可値も次の2つだけです。
 
 ```text
 read-only
 workspace-write
 ```
 
-だけです。
+ただし、asset生成やUnity importへ広げるなら、filesystem writeとapplication起動権限を分けた方が強くなります。
 
-asset生成やUnity importにはwriteが必要ですが、write権限と任意application起動権限は本来別です。
-
-Unity、Blender、FFmpegを本格的にbrokerするなら、次のhardening候補は
+今後のhardening候補は、
 
 ```text
 filesystem sandbox
@@ -824,14 +748,13 @@ tool-specific argument schema
 
 です。
 
-## Tool profile
+### Tool profile
 
-bring-up時には、普段使いのCodex環境にある追加MCP/app層がOAuth認証を要求して無人実行が止まりました。
+bring-up時には、普段使いのCodex環境にある追加MCP / app層がOAuth認証を要求し、無人実行が停止しました。
 
-検証記録:
-https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VERIFICATION.md
+[Verification record](https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VERIFICATION.md)
 
-そのためautonomous runでは
+そのためautonomous runでは、
 
 ```text
 --ignore-user-config
@@ -839,9 +762,9 @@ https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VE
 --disable plugins
 ```
 
-を使い、interactive profileから分離しています。
+を使い、人間が普段使うinteractive profileから分離しています。
 
-同じ原則はUnity / Blenderにも使えます。
+同じ発想はUnityやBlenderにも使えます。
 
 ```text
 人間向けenvironment
@@ -851,16 +774,18 @@ agent向けenvironment
   固定version / 固定project / 固定entry point
 ```
 
-の方が故障原因と権限を減らせます。
+無人実行では、便利さより再現性と権限の小ささを優先した方が扱いやすくなります。
 
-## Output
+### Output
 
-raw task resultにはlocal path、repository state、private task内容などが混ざり得ます。
+raw resultにはlocal path、repository state、private task内容などが含まれる可能性があります。
 
-asset pipelineならさらにmodel名、source media、render、build artifactが加わります。
+asset pipelineなら、さらにmodel名、source media、render、build artifactも加わります。
+
+そのため、
 
 ```text
-publicに出せるmetadata
+外へ出してよいmetadata
 privateに残すraw output
 ```
 
@@ -868,21 +793,20 @@ privateに残すraw output
 
 ---
 
-# E2Eの成功条件もassetごとに変える
+# 成功条件はtoolごとに変える
 
-2026-08-12のbridge verificationでは、
+2026-08-12のbridge smoke testでは、
 
 ```text
 worker exit_code = 0
 final Codex message = BRIDGE_OK
 ```
 
-の両方をsmoke成功条件にしました。
+の両方を成功条件にしました。
 
-検証記録:
-https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VERIFICATION.md
+[Bridge verification record](https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VERIFICATION.md)
 
-asset pipelineへ広げるなら、もっと厳しくします。
+しかし、asset pipelineへ広げるならこれだけでは足りません。
 
 ### Unity
 
@@ -924,49 +848,47 @@ expected codec / resolution / duration確認
 representative frame確認
 ```
 
+共通する考え方は1つです。
+
 **asset workflowは、agentの返答ではなく生成物を検査して終わる。**
 
 ---
 
-# 残る弱点
+# 現在のbridgeに残る弱点
 
-## 長寿命のlocal machine
+このbridgeは「安全になった」のではなく、境界を増やして危険を狭めている途中です。
 
-cloud agentのようなdisposable environmentではありません。
+特に残る課題は次の4つです。
 
-Unity、Blender、model weight、credentialが載ったmachineだからこそ、compromise時のblast radiusは大きくなります。
+### 長寿命のlocal machine
 
-## network policy
+Unity、Blender、model weight、credentialが載った実machineなので、compromise時の影響範囲はcloudの使い捨て環境より大きくなります。
 
-filesystem root、sandbox、MCP allowlistはありますが、domain単位のnetwork allowlistをbridge独自に構築しているわけではありません。
+### network policy
 
-model downloadやAPI利用を許すなら独立したnetwork policyが必要です。
+filesystem root、sandbox、MCP allowlistはありますが、domain単位のnetwork allowlistをbridge独自に持っているわけではありません。model downloadや外部API利用を許すなら、network policyは別に設計する必要があります。
 
-## process allowlist
+### process allowlist
 
-現行bridgeはUnity / Blender / FFmpeg専用brokerではありません。
+現行bridgeはUnity / Blender / FFmpeg専用brokerではありません。本格運用なら、許可binary、version、project path、argumentをtask schemaとして固定する方が安全です。
 
-本格運用なら、許可binary、version、project path、argumentをtask schemaとして固定する方が強くなります。
+### `workspace-write`は採用承認ではない
 
-## `workspace-write`は採用承認ではない
+agentがassetを書き換えられることと、そのassetを採用してよいことは別です。source changeならPR、binary changeならhash・preview・machine validationを残し、人間が採否を判断できる形にします。
 
-agentがassetを書き換えられることと、そのassetを採用してよいことは別です。
-
-source changeはPR、binary changeはhash・preview・machine validationを残し、人間が採否を判断できる形にします。
-
-## GitHub accountがcontrol credentialになる
-
-Issue commentを実行指示として使う以上、GitHub account、GitHub CLI authentication、repository accessがcontrol planeのcredentialです。
+また、Issue commentを実行指示として使う以上、GitHub account、GitHub CLI authentication、repository accessそのものがcontrol planeのcredentialになります。
 
 「private repositoryだから安心」では不十分です。
 
 ---
 
-# 2026年時点での選び方
+# では、どの方法を選ぶべきか
 
-## repositoryだけで完結する
+判断基準はかなり単純です。
 
-**GitHub上のcoding agent。**
+### リポジトリだけで完結する
+
+**GitHub上のcoding agentを使う。**
 
 ```text
 Issue / prompt
@@ -978,19 +900,19 @@ branch / PR
 CI + review
 ```
 
-## 再現可能なbuild / testだけ必要
+### 再現可能なbuild / testだけが必要
 
-**GitHub-hosted Actions。**
+**GitHub-hosted Actionsを使う。**
 
-## 特殊hardwareや社内networkだけlocalに必要
+### 特殊hardwareや社内networkだけローカルに必要
 
-**self-hosted runner。**
+**self-hosted runnerを検討する。**
 
 ただしrunner isolationを先に設計します。
 
-## Unity / Blender / 動画 / 3D assetのようにlocal stateそのものが仕事
+### Unity / Blender / 動画 / 3D assetのようにlocal stateそのものが仕事
 
-**local bridgeが有力。**
+**local bridgeが候補になる。**
 
 ```text
 Unity
@@ -1006,7 +928,7 @@ FFmpeg
   encode / filter / mux
 ```
 
-この場合は、
+この場合は、少なくとも次を設計対象にします。
 
 ```text
 identity allowlist
@@ -1024,15 +946,13 @@ visual evidence
 PR / human review
 ```
 
-までが設計対象です。
-
 ---
 
-# 私たちが作ったのは「AIへの橋」ではなく、local capability brokerだった
+# 作ったのは「AIへの橋」ではなく、local capability brokerだった
 
-Issueからagentへ仕事を渡すこと自体は、2026年には一般化しています。
+Issueからagentへ仕事を渡すこと自体は、2026年には一般的なworkflowになっています。
 
-local bridgeの独自性が出るのは、
+自作bridgeに意味が出るのは、その先です。
 
 ```text
 GitHubだけでは触れない
@@ -1046,23 +966,29 @@ local SDK
 
 へ到達するときです。
 
-その瞬間、bridgeはremote shellではなく、**local capability broker**になります。
+このときbridgeは、単なるremote shellではありません。
 
-そしてimage2outfitとYT3の実装を見ると、もう1つ共通する結論があります。
+**ローカルPCにしかない能力を、制限付きでagentへ貸し出す仕組み**です。
 
-> agentの説明ではなく、artifactとevidenceがstateを決める。
+私はこれを`local capability broker`と考えるのが一番しっくりきます。
 
-AI coding agentを安全にするのは賢いpromptだけではありません。
+そして、image2outfitとYT3を実際に運用して分かったことは、さらに単純です。
 
-agentの外側に置いた強制可能な境界と、再検証できる成果物です。
+> **agentの説明ではなく、artifactとevidenceがstateを決める。**
 
-repositoryだけで完結するならcloud agent + PRを使う。
+安全なAI automationを作るために重要なのは、賢いpromptだけではありません。
 
-local stateが本当に必要なときだけbridgeを足す。
+agentの外側に置いた、突破できない境界。
 
-localへ入った瞬間、codeだけでなくapplication、GPU、asset、network、outputまで権限として設計する。
+そして、あとから再検証できる成果物です。
 
-Unity、Blender、動画生成、実際のasset productionを考えると、local bridgeを作る理由はここにあります。
+コードだけならcloud agent + PRを使う。
+
+ローカル状態が本当に必要なときだけbridgeを足す。
+
+そしてlocalへ入った瞬間、codeだけでなくapplication、GPU、asset、network、outputまで権限として設計する。
+
+Unity、Blender、動画生成のようなasset productionを考えると、ローカルbridgeを作る理由はそこにあります。
 
 ---
 
@@ -1070,72 +996,48 @@ Unity、Blender、動画生成、実際のasset productionを考えると、loca
 
 ### GitHub
 
-- About issues
-  https://docs.github.com/en/issues/tracking-your-work-with-issues/learning-about-issues/about-issues
-- Kick off a task with Copilot agents
-  https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/kick-off-a-task
-- About third-party coding agents
-  https://docs.github.com/en/copilot/concepts/agents/about-third-party-coding-agents
-- Review output from Copilot
-  https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/review-copilot-output
-- Customize Copilot firewall
-  https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-the-firewall
-- Secure use reference for GitHub Actions
-  https://docs.github.com/en/actions/reference/security/secure-use
+- [About issues](https://docs.github.com/en/issues/tracking-your-work-with-issues/learning-about-issues/about-issues)
+- [Kick off a task with Copilot agents](https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/kick-off-a-task)
+- [About third-party coding agents](https://docs.github.com/en/copilot/concepts/agents/about-third-party-coding-agents)
+- [Review output from Copilot](https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/review-copilot-output)
+- [Customize Copilot firewall](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-the-firewall)
+- [Secure use reference for GitHub Actions](https://docs.github.com/en/actions/reference/security/secure-use)
 
 ### OpenAI
 
-- Running Codex safely at OpenAI
-  https://openai.com/index/running-codex-safely/
+- [Running Codex safely at OpenAI](https://openai.com/index/running-codex-safely/)
 
 ### Unity
 
-- Unity Editor command line arguments
-  https://docs.unity3d.com/ja/current/Manual/EditorCommandLineArguments.html
-- Asset Database
-  https://docs.unity3d.com/ja/current/Manual/AssetDatabase.html
-- AssetDatabase.ImportAsset
-  https://docs.unity3d.com/ja/current/ScriptReference/AssetDatabase.ImportAsset.html
+- [Unity Editor command line arguments](https://docs.unity3d.com/ja/current/Manual/EditorCommandLineArguments.html)
+- [Asset Database](https://docs.unity3d.com/ja/current/Manual/AssetDatabase.html)
+- [AssetDatabase.ImportAsset](https://docs.unity3d.com/ja/current/ScriptReference/AssetDatabase.ImportAsset.html)
 
 ### Blender
 
-- Blender 5.0 Manual — Command Line Arguments
-  https://docs.blender.org/manual/ja/5.0/advanced/command_line/arguments.html
+- [Blender 5.0 Manual — Command Line Arguments](https://docs.blender.org/manual/ja/5.0/advanced/command_line/arguments.html)
 
 ### FFmpeg
 
-- ffmpeg Documentation
-  https://ffmpeg.org/ffmpeg.html
-- FFmpeg Filters Documentation
-  https://ffmpeg.org/ffmpeg-filters.html
+- [ffmpeg Documentation](https://ffmpeg.org/ffmpeg.html)
+- [FFmpeg Filters Documentation](https://ffmpeg.org/ffmpeg-filters.html)
 
 ### Hugging Face Diffusers
 
-- Loading pipelines
-  https://huggingface.co/docs/diffusers/en/using-diffusers/loading
-- Pipeline overview
-  https://huggingface.co/docs/diffusers/api/pipelines/overview
-- Stable Video Diffusion
-  https://huggingface.co/docs/diffusers/main/using-diffusers/svd
+- [Loading pipelines](https://huggingface.co/docs/diffusers/en/using-diffusers/loading)
+- [Pipeline overview](https://huggingface.co/docs/diffusers/api/pipelines/overview)
+- [Stable Video Diffusion](https://huggingface.co/docs/diffusers/main/using-diffusers/svd)
 
 ### 公開case study
 
-- image2outfit
-  https://github.com/KAFKA2306/image2outfit
-- image2outfit README / completion contract
-  https://github.com/KAFKA2306/image2outfit/blob/main/README.md
-- YT3 README / media operation contract
-  https://github.com/KAFKA2306/yt3/blob/main/README.md
-- YT3 FFmpeg video composer
-  https://github.com/KAFKA2306/yt3/blob/main/src/domain/media/video_composer.ts
+- [image2outfit](https://github.com/KAFKA2306/image2outfit)
+- [image2outfit README / completion contract](https://github.com/KAFKA2306/image2outfit/blob/main/README.md)
+- [YT3 README / media operation contract](https://github.com/KAFKA2306/yt3/blob/main/README.md)
+- [YT3 FFmpeg video composer](https://github.com/KAFKA2306/yt3/blob/main/src/domain/media/video_composer.ts)
 
 ### bridge実装
 
-- Bridge implementation
-  https://github.com/KAFKA2306/KAFKA2306/tree/main/scripts/codex-chatgpt-bridge
-- Bridge daemon
-  https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/bridge-daemon.ps1
-- E2E verification
-  https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VERIFICATION.md
-- Hardened autonomous-run commit
-  https://github.com/KAFKA2306/KAFKA2306/commit/864774f15d7fc6522572a8e326dfa78573b0df74
+- [Bridge implementation](https://github.com/KAFKA2306/KAFKA2306/tree/main/scripts/codex-chatgpt-bridge)
+- [Bridge daemon](https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/bridge-daemon.ps1)
+- [E2E verification](https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VERIFICATION.md)
+- [Hardened autonomous-run commit](https://github.com/KAFKA2306/KAFKA2306/commit/864774f15d7fc6522572a8e326dfa78573b0df74)
