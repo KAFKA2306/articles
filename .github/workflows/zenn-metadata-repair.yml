@@ -1,4 +1,4 @@
-name: Zenn Metadata Repair
+name: Zenn Pending Normalization
 
 on:
   push:
@@ -10,61 +10,48 @@ permissions:
   contents: write
 
 jobs:
-  repair:
+  normalize:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Restore first committed published_at values
+      - name: Mark unverified articles pending
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
 
-          repairs = {
-              "articles/claude-watermark-secret-key-detection.md": (
-                  "2026-08-15 09:40",
-                  "2026-08-13 09:00",
-              ),
-              "articles/codex-chatgpt-github-issue-bridge.md": (
-                  "2026-08-15 13:01",
-                  "2026-08-12 17:02",
-              ),
-              "articles/unity-mcp-editor-boundary.md": (
-                  "2026-08-15 13:18",
-                  "2026-08-12 16:03",
-              ),
-              "articles/validate-before-pages-deploy.md": (
-                  "2026-08-15 12:44",
-                  "2026-08-13 16:04",
-              ),
-          }
+          pending = [
+              "articles/chatgpt-multiproject-autonomy.md",
+              "articles/claude-watermark-secret-key-detection.md",
+              "articles/codex-chatgpt-github-issue-bridge.md",
+              "articles/opencode-go-deepseek-v4-chatgpt-usage-scale.md",
+              "articles/unity-mcp-editor-boundary.md",
+              "articles/validate-before-pages-deploy.md",
+              "articles/why-i-could-buy-the-crash.md",
+          ]
 
-          changed = []
-          for raw_path, (current, origin) in repairs.items():
+          for raw_path in pending:
               path = Path(raw_path)
               text = path.read_text(encoding="utf-8")
-              current_line = f"published_at: {current}"
-              origin_line = f"published_at: {origin}"
-              if origin_line in text and current_line not in text:
-                  print(f"already repaired: {raw_path} -> {origin}")
+              front, body = text.split("---\n", 2)[1:]
+              true_line = "published: true"
+              false_line = "published: false"
+              if false_line in front and true_line not in front:
+                  print(f"already pending: {raw_path}")
                   continue
-              count = text.count(current_line)
-              if count != 1:
+              if front.count(true_line) != 1:
                   raise SystemExit(
-                      f"refusing repair for {raw_path}: expected exactly one {current_line!r}, found {count}"
+                      f"refusing normalization for {raw_path}: expected exactly one published:true in front matter"
                   )
-              path.write_text(text.replace(current_line, origin_line, 1), encoding="utf-8")
-              changed.append(raw_path)
-              print(f"repaired: {raw_path}: {current} -> {origin}")
-
-          if not changed:
-              print("No metadata repair required")
+              front = front.replace(true_line, false_line, 1)
+              path.write_text(f"---\n{front}---\n{body}", encoding="utf-8")
+              print(f"pending: {raw_path}")
           PY
 
-      - name: Commit repaired metadata
+      - name: Commit pending state
         shell: bash
         run: |
           set -euo pipefail
@@ -75,10 +62,6 @@ jobs:
           git diff --check
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            articles/claude-watermark-secret-key-detection.md \
-            articles/codex-chatgpt-github-issue-bridge.md \
-            articles/unity-mcp-editor-boundary.md \
-            articles/validate-before-pages-deploy.md
-          git commit -m "repair: restore immutable Zenn published_at origins"
+          git add articles/
+          git commit -m "repair: mark unverified Zenn articles pending"
           git push origin HEAD:main
