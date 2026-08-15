@@ -35,6 +35,7 @@ def audit_layout() -> None:
 
     required = [
         core.ROOT / "README.md",
+        core.ROOT / "AGENTS.md",
         core.ROOT / "pipeline" / "config.json",
         core.ROOT / "pipeline" / "cli.py",
         core.ROOT / "pipeline" / "core.py",
@@ -136,18 +137,25 @@ def audit_editorial_contract() -> None:
         core.ROOT / "pipeline" / "contracts" / "article.md"
     ).read_text(encoding="utf-8")
     required_markers = (
-        "ひとつの発見",
-        "冒頭500文字",
-        "100以上",
-        "品質床",
         "initial_hypothesis",
         "hypothesis_update",
+        "reader_job",
+        "observed_anomaly",
+        "proof_of_value",
+        "boundary",
+        "decision_rule",
+        "reader_after",
+        "non_goal",
+        "half_life",
+        "portfolio_overlap",
         "story_overall",
         "interest",
         "discovery",
         "narrative",
         "context",
-        "一文で持ち帰れる結論",
+        "品質床",
+        "explicit human approval",
+        "published:true",
     )
     for marker in required_markers:
         if marker not in contract:
@@ -156,6 +164,33 @@ def audit_editorial_contract() -> None:
     cli = (core.ROOT / "pipeline" / "cli.py").read_text(encoding="utf-8")
     if "install_editorial_pipeline()" not in cli:
         fail("editorial pipeline is not installed by cli.py")
+
+
+def audit_publication_boundary() -> None:
+    selection = (
+        core.ROOT / "pipeline" / "selection.py"
+    ).read_text(encoding="utf-8")
+    workflow = (
+        core.ROOT / ".github" / "workflows" / "article-pipeline.yml"
+    ).read_text(encoding="utf-8")
+    core_source = (
+        core.ROOT / "pipeline" / "core.py"
+    ).read_text(encoding="utf-8")
+
+    if 'os.environ.get("ARTICLE_MANUAL") == "1"' not in selection:
+        fail("draft selection lacks explicit manual authority")
+    if "or is_month_end(core.now_jst())" in selection:
+        fail("calendar month-end still grants draft selection authority")
+    if 'cron: "30 14 28-31 * *"' in workflow:
+        fail("scheduled month-end publication path remains")
+    if "bootstrap_publish=attempt" in workflow:
+        fail("bootstrap publication path remains")
+    if "select-draft" not in workflow:
+        fail("manual unpublished-draft selection mode missing")
+    if "Assert automation never grants publication" not in workflow:
+        fail("workflow lacks publication-state assertion")
+    if '"published: false\\n"' not in core_source:
+        fail("pipeline materialization is not fail-closed at published:false")
 
 
 def audit_privacy() -> None:
@@ -195,6 +230,7 @@ def main() -> int:
     audit_layout()
     audit_config()
     audit_editorial_contract()
+    audit_publication_boundary()
     audit_privacy()
     audit_articles()
     print("AUDIT_PASS")
