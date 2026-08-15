@@ -23,17 +23,22 @@ DRAFT
   published:false
     │ explicit human approval
     ▼
+PENDING_RELEASE
+  published:false
+  approval / Issue queue preserved
+    │ Zenn Manual Release: exactly one article
+    ▼
 PUBLICATION_REQUESTED
-  1変更につき最大1記事だけ false -> true
+  published:true
     │ Zenn GitHub sync
     ▼
 PRODUCTION_VERIFICATION
   pipeline.zenn_production
     ├─ public RSSにslug + title一致 -> PUBLISHED_VERIFIED
-    └─ missing / title mismatch / catalog error -> FAILED
+    └─ missing / title mismatch / catalog error -> rollback to PENDING_RELEASE
 ```
 
-GitHub push直後はZenn同期に時間差があるため、記事変更を含むpush runだけ最大10分retryする。定期reconciliationは毎時1回、即時判定する。
+GitHub push直後はZenn同期に時間差があるため、production verificationは最大10分retryできる。定期reconciliationは毎時1回、現在 `published:true` の全記事を即時判定する。
 
 ## Pre-deploy fail-closed rules
 
@@ -43,6 +48,30 @@ GitHub push直後はZenn同期に時間差があるため、記事変更を含�
 - `published:true` にはtitleと`published_at`を要求する。このrepositoryでは `true` を「今すでに公開されるべき状態」に限定するため、未来日時の予約公開は使わず、公開時刻までは `published:false` を維持する。
 
 最後のルールはZenn自体の制約ではなく、このrepository固有のより厳しいinvariantである。Zenn公式は未来の`published_at`による予約公開をサポートしているが、それを使うと `published:true = 現在public` が成立しなくなるため採用しない。
+
+## Approved pending queue
+
+公開承認済みだがZenn productionで確認できていない記事は、公開意思を失わず `published:false` に戻す。公開承認はIssue等のqueueで保持する。
+
+2026-08-15のrecovery queueは Issue #140 をcanonical trackerとする。
+
+- https://github.com/KAFKA2306/articles/issues/140
+
+`published:false` はここでは「内容が未承認」を意味しない。`PENDING_RELEASE` の記事では「Zenn本番がまだ成功していない」を意味する。
+
+## Manual release gate
+
+投稿制限などZenn側stateが不明なとき、自動scheduleで新規投稿を連打しない。`.github/workflows/zenn-manual-release.yml` を明示的に起動し、approved pending articleを1本だけreleaseする。
+
+workflowは次を行う。
+
+1. 1記事だけ `published:false -> true` にする。
+2. mainへpushする。
+3. Zenn公開RSSで現在の全 `published:true` を最大10分照合する。
+4. 全件PASSなら対象記事を `PUBLISHED_VERIFIED` とする。
+5. FAILなら対象記事を `published:false` に自動rollbackし、`PENDING_RELEASE` を維持する。
+
+次の記事へ進めるのは前の記事が `PUBLISHED_VERIFIED` になった後だけとする。
 
 ## Immutable `published_at` recovery
 
@@ -71,14 +100,16 @@ first committed published_at
 
 Zennはユーザーごとに期間あたりの投稿上限数を持ち、上限は複数指標で決まりユーザーごとに異なると公式に説明している。したがって、このrepositoryは未知のquotaを推測して複数記事を連打しない。
 
-公開は1本ずつ行い、production verificationが完了する前に次の新規公開へ進まない。アカウント固有のdeploy拒否理由はZenn dashboardのデプロイ履歴をauthorityとする。
+公開は1本ずつ行い、production verificationが完了する前に次の新規公開へ進まない。アカウント固有のdeploy拒否理由はZenn dashboardのデプロイ履歴をauthorityとする。上限に関する確認・緩和が必要な場合、Zenn公式問い合わせフォームの「投稿制限と上限緩和」を使う。
 
 ## Canonical implementation
 
 - pre-deploy transition guard: `pipeline/publication_diff.py`
 - official renderer check: `.github/workflows/article-pipeline-ci.yml`
+- manual one-at-a-time release: `.github/workflows/zenn-manual-release.yml`
 - production verifier: `pipeline/zenn_production.py`
 - production observer: `.github/workflows/zenn-production-verify.yml`
+- recovery tracker: GitHub Issue #140
 - regression tests: `tests/test_publication_diff.py`, `tests/test_zenn_production.py`
 
 同じ判定ロジックを別workflowへ複製しない。
@@ -87,5 +118,6 @@ Zennはユーザーごとに期間あたりの投稿上限数を持ち、上限�
 
 - Zenn GitHub連携: https://zenn.dev/zenn/articles/connect-to-github
 - Zenn CLI / publish / published_at: https://zenn.dev/zenn/articles/zenn-cli-guide
-- Zenn RSS: https://zenn.dev/zenn/articles/zenn-feed
+- Zenn RSS: https://zenn.dev/zenn/articles/zenn-feed-rss
 - Zenn AIコンテンツ方針・投稿上限: https://info.zenn.dev/2026-03-10-ai-contents-guideline
+- Zenn問い合わせ: https://zenn.dev/inquiry
