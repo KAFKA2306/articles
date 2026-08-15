@@ -1,149 +1,391 @@
 ---
-title: "AIに自分のPCを操作させるとき、何を止めるべき？ GitHub IssueでCodexを動かして分かったこと"
+title: "GitHub IssueをAIの実行キューにしてよいのか？ Codex・Copilot・Actionsと比べて分かった境界"
 emoji: "🔁"
 type: "tech"
-topics: ["chatgpt", "codex", "github", "security", "automation"]
+topics: ["codex", "github", "copilot", "security", "automation"]
 published: false
 published_at: 2026-08-12 17:02
 ---
 
-# AIに自分のPCを操作させるとき、何を止めるべき？ GitHub IssueでCodexを動かして分かったこと
+# GitHub IssueをAIの実行キューにしてよいのか？ Codex・Copilot・Actionsと比べて分かった境界
 
-「AIにコードを読ませる」だけなら、それほど怖くありません。
+GitHub Issueに仕事を書き、AI coding agentへ渡す。
 
-でも、AIに**自分のPC上でコマンドを実行させ、ファイルまで変更させる**となると話が変わります。
+2026年現在、この発想自体はもう珍しくありません。
 
-今回、GitHub Issueを中継地点にして、Windows上のCodex CLIへ仕事を渡す仕組みを作りました。
+GitHub Copilot cloud agentはIssueを割り当てると作業を行い、Pull Requestを作成して人間へレビューを依頼します。GitHubはOpenAI Codexを含むthird-party coding agentsについても、Issueやpromptから非同期に作業を委譲し、PRでレビューする流れを公式に提供しています。
 
-大まかな流れはこれだけです。
+- GitHub Docs — Kick off a task with Copilot agents:
+  https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/kick-off-a-task
+- GitHub Docs — About third-party coding agents:
+  https://docs.github.com/en/copilot/concepts/agents/about-third-party-coding-agents
+
+OpenAI側も、Codexをrepositoryに接続し、コードの理解・修正・テスト・レビューを行うcoding agentとして提供しています。
+
+- OpenAI Developers:
+  https://developers.openai.com/
+- OpenAI — Running Codex safely at OpenAI:
+  https://openai.com/index/running-codex-safely/
+
+では、なぜ私はわざわざ
 
 ```text
-指示を出す
+GitHub Issue
   ↓
-private GitHub Issueに仕事を書く
+Windowsの常駐daemon
   ↓
-自分のPCの常駐プログラムが読む
-  ↓
-Codexが指定されたフォルダで作業する
-  ↓
-結果をGitHub Issueへ返す
+ローカルCodex CLI
 ```
 
-GitHub Issuesは本来、アイデア・タスク・バグなどを記録して追跡するための機能です。今回はそれを、AIへ仕事を渡すための「受け渡し箱」として使っています。
+というbridgeを作ったのでしょうか。
 
-GitHub公式:
-https://docs.github.com/en/issues/tracking-your-work-with-issues/learning-about-issues/about-issues
+結論から言うと、この仕組みの価値は**「IssueからAIを起動できたこと」ではありません**。
+
+本当に考える価値があったのは、
+
+> cloud上のcoding agentではなく、自分のローカルPCまでAIの実行経路を伸ばすなら、どんな安全境界を追加しなければならないか
+
+という問題でした。
+
+この記事では、自作bridgeを単独の成功談として扱いません。
+
+GitHub Issues、Copilot/Codexのagent workflow、GitHub Actionsのself-hosted runner、OpenAIが公開しているCodexの安全設計と比較しながら、**AIへ仕事を委譲するシステムの一般的な設計原則**としてレビューします。
 
 公開実装:
 https://github.com/KAFKA2306/KAFKA2306/tree/main/scripts/codex-chatgpt-bridge
 
-この記事で扱うのは導入手順ではありません。
+---
 
-**AIにPCを触らせるなら、どこまでを機械的に禁止すべきか**を、実際に作った仕組みを例に説明します。
+## 先に結論：repositoryだけで完結するなら、自作bridgeは第一選択ではない
 
-## まず、登場する言葉を日本語にする
+2026年時点の選択肢を大きく分けると、次のようになります。
 
-この記事ではいくつか技術用語が出てきます。先に意味だけ押さえます。
+| 方法 | 実行場所 | 向いている仕事 | 主な境界 |
+|---|---|---|---|
+| GitHub Copilot / third-party coding agent | cloud | repositoryの調査・修正・テスト・PR | branch / PR / review / agent policy |
+| Codexのrepository workflow | cloud中心 | repositoryを使ったcoding task | environment / sandbox / review |
+| GitHub Actions GitHub-hosted runner | ephemeral VM | 再現可能なCI・build・test | workflow permissions / secrets |
+| GitHub Actions self-hosted runner | 自分のmachine | 特殊hardwareや社内networkが必要なCI | runner access / workflow trust |
+| 自作local bridge | 自分のPC | local file、GUI、device、既存認証などが必要 | controller / path / sandbox / tool / output |
 
-| 用語 | この記事での意味 |
-|---|---|
-| GitHub Issue | AIへ渡す仕事を書いておく場所 |
-| worker | Issueを読み、Codexへ仕事を渡すプログラム |
-| daemon | PC上で待機し続ける常駐プログラム |
-| `cwd` | AIが作業するフォルダ |
-| sandbox | AIにどこまで操作を許すかという制限 |
-| `read-only` | 読むだけ。ファイル変更は禁止 |
-| `workspace-write` | 指定した作業場所ではファイル変更を許す |
-| E2E | 指示から結果まで、最初から最後まで通して確認するテスト |
+GitHubは、Issueをcoding agentへ割り当て、agentがPRを作り、人間がその差分をレビューする流れを正式なworkflowとして提供しています。
 
-用語そのものより重要なのは、**「誰が」「どこを」「どこまで」操作できるか**です。
+さらにGitHubは、Copilotが生成したPRについても「通常のcontributionと同じように十分レビューする」よう明記しています。required reviewが設定されているrepositoryでは、Copilot PRに対する本人のapprovalだけではrequired approvalとして数えない仕組みもあります。
 
-## 最初の勘違い：「privateなら安全」ではなかった
+GitHub Docs:
+https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/review-copilot-output
 
-最初は、GitHubのprivate repositoryを使えば十分安全ではないか、と考えました。
-
-private repositoryは、アクセスできる人を限定できます。GitHub公式も、private repositoryは所有者や明示的にアクセスを与えられた人などに閲覧を制限する仕組みとして説明しています。
-
-GitHub公式:
-https://docs.github.com/en/repositories/creating-and-managing-repositories/about-repositories
-
-ただし、今回の仕組みではIssueに書かれた命令が、そのまま自分のPC上のAIへ届きます。
-
-たとえば、次のような仕事を受け付けるとします。
+したがって、一般的なrepository修正だけが目的なら、
 
 ```text
-D:\dev\report-app を調べて、バグの原因を探して
+Issue
+  ↓
+agent
+  ↓
+branch
+  ↓
+Pull Request
+  ↓
+CI + human review
 ```
 
-ここまでは問題ありません。
+という既存の経路を優先する方が自然です。
 
-しかし、もし命令を書く側が作業場所を自由に変えられたら、
+**local PCを直接実行環境にする理由がないなら、local PCを実行環境にしない。**
+
+これが最初のレビュー結論です。
+
+---
+
+## 一般原則1：Issueは「仕事の記録」であって「実行権限」ではない
+
+GitHubはIssuesを、ideas、feedback、tasks、bugsなどを計画・追跡するための仕組みとして説明しています。
+
+GitHub Docs:
+https://docs.github.com/en/issues/tracking-your-work-with-issues/learning-about-issues/about-issues
+
+Projectsのbest practicesでも、IssuesとPull Requestsを作業のsingle source of truthとして使い、仕事を分解し、状態や依存関係を追跡することが推奨されています。
+
+GitHub Docs:
+https://docs.github.com/en/issues/planning-and-tracking-with-projects/learning-about-projects/best-practices-for-projects
+
+ここで重要なのは、
 
 ```text
-C:\Users\... を調べて
-D:\private-data を読んで
+Issueに書かれている
 ```
 
-のような指示まで届く可能性があります。
-
-つまり、重要なのは「Issueがprivateか」だけではありません。
-
-**Issueに書かれた命令のうち、何を実行してよいかを別に決める必要があります。**
-
-今回の実装では、最初から次の制限を入れています。
+ことと、
 
 ```text
-仕事を書く場所   = private GitHub Issue
-命令できる人     = 設定したGitHubアカウントだけ
-作業できる場所   = AllowedRootの下だけ
-通常の権限       = read-only
-変更が必要な仕事 = workspace-write
-それ以上の権限   = 拒否
+その内容をmachine上で実行してよい
 ```
 
-ここから先は、この制限を1つずつ見ていきます。
+ことは別だという点です。
 
-## 1. 「Issueに書いてある」だけでは実行しない
+Issueはcontrol planeとしては優秀です。
 
-まず決めたのは、**誰の命令なら実行するか**です。
+- 誰が依頼したか残る
+- 何を依頼したか残る
+- commentで状態を追える
+- PRやcommitと関連づけられる
+- 人間が後から監査できる
 
-workerは、Issueコメントを書いたGitHubユーザー名を確認します。
+一方で、Issue本文やcommentをそのままshell command相当の権限へ変換すれば、Issueは事実上remote execution interfaceになります。
 
-そして、インストール時に設定したGitHubアカウントと一致した場合だけ仕事として受け付けます。
+その瞬間から必要なのは「Issueの使い方」ではなく、**実行系のsecurity design**です。
 
-実装上は、概ね次の3条件です。
+この区別は、自作bridgeだけの話ではありません。
+
+GitHubのcoding agentsも、Issueを受け取った後はagent sessionとbranch/PRへ作業場所を移します。Issueをそのままproduction変更権限として扱っているわけではありません。
+
+---
+
+## 一般原則2：agentの能力より先に、実行環境を狭くする
+
+OpenAIが2026年に公開したCodexの安全運用では、中心となる考え方として
+
+- managed configuration
+- constrained execution
+- network policies
+- agent-native logs
+- sandboxing
+- approvals
+
+が挙げられています。
+
+OpenAI:
+https://openai.com/index/running-codex-safely/
+
+特にOpenAIは、sandboxを
+
+- どこへwriteできるか
+- networkへ到達できるか
+- どのpathを保護するか
+
+といった**technical execution boundary**として説明し、approval policyとは分離しています。
+
+これは重要です。
+
+AIへのpromptに
 
 ```text
-決められた形式のコメントがある
-AND
-必要な識別マーカーがある
-AND
-コメントを書いた人 == 設定済みのGitHubアカウント
+危ないことはしないで
+他のfolderは見ないで
 ```
 
-別のユーザーが似たコメントを書いても実行しません。
+と書くことは、境界ではありません。
 
-private repositoryでも、複数人にアクセス権があることはあります。
+境界とは、agentがその指示を無視しても突破できない仕組みです。
 
-そのため、
+```text
+prompt rule     = AIへの依頼
+sandbox rule    = 実行系による強制
+```
 
-**「この部屋に入れる人」**と、
-**「PCへ命令してよい人」**は分けて考えます。
+この2つを混同しないことが、agentic systemの基本になります。
+
+---
+
+## 一般原則3：「自分のPCで動かす」はcloudより強い理由が必要
+
+local executionには大きな利点があります。
+
+例えば、
+
+- cloudへ置けないlocal dataを読む
+- 自宅や社内network上のserviceへ接続する
+- local GPUを使う
+- Windows専用toolやGUI applicationを操作する
+- local deviceやhardwareを扱う
+- 既にlocal machine上にある認証済みserviceを使う
+
+といった用途です。
+
+しかし、その代わりに実行環境が**長寿命の実machine**になります。
+
+ここはGitHub Actionsのself-hosted runnerに非常に近い問題です。
+
+GitHubはself-hosted runnerについて、ephemeralでcleanなVMである保証がなく、untrusted codeによって継続的にcompromiseされる可能性があると警告しています。public repositoryではself-hosted runnerをほぼ使うべきではなく、private/internal repositoryでもforkやPRを作れる利用者を信頼できるか注意するよう明記しています。
+
+GitHub Docs — Secure use reference:
+https://docs.github.com/en/actions/reference/security/secure-use
+
+GitHub Docs — Adding self-hosted runners:
+https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/add-runners
+
+自作bridgeも本質的には同じです。
+
+```text
+cloud agent
+  = disposableな作業環境へ仕事を持っていく
+
+local bridge
+  = 普段使っているmachineへ仕事を持ってくる
+```
+
+後者の方が、漏洩・誤操作・永続化のblast radiusは大きくなりやすい。
+
+したがって、local bridgeは便利だから使うのではなく、**localでなければ達成できない仕事があるときだけ使う**のが妥当です。
+
+---
+
+## 一般原則4：最小権限は「アカウント」だけでなく5層に分ける
+
+least privilegeという言葉はよく使われますが、coding agentでは「token権限を小さくする」だけでは足りません。
+
+少なくとも次の5層があります。
+
+```text
+1. Identity
+   誰がtaskを発行できるか
+
+2. Filesystem
+   どこをread/writeできるか
+
+3. Process
+   どのcommand・programを起動できるか
+
+4. Network / Tool
+   どのservice、MCP、APIへ接続できるか
+
+5. Output
+   実行結果をどこへ返してよいか
+```
+
+GitHub Copilot cloud agentでもinternet accessはfirewallで制限でき、GitHubはその目的をdata exfiltration riskの管理だと説明しています。
+
+GitHub Docs:
+https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-the-firewall
+
+つまり、agent securityは「入力を守る」だけではありません。
+
+**出ていく通信と出力も境界です。**
+
+---
+
+## 一般原則5：仕事の完了点は「agentが止まった」ではなくreviewable artifactにする
+
+AI automationで最も危険な曖昧さの1つが、成功条件です。
+
+```text
+processが起動した
+agentが返事をした
+fileが変わった
+```
+
+これらは、仕事が正しく完了した証拠ではありません。
+
+GitHubのcoding agent workflowがPR中心になっているのは、この点でも合理的です。
+
+PRなら、
+
+- diff
+- commit
+- CI
+- review comments
+- approvals
+- merge status
+
+を1つのreviewable artifactに集約できます。
+
+GitHubはCopilotの出力について、人間が通常のPRと同様にreviewすることを明示しています。またCopilot code reviewについても、すべての問題を発見できる保証はなく、人間のreviewで補完するよう案内しています。
+
+GitHub Docs:
+https://docs.github.com/en/copilot/concepts/agents/code-review
+
+この考え方を一般化すると、agent taskのcompletion contractは次のようになります。
+
+```text
+execution success
+  + expected behavior
+  + machine-verifiable checks
+  + reviewable diff/artifact
+  + human acceptance when required
+```
+
+単なる`exit_code = 0`より一段強い契約です。
+
+---
+
+# では、自作bridgeは何をしているのか
+
+ここまでの一般原則を踏まえて、実際のbridgeをレビューします。
+
+構成は次の通りです。
+
+```text
+ChatGPT / sender
+        │
+        │ controller task
+        ▼
+private GitHub Issue
+        │
+        │ GitHub CLI polling
+        ▼
+Windows bridge daemon
+        │
+        │ codex exec
+        ▼
+local Codex CLI
+        │
+        │ final response + exit code + git evidence
+        ▼
+private GitHub Issue
+```
 
 実装:
 https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/bridge-daemon.ps1
 
-## 2. AIが触れるフォルダを固定する
+この設計を、先ほどの5層で見ます。
 
-次は、**PCのどこを触ってよいか**です。
+---
 
-Codexへ仕事を渡すときには、作業フォルダを指定できます。この作業フォルダが`cwd`です。
+## 1. Identity：誰のtaskを実行するか固定する
 
-もし`cwd`を自由に指定できると、AIの作業範囲がPC全体へ広がってしまいます。
+bridge daemonはIssue commentを順番に読みますが、すべてのcommentを実行するわけではありません。
 
-そこで、インストール時に「このフォルダの下だけ触ってよい」という親フォルダを固定しました。実装ではこれを`AllowedRoot`と呼んでいます。
+実装では、comment authorのGitHub loginがinstallerで設定した`ControllerLogin`と一致する場合だけ処理対象にします。
 
-たとえば、
+さらに、commentには
+
+```text
+codex-bridge:v1
+role=controller
+task=...
+```
+
+というmarkerとJSON blockが必要です。
+
+つまり、概ね
+
+```text
+正しい形式
+AND
+正しいmarker
+AND
+comment author == ControllerLogin
+```
+
+で初めてtaskになります。
+
+これは一般原則として、
+
+> collaboration権限とexecution authorityを分離する
+
+という意味があります。
+
+private repositoryに入れることと、local PCへ命令できることを同一視していません。
+
+---
+
+## 2. Filesystem：`AllowedRoot`から外へ出さない
+
+taskは`cwd`を指定できます。
+
+しかしdaemonは、指定されたpathを正規化した上で、install時に設定した`AllowedRoot`配下かを検査します。
+
+例えば、
 
 ```text
 AllowedRoot = D:\dev
@@ -163,67 +405,57 @@ D:\private-data
 
 となります。
 
-ポイントは、AIへの自然言語の指示に
+この制限はpromptではなくPowerShell側で実行されます。
 
-```text
-他のフォルダは見ないでね
-```
+ここはOpenAIが説明するsandboxの考え方と同じ方向です。
 
-と書くだけではなく、**プログラム側で拒否すること**です。
+**自然言語で「見ないで」と頼むのではなく、path boundaryをprogramで強制する。**
 
-実際のdaemonも、指定された`cwd`が`AllowedRoot`配下かをコードで検査しています。
+---
 
-実装:
-https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/bridge-daemon.ps1
+## 3. Process / Filesystem：既定を`read-only`にする
 
-## 3. 普段は「読むだけ」にする
+bridgeのsandbox既定値は`read-only`です。
 
-AIへ最初からファイル変更権限を与える必要はありません。
-
-たとえば、
-
-```text
-このrepositoryのバグの原因を調べて
-```
-
-という依頼なら、まずコードを読むだけで十分です。
-
-そこで今回のbridgeでは、通常状態を`read-only`にしました。
-
-```text
-read-only       = 読み取りだけ
-workspace-write = 作業フォルダ内の変更を許可
-```
-
-ファイル修正が必要な仕事だけ、明示的に`workspace-write`へ変えます。
-
-逆に、実装が受け付けるsandboxはこの2種類だけです。
+許可されている値も、
 
 ```text
 read-only
 workspace-write
 ```
 
-それ以外を要求すると拒否します。
+だけです。
 
-これはセキュリティでよく使われる**least privilege（最小権限）**という考え方です。
+それ以外はdaemonが拒否します。
 
-「とりあえず全部できるようにする」のではなく、**その仕事に必要な権限だけを渡す**という考え方です。
+つまり、
 
-実装:
-https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/bridge-daemon.ps1
+```text
+調査
+→ read-only
 
-## 4. 普段使いのCodex設定を、そのまま自動実行へ持ち込まない
+変更が必要
+→ workspace-writeを明示
+```
 
-ここは実際に一度失敗しました。
+という昇格方式です。
 
-最初の動作確認では、GitHub IssueからCodexへ仕事を渡す部分ではなく、Codexが追加のMCP/app層でOAuth認証を要求し、そこで止まりました。
+これは「agentに何でもできる状態を与え、promptで抑制する」より安全です。
 
-つまり、普段人間が対話しながら使うCodex環境を、そのまま自動実行へ持ち込むと、不要な機能まで動こうとして失敗要因になります。
+一方で注意も必要です。
 
-そこで自動実行では、普段のユーザー設定・apps・pluginsをそのまま読み込まない構成に変更しました。
+`workspace-write`を許可した時点で、AllowedRoot内の対象workspaceに対する変更能力は生まれます。したがって重要なrepositoryでは、最終的な保護をagent sandboxだけに依存せず、Git branch、PR、CI、review rulesで二重化する方がよいでしょう。
 
-現在の実装では、通常の自動実行に次の指定が入っています。
+---
+
+## 4. Tool：interactive環境をそのままautonomous runへ持ち込まない
+
+このbridgeで実際に起きた失敗の1つが、普段使いのCodex環境にある追加MCP/app層がOAuth認証を要求し、自動実行が停止したことでした。
+
+検証記録:
+https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VERIFICATION.md
+
+その後、autonomous runでは
 
 ```text
 --ignore-user-config
@@ -231,215 +463,304 @@ https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/br
 --disable plugins
 ```
 
-必要なMCPだけは、bridge側で許可したものを明示的に有効化する方式です。
+を指定し、interactive Codexの設定・apps・pluginsから分離しました。
 
-ここでの教訓は、
+local MCPもdeny-by-defaultで、daemonにhard-codeしたallowlistとtask側の明示opt-inの両方が必要です。
 
-**自動化するAIを「普段使いAIの全部入り版」にしない**
+現在の公開実装で許可されているlocal MCPは`youtube_music`だけです。
+
+実装:
+https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/bridge-daemon.ps1
+
+この失敗から得られる一般知見は、
+
+> 人間向けの便利なinteractive environmentと、無人実行用のruntime profileを分離する
 
 ことです。
 
-必要な機能だけを残した方が、権限も故障原因も減らせます。
+便利機能を全部載せるほどagentが賢くなるとは限りません。
 
-失敗と修正の検証記録:
-https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VERIFICATION.md
+無人実行では、tool surfaceが増えるほど
 
-## 5. 「プログラムが起動した」だけでは成功にしない
+- credential
+- network destination
+- failure mode
+- side effect
 
-自動化では、途中まで動いただけで「成功」に見えることがあります。
+も増えます。
 
-たとえば、
+---
 
-```text
-WindowsのScheduled Taskを登録できた
-常駐プログラムが起動した
-GitHub Issueへ指示を書けた
-```
+## 5. Output：結果も機密情報になり得る
 
-ここまで成功しても、Codexが実際に仕事を完了したとは限りません。
+bridgeはCodexのfinal messageだけでなく、
 
-そこで、2026-08-12のE2E検証では、最終的にworkerが
+- task ID
+- exit code
+- sandbox
+- MCP names
+- cwd
+- Git HEAD
+- Git status
 
-```text
-exit_code = 0
-BRIDGE_OK
-```
+などのevidenceをworker resultとして返します。
 
-を返すことを成功条件にしました。
+一方、raw JSONL event logはlocal runtimeにだけ保持します。
 
-`exit_code = 0`は、実行したプログラムが正常終了したことを表す値として使っています。
+公開されているE2E verificationも、raw queueそのものではなく、必要最小限の結果だけです。
 
-`BRIDGE_OK`は、今回のsmoke testで最後まで処理が届いたことを確認するための期待結果です。
+理由は、task outputに
 
-実際の検証記録には、
+- local path
+- repository state
+- private task内容
 
-- worker `exit_code = 0`
-- final Codex message = `BRIDGE_OK`
-
-が残っています。
-
-検証記録:
-https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VERIFICATION.md
-
-つまり、
-
-```text
-道ができた
-```
-
-と、
-
-```text
-荷物が最後まで届いた
-```
-
-は別です。
-
-自動化では、**最後の結果まで確認して初めて成功**とします。
-
-## 6. AIへ渡す情報だけでなく、AIから出ていく情報も制限する
-
-AIへ何を入力するかは気にしやすいのですが、逆方向も重要です。
-
-Codexの実行結果には、
-
-- ローカルのパス
-- Git repositoryの状態
-- 実行結果
-
-などが含まれる可能性があります。
-
-そのため、今回のraw queueはprivateのままにしています。
-
-一方、公開した検証記録には、E2Eが成功したことを確認するための最小限の情報だけを残しました。
-
-検証記録にも、raw queueを公開しない理由として、local paths・repository state・task outputが含まれ得ることを明記しています。
+などが含まれる可能性があるためです。
 
 検証記録:
 https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VERIFICATION.md
 
-考えるべき境界は3つあります。
+これはGitHub Copilotがagent firewallをdata exfiltration対策として扱っていることとも整合します。
+
+AI systemでは、
 
 ```text
-入力
-  誰の命令か
-  どのフォルダか
-  どの権限か
-
-実行
-  AIに何の機能を持たせるか
-
-出力
-  PCの外へ何を返してよいか
+何を読ませるか
 ```
 
-「AIに何をさせるか」だけでなく、**結果として何を外へ出してよいか**まで設計対象です。
-
-## ChatGPTからGitHubが見える = GitHubへ自由に書ける、ではない
-
-ここは混同しやすい点です。
-
-OpenAI公式Helpでは、ChatGPTのGitHub appは、接続したrepositoryのコードを読み取り、分析・検索・引用する用途として説明されています。
-
-同じ公式Helpには、ChatGPTのGitHub app自体はrepositoryへのpush用途ではなく、コードの生成・編集・GitHubへのpushはCodex製品側の機能として案内されています。
-
-OpenAI公式:
-https://help.openai.com/en/articles/11145903
-
-したがって、
+だけでなく、
 
 ```text
-ChatGPTからrepositoryを読める
+何を外へ送れるか
 ```
 
-ことと、
+を同じ重要度で考える必要があります。
+
+---
+
+# 実際のE2Eで分かったこと
+
+2026-08-12の公開verificationでは、bridgeの成功条件を
 
 ```text
-GitHub Issueへ命令を書き込み、その命令をローカルPCで実行できる
+worker exit_code = 0
+final Codex message = BRIDGE_OK
 ```
 
-ことは別です。
+の両方にしました。
 
-今回のbridgeは、後者のために別の実行経路を作ったものです。
+検証記録:
+https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VERIFICATION.md
 
-## 最終的に、何をコードで固定したか
-
-今回の仕組みを、初心者向けの日本語に直すと次の6ルールです。
-
-1. **命令できる人を1人に決める**
-2. **AIが触れるフォルダを決める**
-3. **普段は読み取り専用にする**
-4. **不要な追加機能を自動実行へ持ち込まない**
-5. **最後まで動いた証拠があるときだけ成功にする**
-6. **AIの結果をどこまで外へ出すか決める**
-
-実装上の設定にすると、次のようになります。
-
-```yaml
-queue:
-  visibility: private
-
-controller:
-  allowed_login: fixed
-
-filesystem:
-  allowed_root: fixed
-
-execution:
-  default_sandbox: read-only
-  allowed_sandboxes:
-    - read-only
-    - workspace-write
-
-completion:
-  require_exit_code_zero: true
-  require_expected_result: true
-
-output:
-  raw_result_visibility: private
-```
-
-大事なのは、これを
+ここでは、
 
 ```text
-AIに危ないことをしないようお願いする
+Scheduled Taskを登録できた
+
+daemonが起動した
+
+Issue commentを読めた
 ```
 
-だけで終わらせないことです。
+だけでは成功にしていません。
 
-**危険な命令は、お願いではなくコードで拒否する。**
+bring-up中には、
 
-これが今回のbridgeで一番重要だった設計です。
+1. unrelated MCP/app layerのOAuth要求
+2. smoke用Git repositoryにvalid HEADがない
 
-## まとめ
+という2つのfailure classも記録されています。
 
-最初は、GitHub IssueからCodexへ命令を渡せれば完成だと思っていました。
+それぞれ、
 
-実際には、難しかったのは「命令を届けること」ではありませんでした。
+- autonomous runからuser config/apps/pluginsを分離
+- smoke repositoryへbaseline commitを作る
 
-難しかったのは、
+という形で修正されました。
 
-- 誰なら命令してよいか
-- PCのどこまで触ってよいか
-- どの操作まで許すか
-- どの追加機能を使ってよいか
-- 何を成功と呼ぶか
-- どの結果を外へ出してよいか
+この部分は単なる実装メモ以上の意味があります。
 
-を1つずつ決めることでした。
+**agentic workflowは、happy pathのdemoよりfailure boundaryの方が設計情報として価値が高い**からです。
 
-AIにPCを触らせる仕組みでは、能力を増やすことより先に、**できないことを明確にする**必要があります。
+---
 
-GitHub Issueは便利な「受け渡し箱」になりました。
+# ただし、このbridgeにも残る弱点がある
 
-しかし、本当の安全装置はIssueそのものではなく、その前後に置いた制限でした。
+自作したからといって、これを「安全」と言い切るべきではありません。
+
+一般的なagent architectureと比べると、まだ重要な差があります。
+
+## 1. 長寿命のlocal machineである
+
+GitHub-hosted runnerやcloud agentのようなdisposable environmentではありません。
+
+local machineがcompromiseされた場合、影響が次のtaskにも残る可能性があります。
+
+この点はGitHubがself-hosted runnerについて警告している問題と同型です。
+
+## 2. network policyをbridge独自に細かく定義していない
+
+現在の公開daemonはfilesystem root、sandbox、MCP allowlistを明示していますが、bridge側でdomain単位のnetwork allowlistを構築しているわけではありません。
+
+OpenAIがCodex安全運用でnetwork policyを独立した境界として扱い、GitHubもCopilot cloud agentにfirewallを設けていることを考えると、これは追加hardening候補です。
+
+## 3. `workspace-write`は最終承認ではない
+
+agentがworkspaceを書き換えられることと、その変更を採用してよいことは別です。
+
+重要なcode changeでは、
+
+```text
+workspace-write
+  ↓
+git diff
+  ↓
+commit / branch
+  ↓
+PR
+  ↓
+CI
+  ↓
+human review
+```
+
+まで持っていく方が、現在のcoding agentの標準的な安全モデルに近づきます。
+
+## 4. GitHub account自体がcontrol credentialになる
+
+`ControllerLogin`を確認しているため、controller accountの認証状態は非常に重要です。
+
+Issue commentを実行指示として使う以上、GitHub account、GitHub CLI authentication、repository accessが事実上control planeのcredentialになります。
+
+したがって「private repositoryだから安心」という理解では不十分です。
+
+---
+
+# 2026年時点での選び方
+
+最終的には、次の順番で選ぶのが合理的です。
+
+## A. repositoryだけで完結する
+
+**まずGitHub上のcoding agentを使う。**
+
+```text
+Issue / prompt
+  ↓
+cloud agent
+  ↓
+branch / PR
+  ↓
+CI + review
+```
+
+この用途のために、自宅PCへremote execution pathを追加する必要はありません。
+
+## B. build/testだけlocal resourceが必要
+
+**GitHub Actionsのrunner設計を検討する。**
+
+ただしself-hosted runnerにはGitHub自身が強いsecurity warningを出しているため、repository trust、workflow trust、runner isolationを先に設計します。
+
+## C. local file・device・GUI・既存認証など、localでしかできない
+
+**そのとき初めてlocal bridgeを検討する。**
+
+最低限、
+
+```text
+identity allowlist
+filesystem allowlist
+read-only default
+explicit write elevation
+tool / MCP allowlist
+network boundary
+bounded output
+machine-verifiable completion
+PR / human review for important changes
+```
+
+を設計対象にします。
+
+---
+
+# 私たちが作ったのは「AIへの橋」ではなく、小さなcontrol planeだった
+
+最初は、GitHub Issueを使えばChatGPTとlocal Codexをつなげられる、という発想でした。
+
+しかし、2026年のGitHub/Codex ecosystemと比較すると、Issueからagentへ仕事を渡すこと自体はすでに一般化しています。
+
+差が出るのは、その先です。
+
+```text
+誰が発行できるか
+どこで実行するか
+何を触れるか
+どのtoolを使えるか
+どこへ通信できるか
+何を成果物と呼ぶか
+誰が最後に承認するか
+```
+
+この7つを明示した瞬間、単なるbridgeではなく**control plane**になります。
+
+そして、一般知見として最も重要なのは次の1行です。
+
+> AI coding agentを安全にするのは、賢いpromptではなく、agentの外側に置いた強制可能な境界とreviewableな成果物である。
+
+GitHub Issueはそのcontrol planeの入口として使えます。
+
+しかし、Issueそのものはsandboxでもapprovalでもありません。
+
+repositoryだけで仕事が完結するなら、既存のcloud agent + PR workflowを使う。
+
+local PCへ到達する必要があるときだけbridgeを足し、その分だけ境界も増やす。
+
+これが、自作実装と2026年の公式agent workflowを比較して得た結論です。
+
+---
 
 ## 一次情報・実装証拠
 
-- Bridge implementation: https://github.com/KAFKA2306/KAFKA2306/tree/main/scripts/codex-chatgpt-bridge
-- Bridge daemon: https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/bridge-daemon.ps1
-- E2E verification: https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VERIFICATION.md
-- Hardened daemon commit: https://github.com/KAFKA2306/KAFKA2306/commit/864774f15d7fc6522572a8e326dfa78573b0df74
-- GitHub Docs — About issues: https://docs.github.com/en/issues/tracking-your-work-with-issues/learning-about-issues/about-issues
-- GitHub Docs — About repositories: https://docs.github.com/en/repositories/creating-and-managing-repositories/about-repositories
-- OpenAI — Connecting GitHub to ChatGPT: https://help.openai.com/en/articles/11145903
+### GitHub
+
+- About issues
+  https://docs.github.com/en/issues/tracking-your-work-with-issues/learning-about-issues/about-issues
+- Planning and tracking work
+  https://docs.github.com/en/issues/tracking-your-work-with-issues/learning-about-issues/planning-and-tracking-work-for-your-team-or-project
+- Best practices for Projects
+  https://docs.github.com/en/issues/planning-and-tracking-with-projects/learning-about-projects/best-practices-for-projects
+- Kick off a task with Copilot agents
+  https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/kick-off-a-task
+- About third-party coding agents
+  https://docs.github.com/en/copilot/concepts/agents/about-third-party-coding-agents
+- Review output from Copilot
+  https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/review-copilot-output
+- About GitHub Copilot code review
+  https://docs.github.com/en/copilot/concepts/agents/code-review
+- Customize Copilot firewall
+  https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-the-firewall
+- Secure use reference for GitHub Actions
+  https://docs.github.com/en/actions/reference/security/secure-use
+- Adding self-hosted runners
+  https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/add-runners
+
+### OpenAI
+
+- OpenAI Developers — Codex
+  https://developers.openai.com/
+- Running Codex safely at OpenAI
+  https://openai.com/index/running-codex-safely/
+- Enterprise admin getting started guide for Codex
+  https://help.openai.com/en/articles/11390924
+
+### このbridgeの実装証拠
+
+- Bridge implementation
+  https://github.com/KAFKA2306/KAFKA2306/tree/main/scripts/codex-chatgpt-bridge
+- Bridge daemon
+  https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/bridge-daemon.ps1
+- E2E verification
+  https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VERIFICATION.md
+- Hardened autonomous-run commit
+  https://github.com/KAFKA2306/KAFKA2306/commit/864774f15d7fc6522572a8e326dfa78573b0df74

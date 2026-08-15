@@ -1,74 +1,71 @@
 ---
-title: "AIの「秘密の透かし」は誰が検出する？ 生成側の秘密と第三者検証を分けて考える"
+title: "AIの文章に「透かし」があると言われたら、誰がそれを証明できるのか"
 emoji: "🔐"
 type: "tech"
 topics: ["watermark", "security", "llm", "ai", "provenance"]
-published: false
-published_at: 2026-08-13 09:00
+published: true
+published_at: 2026-08-15 09:40
 ---
 
-「AIが生成した文章に、外からは見えない透かしが入っている」と聞くと、次の疑問が出る。
+採用課題、レポート、ニュース原稿、社内文書。
 
-> 第三者が検出するには、生成側の秘密まで共有しないといけないのでは？
+ある文章を見て、誰かがこう言ったとする。
 
-最初はClaudeを題材にこの疑問を考えていた。
+> 「これはAI生成です。透かしで分かります」
 
-しかし、2026年8月14日にAnthropicの現行一次情報を確認し直すと、記事の前提を変える必要があった。
+ここで本当に知りたいのは、透かしの仕組みそのものではない。
 
-AnthropicのTransparency Hubは、Claudeが現在text-based outputsを提供していること、watermarkingについてindustry・academiaで技術動向を追い、適用法令への準備を進めていることを説明している。一方、その公開ページは**Claudeのtext outputへ現在どのwatermark方式を実装しているか、secret/keyをどう管理するか、第三者向けtext detectorを提供しているか**までは述べていない。
+**誰が、その判定を証明できるのか。**
+
+生成AIの会社だけが判定できるのか。第三者も検証できるのか。第三者が検証するなら、生成側の秘密鍵まで渡す必要があるのか。
+
+私は最初、Claudeを題材に「秘密のtext watermarkを第三者がどう検出するか」を考えていた。
+
+ところが2026年8月15日にAnthropicの一次情報へ戻ると、その出発点を捨てる必要があった。
+
+AnthropicのTransparency Hubは、Claudeが現在text-based outputsを提供していること、watermarkingについてindustry・academiaで技術動向を追っていることを説明している。しかし、その公開ページは**Claudeのtext outputへ現在どのwatermark方式を実装しているか、secret/keyをどう管理するか、第三者向けtext detectorを提供しているか**までは述べていない。
 
 - Anthropic Transparency Hub: https://www.anthropic.com/transparency/voluntary-commitments/security%26privacy
 
-だから、Claudeに「秘密のtext watermarkが実装されている」という前提では書かない。
+つまり、ここで「Claudeには秘密のtext watermarkがある」と話を進めると、記事の一番大事な部分を推測で埋めることになる。
 
-代わりに、現在実装を公式に説明しているGoogle DeepMindのSynthIDを実例にして、もっと一般的な問いへ戻す。
+そこで問いを変えた。
 
-**AI生成物を第三者が検証できることと、生成側の秘密情報を第三者へ配ることは同じ要件なのか。**
+**AI生成物を第三者が検証できることと、生成側の秘密情報を第三者へ配ることは、本当に同じ要件なのか。**
 
-## まず、現在公開されている事実を分ける
+## 実装済みの例を見ると、問いが具体化する
 
-### Anthropicについて確認できること
+現在、text watermarkの具体例として一次情報を追えるのがGoogle DeepMindのSynthID-Textだ。
 
-Anthropicの現行Transparency Hubは、Claudeのoutput transparencyに関してwatermarkingの技術動向を探索・追跡していると説明している。
-
-ここから言えるのは、watermarkingが検討対象であることまでだ。
-
-この記事では次を推測しない。
-
-```text
-Claudeには現在text watermarkが入っている
-Claudeは特定のsecret key方式を使っている
-Claudeには非公開detector APIがある
-ClaudeはSynthIDと同じ方式である
-```
-
-公開されていない内部設計を、別providerの技術から逆算しない。
-
-### SynthIDについて確認できること
-
-Google DeepMindの現行SynthIDページは、image / audio / text / videoへwatermarkを埋め込む技術を説明している。
-
-textについては、Gemini app / web experienceで生成されたtextのwatermarking・identificationへSynthIDを拡張し、LLMのtoken probability scoreを調整してwatermarkを生成すると説明している。
+Google DeepMindはSynthIDをimage / audio / text / videoへ適用する技術として公開しており、textではGemini app / web experienceで生成される文章へwatermarkingとidentificationを拡張したと説明している。
 
 - Google DeepMind SynthID: https://deepmind.google/models/synthid/
 
-一方、同じ現行ページで一般ユーザー向けに案内されているGeminiのupload検証とSynthID Detector portalは、image / video / audioを対象として記載されている。
+2024年にNatureへ掲載されたSynthID-Text論文では、生成時にtokenの選択へwatermark signalを入れ、検出側はその偏りをscoreする方式が説明されている。論文のMethodsでは、scoring functionがtokenized text、watermarking key、random seed generatorを使い、**underlying LLMへアクセスせずに検出できる**と記載されている。
 
-つまり、**watermarking技術が存在すること**と、**誰でも使える同一形式のverification interfaceが存在すること**も別問題である。
+- Dathathri et al., *Scalable watermarking for identifying large language model outputs*: https://www.nature.com/articles/s41586-024-08025-4
+
+Google DeepMindはreference implementationも公開している。そこではwatermark configurationに`keys`があり、Mean / Weighted Mean / Bayesian detectorの実装も確認できる。ただしREADME自身が、このrepositoryをreference implementationでありproduction用ではないと明記している。
+
+- google-deepmind/synthid-text: https://github.com/google-deepmind/synthid-text
+
+ここで最初の疑問が少し変わる。
+
+「keyが必要なdetectorがある」ことと、**そのkeyを検証したい全員へ配布しなければならない**ことは同じではない。
 
 ## 「watermarkがある」を1bitで扱わない
 
-生成AIのprovenanceを評価するとき、最低限4つへ分けると整理しやすい。
+生成AIのprovenanceを評価するとき、少なくとも次の4つを分けた方がいい。
 
 ```text
 1. Embedding
-   何を生成時に埋め込むか
+   生成時に何を埋め込むか
 
 2. Secret / parameters
-   検出に必要な非公開情報があるか、誰が保持するか
+   検出に必要な非公開情報は何か、誰が保持するか
 
 3. Detection
-   何を入力に、どの主体が判定するか
+   何を入力に、誰が判定するか
 
 4. Verification interface
    外部利用者へ何を公開するか
@@ -76,7 +73,7 @@ textについては、Gemini app / web experienceで生成されたtextのwaterm
 
 これらは別componentである。
 
-「watermarkあり」という説明だけでは、
+「watermarkあり」という一言だけでは、
 
 - providerだけが検出できるのか
 - 第三者がローカル検出できるのか
@@ -86,7 +83,9 @@ textについては、Gemini app / web experienceで生成されたtextのwaterm
 
 は分からない。
 
-## 第三者検証に「secretの配布」は必須ではない
+この区別をしないと、「検出可能」と「独立検証可能」が同じ言葉に潰れてしまう。
+
+## 第三者検証にsecretの配布は必須ではない
 
 これは特定providerの現行実装を説明する話ではなく、architecture上の分離である。
 
@@ -104,7 +103,9 @@ result
 
 とできる。
 
-第三者はcontentを送って判定結果を受け取るが、detector内部のsecret materialを直接受け取らない。
+第三者はcontentを送り、判定結果だけを受け取る。detector内部のsecret materialはprovider側に残せる。
+
+ただし、この設計では第三者はproviderのservice availability、判定仕様、運用継続性を信頼する必要がある。
 
 一方、独立検証を優先するなら、
 
@@ -114,9 +115,7 @@ third party
    └─ independently usable verifier
 ```
 
-のように、provider外でも検証できる設計が必要になる。
-
-この2つはtrade-offが違う。
+のように、provider外でも再現可能なverification materialが必要になる。
 
 | 設計 | secret管理 | 独立性 | provider依存 |
 |---|---|---|---|
@@ -126,57 +125,48 @@ third party
 
 重要なのは、**第三者検証可能性とsecret共有範囲を別の設計変数として扱うこと**だ。
 
-## 「検出できる」の中にも複数のUXがある
+## 「検出できた」は「証明できた」とも限らない
 
-利用者から見ると、どれも「watermarkを確認できる」ように見える。
+ここはwatermarkを議論するときに最も落としたくない境界だ。
 
-しかし体験は違う。
+SynthID-Text論文は、watermarkがAI text detectionの完全な解ではないと明記している。生成側がwatermarkingを実装しなければ当然検出できず、textへのeditやLLM paraphrasingでwatermarkが弱くなること、stealing / spoofing / scrubbing attackが研究課題であることもlimitationsとして挙げている。
 
-### providerへ聞く
-
-```text
-contentを送る
-→ providerが判定
-→ resultを返す
-```
-
-簡単だが、provider availabilityや判定仕様へ依存する。
-
-### 自分で検証する
+だから、detectorの出力をそのまま、
 
 ```text
-content + verifier
-→ local / independent verification
+AI生成であることの絶対的証明
 ```
 
-再現性は高めやすいが、公開できるverification materialの設計が必要になる。
+とは扱わない方がいい。
 
-### providerだけが内部利用する
+実運用で知りたいのは、少なくとも次だ。
 
-abuse monitoringや内部provenanceには使えても、一般ユーザーは直接確認できない。
+```text
+何を検出しているのか
+どのthresholdで判定するのか
+false positive / false negativeをどう扱うのか
+編集・翻訳・要約後にどこまで残るのか
+誰がverifierを運用しているのか
+```
 
-「detectable」という言葉だけでは、どのUXなのか分からない。
+これは「watermarkがあるか」より一段実務的な問いになる。
 
-## 実装を評価するときは5つ質問する
+## 実は、provenanceにはwatermark以外の設計もある
 
-AI生成物のmarking機能を見るとき、私は今後次を分けて確認する。
+ここで一度、watermarkから離れると整理しやすい。
 
-1. **現在、本当に実装済みか**  
-   research / exploration / commitmentとproduction deploymentを分ける。
+C2PAのContent Credentialsは、provenance情報をmanifestとして持ち、claimをdigital signatureで署名し、trust modelに基づいて検証するarchitectureを定義している。
 
-2. **何をmarkしているか**  
-   text token selection、media signal、metadataなど。
+- C2PA Specifications 2.2: https://spec.c2pa.org/specifications/specifications/2.2/index.html
+- C2PA Content Credentials specification: https://spec.c2pa.org/specifications/specifications/2.2/specs/C2PA_Specification.html
 
-3. **誰がdetectできるか**  
-   provider、一般ユーザー、限定partner、独立第三者。
+これはtext watermarkと同じ仕組みではない。
 
-4. **verificationに何が必要か**  
-   public verifier、API access、private parametersなど。
+しかし、「第三者が検証するなら秘密を共有しなければならない」という直感が一般には成り立たないことを理解するにはよい対照になる。署名者側の秘密と、検証者が使うverification materialは分離できる。
 
-5. **providerなしで将来も検証できるか**  
-   long-term provenanceとして使うなら重要になる。
+つまり、本当に設計したいのは「秘密をどう隠すか」だけではない。
 
-この5問を通すと、「watermarkがあるらしい」という曖昧な説明から、実際の利用可能性へ進める。
+**誰が、何を根拠に、どこまで独立して検証できるか**である。
 
 ## Claudeについては「未確認」を正しいstateにする
 
@@ -184,7 +174,7 @@ AI生成物のmarking機能を見るとき、私は今後次を分けて確認�
 
 旧稿では、Claudeにsecret watermarkがあると仮定したときの設計を中心に考えていた。
 
-現行一次情報へ戻ると、Anthropicはwatermarkingへの取り組み・準備を説明しているが、この記事で必要なClaude text watermarkの具体実装は公開確認できない。
+しかし現行一次情報へ戻ると、Anthropicはwatermarkingへの取り組みを説明しているものの、この記事で必要なClaude text watermarkの具体実装は公開確認できない。
 
 だからstateを、
 
@@ -203,59 +193,52 @@ specific_claude_text_watermark_implementation = not established here
 
 **分からないものを、別providerの例で埋めない。**
 
-これはwatermark技術そのものより、AI productを評価するときの重要な習慣だと思う。
+これはwatermarkに限らない。AI productを比較するとき、公開されていない内部設計を「たぶん同じだろう」で補うと、もっともらしい説明ほど危険になる。
 
-## 読者が自分のsystemへ持ち帰る最小model
+## 読者が持ち帰る5つの質問
 
-自社で生成物provenanceを設計するなら、最初から「watermark機能」という1boxにしない。
+今後、AI生成物のmarkingやprovenance機能を見るときは、私は次の5つを先に確認する。
 
-```yaml
-provenance:
-  embedding:
-    mechanism: TBD
+1. **現在、本当に実装済みか**  
+   research / exploration / commitmentとproduction deploymentを分ける。
 
-  detection:
-    operator: TBD
+2. **何をmarkしているか**  
+   text token selection、media signal、metadata、署名などを分ける。
 
-  verification_interface:
-    audience: TBD
+3. **誰がdetect / verifyできるか**  
+   provider、一般ユーザー、限定partner、独立第三者を分ける。
 
-  secret_or_parameters:
-    holder: TBD
+4. **verificationに何が必要か**  
+   public verifier、API access、key / parameters、credentialなどを確認する。
 
-  long_term_verifiability:
-    provider_independent: TBD
-```
+5. **providerなしで将来も検証できるか**  
+   long-term provenanceとして使うなら、ここが効いてくる。
 
-この形なら、
+この5問を通すだけで、「watermarkがあるらしい」という曖昧な説明から、実際に使えるverification designへ進める。
 
-- secretは閉じたい
-- 顧客には確認手段を提供したい
-- 監査者には独立verificationを提供したい
+## 最後に
 
-といった要件を別々に議論できる。
-
-## まとめ
-
-最初の疑問は、
+最初の疑問は単純だった。
 
 > 第三者へ検出させるなら、秘密鍵も渡さないといけないのでは？
 
-だった。
+今は、問いそのものが変わっている。
 
-今の結論はもっと分解されている。
+**第三者が検証できること、誰がdetectorを持つこと、secretを誰が保持すること、providerなしで独立検証できることは、すべて別の要件である。**
 
-**第三者が検証できること、誰がdetectorを持つこと、secretを誰が保持すること、providerなしで独立検証できることは別の要件である。**
+そして、watermarkの検出結果そのものにも限界がある。
 
-そしてClaudeについては、2026年8月14日時点のAnthropic公開情報を超えて具体的なtext watermark実装を推測しない。
+だからAI生成物を見るとき、「透かしは入っていますか？」で止まらない方がいい。
 
-公開実装の具体例が必要ならSynthIDを見る。
+**「その主張を、誰が、何を使って、どこまで独立して確かめられるのか？」**
 
-vendor固有の事実が必要ならvendor自身の現在の一次情報へ戻る。
-
-その境界を守る方が、もっともらしい説明を作るより役に立つ。
+この問いに変えるだけで、vendorの説明を読むときも、自社systemを設計するときも、判断の解像度が一段上がる。
 
 ## 一次情報
 
 - Anthropic Transparency Hub: https://www.anthropic.com/transparency/voluntary-commitments/security%26privacy
 - Google DeepMind SynthID: https://deepmind.google/models/synthid/
+- Dathathri et al., *Scalable watermarking for identifying large language model outputs*: https://www.nature.com/articles/s41586-024-08025-4
+- google-deepmind/synthid-text: https://github.com/google-deepmind/synthid-text
+- C2PA Specifications 2.2: https://spec.c2pa.org/specifications/specifications/2.2/index.html
+- C2PA Content Credentials specification: https://spec.c2pa.org/specifications/specifications/2.2/specs/C2PA_Specification.html
