@@ -1,5 +1,5 @@
 ---
-title: "Claude Codeにテストを全部任せるなら、「何を正しいとするか」を先に固定する"
+title: "Claude Codeにテストを全部任せるなら、先に「合格条件」を固定する"
 emoji: "🧪"
 type: "tech"
 topics: ["claudecode", "testing", "ai", "ci", "automation"]
@@ -11,24 +11,20 @@ published_at: 2026-08-15 09:33
 
 Claude Codeを使っていると、ここまでまとめて任せられる。
 
-Anthropic自身もClaude Codeを、コードベースを読み、複数ファイルを変更し、テストを実行し、commitされたコードまで届けるagentic coding systemとして説明している。
+Anthropicの現在の公式ドキュメントでも、Claude Codeはコードベースを読み、ファイルを編集し、commandやtestを実行して検証するagentic coding toolとして説明されている。公式のoverviewには、未テストコードへのtest作成、lint errorの修正、さらに「testを書き、実行し、失敗を直す」という利用例まである。
 
-- [Claude Code | Anthropic](https://www.anthropic.com/product/claude-code)
+- [Claude Code overview | Claude Code Docs](https://code.claude.com/docs/en/overview)
+- [How Claude Code works | Claude Code Docs](https://code.claude.com/docs/en/how-claude-code-works)
 
-さらにClaude Code Hooksでは、Claudeが作業を終える前にunit testがすべて通ることを検証する `Stop` hook の例まで公式に示されている。
-
-- [Automate workflows with hooks | Claude Code Docs](https://code.claude.com/docs/en/hooks-guide)
-- [Hooks reference | Claude Code Docs](https://code.claude.com/docs/en/hooks)
-
-では、テスト実行も修正も再実行もClaude Codeに任せられるようになったとき、人間側に何が残るのか。
+では、テスト作成も実行も失敗修正も再実行もClaude Codeに任せられるようになったとき、人間側には何が残るのか。
 
 この記事の答えは1つだ。
 
-> **「何をすればpassなのか」を、実行するagentとは別に固定する。**
+> **「何を満たせば合格なのか」を、実行するagentとは別に固定する。**
 
 Claude Codeにテストを任せることが問題なのではない。
 
-むしろ、反復的な実行と修正はagentに委譲しやすい。
+むしろ、反復的な実行と修正はagentに積極的に委譲できる。
 
 問題になるのは、**実装する主体・テストを選ぶ主体・合格を宣言する主体が全部同じになったとき、何を根拠に「終わった」と判断するのかが曖昧なままになること**だ。
 
@@ -36,7 +32,7 @@ Claude Codeにテストを任せることが問題なのではない。
 
 緑色のtest resultは重要だ。
 
-しかし、それが直接意味するのは、**実行されたテストが定義した条件を満たした**ということまでである。
+ただし、それが直接意味するのは、**実行されたテストが、その時点で定義されていた条件を満たした**ということまでである。
 
 たとえば、Claude Codeに次のように頼める。
 
@@ -60,33 +56,39 @@ Claude Codeにテストを任せることが問題なのではない。
 どの条件を満たしたらmergeしてよいか？
 ```
 
-この層まで暗黙のままagentに渡すと、「テストが通った」という観測と「欲しかったものが正しい」という判断が同じものに見えやすくなる。
+さらに、同じagentがproduction codeだけでなくtest、fixture、configまで自由に変更できるなら、greenは実装修正だけでなく**合格条件側を変えることでも作れてしまう**。
 
-そこで、実行とpolicyを分ける。
+これはClaude Codeが悪いという話ではない。最適化する主体と、最適化対象を判定するoracleが同じ変更scopeに入っているという設計上の問題だ。
+
+Anthropic自身もClaude Codeの公式ガイドで、Claudeが自分の仕事を検証できるように、test case、期待する出力、screenshotなど「検証対象」を与えることを推奨している。
+
+- [How Claude Code works: Give Claude something to verify against](https://code.claude.com/docs/en/how-claude-code-works)
+
+そこで、実行と合格条件を分ける。
 
 ## Claude Code時代の4層
 
-私は自動化を次の4層に分けて考えるのがよいと思っている。
+自動化を次の4層に分けると整理しやすい。
 
 ```text
-1. Outcome / Contract
+1. Outcome / Contract（目的・契約）
    何を実現し、何を壊してはいけないか
 
             ↓
 
-2. Policy Authority
+2. Policy / Oracle（合格条件）
    tests / type checks / schema / invariants / custom checks
    何をpass・failとするか
 
             ↓
 
-3. Execution / Trigger
+3. Execution / Trigger（実行）
    Claude Code / hooks / CI / runner
    いつ、どのcheckを実行するか
 
             ↓
 
-4. Evidence
+4. Evidence（証拠）
    test result / diff / hash / artifact / CI result
    何が実際に起きたか
 ```
@@ -95,28 +97,26 @@ Claude Codeは3層目を非常に強くできる。
 
 実装して、commandを実行し、失敗を読み、直して、もう一度実行するloopを高速化できるからだ。
 
-しかし3層目が強くなったことと、2層目の**「正しさの定義」**が増えたことは同じではない。
+しかし3層目が強くなったことと、2層目の**「何を合格とするか」**が強くなったことは同じではない。
 
 ここを混ぜないことが重要になる。
 
-## これはClaude Code公式の設計とも整合する
+## Claude Code自身も「agentの判断」と「必ず実行する仕組み」を分けている
 
-Claude CodeのHooks guideは、hooksを「user-defined shell commands」と説明し、LLMが実行するかどうかを選ぶことに依存せず、特定のactionを必ず起こすための **deterministic control** と位置づけている。
-
-さらに、project rulesのenforcementやrepetitive taskのautomationを用途として明記している。
+Claude CodeのHooks guideは、hooksをClaude Codeのライフサイクル上の特定地点で自動実行される仕組みとし、LLMが実行を選ぶことに依存しない **deterministic control** と説明している。用途としてproject rulesのenforcementも明記されている。
 
 - [Automate workflows with hooks | Claude Code Docs](https://code.claude.com/docs/en/hooks-guide)
 
-Hooks referenceでは、agent-based hooksは現在experimentalであり、production workflowではcommand hooksを優先するよう明記されている。
+Hooks referenceでは、`TaskCompleted` hookでtest suiteを実行し、失敗時にはtaskをcompleteとして扱わせない公式例も掲載されている。
 
 - [Hooks reference | Claude Code Docs](https://code.claude.com/docs/en/hooks)
 
-つまりClaude Code自身の拡張モデルにも、次の区別がある。
+つまりClaude Code自身の設計にも、次の区別がある。
 
 ```text
 LLMに判断させる
         ≠
-決定的なcommandを必ず実行する
+決定的なcheckを必ず実行する
 ```
 
 AI agentを信用するか、しないかという話ではない。
@@ -125,20 +125,21 @@ AI agentを信用するか、しないかという話ではない。
 
 ## では、Claude Codeには何を任せるのか
 
-テスト自動化をClaude Codeへ委譲するとき、私は次のように分ける。
+テスト自動化をClaude Codeへ委譲するとき、次のように分ける。
 
-| 委譲しやすい | repo側に固定したい |
+| Claude Codeに委譲しやすい | repo側に固定したい |
 |---|---|
 | test commandの反復実行 | 必須test suite |
 | failure logの解析 | acceptance criteria |
 | 実装修正 | invariant |
-| regression testの追加案 | mergeをblockする条件 |
+| regression testの追加 | testを弱める変更のreview条件 |
 | lint / type checkの実行 | lint / type ruleそのもの |
-| 修正後の再検証 | 最終的に保存するevidence |
+| 修正後の再検証 | 許可された変更scope |
+| evidenceの収集 | mergeをblockする条件 |
 
-ここで重要なのは、右側を必ず人間が毎回手作業で実行することではない。
+右側を人間が毎回手作業で実行する必要はない。
 
-**右側をagentのその場の判断から独立した、再実行可能な形にしておく**ことだ。
+**agentのその場の判断から独立し、別の主体でも再実行できる形にしておく**ことが重要だ。
 
 たとえば、
 
@@ -153,7 +154,7 @@ Claude CodeにもCIにも同じcommandを実行させる。
 すると「Claudeが大丈夫と言った」ではなく、
 
 ```text
-同じpolicyを
+同じ合格条件を
 Claude Codeでも
 local hookでも
 CIでも
@@ -201,7 +202,7 @@ controlled resultは次の通りだった。
 
 しかし、この小さな実験はClaude Code時代にも使える1つの見方を与える。
 
-> **実行主体が変わっただけなら、正しさの定義が増えたとは限らない。**
+> **実行主体が変わっただけなら、合格条件が増えたとは限らない。**
 
 ## Claude Codeを追加しても、品質ルールが自動的に増えるわけではない
 
@@ -216,15 +217,13 @@ schema validation
 
 そこへClaude Codeを追加して、同じcommandを実装中にも実行させる。
 
-これは大きな価値がある。
-
-feedback loopが短くなり、失敗をagent自身が修正できるからだ。
+これは大きな価値がある。feedback loopが短くなり、失敗をagent自身が修正できるからだ。
 
 ただし、新しく増えたのは主に**実行能力**である。
 
-Ruff rule、type policy、test oracle、schema invariantが同じなら、policy authorityそのものが自動的に増えたわけではない。
+Ruff rule、type policy、test oracle、schema invariantが同じなら、合格条件そのものが自動的に増えたわけではない。
 
-逆に、Claude Codeに新しいregression testを作らせ、そのtestをレビューして正準suiteへ追加したなら、そこで初めてrepositoryが検出できるfailure conditionが増える可能性がある。
+逆に、Claude Codeに新しいregression testを作らせ、そのtestを正準suiteへ追加し、以後の変更をblockできるようにしたなら、そこでrepositoryが検出できるfailure conditionは増える。
 
 見るべきなのは「Claude Codeを導入したか」ではない。
 
@@ -232,9 +231,9 @@ Ruff rule、type policy、test oracle、schema invariantが同じなら、policy
 
 ## 「agentに全部任せる」を成立させるのは、強いpromptではなく外部化されたpolicy
 
-Claude Codeへ長いpromptを書けば、かなり多くのことを任せられる。
+Claude Codeへ長いpromptを書けば、多くのことを任せられる。
 
-しかし、毎回promptの中で、
+しかし毎回promptの中で、
 
 ```text
 必ずtestして
@@ -246,11 +245,20 @@ type checkして
 
 と頼み続けるより、決定的に強制できる条件はrepository側へ外部化した方が再利用しやすい。
 
-AnthropicのHooks documentationも、まさにLLMが実行を選択することに依存しないdeterministic controlをhooksの用途として説明している。
-
 Claude Codeを賢くするだけではなく、**Claude Codeが働く環境そのものを賢くする**。
 
 この方が、agentを増やしてもpolicyが散らばりにくい。
+
+## 30秒で確認するなら、この4点だけ
+
+Claude Codeへ大きな仕事を渡す前に、最低限ここだけ確認する。
+
+1. **合格条件はagentのprompt以外にも存在するか**
+2. **同じverificationをCIから再実行できるか**
+3. **test・config・必須artifactを弱める変更をdiffで識別できるか**
+4. **「完了」がagentの自己申告ではなく観測可能な条件になっているか**
+
+この4つがyesなら、実装や修正loopはかなり大胆に委譲できる。
 
 ## 最小構成ならこうする
 
@@ -268,7 +276,7 @@ Hooks / CIが同じpolicyを再実行
 Evidenceを残す
 ```
 
-たとえば、終了条件を、
+終了条件も、
 
 ```text
 Claude Codeが「完了」と言った
@@ -290,20 +298,22 @@ Claude Codeはその条件を満たすために自由に試行できる。
 
 この分離があるほど、より大きな仕事をagentへ渡しやすくなる。
 
+人間のレビュー対象も、毎回のcommand実行そのものから、**Outcome・合格条件・policyを変更したdiff**へ寄せられる。
+
 ## 誤解しないでほしいこと
 
 この記事は「Claude Codeにテストを任せるな」という話ではない。
 
 逆である。
 
-**もっと任せるために、正しさの定義をagentの外へ出す。**
+**もっと任せるために、合格条件をagentの外へ出す。**
 
 反復実行、failure解析、修正、再検証はagentが強い領域だ。
 
 その能力を活かすほど、
 
 ```text
-何を正しいとするか
+何を合格とするか
 何がblocking conditionか
 何を証拠として残すか
 ```
@@ -312,15 +322,16 @@ Claude Codeはその条件を満たすために自由に試行できる。
 
 ## 持ち帰るべき1文
 
-**Claude Codeにテストを全部任せるなら、テストの実行ではなく「何をpassとするか」を先に固定する。**
+**Claude Codeにテストを全部任せるなら、テストの実行ではなく「何を合格とするか」を先に固定する。**
 
 agentは何度でも実行できる。
 
-だからこそ、**正しさの定義は実行loopの外に置く。**
+だからこそ、**合格条件は実行loopの外に置く。**
 
 ## 一次情報・実験証跡
 
-- [Claude Code | Anthropic](https://www.anthropic.com/product/claude-code)
+- [Claude Code overview | Claude Code Docs](https://code.claude.com/docs/en/overview)
+- [How Claude Code works | Claude Code Docs](https://code.claude.com/docs/en/how-claude-code-works)
 - [Automate workflows with hooks | Claude Code Docs](https://code.claude.com/docs/en/hooks-guide)
 - [Hooks reference | Claude Code Docs](https://code.claude.com/docs/en/hooks)
 - [pre-commit documentation](https://pre-commit.com/)
