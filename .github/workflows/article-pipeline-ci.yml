@@ -36,6 +36,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -46,6 +48,24 @@ jobs:
         run: python -m compileall pipeline demos/python-syntax-gate/syntax_gate.py
       - name: Contract tests
         run: python -m unittest discover -s tests -v
+      - name: Publication transition guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
+          else
+            base="${{ github.event.before }}"
+            head="${{ github.sha }}"
+          fi
+          if printf '%s' "$base" | grep -Eq '^0+$'; then
+            echo "Initial history: no publication diff to validate"
+            exit 0
+          fi
+          git cat-file -e "$base^{commit}" 2>/dev/null || git fetch origin "$base" --depth=1
+          git cat-file -e "$head^{commit}" 2>/dev/null || git fetch origin "$head" --depth=1
+          python -m pipeline.publication_diff --base "$base" --head "$head"
       - name: Zenn CLI compatibility
         shell: bash
         run: |
