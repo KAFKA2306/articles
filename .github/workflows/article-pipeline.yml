@@ -4,23 +4,20 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: candidate or publish
+        description: candidate or select-draft
         required: true
         default: candidate
         type: choice
         options:
           - candidate
-          - publish
+          - select-draft
   push:
     branches: [main]
     paths:
       - ".github/workflows/article-pipeline.yml"
   schedule:
-    # Monday 09:00 JST.
+    # Monday 09:00 JST. Scheduled automation may create/review candidates only.
     - cron: "0 0 * * 1"
-    # Month-end finalization window: 28th-31st at 23:30 JST.
-    # pipeline.selection.is_month_end() allows only the actual last day.
-    - cron: "30 14 28-31 * *"
 
 permissions:
   contents: write
@@ -45,56 +42,15 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Apply fail-close editorial migration
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          unpublish = [
-              Path("articles/codex-chatgpt-github-issue-bridge.md"),
-              Path("articles/liltoon-reimport-first-aid-qa.md"),
-              Path("articles/unity-mcp-editor-boundary.md"),
-              Path("articles/unity-vrchat-shader-troubleshooting-qa.md"),
-          ]
-          for path in unpublish:
-              text = path.read_text(encoding="utf-8")
-              if "published: true\n" in text:
-                  text = text.replace("published: true\n", "published: false\n", 1)
-                  path.write_text(text, encoding="utf-8")
-
-          core = Path("pipeline/core.py")
-          text = core.read_text(encoding="utf-8")
-          text = text.replace(
-              '        needle in path.read_text(encoding="utf-8", errors="ignore")\n',
-              '        "published: true" in path.read_text(encoding="utf-8", errors="ignore")\n'
-              '        and needle in path.read_text(encoding="utf-8", errors="ignore")\n',
-              1,
-          )
-          text = text.replace(
-              '        "published: true\\n"\n',
-              '        # Fail-close: generation never grants publication approval.\n'
-              '        "published: false\\n"\n',
-              1,
-          )
-          core.write_text(text, encoding="utf-8")
-          PY
-
       - name: Resolve mode
         id: mode
         shell: bash
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "mode=${{ inputs.mode }}" >> "$GITHUB_OUTPUT"
-            echo "manual=1" >> "$GITHUB_OUTPUT"
-          elif [[ "${{ github.event_name }}" == "push" ]]; then
-            echo "mode=candidate" >> "$GITHUB_OUTPUT"
-            echo "manual=0" >> "$GITHUB_OUTPUT"
-          elif [[ "${{ github.event.schedule }}" == "0 0 * * 1" ]]; then
-            echo "mode=candidate" >> "$GITHUB_OUTPUT"
-            echo "manual=0" >> "$GITHUB_OUTPUT"
-          else
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.mode }}" == "select-draft" ]]; then
             echo "mode=publish" >> "$GITHUB_OUTPUT"
+            echo "manual=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=candidate" >> "$GITHUB_OUTPUT"
             echo "manual=0" >> "$GITHUB_OUTPUT"
           fi
 
@@ -107,7 +63,7 @@ jobs:
           python -m unittest discover -s tests -v
           python -m pipeline.audit
 
-      - name: Generate or publish
+      - name: Generate candidate or select unpublished draft
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GRAPHITI_READ_TOKEN: ${{ secrets.GRAPHITI_READ_TOKEN }}
@@ -115,27 +71,44 @@ jobs:
           ARTICLE_MODEL: auto
           ARTICLE_MANUAL: ${{ steps.mode.outputs.manual }}
         shell: bash
-        run: |
-          python -m pipeline.cli "${{ steps.mode.outputs.mode }}"
+        run: python -m pipeline.cli "${{ steps.mode.outputs.mode }}"
 
-          # Fresh repositories must not remain permanently empty until month-end.
-          # After candidate generation, bootstrap exactly one publication when
-          # there is still no Zenn article. publish_best() keeps all source and
-          # quality gates; ARTICLE_MANUAL only bypasses the calendar restriction.
-          if [[ "${{ steps.mode.outputs.mode }}" == "candidate" ]]; then
-            if ! find articles -maxdepth 1 -type f -name '*.md' ! -name '.gitkeep' -print -quit | grep -q .; then
-              echo "bootstrap_publish=attempt"
-              ARTICLE_MANUAL=1 python -m pipeline.cli publish
-            fi
-          fi
+      - name: Assert automation never grants publication
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          newly_true = []
+          for path in Path("articles").glob("*.md"):
+              current = path.read_text(encoding="utf-8", errors="ignore")
+              if "published: true" not in current:
+                  continue
+              # Existing human-published files may remain true. This workflow is
+              # forbidden only from introducing a new true state.
+              import subprocess
+              previous = subprocess.run(
+                  ["git", "show", f"HEAD:{path.as_posix()}"],
+                  text=True,
+                  capture_output=True,
+                  check=False,
+              )
+              if previous.returncode != 0 or "published: true" not in previous.stdout:
+                  newly_true.append(path.as_posix())
+
+          if newly_true:
+              raise SystemExit(
+                  "automation attempted to grant publication: " + ", ".join(newly_true)
+              )
+          PY
 
       - name: Postflight audit
         run: python -m pipeline.audit
 
-      - name: Commit canonical outputs and publication policy
+      - name: Commit canonical candidate outputs
         shell: bash
         run: |
-          git add -A artifacts articles pipeline/core.py
+          git add -A artifacts articles
           if git diff --cached --quiet; then
             echo "No canonical output changes"
             exit 0
