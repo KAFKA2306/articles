@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import unittest
 
-from pipeline.publication_diff import PublicationState, validate_transition
+from pipeline.publication_diff import (
+    PublicationState,
+    validate_article_paths,
+    validate_transition,
+)
 
 
 class PublicationDiffTests(unittest.TestCase):
@@ -75,6 +79,19 @@ class PublicationDiffTests(unittest.TestCase):
             ]
         )
         self.assertEqual([], errors)
+
+    def test_zenn_slug_at_50_characters_is_allowed(self) -> None:
+        slug = "a" * 50
+        self.assertEqual([], validate_article_paths([f"articles/{slug}.md"]))
+
+    def test_zenn_slug_over_50_characters_fails_closed(self) -> None:
+        slug = "a" * 51
+        errors = validate_article_paths([f"articles/{slug}.md"])
+        self.assertTrue(any("invalid Zenn slug" in error for error in errors))
+
+    def test_zenn_slug_with_invalid_characters_fails_closed(self) -> None:
+        errors = validate_article_paths(["articles/Invalid-Slug-123.md"])
+        self.assertTrue(any("invalid Zenn slug" in error for error in errors))
 
 
 if __name__ == "__main__":
