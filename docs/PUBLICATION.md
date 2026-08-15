@@ -149,3 +149,5 @@ slug判定ロジックは `pipeline.zenn_slug` に集約し、別workflowへrege
 - Zenn RSS: https://zenn.dev/zenn/articles/zenn-feed-rss
 - Zenn AIコンテンツ方針・投稿上限: https://info.zenn.dev/2026-03-10-ai-contents-guideline
 - Zenn問い合わせ: https://zenn.dev/inquiry
+
+<!-- production-snapshot: 2026-08-15T16:18:05+09:00 muchio -->
