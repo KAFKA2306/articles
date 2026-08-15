@@ -31,46 +31,69 @@ jobs:
           print('CURRENT_PRICE=' + str(data.get('price')))
           PY
 
-      - name: Inspect Wayback snapshots
+      - name: Extract Wayback wishlist history
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
+          import html
           import json
+          import re
           import urllib.parse
           import urllib.request
 
-          target = 'https://booth.pm/ja/items/8657397'
-          cdx = 'https://web.archive.org/cdx/search/cdx?' + urllib.parse.urlencode({
-              'url': target,
-              'from': '20260728',
-              'to': '20260815',
-              'output': 'json',
-              'filter': 'statuscode:200',
-              'fl': 'timestamp,original,digest',
-              'collapse': 'digest',
-          })
-          req = urllib.request.Request(cdx, headers={'User-Agent': 'Mozilla/5.0'})
-          try:
-              with urllib.request.urlopen(req, timeout=30) as r:
-                  rows = json.load(r)
-          except Exception as e:
-              print('WAYBACK_CDX_ERROR=' + repr(e))
-              raise SystemExit(0)
-          print('WAYBACK_ROWS=' + json.dumps(rows, ensure_ascii=False))
-          for row in rows[1:]:
-              ts = row[0]
-              archived = f'https://web.archive.org/web/{ts}id_/{target}'
-              req = urllib.request.Request(archived, headers={'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0'})
+          targets = [
+              'https://booth.pm/ja/items/8657397',
+              'https://booth.pm/items/8657397',
+              'https://iwanuga.booth.pm/items/8657397',
+          ]
+          seen = set()
+          for target in targets:
+              cdx = 'https://web.archive.org/cdx/search/cdx?' + urllib.parse.urlencode({
+                  'url': target,
+                  'from': '20260728',
+                  'to': '20260815',
+                  'output': 'json',
+                  'filter': 'statuscode:200',
+                  'fl': 'timestamp,original,digest',
+                  'collapse': 'digest',
+              })
+              req = urllib.request.Request(cdx, headers={'User-Agent': 'Mozilla/5.0'})
               try:
                   with urllib.request.urlopen(req, timeout=30) as r:
-                      body = r.read().decode('utf-8', errors='replace')
-                  try:
-                      data = json.loads(body)
-                      count = data.get('wish_lists_count')
-                      print(f'WAYBACK_COUNT {ts} {count}')
-                  except Exception:
-                      print(f'WAYBACK_NONJSON {ts} bytes={len(body)}')
+                      rows = json.load(r)
               except Exception as e:
-                  print(f'WAYBACK_FETCH_ERROR {ts} {e!r}')
+                  print(f'CDX_ERROR {target} {e!r}')
+                  continue
+              print('CDX ' + target + ' ' + json.dumps(rows, ensure_ascii=False))
+              for row in rows[1:]:
+                  ts, original = row[0], row[1]
+                  key = (ts, original)
+                  if key in seen:
+                      continue
+                  seen.add(key)
+                  archived = f'https://web.archive.org/web/{ts}id_/{original}'
+                  req = urllib.request.Request(archived, headers={'User-Agent': 'Mozilla/5.0'})
+                  try:
+                      with urllib.request.urlopen(req, timeout=30) as r:
+                          body = r.read().decode('utf-8', errors='replace')
+                  except Exception as e:
+                      print(f'FETCH_ERROR {ts} {original} {e!r}')
+                      continue
+
+                  patterns = [
+                      r'"wish_lists_count"\s*:\s*(\d+)',
+                      r'wish_lists_count[^0-9]{0,80}(\d+)',
+                      r'wishlist[^0-9]{0,80}(\d+)',
+                      r'item-card__wish-list[^0-9]{0,120}(\d+)',
+                  ]
+                  values = []
+                  for pattern in patterns:
+                      values.extend(re.findall(pattern, body, flags=re.I))
+                  print(f'ARCHIVE {ts} {original} bytes={len(body)} VALUES={values[:20]}')
+                  for token in ['wish_lists_count', 'wish-list', 'wishlist', 'スキ']:
+                      pos = body.lower().find(token.lower())
+                      if pos >= 0:
+                          snippet = html.unescape(body[max(0,pos-200):pos+400]).replace('\n',' ')
+                          print(f'CONTEXT {ts} {token} {snippet[:600]}')
           PY
