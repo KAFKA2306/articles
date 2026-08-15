@@ -6,6 +6,9 @@ import subprocess
 from dataclasses import dataclass
 
 
+SLUG_RE = re.compile(r"^[a-z0-9_-]{12,50}$")
+
+
 @dataclass(frozen=True)
 class PublicationState:
     published: bool
@@ -31,6 +34,20 @@ def parse_state(text: str | None) -> PublicationState | None:
             published_at_match.group(1).strip() if published_at_match else None
         ),
     )
+
+
+def validate_article_paths(paths: list[str]) -> list[str]:
+    errors: list[str] = []
+    for path in paths:
+        if not path.startswith("articles/") or not path.endswith(".md"):
+            continue
+        slug = path.removeprefix("articles/").removesuffix(".md")
+        if not SLUG_RE.fullmatch(slug):
+            errors.append(
+                f"{path}: invalid Zenn slug {slug!r}; expected 12-50 characters "
+                "using only a-z, 0-9, hyphen, or underscore"
+            )
+    return errors
 
 
 def validate_transition(
@@ -98,6 +115,15 @@ def find_original_published_at(path: str, head: str) -> str | None:
     return None
 
 
+def collect_article_paths(head: str) -> list[str]:
+    output = _git("ls-tree", "-r", "--name-only", head, "--", "articles")
+    return [
+        path
+        for path in (line.strip() for line in output.splitlines())
+        if path.endswith(".md")
+    ]
+
+
 def collect_changes(
     base: str, head: str
 ) -> list[tuple[str, PublicationState | None, PublicationState | None]]:
@@ -125,7 +151,8 @@ def main() -> int:
         path: find_original_published_at(path, args.head)
         for path, _old, _new in changes
     }
-    errors = validate_transition(changes, original_published_at=origins)
+    errors = validate_article_paths(collect_article_paths(args.head))
+    errors.extend(validate_transition(changes, original_published_at=origins))
     if errors:
         for error in errors:
             print(f"PUBLICATION_DIFF_FAIL: {error}")
