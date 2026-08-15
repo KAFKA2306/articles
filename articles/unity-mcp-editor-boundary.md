@@ -1,5 +1,5 @@
 ---
-title: "2026年、Unity MCPはどこまで実用になったのか――14件の実運用メタレビュー"
+title: "2026年、Unity MCPはどこまで実用になったのか――14件の公開実例と自前repoで見る完成境界"
 emoji: "🛠️"
 type: "tech"
 topics: ["unity", "mcp", "codex", "claudecode", "ai"]
@@ -7,13 +7,20 @@ published: false
 published_at: 2026-08-12 16:03
 ---
 
-# 2026年、Unity MCPはどこまで実用になったのか――14件の実運用メタレビュー
+# 2026年、Unity MCPはどこまで実用になったのか――14件の公開実例と自前repoで見る完成境界
 
 「AIがUnity Editorを操作できる」は、もう面白デモだけの話ではありません。
 
-2026年には、自然言語だけで簡単なゲームを作った例、2Dから3Dへ作り替えた例、EditMode / PlayMode testまで通した例、そして複数ステージのゲームを継続開発して完成まで持っていった例が公開されています。
+2026年には、自然言語から数分〜十数分で小さなゲームを作った例、既存projectのbugを直した例、EditMode / PlayMode testまで通した例、複数sessionにまたがって一本のゲームを完成させた例まで公開されています。
 
-一方で、49分かけて7回自己テストし5件を自己修正したのに、実際のプレイヤーは最初の部屋から出られなかった例もあります。Visual Effect Graphに30分使って完成できなかった例、Editor上では変更されたように見えても保存されず消えた例、「Connected」と表示されているのに操作不能だった例もあります。
+一方で、49分かけて7回自己テストし5件を自己修正したのに、実際のplayerは最初の部屋から出られなかった例があります。Visual Effect Graphに長時間使って完成しなかった例、Editorでは変更されたように見えても保存されなかった例、「Connected」と表示されていても操作不能だった例もあります。
+
+さらに私たち自身のrepoでも、同じ構造の失敗を経験しています。
+
+- Blenderの数値gateと201 testsを通った衣装が、人間の5面・6ポーズ確認でREJECTになった
+- Blender / Unity MCP integrationを859行追加しても、live E2Eが`NOT_RUN`なので成功とは呼んでいない
+- Unity assetの見た目が正しくても、Material identityやstereo shader、OSC、Animator、実HMDのどこで壊れているかは別問題だった
+- VRChat worldは84 commits、48 changed files、約4,000 additionsまで進んでも、2-client、late join、owner leave、private uploadを証明できずreleaseは`BLOCKED`のままだった
 
 2026年に知りたいのは、もはや
 
@@ -32,9 +39,13 @@ UnityをAIから操作できるか？
 
 です。
 
-この記事では、2026年に公開されたUnity MCP / Unity Editor agentの実運用記録14件を同じ物差しで読み直します。ただし14件は14人の独立再現ではありません。越井琢巳氏とmiya氏がそれぞれ2件を公開しているため、中心サンプルは**12の発信主体による14事例**です。
+この記事では、2026年8月15日までに公開されたUnity MCP / Unity Editor agentの実運用記録14件を同じ物差しで読み直し、最後に私たち自身のUnity / Blender / VRChat asset系repoの失敗記録を重ねます。
 
-結論を先に書くと、**prototype生成、Scene操作、script実装、既存bug修正、console / testを使った反復修正はすでに実用域です。一方、複雑なplayability、game feel、視覚品質、長時間session、保存、最終runtime品質まで「AIが確認したから完成」とするには証拠が足りません。**
+14件は14人の独立再現ではありません。越井琢巳氏とmiya氏がそれぞれ2件を公開しているため、中心サンプルは**12の発信主体による14事例**です。
+
+結論を先に書きます。
+
+**prototype生成、Scene操作、script実装、既存bug修正、console / testを使った反復修正はすでに実用域です。問題は「AIがUnityを触れるか」から「何を証拠に完成と判定するか」へ移っています。**
 
 ---
 
@@ -45,16 +56,17 @@ UnityをAIから操作できるか？
 - `> 「……」` は原文からの**直接引用**
 - 直接引用の直下に、著者名・記事名・公開日・URLを明記
 - 引用符を付けていない説明は、原文に基づく**筆者要約**または本記事の分類
-- 数字、日付、version、test件数などは元記事または公式一次情報で確認できたものだけを使用
+- 数字、日付、version、test件数などは元記事または一次情報で確認できたものだけを使用
 - 体験談は「その環境で起きた観測」であり、製品全体の成功率には読み替えない
+- 私たち自身のrepoについても、Issue / PRに残っている状態とevidenceを根拠にし、未実行を成功へ昇格させない
 
-つまり、この記事の「実用域」「不安定」というラベルは引用ではなく、14件を比較した本記事の判断です。
+この記事の「実用域」「不安定」「完成境界」というラベルは引用ではなく、複数事例を比較した本記事の判断です。
 
 ---
 
 ## これはsystematic reviewではない
 
-対象は、2026年8月15日までに公開され、次を満たす実運用記録です。
+対象は次を満たす公開記録を優先しました。
 
 - Unity EditorをAI agent / MCPから実際に操作している
 - setup紹介だけで終わらず、Scene、game、test、build、debug等の結果がある
@@ -63,7 +75,7 @@ UnityをAIから操作できるか？
 
 note、Zenn、Qiita、DevelopersIO、企業・個人blog、GitHub、Unity公式情報を調査しました。Redditも探索しましたが、中心表では環境・成果物・失敗条件まで追える記録を優先しました。
 
-これは無作為抽出ではありません。成功体験を公開するselection biasもあります。そのため、
+無作為抽出ではなく、成功体験を公開しやすいselection biasもあります。そのため、
 
 ```text
 14件中10件成功 → 成功率71%
@@ -77,11 +89,11 @@ note、Zenn、Qiita、DevelopersIO、企業・個人blog、GitHub、Unity公式�
 
 ## 誰が試したのか――肩書きより「証拠密度」を見る
 
-14件の価値を判断するとき、作者の属性も無視できません。ただし「会社員だから信頼できる」「個人blogだから弱い」とは扱いません。
+作者の属性も無視できません。ただし「会社員だから信頼できる」「個人blogだから弱い」とは扱いません。
 
-今回の中心サンプルには、個人開発者のnote/Zenn記事、企業技術blog、会社名義の検証記事、Qiita上の技術記録、長期の個人ゲーム開発記が混在しています。同じUnity MCPでも、目的がtutorial、既存project修正、game prototype、長期game制作、workflow設計とかなり違います。
+中心サンプルには、個人開発者、企業技術blog、会社名義の検証、Qiita上の技術記録、長期の個人ゲーム開発記が混在しています。目的もtutorial、既存project修正、game prototype、長期game制作、workflow設計と異なります。
 
-そこで本記事では作者の知名度ではなく、次の証拠を重く見ます。
+そこで本記事では知名度より、第三者が観測を追跡できるかを重く見ます。
 
 ```text
 E3  高い証拠密度
@@ -94,19 +106,17 @@ E1  低い
     感想や完成報告が中心で、環境・検証条件・失敗情報が少ない
 ```
 
-E3だから主張が正しいという意味ではありません。**第三者が「何が起きたか」を追いやすい**という意味です。
-
-また14件は12の発信主体から出ています。越井琢巳氏の2件とmiya氏の2件は、同じ人が条件を変えて複数回試した事例なので、独立再現2件とは数えません。その代わり、同じ作者がtask complexityを変えたとき結果がどう変わったかを見る材料にします。
+E3だから主張が正しいという意味ではありません。**何が起きたかを第三者が追いやすい**という意味です。
 
 | 発信の種類 | 本記事での扱い | 信頼性を見るポイント |
 | --- | --- | --- |
 | 企業技術blog | 実務寄りの検証記録 | 実行条件、失敗、再試行、画像・数値 |
-| 個人の長期開発記 | production frictionを見る材料 | 複数日・複数featureを跨いだ記録、失敗の具体性 |
+| 個人の長期開発記 | production frictionを見る材料 | 複数日・複数feature、失敗の具体性 |
 | 個人の単発検証 | task別の成立可否を見る材料 | prompt、環境、成果物、動画・screenshot |
 | workflow / code公開 | 再現可能な運用設計を見る材料 | test、commit、gate、公開code |
 | 公式情報 | capability / support範囲の確認 | version、beta status、正式仕様 |
 
-この区別を入れると、例えば「10分でゲームができた」という記事と、「複数stageを数日かけて完成させ、保存漏れやfreezeまで記録した」という記事を同じ重さで扱わずに済みます。
+同じ「成功」でも、10分のtutorialと複数sessionの製品開発は同じ重さでは扱いません。
 
 ---
 
@@ -154,15 +164,15 @@ L5 RUNTIME_COMPLETED
 | 6/24 | TsuchiyaK / Qiita | Unity公式MCPでRoll-a-Ball | L2 | E2 | 追加prompt | tutorial規模は短時間で成立 |
 | 7/5〜9 | bunnoneta / note | 『昭和サバイバル』継続開発 | L4 | E3 | balance・debug・判断を人間が担当 | 長期開発可能、完成判断は人間 |
 
-ここで重要なのは、L2が多数あることでも、L5がほぼ見当たらないことでもありません。
+重要なのはL2の件数ではありません。
 
 **taskの複雑さが上がるほど、agentの「観測方法」と人間の「完成基準」が支配的になる**ことです。
 
 ---
 
-# 1. 2月19日：同じブロック崩しで3時間と1時間
+# 1. 同じブロック崩しでも3時間と1時間
 
-増田恭隆氏は、同じブロック崩しをUnity側のMCP系とCoPlay MCPで比較しています。前者は実装約3時間、CoPlay側は約1時間で、人間が手を入れたのは4箇所のbug修正だったと報告しています。
+増田恭隆氏は、同じブロック崩しを異なるUnity MCP系で比較しています。前者は実装約3時間、CoPlay側は約1時間で、人間が4箇所のbugを修正したと報告しています。
 
 ### 直接引用
 
@@ -171,15 +181,13 @@ L5 RUNTIME_COMPLETED
 — 増田恭隆「Unity本家のAI参入と、これまでのUnityでのノーコード検証」2026-02-19  
 https://note.com/yasutaka_masuda/n/n74397dbf2abf
 
-同じ作者・同じ題材でも、MCP側のEditor abstractionを変えるだけで体験が大きく変わりました。
-
-**本記事の判断:** 「Unity MCP」というカテゴリ名だけで性能を語れません。modelだけでなく、agentへどのUnity操作をどう見せるかが結果を左右します。
+**本記事の判断:** 「Unity MCP」というカテゴリ名だけで性能を語れません。modelだけでなく、agentへUnity操作をどう見せるかが結果を左右します。
 
 ---
 
-# 2. 2月24日：2Dから3Dへ。強かったのは生成より観測
+# 2. 2D→3D化で効いたのは生成より観測
 
-uLoopMCPをClaude Codeから使った検証では、白紙projectから数字付きブロック崩しを作り、2D版から3D版へ拡張しています。記事では2D/3D合計18 scripts、Scene構築、compile、動作確認、testまでのloopが報告されています。
+uLoopMCPをClaude Codeから使った検証では、白紙projectから数字付きブロック崩しを作り、2D版から3D版へ拡張しています。3D化では壁へのめり込みや反射不良があり、人間が動作確認しながら修正を投げています。
 
 ### 直接引用
 
@@ -188,17 +196,17 @@ uLoopMCPをClaude Codeから使った検証では、白紙projectから数字付
 — unsoluble_sugar「uLoopMCP × Claude Code、AI駆動でUnityゲーム開発がどこまで自走できるか試してみた」2026-02-24  
 https://zenn.dev/unsoluble_sugar/articles/cd8d59be7b8f85
 
-3D化では壁へのめり込みや反射不良があり、人間が動作確認しながら修正を投げています。一方、Hierarchy取得、capture、test結果取得があるため、AI自身も失敗を観測して修正できます。
+Hierarchy取得、capture、test結果取得があるため、AI自身も失敗を観測して修正できます。
 
-**本記事の判断:** Unity agentの価値は「C#を生成すること」より、`Editor state → observation → repair`を閉ループ化することにあります。
+**本記事の判断:** Unity agentの価値は「C#を書くこと」だけではなく、`Editor state → observation → repair`を閉ループ化することにあります。
 
 ---
 
-# 3. 2月28日：「Connected」でも操作できない
+# 3. 「Connected」でも操作できない
 
 よなよな@AIゲーム開発氏は、Unity 6 + Codex + MCPでVampire Survivors系gameを作る過程を記録しています。
 
-Unity側はConnectedでも、Codex側ではproject一覧を取得できず操作不能という状態が発生。process整理、再接続、Main Camera消失、初期化順序、freeze、UI責務の重複などを潰し、最終的に遊べる状態へ進めています。
+Unity側はConnectedでもCodex側からprojectを操作できない状態、Main Camera消失、初期化順序、freeze、UI責務重複などを解消して、最終的に遊べる状態まで進めています。
 
 ### 直接引用
 
@@ -207,15 +215,15 @@ Unity側はConnectedでも、Codex側ではproject一覧を取得できず操作
 — よなよな@AIゲーム開発「Unity 6 × Codex × MCPで『30分ヴァンサバ』を作るつもりが、白画面から始まった話」2026-02-28  
 https://note.com/yonayona_ai_game/n/nb1ec6a528bbd
 
-**本記事の判断:** MCP connection healthはproduct completionとは別の監視対象です。`Connected`をacceptance testにしてはいけません。
+**本記事の判断:** connection healthはproduct completionとは別の監視対象です。
 
 ---
 
-# 4. 3月8日：12 objectを作れても、部屋には入れない
+# 4. 12 objectを作れても、部屋には入れない
 
-DevelopersIOはUnity公式MCP `com.unity.ai.assistant 2.0.0-pre.1`とClaude Code / Claude Opus 4.6でTPS templateを改造しています。
+DevelopersIOはUnity公式MCPとClaude Code / Claude Opus 4.6でTPS templateを改造しています。
 
-AIは壁、床、天井、doorway、柱、高台、slopeの計12 objectを生成しました。しかしPlay Modeで確認すると、既存壁がdoorwayを塞ぎ、部屋へ侵入できませんでした。内部light不足、scale不整合、material不統一、Static Editor Flags未設定も確認されています。
+AIは壁、床、天井、doorway、柱、高台、slopeを生成しました。しかしPlay Modeで確認すると既存壁がdoorwayを塞ぎ、部屋へ侵入できませんでした。内部light不足、scale不整合、material不統一等も残っています。
 
 ### 直接引用
 
@@ -224,18 +232,18 @@ AIは壁、床、天井、doorway、柱、高台、slopeの計12 objectを生成
 — 越井琢巳「Unity MCP で TPS ゲームを Claude Code に改造させたら何が起きたか」2026-03-08  
 https://dev.classmethod.jp/articles/unity-mcp-tps-game-claude-code-modification/
 
-AIは外部4視点をcaptureしていましたが、部屋内部へcameraを入れていませんでした。
+AIは外部視点をcaptureしていましたが、playerが実際に部屋へ入れるかを見ていませんでした。
 
 ```text
 geometry generated: PASS
 human traversal: FAIL
 ```
 
-**本記事の判断:** screenshotを撮った回数ではなく、**何を観測したか**が重要です。
+**本記事の判断:** screenshotの枚数ではなく、**何を観測したか**が重要です。
 
 ---
 
-# 5. 3月11日：自然言語だけでCatchGameを全自動生成
+# 5. 自然言語だけでCatchGameを生成
 
 miya氏はUnity MCPのAssistant windowからCodexを使い、簡単なcasual game「CatchGame」を自然言語のみで全自動開発したと報告しています。
 
@@ -248,19 +256,17 @@ https://note.com/miya19/n/n4503e377dc45
 
 記事には生成過程、play、生成codeのvideo timelineがあります。
 
-**本記事の判断:** tutorial / casual game規模でL2 PLAYABLEへ到達すること自体は、もはや珍しい反例ではありません。ただし、この証拠からAAAやproduction qualityへ一般化はできません。
+**本記事の判断:** tutorial / casual game規模でL2 PLAYABLEへ到達すること自体は、すでに珍しい成功ではありません。ただしproduction qualityへ一般化はできません。
 
 ---
 
-# 6. 3月13日：7回test、5件自己修正。それでも最初の部屋から出られない
+# 6. 7回test、5件自己修正。それでも最初の部屋から出られない
 
-この14件の中で、実運用の限界を最も分かりやすく示す事例です。
+この14件の中で、completion oracleの重要性を最も分かりやすく示す事例です。
 
-DevelopersIOはUnity MCP + Claude Code / Opus 4.6で、弾幕shooting、athletics、探索型dungeonの3テーマを比較しました。
+DevelopersIOは弾幕shooting、athletics、探索型dungeonの3テーマを比較しました。単純な前2つは短時間で成立しましたが、複雑なdungeonは約49分。Claude Codeは7回Play Mode testを実行し、5件を自己修正しました。
 
-単純な前2つは約7.5分、9分で初回出力から成立。複雑なdungeonは約49分で、Claude Codeは7回Play Mode testを実行し、5件を自己修正しました。
-
-しかし人間が実際にplayすると、初期jumpでは出口へ届かず、最初の部屋から出られませんでした。
+しかし人間がplayすると、初期jumpでは出口へ届かず、最初の部屋から出られませんでした。
 
 ### 直接引用
 
@@ -269,39 +275,37 @@ DevelopersIOはUnity MCP + Claude Code / Opus 4.6で、弾幕shooting、athletic
 — 越井琢巳「Unity MCP × Claude Code に 2D ゲームの弾幕処理・アスレチック生成・ダンジョン生成をさせて破綻するかどうか観察してみた」2026-03-13  
 https://dev.classmethod.jp/articles/unity-mcp-claude-code-2d-game-verification/
 
-原因はtest oracleです。agentはplayerをMCP経由でwarpさせて各部屋を検査していました。
+agentはplayerをMCP経由でwarpさせて各部屋を検査していました。
 
 ```text
 state consistency: PASS
 actual traversal: FAIL
 ```
 
-**本記事の判断:** 自律test loopそのものは価値があります。しかし、間違ったoracleを高速に回すと「何度も検証した未完成品」ができます。
+**本記事の判断:** 間違ったoracleを高速に回すと、「何度も検証した未完成品」ができます。
 
 ---
 
-# 7. 3月22日：強い人は「AIに任せる」のではなくworkflowを固定した
+# 7. 強いworkflowは「AIに任せる」よりcompletion contractを固定する
 
-umezu_y氏はCoplayDev/unity-mcp + Claude Code向けに`hcg-workflows`を公開し、Phase 0〜8として接続確認、企画、機能仕様、技術仕様、test仕様、task list、実装、検証、releaseまでを分離しています。
-
-実装では1 task 1 commitとし、test、console、Play Mode確認を通してからcommitする構造です。
+umezu_y氏はCoplayDev/unity-mcp + Claude Code向けworkflowを公開し、接続確認、企画、仕様、test仕様、task list、実装、検証、releaseを分離しています。
 
 ### 直接引用
 
 > 「仕様がないと AI は『なんとなくそれっぽいもの』を作ってしまい、手戻りが大きくなります。」
 
-— umezu_y「Claude Code × unity-mcp でゲーム開発の企画→公開をワークフロー化した話」2026年3月公開  
+— umezu_y「Claude Code × unity-mcp でゲーム開発の企画→公開をワークフロー化した話」2026年3月  
 https://qiita.com/umezu_y/items/090a0fd25f9f915ad375
 
-**本記事の判断:** model intelligenceよりcompletion contractを強くする方が、production workflowでは再現性を上げやすいです。
+**本記事の判断:** productionではmodel intelligenceを期待するだけより、completion contractを強くする方が再現性を上げやすいです。
 
 ---
 
-# 8. 4月5日：雑な指示からgameを作り、Codexでbuildまで進める
+# 8. 雑な指示からgameを作れても、setupには1〜2時間かかった
 
 四駒アイ氏はWindows 11 / Unity 6.4 / Cursor環境でClaude CodeとCodexの両方からUnity MCPを利用しています。
 
-Claude Code側の設定場所へ辿り着くまで1〜2時間かかった一方、接続後はかなり雑な指示からgameを生成。そのprojectをCodexから修正し、buildで機能追加しています。
+接続設定へ辿り着くまで1〜2時間かかった一方、接続後はかなり雑な指示からgameを生成し、Codexから修正・buildまで進めています。
 
 ### 直接引用
 
@@ -310,17 +314,15 @@ Claude Code側の設定場所へ辿り着くまで1〜2時間かかった一方�
 — 四駒アイ「2026/4/5 UnityのMCPサーバ設定をしてみる in Cursor」2026-04-05  
 https://note.com/4komaai/n/nafd4090dc068
 
-ただし同じ記事で作者は、まだ改善余地があり「叩き台としては良さそう」と評価しています。
+同じ記事で作者は「叩き台」としての評価も残しています。
 
-**本記事の判断:** 「完成」という単語だけを抜き出すと過大評価になります。同一記事の留保まで読む必要があります。
+**本記事の判断:** 「完成」という一語だけを抜き出さず、同じ記事の留保まで読む必要があります。
 
 ---
 
-# 9. 4月11日：生成したら大量error。観測toolを足すと遊べた
+# 9. 生成したら大量error。観測toolを足すと遊べた
 
-ティー氏はCoplayDev/unity-mcpに「簡単な神経衰弱」を依頼しました。一見完成したものの、Playすると大量のerrorが出ました。
-
-そこでUnity CLI Loop（旧uLoopMCP）を追加し、Play Modeとerror確認を使ったdebugを依頼すると、問題なく遊べる状態まで修正できたと報告しています。
+ティー氏はCoplayDev/unity-mcpに神経衰弱を依頼しました。一見完成したものの、Playすると大量errorが発生。その後Unity CLI Loopを追加してPlay Modeとerrorを観測させ、遊べる状態まで修正しています。
 
 ### 直接引用
 
@@ -329,13 +331,13 @@ https://note.com/4komaai/n/nafd4090dc068
 — ティー「Unityに関するMCPを実際に入れてみた所感」2026-04-11  
 https://note.com/mindpower/n/nba514492f5a5
 
-**本記事の判断:** generation capabilityを足したのではなく、observation / repair capabilityを足したことでL1からL2へ進んだ点が重要です。
+**本記事の判断:** generation能力ではなく、observation / repair能力を足したことが効いています。
 
 ---
 
-# 10. 4月17日：全自動移植できても「未完成」
+# 10. 全自動移植できても作者自身が「未完成」と評価
 
-miya氏は既存game「マグネットスイーパー」をUnityへ全自動移植しています。game自体は自動実装されましたが、UI等の修正が必要でした。
+miya氏は既存game「マグネットスイーパー」をUnityへ全自動移植しています。実装自体は進みましたが、UI等の修正が必要でした。
 
 ### 直接引用
 
@@ -344,17 +346,15 @@ miya氏は既存game「マグネットスイーパー」をUnityへ全自動移�
 — miya「〖UnityMCP〗マグネットスイーパーの移植を試しました。」2026-04-17  
 https://note.com/miya19/n/n8df417077cb0
 
-**本記事の判断:** 「自動実装」と「完成」は同義ではありません。この区別を作者自身が明記している点が重要です。
+**本記事の判断:** 「自動実装」と「完成」は同義ではありません。
 
 ---
 
-# 11. 5月7日：bug fixは成功、shader / VFXは失敗
+# 11. 既存bug fixは強い。shader / VFXは不安定
 
 株式会社ユニスポットはClaude Code + Unity MCPで既存3D projectを検証しています。
 
-VRM characterのanimation不具合では、既存official controllerを参照して構造を確認し、script作成・attachまで行い、正常なanimationへ到達しました。
-
-一方、shader調整は複数回試しても期待した変化が出ず失敗。Visual Effect Graphは約30分処理し、5時間枠のtoken容量の約50%を消費したものの、Output nodeが途中で止まり動作しませんでした。
+VRM characterのanimation不具合では修正へ到達した一方、shader調整は期待した変化が出ず、Visual Effect Graphも長時間処理したものの完成しませんでした。
 
 ### 直接引用
 
@@ -363,8 +363,6 @@ VRM characterのanimation不具合では、既存official controllerを参照し
 — 株式会社ユニスポット「本当にゲーム開発もAIで出来る?『Claude Code + Unity MCP』でどこまで出来るか試してみた。」2026-05-07  
 https://www.uni-spot.com/blog_post/claude-unity-mcp/
 
-**本記事の判断:** Unity MCPを一つのscoreで評価するのは雑です。task classで分けるべきです。
-
 ```text
 existing bug fix    → strong
 structured editing  → strong
@@ -372,30 +370,30 @@ art direction       → variable
 complex VFX graph   → high-cost / unstable
 ```
 
+**本記事の判断:** Unity MCPを一つのscoreで評価するのは雑です。task classで分けるべきです。
+
 ---
 
-# 12. 6月20日：3D鬼ごっこ + EditMode 4件 + PlayMode 3件が全PASS
+# 12. EditMode 4件 + PlayMode 3件が全PASS
 
 zuqqhi2氏はCoplayDev版unity-mcp + Codexで最小限の3D鬼ごっこを作らせ、promptの時点でEditMode / PlayMode test作成も要求しています。
 
-生成後、Unity Test RunnerでEditMode 4件、PlayMode 3件がすべてPASS。cameraがstage上部を切っていた問題は追加指示で修正されています。
+生成後、EditMode 4件、PlayMode 3件がすべてPASSしました。一方、camera framingは追加修正が必要でした。
 
 ### 直接引用
 
-> 「EditModeを見ると、ちゃんと4つテストケースがあって全部通りますね。」
+> 「EditModeをみると、ちゃんと4つテストケースがあって全部通りますね。」
 
 — zuqqhi2「CoplayDev 版 unity-mcp を使用して Codex に Unity を操作させてテスト込みの開発をさせる」2026-06-20  
 https://zuqqhi2.com/coplaydev-unity-mcp-codex-game-dev
 
-**本記事の判断:** completion conditionを最初からpromptに含めると、単なる「動いた」より強いevidenceを作れます。ただしcamera問題が残ったことから、test coverageと視覚品質は別です。
+**本記事の判断:** completion conditionをpromptに含めるのは有効です。ただしtest coverageと視覚品質は別です。
 
 ---
 
-# 13. 6月24日：Roll-a-Ballは約10分でerrorなくplayable
+# 13. Roll-a-Ballは約10分でplayable
 
-花王株式会社のTsuchiyaK氏はUnity公式MCP Server + Claude CodeでUnity入門のRoll-a-Ballを作らせています。
-
-作業開始から約10分後、実際にPlayでき、さらに「ホラーゲームっぽくして」という追加promptから約5分でlighting、post process、enemy、game over等が追加されています。
+花王株式会社のTsuchiyaK氏はUnity公式MCP Server + Claude CodeでRoll-a-Ballを作らせています。作業開始から約10分でPlayでき、その後の追加promptで演出やenemy等を追加しています。
 
 ### 直接引用
 
@@ -404,15 +402,15 @@ https://zuqqhi2.com/coplaydev-unity-mcp-codex-game-dev
 — TsuchiyaK「Unity AI × Claude Code でゲームを作ってみた」2026-06-24  
 https://qiita.com/TsuchiyaK/items/a3de1ac034bf94cf905b
 
-**本記事の判断:** tutorial規模・既知patternのgameでは、自然言語→playableまでの摩擦はかなり小さくなっています。
+**本記事の判断:** tutorial規模・既知patternでは、自然言語→playableまでの摩擦はかなり小さくなっています。
 
 ---
 
-# 14. 7月：複数stageのgameを完成まで継続開発した例
+# 14. 全6stageのgameを継続開発した例
 
 「小さいdemoしか作れないのでは？」への強い反例が、bunnoneta氏の『昭和サバイバル』です。
 
-2026年7月5日の開発記では全6stageの完成を報告。続く完結記事では、Unity MCPを使いながらbalance調整、bug修正、gamepad対応、演出等を進め、game一本を完成させた経験がまとめられています。
+Unity MCPを使いながらbalance調整、bug修正、gamepad対応、演出等を進め、全6stageまで継続開発しています。
 
 ### 直接引用
 
@@ -421,242 +419,279 @@ https://qiita.com/TsuchiyaK/items/a3de1ac034bf94cf905b
 — bunnoneta「〖開発記〗Unity製サバイバルゲーム『昭和サバイバル』全6ステージ完成までにClaudeと乗り越えた壁」2026-07-05  
 https://note.com/bunnoneta/n/ndd6c132b1abf
 
-ここは成功例だからこそ重要です。
+同じ開発記録には、型解決、`EditorUtility.SetDirty()`、Prefab保存、C# version差、改行差、compile/domain reload待ち、freeze調査など、Unity実運用特有のfrictionが多数記録されています。
 
-同じ開発記録には、
+**本記事の判断:** L4 SUSTAINEDは実例があります。ただしその実態は一発生成ではなく、**生成→観測→failure発見→修正→再検証**です。
 
-- full pathの型名が必要になる場面
-- `EditorUtility.SetDirty()`を呼ばず変更が保存されない場面
-- Prefab保存忘れ
-- C#構文差
-- 改行差による置換失敗
-- compile / domain reload待ち
-- freeze原因調査用の`HangWatchdog`作成
-
-が記録されています。
-
-完結記事で作者は、最終的な「面白いかどうか」の判断を人間側に残しています。
-
-**本記事の判断:** L4 SUSTAINEDは実例があります。しかし、その実態は「AIが一発で完成させた」ではなく、**生成→観測→failure発見→修正→再検証を人間とAIで何度も回した**ものです。
+補助:
+https://note.com/bunnoneta/n/n91bbcd3fd700
 
 ---
 
-## 外部14件を読んだあと、自分たちのUnity / Blender repoを見る
+# 私たち自身のrepoを同じ物差しで見る
 
-ここまで外部事例を調べて、筆者自身は意外と驚きませんでした。
+外部事例だけなら、「他人はそうだった」で終わります。
 
-理由は、私たちのUnity / Blender / VRChat asset系repositoryでも、ほぼ同じ失敗構造を何度も踏んでいるからです。
+しかし私たち自身も2026年にUnity / Blender / VRChat asset pipelineをAIと自動化し、その過程で外部事例とほぼ同じ失敗構造に何度も当たっています。
 
-これは「自分たちもUnity MCPで成功した」という追加事例ではありません。むしろ、**AI・自動化・CIが大量に動いても、最終成果を別の観測で確認しない限り完成にならない**という現場側の補助証拠です。
+ここでは成功談としてではなく、**どこで完成判定を止めたか**を記録します。
 
-### 自分たちの例1：201 testsとHosted BlenderがPASSしても、衣装はREJECTだった
+---
 
-`KAFKA2306/image2outfit`の青い法被PR #197では、13-stage pipelineを通し、Blender 4.4.3 hosted execution、201 unit tests、architecture / release-policy / production-contract / Ruff等のchecksまで通しました。
+## 自前失敗例1：201 testsとBlender buildがPASSしても、青い法被はREJECTだった
 
-数値上のfit / build gateもPASSしています。
+`KAFKA2306/image2outfit`のSiroinoSotai_PC向け青い法被では、13-stage pipeline、Blender 4.4.3 hosted execution、数値fit/build gate、repository audit、201 unit testsまで進めました。
 
-しかし、保存された5面と6ポーズを直接見ると、袖山が肩から離れ、collar bridgeが浮き、arms-up / arm-cross deformationも許容できませんでした。そのため生成画像は`Evidence/Rejected/`へ保存し、manifestは`WORKING`のままにしました。
-
-直接のrepository evidence:
+PR #197:
 https://github.com/KAFKA2306/image2outfit/pull/197
 
-ここで起きたことは、3月13日のdungeonとほぼ同じです。
+しかし、生成した5面と6ポーズを直接確認すると、
+
+- sleeve headが肩から離れている
+- collar bridgeが浮いている
+- arms-up / arm-cross deformationが許容できない
+
+という問題が見つかりました。
+
+numeric fitとbuildがPASSしたrunも、最終的に`Evidence/Rejected/`へ保存しました。manifestは`WORKING`のままです。
+
+これは3月13日のdungeon事例と非常によく似ています。
 
 ```text
-201 tests: PASS
-Hosted Blender: PASS
-numeric fit/build gates: PASS
-human direct visual review: FAIL
+外部事例
+7 PlayMode tests
+5 self-repairs
+→ player traversal FAIL
+
+自前事例
+201 unit tests
+Hosted Blender PASS
+numeric fit/build PASS
+→ direct visual review FAIL
 ```
 
-外部事例では、7回Play Mode testしても「最初の部屋から出られない」を見逃しました。
-
-私たちは201 testsを通しても「袖が肩から離れている」を見逃しかけました。
-
-**test数は完成度ではありません。何をoracleにしたかが完成度を決めます。**
-
-### 自分たちの例2：MCP integrationを859行追加しても、live成功とは呼んでいない
-
-同じ`image2outfit`のDraft PR #212では、Blender MCP + Unity MCP + Codexのlocal authoring supportを実装しています。
-
-PRにはWindows setup、doctor、Blender Assistant panel、version pin、localhost制限、static testsが入り、9 files / 859 additionsのintegrationになっています。
-
-それでもPR本文のvalidation statusは、
-
-```text
-STATIC_REVIEW: implemented and source-reviewed
-NOT_RUN: local Windows setup
-NOT_RUN: live Blender MCP connection
-NOT_RUN: live Unity MCP connection/package resolution
-NOT_RUN: Blender Assistant -> Codex -> MCP end-to-end call
-```
-
-です。
-
-repository evidence:
-https://github.com/KAFKA2306/image2outfit/pull/212
-
-コード量、CI、設定ファイル、doctor commandが揃っていても、local Editorに接続して一度も実tool callを通していないなら、この記事の分類では成功例に入りません。
-
-この境界を実際に維持しようとすると、かなり誘惑があります。
-
-```text
-実装した
-CIが緑
-configも正しい
-upstream versionもpinした
-```
-
-ここまで来ると「対応完了」と書きたくなります。
-
-しかし、Unity/BlenderのようなGUI + local runtimeを含む系では、その1行が最も危険です。
-
-### 自分たちの例3：見た目の問題なのに、原因はMaterial名だけでは追えない
-
-`KAFKA2306/avatars2509` Issue #4では、VRChat上で「観察者の左眼と右眼でアバターの見え方が異なる」という報告を扱っています。
-
-このrepoでは以前、`SkinnedMeshRenderer.sharedMaterials[]`が意図したstandalone `.mat`ではなく、FBX/model内のmaterial sub-assetを参照し、**見た目と実参照が食い違う事故**を経験しています。
-
-しかし今回の左右眼差を同じ原因だと決め打ちしていません。
-
-Issueでは、
-
-```text
-Material identity
-↓
-Shader stereo compatibility
-↓
-SDK validation
-↓
-actual HMD / third-party VR observation
-```
-
-を別gateにしています。
-
-repository evidence:
-https://github.com/KAFKA2306/avatars2509/issues/4
-
-2026年8月12日時点の取得済み実測では、対象RendererのSubMesh数とMaterial slot数は一致し、`Hidden/InternalErrorShader`も対象直接参照範囲では確認されていません。それでも本人環境では現象を再現できず、Issueはopenのままです。
-
-これはUnity asset automationの嫌なところをよく表しています。
-
-```text
-Prefab exists
-Material exists
-Shader exists
-SDK validation may pass
-Desktopでは普通に見える
-```
-
-ここまで通っても、**他人のHMDの左右眼で正しいか**は別の問いです。
-
-### 自分たちの例4：文字が消えるだけでも、OSC→Animator→GameObjectを分けないと直せない
-
-`avatars2509` Issue #8では、Muchioの文字盤テキストが短時間で消える現象を調べています。
-
-最初はUnityのAnimatorやExpression Menuを直したくなります。しかし現時点の調査では、`KAT_Visible`は公開Avatar OSC設定に存在し、Animator側のenable/disable clipは単一キー、transition durationも0です。
-
-一方、実行中VRCPetのversion自体はまだ確定していません。
-
-そのため修正より先に、
-
-```text
-t0 = KAT_Visible true
-t1 = KAT_Visible false
-Δt = t1 - t0
-```
-
-を実測することを完了条件にしています。
-
-repository evidence:
-https://github.com/KAFKA2306/avatars2509/issues/8
-
-ここでも問題は「AIがUnityを操作できるか」ではありません。
-
-AIが`.anim`や`.controller`を書き換えること自体は難しくありません。
-
-難しいのは、
-
-```text
-VRCPetがfalseを送ったのか
-OSCではtrueなのにAnimatorがfalseになったのか
-AnimatorはtrueなのにGameObjectだけ消えたのか
-```
-
-を観測してから、正しい層だけを直すことです。
-
-### 自分たちの現場での感想
-
-外部14件と自分たちのrepositoryを並べると、Unity MCPの「実用性」はかなり具体的に見えます。
-
-操作自体は、もうかなりできます。
-
-```text
-Sceneを作る
-scriptを書く
-Materialを差し替える
-Prefabを生成する
-Blenderでmeshを作る
-testを回す
-buildする
-```
-
-しかしproduction assetでは、その後に、
-
-```text
-保存後も同じか
-reload後も同じreferenceか
-別poseでも破綻しないか
-別eyeでも正しく描画されるか
-build-time processor後も同じか
-OSC / Animator / GameObjectのどこで状態が変わったか
-実HMDで正しいか
-```
-
-が待っています。
-
-私たちのrepoで自動化を増やすほど、逆に「操作成功」を信用しなくなりました。
-
-**自動化が増えるとverificationが不要になるのではなく、自動化が増えるほどverification contractが重要になる。**
-
-これが外部14件を読んだあと、自分たちのUnity / Blender asset pipelineへ戻ってきたときの一番強い実感です。
+**感想:** test数を増やすだけではcompletionへ近づきません。testが測っていない品質は、永遠にPASSできます。
 
 ---
 
-## 14件 + 自分たちの実運用から見えるtask class別の現在地
+## 自前失敗例2：MCP integrationを実装しても、live E2EがNOT_RUNなら成功ではない
 
-| task class | 観測 | 2026年8月時点の判断 |
+`image2outfit` PR #212では、Blender MCP + Unity MCP + Codex integrationを実装しました。
+
+https://github.com/KAFKA2306/image2outfit/pull/212
+
+現在のPRには、Windows setup、version pin、localhost限定、doctor、Blender-side Assistant UI、static tests等が入り、9 files / 859 additionsまで進んでいます。
+
+しかしPR自身が次を`NOT_RUN`としています。
+
+- local Windows PowerShell setup
+- live Blender MCP connection
+- live Unity MCP connection / package resolution
+- Blender Assistant → Codex → MCP end-to-end call
+
+PRは現在もDraftです。
+
+```text
+integration code exists
+static contract exists
+≠
+live editor operation verified
+```
+
+**感想:** MCPの記事を書いている自分たち自身が、最も簡単に「設定を書いた＝動いた」と誤認できます。だからlive callがない限り成功例に数えません。
+
+---
+
+## 自前失敗例3：Unity assetの「見た目が変」は、原因層を分けないと直せない
+
+`KAFKA2306/avatars2509`では、VRChat上で左右眼の見え方が違うという問題を追っています。
+
+Issue #4:
+https://github.com/KAFKA2306/avatars2509/issues/4
+
+過去には、`SkinnedMeshRenderer.sharedMaterials[]`が意図したstandalone `.mat`ではなくFBX/model内のmaterial sub-assetを参照し、**見た目と実参照identityが食い違う**事故がありました。
+
+しかし今回の左右眼差を、過去のMaterial事故と決め打ちはしていません。
+
+```text
+MATERIAL_IDENTITY_VALIDATED
+        ↓
+SHADER_STEREO_VALIDATED
+        ↓
+SDK_VALIDATED
+        ↓
+actual HMD / third-party VR
+```
+
+本人環境では現象を再現できておらず、第三者VRでの確認が必要です。Issueはopenのままです。
+
+**感想:** Editor上のasset stateを全部読めても、実HMDでしか観測できないfailureは残ります。Editor authorityとruntime authorityは別です。
+
+---
+
+## 自前失敗例4：0.8秒で文字が消える問題でも、OSC→Animator→GameObjectを分ける
+
+同じ`avatars2509`では、Muchioの文字盤が短時間で消える問題も追っています。
+
+Issue #8:
+https://github.com/KAFKA2306/avatars2509/issues/8
+
+Unity側のAnimationやAnimatorを読むだけでは原因は確定しません。
+
+観測線は次のように分けています。
+
+```text
+VRCPet
+↓
+OSC /avatar/parameters/KAT_Visible
+↓
+Animator parameter
+↓
+VRCFury / Driver / Animation
+↓
+GameObject m_IsActive
+↓
+実画面
+```
+
+まず`KAT_Visible=true`から`false`までのtimestamp差を採る。短時間でOSC自体がfalseになるなら外部送信側、OSCがtrueのまま表示だけ消えるならUnity/build側へ進む、という切り分けです。
+
+**感想:** AIがEditorを自在に触れても、観測する層を間違えれば無関係な`.anim`やcontrollerを壊すだけです。
+
+---
+
+## 自前失敗例5：`vrmine`――約4,000行追加しても、releaseはBLOCKEDだった
+
+`KAFKA2306/vrmine`は、この記事に最も近い**runtime completion failure**です。
+
+PR #18:
+https://github.com/KAFKA2306/vrmine/pull/18
+
+このPRはRULEFORGE、ECHO MINE、CHESSの3ゲームworldをrelease-gatedにする大きな変更です。現在でも、
+
+- 84 commits
+- 48 changed files
+- +3,989 / -338
+- three-game implementation
+- two-client verification logic
+- static repository integrity CI
+- fail-closed upload-readiness gate
+- GitHub Pages landing page
+
+まで実装されています。
+
+それでもPRは**open / Draft**で、release statusは明示的に`BLOCKED`です。
+
+理由は単なる慎重さではありません。PR本文には、以前のG3について次の事実が記録されています。
+
+- previous G3はfailed
+- 旧実装はclient evidenceがなくてもPASSを書ける経路があった
+- recent run同士のevidenceを混ぜ得た
+- そのため過去のG1/G2/G3 evidenceをinvalidatedした
+
+つまり、ここでは実際に
+
+```text
+verification implementation exists
+report can say PASS
+```
+
+と
+
+```text
+current runの2-client runtimeを本当に証明した
+```
+
+が一致していませんでした。
+
+release blocker Issue #19もopenです。
+
+https://github.com/KAFKA2306/vrmine/issues/19
+
+残っているのは、たとえば次です。
+
+- exact Unity 2022.3.22f1 / Worlds SDK 3.10.4でcompile
+- G1 / G2
+- two-client Build & Test
+- 同一`RunToken`で2 distinct player IDsを確認
+- ownership transfer / republish / restoration
+- G4 upload readiness
+- private world upload
+- delayed second-account join
+- late-join state restoration
+- current owner leave
+- RULEFORGE 3P/4P/5P
+- ECHO MINE 2P/3P/4P/5P
+- CHESSの各runtime path
+
+さらにIssue #43では、multi-client、late join、owner leave、PC/Questを独立したregression matrixとして残しています。
+
+https://github.com/KAFKA2306/vrmine/issues/43
+
+2026年8月には、それらをU1〜U4へ分解して自動化するEpic #54まで作りました。
+
+https://github.com/KAFKA2306/vrmine/issues/54
+
+```text
+U1 package graph
+U2 exact Unity compile / EditMode
+U3 PlayMode + ClientSim
+U4 real Windows + VRChat multi-client
+U5 private upload smoke
+```
+
+ここで重要なのは、`vrmine`を「AI開発は失敗した」と雑にまとめないことです。
+
+Editor code、scene generation、static verification、game logic、release gate設計には大量の成果があります。
+
+失敗したのは、**それらをL5 RUNTIME_COMPLETEDと呼べるところまで証拠を閉じること**です。
+
+```text
+L1 Editor操作      → かなり進んだ
+L2 Playable        → 実装あり
+L3 Verification    → 多数あり。ただし旧G3に偽陽性経路
+L4 Sustained       → 長期開発できている
+L5 Runtime complete→ BLOCKED
+```
+
+**感想:** これはUnity MCP / agent開発の危険を一番よく表しています。実装量が増えるほど「ほぼ完成」に見えます。しかしVRChatでは、late join、ownership、real serialization、multi-client、Quest、private uploadというEditor外のauthorityが最後に残ります。
+
+`vrmine`から得た教訓は、
+
+> GitHub CIが全部緑でも、VRChat worldが完成したとは限らない。
+
+という単純なものではありません。
+
+より正確には、
+
+**証拠を生成するコード自体にもbugが入り得るため、verification pipelineにもprovenance、freshness、run isolation、runtime authorityが必要**
+
+ということです。
+
+---
+
+# 外部事例と自前repoは同じ場所で壊れた
+
+並べるとかなり明確です。
+
+| 観測 | 外部事例 | 自前repo |
 | --- | --- | --- |
-| GameObject / Scene生成 | 多数の成功例 | 実用域 |
-| script生成・attach | 多数の成功例 | 実用域 |
-| tutorial / casual prototype | 10分前後の例もある | 実用域 |
-| 既存bug調査・修正 | animation等で成功 | 強い |
-| console-driven repair | 成功例複数 | 強い |
-| EditMode / PlayMode tests | 全PASS例あり | 有効。ただしcoverage依存 |
-| Blender asset生成 | Hosted execution・mesh/FBX生成の実例あり | 実用域。ただしvisual oracle必須 |
-| build | 実例あり | 利用可能 |
-| 複雑なprogression | self-test後も詰み例 | 人間play必須 |
-| visual consistency | 数値gate PASS後のREJECT実例あり | 人間レビュー必須 |
-| Material / reference identity | 見た目と実参照が食い違う事故あり | save/reload後のidentity監査が必要 |
-| art direction | 成功・失敗が混在 | 不安定 |
-| shader / VFX | 高コスト失敗例 | まだ不安定 |
-| connection lifecycle | Connectedでも失敗例 | 運用監視が必要 |
-| long-running local MCP | static integrationだけでは証明不能 | live E2E evidence必須 |
-| VRChat / HMD runtime | DesktopやSDKだけでは不足する例 | 実runtime確認が必要 |
-| 長期game development | 全6stage完成例 | 可能 |
-| 外部playerの面白さ | 強い自動評価証拠なし | 人間 / player側 |
+| testは通るが利用不能 | dungeon: 7 tests後も出口へ届かない | blue happi: 201 tests後もvisual REJECT |
+| connection/config ≠ operation | ConnectedでもCodexから操作不能 | PR #212 live MCP E2E `NOT_RUN` |
+| Editor state ≠ persistent/runtime state | SetDirty / Prefab保存問題 | Material identity / save→reload gate |
+| local test ≠ actual user experience | camera / traversalを人間が発見 | VR左右眼をactual HMDで確認必要 |
+| simulation ≠ real networking | 公開事例では証拠薄い | vrmine ClientSimではlate join/ownershipを証明しない |
+| report PASS ≠ valid evidence | test oracleの欠陥 | vrmine旧G3にclient evidenceなしPASS経路 |
 
-この表から見える境界は、code / editor operationとexperience evaluationの間だけではありません。
+つまり私たちのrepoを足しても、外部レビューの結論は変わりません。
 
-**Editor stateとruntime state、見た目とreference identity、test oracleと実ユーザー行動の間**に複数の境界があります。
+むしろ強くなります。
 
 ---
 
 ## 一番重要な発見：AIの弱点は「操作」より「oracle」
 
-2026年の事例を読む前は、Unity MCPの問題は「AIがEditorを上手く触れないこと」だと思いやすいです。
-
-しかし14件を並べると、より深い問題が見えます。
+14件と自前repoを並べると、より深い問題が見えます。
 
 ```text
 AIが操作できない
@@ -670,13 +705,11 @@ AIが何を確認すべきかを間違える
 
 方がproductionでは危険です。
 
-3月13日のdungeonでは7回testしています。それでもplayer traversalをtestしていなかった。
+3月13日のdungeonでは7回testしてもplayer traversalを見ていませんでした。
 
-3月8日のTPSでは4視点captureしています。それでも部屋内部を見なかった。
+青い法被では201 testsとnumeric gateを通しても袖と衿の見た目を機械testが見ていませんでした。
 
-6月20日の鬼ごっこではtestsは全PASSしました。それでもcamera framingは人間が追加修正しています。
-
-私たちの青い法被では201 testsとHosted Blenderが通っても、袖と衿の破綻をdirect visual reviewでREJECTしました。
+`vrmine`ではverification reportを作る実装そのものに、current client evidenceなしでPASSし得る穴がありました。
 
 つまり、
 
@@ -689,79 +722,75 @@ more CI
 
 だけでは完成へ近づきません。
 
-必要なのは、**正しいcompletion oracle**です。
-
----
-
-## 研究側の結果も「repair loopが本体」という読み方と整合する
-
-2026年7月公開のpreprintでは、MCPとは異なるsingle-pass条件でUnity C# scene生成を評価しています。
-
-4つのopen-weight model、26 goal patterns、合計10,400 generationsを評価し、single-passでrunnable sceneまでcompileしたものは0件と報告されています。
-
-https://arxiv.org/abs/2607.10187
-
-これはUnity MCPの成功率ではありません。条件が違うので直接比較は禁止です。
-
-ただし、公開実例の多くが
-
-```text
-generate
-→ compile
-→ observe
-→ repair
-→ play
-→ observe again
-```
-
-を使っていることとは整合します。
-
-**一発生成能力より、失敗から戻れる閉ループの方が現在の実用性を説明しやすい**、というのが本記事の解釈です。
+必要なのは、**正しいcompletion oracleと、そのoracle自身の証拠設計**です。
 
 ---
 
 ## 2026年5月、Unity自身もMCPを公式toolchainへ入れた
 
-Unityは2026年5月5日、Unity 6.0以降向けAI toolsをopen betaとして公開し、その構成要素に公式MCP Serverを含めています。
+Unityは2026年にAI toolsをopen betaとして公開し、その構成要素に公式MCP Serverを含めています。
 
 公式一次情報:
 https://unity.com/blog/unity-ai-how-to-get-started
 https://unity.com/blog/unity-ai-mcp-how-to-get-started
+https://unity.com/blog/mcp-servers-game-development
 
-Unity公式MCP Serverは、scene state、GameObjects、components、console logs等を外部AI agentから扱えるintegration pathとして案内されています。
+これは大きな変化です。
 
-一方、Unity自身もopen betaについて、features、behavior、availabilityが変更・制限・終了され得ると明記しています。
+MCPそのものを「toyだからproductionでは無意味」と切り捨てる段階ではありません。
 
-つまり2026年2月と8月では、同じ「Unity MCP」という言葉でも測っているsoftware versionが違います。
+一方、official integrationが存在することと、個々のprojectでL5まで証明できることは別です。
 
-このversion driftがあるため、この記事でも過去の失敗を「現在も必ず再現するbug」とは扱いません。
+---
+
+## task class別の現在地
+
+| task class | 2026年の観測 | 本記事の判断 |
+| --- | --- | --- |
+| GameObject / Scene生成 | 多数の成功例 | 実用域 |
+| script生成・attach | 多数の成功例 | 実用域 |
+| tutorial / casual prototype | 10分前後の例もある | 実用域 |
+| 既存bug調査・修正 | animation等で成功 | 強い |
+| console-driven repair | 成功例複数 | 強い |
+| EditMode / PlayMode tests | 全PASS例あり | 有効。ただしcoverage依存 |
+| build | 実例あり | 利用可能 |
+| Blender asset generation | 自前でhosted execution多数 | 強い。ただしvisual oracle必要 |
+| 複雑なprogression | self-test後も詰み例 | human play必須 |
+| visual consistency | 外部・自前とも見落とし | human / vision review必須 |
+| art direction | 成功・失敗が混在 | 不安定 |
+| shader / VFX | 高コスト失敗例 | 不安定 |
+| connection lifecycle | Connectedでも失敗例 | 運用監視が必要 |
+| save / reload persistence | 公開・自前とも境界あり | 明示gateが必要 |
+| real VR networking | vrmineで未完了 | ClientSimだけでは不可 |
+| late join / owner leave | vrmineでrelease blocker | real clients必要 |
+| external playerの面白さ | 強い自動評価証拠なし | 人間 / player側 |
 
 ---
 
 ## 導入するなら、MCPをcompletion gateにしない
 
-2026年の実例と自分たちのasset pipelineから、現実的な構造はこれです。
+現実的な構造はこれです。
 
 ```text
 Codex / Claude Code
         ↓
-Unity / Blender MCP
+Unity MCP
         ↓
-Editor state
+Unity Editor
         ↓
-compile / console / static audit
+compile / console
         ↓
-EditMode / PlayMode / geometry tests
+EditMode / PlayMode tests
         ↓
-save → reload → reference re-check
+save → reload
         ↓
-actual traversal / pose / visual review
-        ↓
-build-time processors
+actual player traversal / visual review
         ↓
 build
         ↓
-actual runtime / HMD / external user
+real target runtime
+        ↓
+external user / multi-client / device-specific checks
 ```
 
 最低でもstateを分けます。
@@ -770,7 +799,7 @@ actual runtime / HMD / external user
 TOOL_SUCCESS
 EDITOR_VALIDATED
 PERSISTENCE_VALIDATED
-PLAYABLE_OR_VISUAL_VALIDATED
+PLAYABLE_VALIDATED
 BUILD_VALIDATED
 RUNTIME_COMPLETED
 ```
@@ -782,13 +811,24 @@ RUNTIME_COMPLETED
   "tool_success": true,
   "editor_validated": true,
   "persistence_validated": true,
-  "visual_validated": false,
+  "playable_validated": false,
   "runtime_completed": false,
-  "reason": "DIRECT_REVIEW_FAILED"
+  "reason": "NOT_RUN"
 }
 ```
 
 ならcompletedではありません。
+
+VRChatのようにruntime authorityが強いprojectなら、さらに分けます。
+
+```text
+STATIC_VALID
+UNITY_VALID
+CLIENTSIM_VALID
+REAL_MULTICLIENT_VALID
+PRIVATE_UPLOAD_VALID
+RELEASED
+```
 
 ---
 
@@ -798,19 +838,13 @@ RUNTIME_COMPLETED
 
 **価値あり。ただしAIの出力を正解教材にしない。**
 
-Roll-a-Ballやcasual gameのような小規模prototypeはかなり作りやすくなっています。一方、Unity固有のlifecycle、Prefab、serialization、physicsを知らないと、AIの偽成功を見抜きにくいです。
+小規模prototypeはかなり作りやすくなっています。一方、serialization、Prefab、physics、lifecycleを知らないと偽成功を見抜きにくいです。
 
 ### Unity engineer
 
 **かなり価値あり。特に反復作業、既存bug、test、variant生成。**
 
-人間側がarchitectureとacceptance criteriaを持てるため、最も恩恵を受けやすい層です。
-
-### 3D / avatar / asset creator
-
-**Blender生成・variant・監査の速度には価値あり。ただしUnity import後を別製品として考える。**
-
-Blenderでmesh、weight、renderが正しくても、Unity側のMaterial identity、NDMF / Modular Avatar、shader、build-time変換、VRChat runtimeは別のfailure surfaceです。
+architectureとacceptance criteriaを人間側が持てるため、恩恵を受けやすい層です。
 
 ### game designer / planner
 
@@ -818,9 +852,15 @@ Blenderでmesh、weight、renderが正しくても、Unity側のMaterial identit
 
 「面白い」「難しい」「見づらい」は機械testだけでは決まりません。
 
+### VRChat / networked-world developer
+
+**Editor automationだけ見て採用判断しない。**
+
+ClientSim、real multi-client、late join、ownership、PC/Quest、uploadを別gateとして設計する必要があります。`vrmine`はその境界を越えられずreleaseが止まった実例です。
+
 ### production team
 
-**導入するならversion pin、logs、test、save/reload audit、human reviewを前提にする。**
+**version pin、logs、test、provenance、human review、target-runtime evidenceを前提にする。**
 
 MCPをproduction gateにせず、authoring adapterとして扱う方が安全です。
 
@@ -828,9 +868,9 @@ MCPをproduction gateにせず、authoring adapterとして扱う方が安全で
 
 ## 結論
 
-14件の外部実例と、自分たちのUnity / Blender / VRChat asset repositoryを見比べて、一番重要だったのは「Unity MCPはすごい」という話でも「まだ使えない」という話でもありませんでした。
+14件の公開実例と、自分たちのUnity / Blender / VRChat repoを並べて見えてきたのは、「Unity MCPはすごい」でも「まだ使えない」でもありません。
 
-2026年の公開実例からは、すでに
+すでにAIは、
 
 ```text
 Sceneを作る
@@ -840,12 +880,10 @@ errorを読む
 testする
 直す
 buildする
-長期開発を続ける
+複数sessionで開発を続ける
 ```
 
-ところまで到達しています。
-
-自分たちのpipelineでも、Blender上の衣装生成、weight監査、5面・ポーズ生成、CI、MCP integration codeまではかなり自動化できます。
+ところまで来ています。
 
 だから、
 
@@ -857,23 +895,19 @@ buildする
 
 > Unity MCPに完成を任せられるのか？
 
-への答えは、まだ別です。
+への答えは別です。
 
-3月13日のdungeonは、7回testして5件直しても最初の部屋から出られませんでした。
+外部では7回testしても最初の部屋から出られないgameがありました。
 
-私たちの青い法被は、201 testsとHosted Blenderを通してもdirect image inspectionでREJECTでした。
+自分たちでは201 testsを通しても見た目で棄却した衣装がありました。
 
-Unity MCP integrationは859 additionsまで実装しても、live Editor E2Eが`NOT_RUN`なので成功とは数えていません。
+MCP integrationを実装してもlive E2Eが未実行なら成功と呼びませんでした。
 
-VRChatの左右眼差は、PrefabもMaterialも存在する状態からさらに実HMDの観測が必要です。
+そして`vrmine`では約4,000行を追加し、verificationとrelease gateを作っても、real multi-client / late join / owner leave / private upload evidenceを閉じられずreleaseは`BLOCKED`のままです。
 
 したがって2026年8月時点の最も実務的な結論はこれです。
 
-**Unity MCPは「使えるか？」の段階を越えた。次の問題は、AIに何を操作させるかではなく、何を証拠に完成と判定するかである。**
-
-そしてasset pipelineまで含めるなら、もう一段付け加えられます。
-
-**Editorで正しいこと、保存後に正しいこと、build後に正しいこと、実runtimeで正しいことは、全部別々に証明する。**
+**Unity MCPは「使えるか？」の段階を越えた。次の問題は、AIに何を操作させるかではなく、何を証拠に完成と判定し、その証拠自体をどう信頼するかである。**
 
 ---
 
@@ -888,13 +922,13 @@ https://zenn.dev/unsoluble_sugar/articles/cd8d59be7b8f85
 3. よなよな@AIゲーム開発「Unity 6 × Codex × MCPで『30分ヴァンサバ』を作るつもりが、白画面から始まった話」  
 https://note.com/yonayona_ai_game/n/nb1ec6a528bbd
 
-4. 越井琢巳 / DevelopersIO「Unity MCP で TPS ゲームを Claude Code に改造させたら何が起きたか」  
+4. 越井琢巳「Unity MCP で TPS ゲームを Claude Code に改造させたら何が起きたか」  
 https://dev.classmethod.jp/articles/unity-mcp-tps-game-claude-code-modification/
 
 5. miya「〖UnityMCP〗簡単なUnityゲームを全自動で実装させました。」  
 https://note.com/miya19/n/n4503e377dc45
 
-6. 越井琢巳 / DevelopersIO「Unity MCP × Claude Code に 2D ゲームの弾幕処理・アスレチック生成・ダンジョン生成をさせて破綻するかどうか観察してみた」  
+6. 越井琢巳「Unity MCP × Claude Code に 2D ゲームの弾幕処理・アスレチック生成・ダンジョン生成をさせて破綻するかどうか観察してみた」  
 https://dev.classmethod.jp/articles/unity-mcp-claude-code-2d-game-verification/
 
 7. umezu_y「Claude Code × unity-mcp でゲーム開発の企画→公開をワークフロー化した話」  
@@ -921,28 +955,34 @@ https://qiita.com/TsuchiyaK/items/a3de1ac034bf94cf905b
 14. bunnoneta「〖開発記〗Unity製サバイバルゲーム『昭和サバイバル』全6ステージ完成までにClaudeと乗り越えた壁」  
 https://note.com/bunnoneta/n/ndd6c132b1abf
 
-### 自分たちの実運用証拠
-
-- `image2outfit` PR #197 — 青い法被。201 tests / Hosted Blender / numeric gates後にdirect visual reviewでREJECT  
-https://github.com/KAFKA2306/image2outfit/pull/197
-- `image2outfit` PR #212 — Blender + Unity MCP integration。live editor E2Eは`NOT_RUN`  
-https://github.com/KAFKA2306/image2outfit/pull/212
-- `avatars2509` Issue #4 — Material identity / Stereo shader / HMD左右眼を分離して調査中  
-https://github.com/KAFKA2306/avatars2509/issues/4
-- `avatars2509` Issue #8 — Muchio文字表示をVRCPet / OSC / Animator / GameObjectの3層で切り分け  
-https://github.com/KAFKA2306/avatars2509/issues/8
-
-### 補助資料
+### 補助・公式資料
 
 - bunnoneta「〖開発記③・完結〗AIと二人三脚で作ったゲーム『昭和サバイバル』、ついに完成しました」  
 https://note.com/bunnoneta/n/n91bbcd3fd700
-- Unity公式「Unity's AI tools in beta: How to get started」  
+- Unity「Unity's AI tools in beta: How to get started」  
 https://unity.com/blog/unity-ai-how-to-get-started
-- Unity公式「Unity AI open beta: How to get started with MCP」  
+- Unity「Unity AI open beta: How to get started with MCP」  
 https://unity.com/blog/unity-ai-mcp-how-to-get-started
-- Unity公式「MCP servers in game development explained」  
+- Unity「MCP servers in game development explained」  
 https://unity.com/blog/mcp-servers-game-development
 - CoplayDev/unity-mcp  
 https://github.com/CoplayDev/unity-mcp
-- Unity single-pass generation preprint  
-https://arxiv.org/abs/2607.10187
+
+### 私たち自身のfield evidence
+
+- image2outfit PR #197 — blue happi visual rejection after automated gates  
+https://github.com/KAFKA2306/image2outfit/pull/197
+- image2outfit PR #212 — Blender + Unity MCP integration, live E2E still NOT_RUN  
+https://github.com/KAFKA2306/image2outfit/pull/212
+- avatars2509 Issue #4 — Material identity / stereo / actual HMD boundary  
+https://github.com/KAFKA2306/avatars2509/issues/4
+- avatars2509 Issue #8 — OSC → Animator → GameObject troubleshooting boundary  
+https://github.com/KAFKA2306/avatars2509/issues/8
+- vrmine PR #18 — three-game release remains BLOCKED  
+https://github.com/KAFKA2306/vrmine/pull/18
+- vrmine Issue #19 — target-machine G0–G4 and private upload release blocker  
+https://github.com/KAFKA2306/vrmine/issues/19
+- vrmine Issue #43 — real multi-client / late-join / owner-leave regression matrix  
+https://github.com/KAFKA2306/vrmine/issues/43
+- vrmine Issue #54 — U1–U4 automated verification redesign  
+https://github.com/KAFKA2306/vrmine/issues/54
