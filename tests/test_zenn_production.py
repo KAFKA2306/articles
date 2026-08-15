@@ -43,9 +43,23 @@ class ZennProductionTests(unittest.TestCase):
             self.assertEqual([], articles)
             self.assertTrue(any("invariant violation" in error for error in errors))
 
-    def test_zenn_metadata_title_match(self) -> None:
-        page = '<html><head><meta property="og:title" content="記事タイトル"></head></html>'
-        self.assertEqual((True, "記事タイトル"), zenn_production._title_matches(page, "記事タイトル"))
+    def test_catalog_requires_slug_and_title_match(self) -> None:
+        article = zenn_production.Article(
+            Path("articles/example-article-123.md"),
+            "example-article-123",
+            "記事タイトル",
+            datetime(2026, 8, 15, 10, 0, tzinfo=ZoneInfo("Asia/Tokyo")),
+        )
+        passed = zenn_production.compare_catalog(
+            [article], {"example-article-123": "記事タイトル"}
+        )
+        self.assertTrue(passed[0].ok)
+        missing = zenn_production.compare_catalog([article], {})
+        self.assertFalse(missing[0].ok)
+        mismatch = zenn_production.compare_catalog(
+            [article], {"example-article-123": "別タイトル"}
+        )
+        self.assertFalse(mismatch[0].ok)
 
     def test_workflow_enforces_production_verifier(self) -> None:
         workflow = (
