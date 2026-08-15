@@ -1,5 +1,5 @@
 ---
-title: "業務ロジックをUIにコピーするな。GoogleとO'Reillyに学ぶ「正解を1か所に置く」設計"
+title: "業務ロジックをUIにコピーするな。「正解」を1か所に置く設計"
 emoji: "🎯"
 type: "tech"
 topics: ["architecture", "python", "javascript", "webassembly"]
