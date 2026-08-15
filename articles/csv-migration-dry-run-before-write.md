@@ -37,9 +37,9 @@ published_at: 2026-08-12 12:30
 
 **正準データを壊さなかった数だ。**
 
-この記事では、LLMで雑データを整えるとき、なぜ「全部自動化」が危ないのかを、実データで見ていく。
+この記事では、LLMで雑データを整えるとき、なぜ「全部自動化」が危ないのかを、文献と実データの両方から見ていく。
 
-一次情報:
+ケーススタディ:
 
 - Repository: https://github.com/KAFKA2306/books
 - 455件→414 Work: https://github.com/KAFKA2306/books/pull/2
@@ -56,15 +56,19 @@ published_at: 2026-08-12 12:30
 
 1行ずつ読み、列を分け、表記揺れを探し、検索し、似たレコードを比べる。
 
-LLMはここを一気に安くできる。
+LLMはここをかなり安くできる。
 
-OpenAIのStructured Outputsも、非構造入力をJSON Schemaに沿った形へ変換する用途を明示している。
+OpenAIのStructured Outputsも、非構造入力からJSON Schemaに沿った出力を作る用途を明示している。
 
 https://openai.com/index/introducing-structured-outputs-in-the-api/
 
-ただし、ここには大事な境界がある。
+ただし、OpenAI自身が大事な注意書きを置いている。
 
-Structured Outputsが保証するのは、主に**形**だ。
+> “Structured Outputs doesn’t prevent all kinds of model mistakes.”
+
+Schemaに合っていても、JSONの**値そのもの**は間違うことがある、という話だ。
+
+つまり、
 
 ```text
 unstructured data
@@ -72,7 +76,7 @@ unstructured data
 → valid JSON
 ```
 
-ここまではかなり楽になった。
+まではかなり楽になった。
 
 でも、
 
@@ -84,13 +88,15 @@ valid JSON
 
 は別問題だ。
 
-OpenAI自身も、Schemaに合っていてもJSON内部の値は誤ることがあると説明している。
+**schema-valid と fact-valid は違う。**
 
-つまり、LLMで候補を100倍速く作れるようになるほど、次に詰まるのは**検証**になる。
+そしてもう一段ある。
 
-候補生成が速くなった。
+**fact-valid と safe-to-apply も違う。**
 
-だからこそ、「これは本当に同じものか」「本当に書いていいか」を決める部分が重要になった。
+後で出てくる5候補中1件のcollisionは、まさにこの3段目で止まった。
+
+LLMが候補を速く作れるようになったからこそ、次に詰まるのは検証になる。
 
 ## まず難しいのは「同じもの」を決めること
 
@@ -118,11 +124,11 @@ AB0123
 
 旧品番かもしれない。工場ごとのlocal codeかもしれない。親品番と子部品かもしれない。
 
-LLMは「たぶん同じ」と言える。
+LLMは「たぶん同じ」と候補を出せる。
 
 データ基盤は、それだけでは統合できない。
 
-なぜなら、別物を誤って1つにまとめると、その後の履歴、集計、JOIN、学習データまで全部つながってしまうからだ。
+別物を誤って1つにまとめると、その後の履歴、集計、JOIN、学習データまでつながってしまうからだ。
 
 重複を残すなら、あとで統合できる。
 
@@ -252,13 +258,27 @@ master
 
 入力1件の誤りが、利用先の数だけ再利用される。
 
-Google ResearchのSambasivanらは、53人のhigh-stakes AI practitionerを調べ、こうしたデータ問題が下流へ連鎖する現象を **Data Cascades** と呼んだ。
+Google ResearchのSambasivanらは、53人のhigh-stakes AI practitionerへの調査から、この連鎖を **Data Cascades** と呼んだ。
 
-調査では、Data Cascadesが92%のprevalenceで観測され、見えにくく、遅れて現れ、複合化しやすいと報告されている。
+論文の表現はかなり強い。
+
+> “pervasive (92% prevalence), invisible, delayed, but often avoidable.”
 
 https://research.google/pubs/everyone-wants-to-do-the-model-work-not-the-data-work-data-cascades-in-high-stakes-ai/
 
-Googleのproduction MLに関するData Validation研究も、入力データの誤りがmodel側の改善効果を打ち消し得るとして、データをalgorithmやinfrastructureと同じく**production asset**として扱うべきだとしている。
+今回の本棚DBはhigh-stakes AIではない。
+
+でも構造は同じだ。
+
+正準データへ誤りを1件入れれば、API、UI、分析、agentが同じ誤りを再利用する。
+
+だから、OCR 60件中24件を止めたことは単なる「重複除去」ではない。
+
+**24件を下流へ流さなかった**ということでもある。
+
+GoogleのData Validation研究も同じ方向を向いている。
+
+同研究はtraining / serving dataをアルゴリズムやインフラと並ぶ **“important production asset”** と位置づけ、Googleのhundreds of product teamsでproduction dataの継続監視に使われたvalidation systemを報告している。
 
 https://research.google/pubs/data-validation-for-machine-learning/
 
@@ -287,11 +307,13 @@ raw text
 - いつ判断したか
 - なぜ自動採用されたか
 
-W3C PROVも、provenanceをデータのquality、reliability、trustworthinessを評価するための情報として扱っている。
+W3C PROVはprovenanceを、データを生み出したentity、activity、peopleについての情報として定義している。
+
+そして、その情報はデータの **“quality, reliability or trustworthiness”** を評価するために使えるとしている。
 
 https://www.w3.org/TR/prov-overview/
 
-LLM時代には、この考え方がさらに重要になる。
+これはLLM時代には特に重要だ。
 
 modelもpromptも外部APIもruleも変わるからだ。
 
@@ -317,7 +339,7 @@ source
 
 顧客master、設備台帳、商品master、研究データにもかなり近い。
 
-### 455件を、455件の「正解」にはしなかった
+## 455件を、455件の「正解」にはしなかった
 
 最初にあった入力は455件。
 
@@ -375,7 +397,15 @@ OCRで60件読めた。
 
 このケースでは、OCR精度よりも**書く前に止めるprecheck**の方が重要だった。
 
-LLMでも同じだ。
+OpenAIの注意書きと並べると、意味が分かりやすい。
+
+```text
+schema-valid
+≠ fact-valid
+≠ safe-to-apply
+```
+
+LLMでも、
 
 ```text
 LLM output = canonical data
@@ -472,6 +502,10 @@ https://github.com/KAFKA2306/books/blob/main/data/category-enrichment-report.jso
 意味が違う。
 
 だから状態も分けて残す。
+
+**「分からない」を消さない。**
+
+これはLLMを安全に使うための地味だが重要な設計になる。
 
 ## 一次情報で確認できた5件でも、1件は止めた
 
@@ -583,6 +617,12 @@ API / UI / agent
 
 自動化率100%は、品質100%ではない。
 
+Google ResearchのData Cascadesが示したように、データの問題は後から、別の場所で、複合的に効いてくる。
+
+だから「今どれだけ通したか」だけでは足りない。
+
+**何を止めたかも記録する。**
+
 ## 雑な過去データは、LLMで再評価しやすくなった
 
 ここまで書くとLLMに厳しく見えるが、逆だ。
@@ -620,6 +660,15 @@ provenanceを残す
 25件中16件を自動分類しなかった。
 
 一次情報で確認済みの5件でも、1件はcollisionで止めた。
+
+文献側から見ても、これは特殊な思想ではない。
+
+- OpenAI: schemaに従っても値の誤りは残る
+- Google Research: データ問題は下流へcascadeする
+- Google Data Validation: データはproduction assetとして継続監視する
+- W3C PROV: 根拠を追えるprovenanceはquality / reliability / trustworthinessの評価に使える
+
+そして、今回の実測はその抽象論を具体的な数字にした。
 
 だから最後に残る結論はシンプルだ。
 
