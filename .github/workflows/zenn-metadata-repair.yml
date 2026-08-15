@@ -1,0 +1,84 @@
+name: Zenn Metadata Repair
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/zenn-metadata-repair.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Restore first committed published_at values
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          repairs = {
+              "articles/claude-watermark-secret-key-detection.md": (
+                  "2026-08-15 09:40",
+                  "2026-08-13 09:00",
+              ),
+              "articles/codex-chatgpt-github-issue-bridge.md": (
+                  "2026-08-15 13:01",
+                  "2026-08-12 17:02",
+              ),
+              "articles/unity-mcp-editor-boundary.md": (
+                  "2026-08-15 13:18",
+                  "2026-08-12 16:03",
+              ),
+              "articles/validate-before-pages-deploy.md": (
+                  "2026-08-15 12:44",
+                  "2026-08-13 16:04",
+              ),
+          }
+
+          changed = []
+          for raw_path, (current, origin) in repairs.items():
+              path = Path(raw_path)
+              text = path.read_text(encoding="utf-8")
+              current_line = f"published_at: {current}"
+              origin_line = f"published_at: {origin}"
+              if origin_line in text and current_line not in text:
+                  print(f"already repaired: {raw_path} -> {origin}")
+                  continue
+              count = text.count(current_line)
+              if count != 1:
+                  raise SystemExit(
+                      f"refusing repair for {raw_path}: expected exactly one {current_line!r}, found {count}"
+                  )
+              path.write_text(text.replace(current_line, origin_line, 1), encoding="utf-8")
+              changed.append(raw_path)
+              print(f"repaired: {raw_path}: {current} -> {origin}")
+
+          if not changed:
+              print("No metadata repair required")
+          PY
+
+      - name: Commit repaired metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- articles/; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            articles/claude-watermark-secret-key-detection.md \
+            articles/codex-chatgpt-github-issue-bridge.md \
+            articles/unity-mcp-editor-boundary.md \
+            articles/validate-before-pages-deploy.md
+          git commit -m "repair: restore immutable Zenn published_at origins"
+          git push origin HEAD:main
