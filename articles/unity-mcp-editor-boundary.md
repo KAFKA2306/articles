@@ -1,21 +1,21 @@
 ---
-title: "Unity MCPはゲームを作れる。でも『完成』を任せると危ない――実運用の成功例と失敗例"
+title: "2026年、Unity MCPはどこまで実用になったのか――13件の実例から見る成功・失敗・完成境界"
 emoji: "🛠️"
 type: "tech"
-topics: ["unity", "mcp", "codex", "vrchat", "ai"]
+topics: ["unity", "mcp", "codex", "claudecode", "ai"]
 published: false
 published_at: 2026-08-12 16:03
 ---
 
-# Unity MCPはゲームを作れる。でも「完成」を任せると危ない――実運用の成功例と失敗例
+# 2026年、Unity MCPはどこまで実用になったのか――13件の実例から見る成功・失敗・完成境界
 
-「AIがUnity Editorを操作できる」は、もうデモだけの話ではありません。
+「AIがUnity Editorを操作できる」は、もう面白デモだけの話ではありません。
 
-2026年7月には、Unity MCPを使いながら全6章のサバイバルアクションを完成させた個人開発者の実録があります。別の開発者は、Claude Codeへのかなり雑な指示からゲームの叩き台を作り、その後Codexから修正してbuildまで進めています。
+2026年には、自然言語だけで簡単なゲームを作った例、2Dから3Dへの作り替え、EditMode / PlayMode testまで通した例、全6章のサバイバルゲームを完成させた例まで公開されています。
 
-一方で、Unityエンジニアによる検証では、オセロを作らせても「全自動で完成」には届かず、Scene編集や細かな挙動調整は手作業の方が速かったと報告されています。
+一方で、49分かけて7回自己テストし5件を自己修正したのに「最初の部屋から出られない」問題を見逃した例、30分考え続けてVisual Effect Graphを完成できなかった例、Editor上では変更されたのに保存されず消えた例、Connected表示なのに実際には操作不能だった例もあります。
 
-つまり、いま読む価値がある問いは、
+つまり、2026年に読む価値がある問いは、
 
 ```text
 UnityをAIから操作できるか？
@@ -24,342 +24,555 @@ UnityをAIから操作できるか？
 ではありません。
 
 ```text
-どこまでなら本当に任せられるのか？
-どこから人間の検証が必要になるのか？
-長時間の実運用で何が壊れるのか？
+どの種類の仕事なら任せられるのか？
+どこまで到達したら「成功」と呼べるのか？
+実運用で人間は何を握り続ける必要があるのか？
 ```
 
 です。
 
-この記事では、MCPのsetup方法ではなく、公開されている成功例・失敗例・upstream issueを使って、**Unity MCPの実態とcompletion boundary**を整理します。
+この記事では、2026年に公開されたUnity MCP / Unity Editor agentの実運用記録を横断し、成功例と失敗例を同じ物差しで比較します。
 
-## 先に結論：プロトタイプ生成は実用域。完成保証は別問題
-
-公開事例を並べると、2026年8月時点の実態はかなりはっきりしています。
-
-| 実例 | 実際に起きたこと | ここから言えること |
-| --- | --- | --- |
-| 四駒アイ氏、2026-04-05 | Claude Codeへの雑な指示からゲームを生成。その後Codexで機能追加しbuild | 小規模な叩き台生成・反復編集は成立する |
-| 株式会社アタリ、2025-05-16 | オセロを試作。コードベースは作れるが、Sceneや細かな挙動は手動の方が速い | 「ゲーム全体を自動完成」は別問題 |
-| bunnoneta氏、2026-07-09 | Unity MCP併用で全6章のゲームを完成 | 長期開発でも成果物まで到達できる |
-| 同氏の運用記録 | 保存漏れ、型名、C#構文、改行、compile待ち、freeze調査などを経験 | Editor操作成功と成果物の正しさは一致しない |
-| CoplayDev issue群 | reconnect、batch-mode、Codex transport等の障害報告 | 接続・process lifecycle自体も運用対象になる |
-
-成功例も失敗例もあります。
-
-だから結論は、
-
-```text
-MCPは使える
-```
-
-でも、
-
-```text
-MCP toolが成功した = Unity成果物が完成した
-```
-
-ではない、です。
+結論を先に書くと、**prototype生成と反復実装はすでに実用域に入っています。しかし、完成判定、体験品質、接続安定性、保存、runtime validationまで含めると、人間のverification layerはまだ外せません。**
 
 ---
 
-## 成功例1：雑な指示から、実際にゲームの叩き台ができる
+## このレビューで何を数え、何を数えなかったか
 
-四駒アイ氏は2026年4月、Windows 11 / Unity 6.4 / Cursor環境でUnity MCPをClaude CodeとCodexから利用しています。
+これは学術的なsystematic reviewではありません。
 
-接続設定には苦戦し、Claude Code側の設定場所へ辿り着くまで「1,2時間くらいかかってしまいました」と書いています。
+2026年8月15日までに公開され、次の条件を満たす実運用記録を中心に比較しました。
 
-しかし接続後は、Claude Codeへかなり雑な指示を与え、記事中で短く、
+- 2026年に実施または公開されたことが確認できる
+- Unity EditorをAI agent / MCPから実際に操作している
+- 「導入できた」だけでなく、ゲーム、Scene、test、build、debugなどの結果が書かれている
+- 成功だけでなく、失敗・修正・人間介入の情報がある
 
-> 「ゲーム完成です。」
+note、Zenn、Qiita、DevelopersIO、個人・企業blog、GitHub issue、Unity公式情報を調査しました。Redditも探索しましたが、今回の中心表では、環境・成果物・失敗条件まで追える投稿を優先し、再現条件の薄いコメントは採用していません。
 
-と報告しています。
+また、時期によって使われているものが違います。
 
-さらに同じprojectをCodexから修正し、buildによって複数機能を追加できています。ただし本人の評価は「叩き台としては良さそう」であり、操作性には改善余地があるとも書いています。
+```text
+Unity公式 MCP / Unity AI MCP Server
+CoplayDev/unity-mcp
+uLoopMCP → Unity CLI Loop
+```
+
+AI modelもClaude Code、Codexなどが混在します。したがって、以下の事例から「製品Aの成功率は何%」のような統計は出しません。
+
+比較するのは**到達した成果の段階**です。
+
+---
+
+## 「成功」を5段階に分ける
+
+Unity MCPの記事を読むとき、最も危険なのは全部を「成功」でまとめることです。
+
+この記事では次の5段階で読みます。
+
+```text
+L1  EDITOR_OPERATED
+    Scene / GameObject / script等を操作できた
+
+L2  PLAYABLE
+    Play Modeで最低限遊べた
+
+L3  VERIFIED
+    test / console / build等の機械検証を通した
+
+L4  SUSTAINED
+    複数feature・複数sessionを跨ぐ開発を継続できた
+
+L5  RUNTIME_COMPLETED
+    公開物・実機・外部プレイヤー等、最終利用環境まで確認した
+```
+
+`tool call returned success`はL1より前の中間状態です。
+
+これをL4やL5と同じ「できた」にすると、Unity MCPの実態を見誤ります。
+
+---
+
+## 2026年の実例を並べる
+
+### 1. 2月19日：同じブロック崩しでも3時間と1時間に分かれた
+
+増田恭隆氏は、同じ「ブロック崩し」をUnity側のMCP系とCoPlay MCPで比較しています。
+
+前者は実装に約3時間かかり、本人はバグとtrial-and-errorの多さを厳しく評価。一方CoPlay側は約1時間で、人間が修正したのは4箇所だったと報告しています。
+
+これは「MCPなら全部同じ」ではないことを示す初期の重要な例です。Editor APIをどう抽象化してagentへ見せるかで、同じモデルでも結果が変わります。
+
+出典:
+https://note.com/yasutaka_masuda/n/n74397dbf2abf
+
+到達点: **L2 PLAYABLE**
+
+---
+
+### 2. 2月24日：2Dを作り、3D化し、修正loopまで回した
+
+uLoopMCPをClaude Codeから使った検証では、白紙projectから数字付きブロック崩しを作り、さらに2D版を3D版へ拡張しています。
+
+初回出力について作者は「土台がほぼできていました」と評価しています。ただし3D化では、ブロックが壁にめり込む、ボールが正しく反射しないなどの問題が発生し、人間が動作確認しながら修正を依頼しています。
+
+重要なのは、Hierarchy取得、Editor画面capture、compile、test、Play Mode制御をagentが使えるため、単発生成ではなく**観測→修正**へ進めたことです。
+
+出典:
+https://zenn.dev/unsoluble_sugar/articles/cd8d59be7b8f85
+
+到達点: **L2〜L3**
+
+---
+
+### 3. 2月28日：「Connected」なのに動かないところから遊べるまで復旧
+
+よなよな@AIゲーム開発氏は、Unity 6 + Codex + MCPでVampire Survivors系ゲームを作る過程を記録しています。
+
+最初は、
+
+```text
+Unity: Connected
+Codex: projectを列挙できない / 操作不能
+```
+
+という状態でした。
+
+さらにMain Camera消失、真っ白・真っ青な画面、初期化順序の問題、参照待ちによるfreeze、UI責務の重複まで発生しています。
+
+最終的にはHP/XP、被弾、攻撃、SE等を持つ遊べる状態まで進みましたが、作者が得た教訓は「Codexに任せるほど、人間側の観測精度が重要になる」でした。
+
+出典:
+https://note.com/yonayona_ai_game/n/nb1ec6a528bbd
+
+到達点: **L2**
+
+この事例は、connection stateそのものをcompletion evidenceにしてはいけないことを示します。
+
+---
+
+### 4. 3月8日：12 objectは作れた。でも部屋に入れなかった
+
+DevelopersIOはUnity公式MCP + Claude Code / Opus 4.6でTPS templateを改造しています。
+
+新しい部屋を指示すると、AIは壁、床、天井、doorway等の12 objectを生成しました。
+
+しかし人間がPlay Modeで見ると、
+
+- 既存壁がdoorwayを塞いでいて侵入不能
+- 部屋内部にlightがなく暗い
+- scaleが既存sceneと不整合
+- Static Editor Flagsが未設定
+- materialも既存環境と不統一
+
+でした。
+
+AIは外部4視点からcaptureしていましたが、部屋内部へcameraを入れて確認していませんでした。
+
+出典:
+https://dev.classmethod.jp/articles/unity-mcp-tps-game-claude-code-modification/
+
+到達点: **L1 EDITOR_OPERATED。ただしgameplay validationでは失敗**
+
+これはこの記事の中心命題を非常に分かりやすく示します。
+
+```text
+12 objects created successfully
+!=
+usable room created successfully
+```
+
+---
+
+### 5. 3月11日：自然言語だけでCatchGameを全自動生成
+
+miya氏はUnity MCPのAssistant windowからCodexを使い、簡単なcasual game「CatchGame」を自然言語のみで全自動開発したと報告しています。記事には生成過程、play、生成codeのvideo timelineもあります。
+
+出典:
+https://note.com/miya19/n/n4503e377dc45
+
+到達点: **L2 PLAYABLE**
+
+これは「簡単なゲームなら、コード生成だけでなくUnity Editor操作まで含めて自然言語から成立する」という強い成功例です。
+
+一方、この1件から大型gameやproduction qualityまで一般化はできません。
+
+---
+
+### 6. 3月13日：7回testして5件直したのに、最初の部屋から出られなかった
+
+2026年の事例の中で、最も示唆が大きい検証の一つです。
+
+DevelopersIOはClaude Code + Unity MCPに、
+
+1. 弾幕shooting
+2. athletics game
+3. 探索型dungeon
+
+を作らせています。
+
+単純な前2つは初回出力で成立し、所要時間は7.5分、9分でした。
+
+複雑なdungeonは49分。Claude Codeは自ら7回Play Mode testを実行し、5件の問題を自己修正しました。
+
+それでも人間が実際に操作すると、**スタート部屋の出口に初期jumpでは届かず、最初の部屋から一歩も出られませんでした。**
+
+原因は明確です。
+
+agentはtest時にplayerをMCP経由でwarpして各部屋を検査していました。
+
+```text
+state consistency test: PASS
+actual player traversal: FAIL
+```
+
+だったのです。
+
+人間の指摘後、4分で出口位置は修正され、clearまで進めるようになりました。しかし複数回playすると別の詰みpatternも残っていました。
+
+出典:
+https://dev.classmethod.jp/articles/unity-mcp-claude-code-2d-game-verification/
+
+到達点: **L3 VERIFIEDに近いが、実プレイ基準では未完了**
+
+この事例から分かるのは、agentic test loopがあっても**test oracleが間違っていれば自律性は完成保証にならない**ということです。
+
+---
+
+### 7. 3月22日：企画→実装→検証→WebGL公開をworkflow化
+
+umezu_y氏はCoplayDev/unity-mcpとClaude Codeを使い、ゲーム開発を8 phaseに分割した`hcg-workflows`を公開しています。
+
+特に重要なのは、AIに好きに作らせるのではなく、
+
+```text
+仕様
+→ task
+→ 実装
+→ test
+→ console
+→ Play Mode
+→ screenshot
+→ commit
+→ release
+```
+
+をworkflowとして固定している点です。
+
+L1はcompile error、L2はPlay Mode runtime error、L3はscreenshotによる視覚確認という段階的verificationも定義されています。
+
+出典:
+https://qiita.com/umezu_y/items/090a0fd25f9f915ad375
+
+到達点: **成果物そのものより、L3以降へ進むための運用設計の証拠**
+
+「高性能なmodelを使えば完成する」より、「completion contractを設計する」の方が実務では再現性があります。
+
+---
+
+### 8. 4月5日：雑な指示からゲームを作り、別agentでbuildまで進めた
+
+四駒アイ氏はWindows 11 / Unity 6.4 / Cursor環境で、Claude CodeとCodexの両方からUnity MCPを利用しています。
+
+Claude Codeへかなり雑な指示を与えた結果を、記事中で短く「ゲーム完成です。」と報告。そのprojectをCodexから修正し、buildによって複数機能を追加しています。
+
+ただし本人の評価は「叩き台としては良さそう」で、操作性には改善余地があるとしています。
 
 出典:
 https://note.com/4komaai/n/nafd4090dc068
 
-ここで重要なのは、「できた」の中身です。
-
-```text
-自然言語
-→ Scene / script生成
-→ build可能なゲームの叩き台
-```
-
-までは実例があります。
-
-しかし、
-
-```text
-面白い
-操作しやすい
-壊れない
-公開品質
-```
-
-までは同じ証拠からは言えません。
-
-**生成できることと、完成品質を満たすことは別stateです。**
-
----
-
-## 成功例2：Unity MCPを使いながら、ゲーム1本を本当に完成させた例もある
-
-「結局デモしか作れないのでは？」という疑問に対しては、もっと強い反例があります。
-
-bunnoneta氏は2026年7月9日、Unity MCPを使った開発で、全6章構成のサバイバルアクション『昭和サバイバル』を完成させたと報告しています。
-
-記事では、設計、コーディング、debugだけでなく、完成直前のbalance調整、gamepad対応、演出、敵追加、当たり判定修正までAIと往復しています。
-
-出典:
-https://note.com/bunnoneta/n/n91bbcd3fd700
-
-これはかなり重要です。
-
-Unity MCPは、単にcubeを置くdemoに限定されていません。
-
-```text
-長い開発
-→ bug修正
-→ 複数scene
-→ gameplay調整
-→ 入力対応
-→ 最終仕上げ
-→ 完成
-```
-
-まで付き合える事例が実際にあります。
-
-ただし、その成功例こそが「tool successだけでは足りない」ことも同時に証明しています。
-
----
-
-## 完成例で露呈した「見た目だけ成功」の罠
-
-同じ開発記には、Unity MCPを長く使ったからこそ分かった地雷が具体的に残されています。
-
-### 1. Editor上では変わったのに、保存されていない
-
-scriptやassetの値を書き換えても、Unity側で`EditorUtility.SetDirty()`等の適切な保存処理がなければ、見た目には反映されてもEditorを閉じると消えるケースを経験しています。
-
-Prefabではさらに保存処理が必要だったとされています。
-
-これは典型的な偽成功です。
-
-```text
-MCP tool: success
-Unity画面: changed
-再起動後: lost
-```
-
-tool responseだけをcompletion evidenceにしていたら、この不具合はPASSになります。
-
-### 2. scriptを書いた直後はUnityがまだ古い状態
-
-Unityはscript変更後にcompile/domain reloadを挟みます。
-
-同記事では、書き換え直後に次操作へ進むとcompile完了前の古い状態で処理が進むため、待ってconsole errorを確認する運用が必要だったとされています。
+到達点: **L2 + build実行**
 
 つまり、
 
 ```text
-write script
-→ tool success
-→ next action
+natural language
+→ scene / script
+→ playable draft
+→ another agentで改修
+→ build
 ```
 
-では速すぎる場合があります。
+は現実に起きています。
 
-必要なのは、
+---
+
+### 9. 4月11日：最初は大量error、別の観測loopを足すと遊べるまで修正
+
+ティー氏はCoplayDev/unity-mcpで「簡単な神経衰弱」を作らせました。
+
+一見完成したものの、Playすると大量のerrorが出ました。
+
+そこでUnity CLI Loop（旧uLoopMCP）を追加し、Play Modeとerror確認を使ったdebugを依頼すると、問題なく遊べるところまで修正できたと報告しています。
+
+出典:
+https://note.com/mindpower/n/nba514492f5a5
+
+到達点: **最初はL1止まり → observation / repair loop追加後にL2**
+
+これも重要です。
+
+**生成能力より、観測能力を足したことで成果が上がっています。**
+
+---
+
+### 10. 4月17日：既存ゲームの全自動移植はできた。ただし「未完成」
+
+miya氏はCodex + UnityMCPで既存の「マグネットスイーパー」をUnityへ全自動移植しています。
+
+ゲーム自体は自動実装された一方、本人はUI修正等が必要で「まだまだ未完成」と評価し、実装にもそれなりの時間がかかったと書いています。
+
+出典:
+https://note.com/miya19/n/n8df417077cb0
+
+到達点: **L2に近いprototype。completionは未達**
+
+成功例だけを並べるより、この「動くが未完成」が実運用の中央値に近い可能性があります。
+
+---
+
+### 11. 5月7日：bug fixは強い。shader / VFXは弱かった
+
+株式会社ユニスポットはClaude Code + Unity MCPで、既存3D projectを対象に複数種類の仕事を試しています。
+
+既存のofficial controllerを参考にVRM characterのanimation不具合を直すtaskでは、構造を確認し、script作成・attachまで行って正常にanimationするところまで到達しました。
+
+一方、shader調整では何度か試しても期待した変化が出ず失敗。Visual Effect Graph生成では約30分処理し、5時間枠のtoken容量の約50%を消費したのに、output nodeが途中で止まり動作しませんでした。
+
+出典:
+https://www.uni-spot.com/blog_post/claude-unity-mcp/
+
+到達点:
 
 ```text
-write script
-→ compile settle
-→ console readback
-→ next action
+existing bug fix: strong
+art direction: weak / variable
+complex VFX graph generation: failed in this case
+```
+
+「Unity MCPは強いか弱いか」ではなく、**task classで性能が違う**と考える方が正確です。
+
+---
+
+### 12. 6月20日：3D鬼ごっこ + EditMode 4件 + PlayMode 3件が全PASS
+
+zuqqhi2氏はCoplayDev版unity-mcp + Codexで、最小限の3D鬼ごっこを作らせています。
+
+要求には最初からEditMode / PlayMode testも含めています。
+
+生成後、Unity Test Runnerで、
+
+- EditMode: 4 testすべてPASS
+- PlayMode: 3 testすべてPASS
+
+を確認しています。
+
+初期cameraはstage上部が見切れていましたが、追加指示で修正されています。
+
+出典:
+https://zuqqhi2.com/coplaydev-unity-mcp-codex-game-dev
+
+到達点: **L3 VERIFIED**
+
+この例は、completion conditionを最初からpromptに含めると「動いた」より強い証拠を作れることを示します。
+
+---
+
+### 13. 6月24日：Roll-a-Ballは約10分でerrorなくplayable
+
+花王のTsuchiyaK氏はUnity公式MCP Server + Claude Codeで、Unity入門のRoll-a-Ballを作らせています。
+
+作業開始から約10分後、実際にPlayし「エラーなくプレイできるゲーム」が完成。その後「ホラーゲームっぽくして」という曖昧な指示でも、lighting、post process、enemy、game over処理まで追加しています。
+
+出典:
+https://qiita.com/TsuchiyaK/items/a3de1ac034bf94cf905b
+
+到達点: **L2 PLAYABLE**
+
+単純game / tutorial規模では、自然言語からplayableまでの摩擦はかなり小さくなっています。
+
+---
+
+## そして7月：全6章のゲームを完成させた実例が出た
+
+「結局、小さいdemoしかないのでは？」に対する強い反例がbunnoneta氏の『昭和サバイバル』です。
+
+2026年7月9日、Unity MCPを使いながら設計、coding、debugを進め、全6章構成、町育成、boss、gamepad対応等を含むUnity製survival actionを完成させたと報告しています。
+
+出典:
+https://note.com/bunnoneta/n/n91bbcd3fd700
+
+前段階の開発記:
+https://note.com/bunnoneta/n/ndd6c132b1abf
+
+到達点: **L4 SUSTAINED**
+
+ここまで来ると、Unity MCPを「prototype toolだけ」と呼ぶのも正確ではありません。
+
+ただし、この成功例こそ、完成までの摩擦を大量に記録しています。
+
+- `execute_code`では型名をnamespace / assembly込みで指定しないと失敗する場面
+- `EditorUtility.SetDirty()`等を呼ばず、変更が見た目だけ反映され保存されない場面
+- prefab saveが必要な場面
+- compile / domain reload待ち
+- balanceが完成直前まで崩れていた問題
+- logと観測器を作りながら原因を潰すdebug
+
+つまり、長期成功例の実態は、
+
+```text
+AIが全部正しく作った
+```
+
+ではありません。
+
+```text
+AIと人間が
+生成 → 観測 → failure発見 → 修正 → 再検証
+を何度も回し、最終的に完成へ到達した
 ```
 
 です。
 
-### 3. AIが一発でdebugしてくれるわけではない
-
-最終boss撃破時のfreezeでは、原因をAIが即答したのではなく、frame単位で処理を記録する`HangWatchdog`を作り、実際にfreezeさせ、logを読んで原因を追ったと報告されています。
-
-要するにAIの価値は、
-
-```text
-魔法の一発回答
-```
-
-というより、
-
-```text
-仮説
-→ 観測器を作る
-→ 再現する
-→ logを読む
-→ 修正する
-```
-
-という普通のengineering loopを高速に回せることにあります。
-
-この違いは大きいです。
+これは十分に大きな成果ですが、意味は全く違います。
 
 ---
 
-## 失敗例：Unityエンジニアが試しても「全部自動」は難しかった
+## 2026年の事例から見える「得意・苦手」の境界
 
-株式会社アタリのUnityエンジニア赤池氏は2025年5月、Claude 3.7 SonnetとCursorを使ってUnity MCPを比較しています。
+事例をtask classでまとめると、傾向はかなり揃います。
 
-オセロを作らせた結果について、記事では、
+| task | 2026年の観測 | 判断 |
+| --- | --- | --- |
+| GameObject / Scene生成 | 多数の成功例 | 実用域 |
+| script生成・attach | 多数の成功例 | 実用域 |
+| 簡単な2D / 3D game prototype | 10分前後〜短時間の成功例あり | 実用域 |
+| 既存bug調査・修正 | animation修正等で成功 | 強い |
+| compile / console / test loop | toolが揃えば自律修正例あり | 強いがoracle設計が必要 |
+| build | 実例あり | 利用可能 |
+| 複雑なgame progression | 49分 + 自己修正後も詰みを残した例 | 人間validation必須 |
+| art direction / game feel | 成功例と失敗例が混在 | 不安定 |
+| shader / VFX graph | 失敗例あり | 高コスト・不安定 |
+| connection / process lifecycle | 複数の障害報告 | 運用設計が必要 |
+| 長期game development | 全6章完成例あり | 可能。ただし人間の基準・観測が必要 |
+| 外部playerが感じる面白さ | 自動評価の証拠は弱い | まだ人間側 |
 
-> 「結局手動の方が早いという印象です。」
+---
 
-とまとめています。
+## 研究側から見ると「修正loopが本体」という解釈とも整合する
 
-コードのベース生成はできるものの、Scene編集と細かな挙動調整は全自動完成に届かなかった、という評価です。また曖昧な自然言語指示では、後から構造的に調整しにくいcodeが生成される場合も報告されています。
+2026年7月公開のpreprintでは、MCPとは別の条件ですが、Unity C# scene生成をsingle-passで厳しく評価しています。
+
+4つのopen-weight model、26種類のgoal pattern、合計10,400 generationを評価したところ、**single-passではrunnable sceneまでcompileしたものが0件**でした。
 
 出典:
-https://note.com/atali/n/n64b709af8411
+https://arxiv.org/abs/2607.10187
 
-これは「Unity MCPは役に立たない」という話ではありません。
+この研究をUnity MCPの成功率へ直接読み替えてはいけません。
 
-むしろ、得意領域が見えます。
+条件が違います。
+
+しかし示唆は重要です。
+
+公開demoの多くは、
 
 ```text
-強い:
-- 既存codeの調査
-- 部分修正
-- debugging
-- prototype
-- repetitive Editor work
-
-難しい:
-- 曖昧な仕様からの最終品質決定
-- game feel
-- fine tuning
-- 長い依存関係を跨ぐcompletion保証
+生成
+→ compile
+→ error取得
+→ 修正
+→ scene観測
+→ 再修正
 ```
 
-後者を前者と同じ「AI操作」でまとめると期待値を誤ります。
+というiterative repair loopを使っています。
+
+「AIが一発でUnityを理解する」ことより、**Unityを観測でき、失敗から戻れること**の方が2026年時点では重要だと考える方が、実例と整合します。
 
 ---
 
-## 2作目でもsetupで約1時間消える。それが実運用
+## Unity公式化でsetup問題は消えたのか
 
-さらに2026年7月の別の開発記では、前作でUnity MCPを使っていた作者が、次のprojectでも同じ構成を使おうとして初手で止まっています。
+2026年5月、UnityはUnity AIをopen betaとして公開し、MCP Serverも公式toolchainへ入れました。
 
-原因は、MCP for Unity packageがprojectごとのinstallだったことでした。
+公式:
+https://unity.com/blog/unity-ai-how-to-get-started
+https://unity.com/blog/unity-ai-mcp-how-to-get-started
 
-作者は手順を思い出すのに、
+これは大きな変化です。
 
-> 「小一時間溶かしました。」
+しかしUnity自身もopen betaについて、features、behavior、availabilityは変更・制限・終了の可能性があると明記しています。
 
-と書いています。
-
-その後、JSONで事前検証済みの30 event等をUnityへ組み込み、一通り遊べる状態まで到達しています。
-
-出典:
-https://note.com/bunnoneta/n/naa2726ea0a32
-
-この事例が示すのは、MCPの価値と導入摩擦が同時に存在することです。
-
-1回動いたからといって、
-
-```text
-別project
-別Unity version
-別client
-別transport
-```
-
-でもそのまま動くとは限りません。
-
-**MCP server自体も開発環境のdependencyとして管理する必要があります。**
-
----
-
-## upstream issueを見ると、接続そのものもproduction concernになる
-
-実運用の難しさは個人blogだけではありません。
-
-CoplayDev/unity-mcpのissueにも、再現条件付きの障害が残っています。
-
-### reconnect：serverを何度も再起動する状態
-
-Issue #672では、2026年2月、server disconnectと自動reconnect不足により、利用者が「multiple times per hour」serverを再起動することがあると報告しています。
-
-このissueは現在closedですが、重要なのは「Unity操作APIが豊富か」以前に、**長時間sessionのlifecycleが実用性を左右する**ことです。
-
-https://github.com/CoplayDev/unity-mcp/issues/672
-
-### batch buildがinteractive MCP serverを落とす
-
-Issue #1196では、2026年6月、同一machine上のUnity batch-mode processが終了した際、interactive HTTP serverまで停止させる問題が再現されています。
-
-報告者の環境では、agent-driven batch compileを頻繁に回すため、serverが1日に何度も停止したとされています。
-
-このissueは修正PR #1235に紐づきclosedしています。
-
-https://github.com/CoplayDev/unity-mcp/issues/1196
-
-これは特に重要です。
-
-```text
-interactive agent session
-+
-CI / batch build
-```
-
-を同じmachineで併用する、本格運用ほど踏みやすい問題だからです。
-
-### Codexからtool一覧は見えるのに、全callが失敗する例
-
-Issue #1215では、Windows / Unity 2022.3.62f3 / MCP for Unity 9.7.3 / Codex / HTTP環境で、tool自体は見えているのに全callが`unsupported call`になる報告があります。
-
-https://github.com/CoplayDev/unity-mcp/issues/1215
-
-一方、CoplayDevの最新stable releaseは2026年8月2日公開の`v10.1.2`で、release noteにはCodex HTTP transport repair、Windows server launch修正、過剰なapproval prompt修正などが含まれています。
+またcommunity側も高速で変化しています。CoplayDev/unity-mcpの`v10.1.2`は2026年8月2日に公開され、release noteにはCodex HTTP transport、Windows launch、approval prompt等の修正が並びます。
 
 https://github.com/CoplayDev/unity-mcp/releases/tag/v10.1.2
 
-つまり、2026年のUnity MCPは「止まった実験」ではありません。
+したがって、2026年2月の体験談と2026年8月の体験談は完全には同じtechnologyを測っていません。
 
-**実用化が進んでいる一方で、transport、approval、process lifecycle、Editor state同期のような運用問題を今まさに潰している段階**です。
+この変化速度自体が、現時点のproduction adoptionでversion pinとregression testを必要とする理由です。
 
 ---
 
-## Unity自身もMCPを提供するようになった。ただしopen beta
+## 自分たちの`image2outfit`は、まだ成功例に数えない
 
-ここも2025年の記事とは状況が変わっています。
+`KAFKA2306/image2outfit`のDraft PR #212では、local Blender + Unity MCP supportを実装しています。
 
-Unity Technologiesは2026年6月、公式blogでUnity自身がofficial MCP serverを提供していることを説明しています。
+https://github.com/KAFKA2306/image2outfit/pull/212
 
-https://unity.com/blog/mcp-servers-game-development
+しかしPRは次を明示的に`NOT_RUN`としています。
 
-同ページでは、UnityのAI toolsは現在open betaであり、機能・挙動・availabilityは変更、制限、終了の可能性があるとも明記しています。
+- user Windows環境でのPowerShell setup
+- live Blender MCP connection
+- live Unity MCP connection / package resolution
+- Blender Assistant → Codex → MCP end-to-end call
 
-つまりMCPという考え方自体は、community pluginだけの実験からUnity公式のproduct surfaceへ進みました。
+またMCP integrationはoptional authoring supportであり、既存の`requiredCompletionGates`を変更していません。
 
-しかし、officialになったことと、
+つまり、現時点で言えるのは、
 
 ```text
-AIが最終成果物を自律的に保証できる
+integration code exists
+static contract exists
 ```
 
-ことは別です。
+までです。
 
-MCPが標準化するのは**操作とcontext access**です。
+```text
+live Unity MCP E2E passed
+VRChat runtime completed
+```
 
-completion criteriaそのものではありません。
+とはまだ言えません。
+
+外部事例をレビューした結果、自分たちの実装についても同じ基準を適用します。
 
 ---
 
-## だから3種類の「成功」を分ける
+## 実運用では、MCPをcompletion gateではなくauthoring adapterにする
 
-実例を見た後なら、この区別の必要性が分かります。
+2026年の事例を横断すると、現実的な構造はこれです。
+
+```text
+Codex / Claude Code
+        ↓
+Unity MCP
+        ↓
+Unity Editor
+        ↓
+compile / console / tests
+        ↓
+Play Mode observation
+        ↓
+build
+        ↓
+actual runtime / user validation
+```
+
+MCPの役割は、上流の操作を速くすることです。
+
+完成条件を短絡することではありません。
+
+最低でもstateは分けます。
 
 ```text
 TOOL_SUCCESS
@@ -369,261 +582,95 @@ EDITOR_VALIDATED
 RUNTIME_COMPLETED
 ```
 
-### TOOL_SUCCESS
+例えば、
 
-MCP clientからUnityへ命令を送り、tool responseが成功した状態です。
-
-```text
-GameObjectを作成した
-Componentを変更した
-scriptを編集した
-test toolを呼んだ
+```json
+{
+  "tool_success": true,
+  "editor_validated": true,
+  "runtime_completed": false,
+  "runtime_reason": "NOT_RUN"
+}
 ```
 
-これは必要です。
-
-しかし、ここで止めると、
-
-```text
-保存されていない
-compile前の古いstate
-違うobjectを編集した
-referenceが切れている
-```
-
-を見逃せます。
-
-### EDITOR_VALIDATED
-
-Unity Editor側を読み直し、期待したstateになったことを確認した状態です。
-
-```text
-tool response = success
-AND
-対象objectが存在
-AND
-期待componentが存在
-AND
-referenceが解決
-AND
-compile errorなし
-AND
-保存後にstateが残る
-```
-
-ここでは「AIが変更しましたと言った」ことを証拠にしません。
-
-Editor stateを再観測します。
-
-### RUNTIME_COMPLETED
-
-実際の成果物に必要な最終gateを通った状態です。
-
-gameならplaytest、build、input、performance、gameplay。
-
-VRChat向けならproject contractに応じて、Unity import、NDMF / Modular Avatar processing、Build & Test、実機runtime等が入ります。
-
-```text
-Editor validation passed
-!=
-runtime completion passed
-```
-
-この境界が記事の中心です。
+なら、task全体をcompletedとは呼びません。
 
 ---
 
-## `image2outfit` では、意図的にNOT_RUNのままにしている
+## では、2026年8月に導入する価値はあるのか
 
-`KAFKA2306/image2outfit` のDraft PR #212は、OpenAI Codexからlocal Blender + Unity MCPを使うsupportを実装しています。
+あります。
 
-2026年8月15日時点でもPRはDraftで、本文では次を明示的に`NOT_RUN`としています。
+ただし「Unity開発を全部AIにするtool」として導入すると期待値を外します。
 
-- user Windows環境でのPowerShell setup
-- live Blender MCP connection
-- live Unity MCP connection / package resolution
-- Blender Assistant → Codex → MCP end-to-end call
-
-PR:
-https://github.com/KAFKA2306/image2outfit/pull/212
-
-また、このintegrationはoptional local authoring supportであり、既存の`requiredCompletionGates`を変更しない設計です。
-
-つまり、このPRから言えるのは、
+特に価値が高いのは、
 
 ```text
-integration code exists
-static contract exists
-```
-
-までです。
-
-**live Unity MCP E2Eが成功した、VRChat成果物が完成した、とはまだ言いません。**
-
-この区別を消すと、この記事自身が批判している「偽の成功」を再生産します。
-
----
-
-## MCPはcompletion gateではなくauthoring adapterにする
-
-実運用では、次の位置に置くのが安全です。
-
-```text
-Codex / Claude Code / Cursor
-        ↓
-MCP for Unity / Unity MCP Server
-        ↓
-Unity Editor
-        ↓
-state readback / console / tests
-        ↓
-build
-        ↓
-runtime / human validation
-```
-
-MCPを導入したことで、既存のcompletion gateを短絡しません。
-
-これはMCPを信用しないという話ではありません。
-
-**操作チャネルと検証チャネルの責務が違う**という話です。
-
----
-
-## 実運用で「任せやすい仕事」と「任せきれない仕事」
-
-公開事例から、現時点では次の切り分けが妥当です。
-
-### 任せやすい
-
-- GameObject / Componentの大量作成
-- Sceneの叩き台
-- script生成・部分修正
-- 既存projectの検索・調査
-- consoleを使ったdebug loop
-- repetitiveなEditor操作
-- test / buildの起動
-- 小規模prototype
-
-### 検証を別に持つべき
-
-- reference integrity
-- asset / Prefabの永続保存
-- compile / domain reload後のstate
-- build processor後のstate
-- inputやscene transition
-- performance
-- game balance / game feel
-- VRChat等のtarget runtime
-
-ここを分ければ、MCPはかなり強力です。
-
-逆に、全部を一つの`success`へ潰すと危険です。
-
----
-
-## 再利用できるcompletion contract
-
-GUI applicationをAI agentへ渡す場合は、結果をBoolean一つにしない方がいいです。
-
-```yaml
-completion:
-  tool_success:
-    required: true
-  editor_validation:
-    required: true
-  runtime_validation:
-    required: true
-```
-
-実行環境がなくruntime validationを回せないなら、
-
-```yaml
-runtime_validation:
-  status: NOT_RUN
-```
-
-とします。
-
-`NOT_RUN`を`PASS`へ変換しない。
-
-単純ですが、実際の成功例・失敗例を見ると、この区別が一番効きます。
-
----
-
-## まとめ：Unity MCPは「使える」。だからこそ成功条件を厳しくする
-
-Unity MCPは、もうcube demoだけの技術ではありません。
-
-2026年には、
-
-- 雑なpromptからplayableな叩き台を作った例
-- Codexで追加修正してbuildした例
-- AIとUnity MCPを使い、ゲーム1本を完成させた例
-
-まで公開されています。
-
-一方で同じ実運用から、
-
-- setupに1〜2時間かかる
-- 別projectで再設定に詰まる
-- 見た目だけ変わり保存されない
-- compile待ちが必要
-- 型名、C# version、改行差で失敗する
-- freezeは再現用の観測器から作る
-- MCP server自体がdisconnectする
-- batch buildとinteractive sessionが干渉する
-
-という現実も出ています。
-
-だから評価は、
-
-```text
-Unity MCPはまだ使い物にならない
-```
-
-でも、
-
-```text
-AIにUnityを全部任せれば完成する
-```
-
-でもありません。
-
-より正確には、
-
-```text
-AIはUnity Editorをかなり深く操作できるようになった。
-しかし「操作できた」「Editor上で正しい」「成果物として完成した」は、まだ別々に証明しなければならない。
+prototype
+repetitive scene work
+script scaffolding
+existing bug investigation
+test generation
+console-driven repair
+variant creation
 ```
 
 です。
 
-MCPが強力になるほど、最後に重要になるのはtool数ではありません。
+逆に、
 
-**何をもって完成と呼ぶかを、AIの外側に固定できるかです。**
+```text
+game feel
+art direction
+playability across procedural states
+final visual quality
+runtime-specific behavior
+player experience
+```
 
-## 参考・検証元
+は、まだ独立したvalidationが必要です。
 
-- Unity公式: MCP servers in game development explained  
-  https://unity.com/blog/mcp-servers-game-development
-- CoplayDev MCP for Unity  
-  https://github.com/CoplayDev/unity-mcp
-- CoplayDev v10.1.2  
-  https://github.com/CoplayDev/unity-mcp/releases/tag/v10.1.2
-- CoplayDev Issue #672: reconnect / server lifecycle  
-  https://github.com/CoplayDev/unity-mcp/issues/672
-- CoplayDev Issue #1196: batch-modeとinteractive serverの干渉  
-  https://github.com/CoplayDev/unity-mcp/issues/1196
-- CoplayDev Issue #1215: Codex / HTTPでのunsupported call報告  
-  https://github.com/CoplayDev/unity-mcp/issues/1215
-- 四駒アイ「2026/4/5 UnityのMCPサーバ設定をしてみる in Cursor」  
-  https://note.com/4komaai/n/nafd4090dc068
-- 株式会社アタリ「Unity × MCPを試してみた：ClaudeとCursorの比較レビュー」  
-  https://note.com/atali/n/n64b709af8411
-- bunnoneta「AIと二人三脚で作ったゲーム『昭和サバイバル』、ついに完成しました」  
-  https://note.com/bunnoneta/n/n91bbcd3fd700
-- bunnoneta「Unity MCPでReigns系ゲームを組み上げるまで」  
-  https://note.com/bunnoneta/n/naa2726ea0a32
-- image2outfit Draft PR #212  
-  https://github.com/KAFKA2306/image2outfit/pull/212
+2026年の公開実例から得られる一番有用な判断は、
+
+> **Unity MCPは「使えるか？」の段階を越えた。ただし「何をもって完成とするか」を人間が定義しないと、速く間違った完成へ到達する。**
+
+だと思います。
+
+AIがUnityを操作できたこと自体は、もうニュースではありません。
+
+次に競争になるのは、
+
+```text
+何を任せるか
+何を観測するか
+何を自動検証するか
+どこで人間が止めるか
+```
+
+を設計できるかです。
+
+---
+
+## 参照した主な2026年実例・一次情報
+
+- Unity AI open beta: https://unity.com/blog/unity-ai-how-to-get-started
+- Unity MCP getting started: https://unity.com/blog/unity-ai-mcp-how-to-get-started
+- DevelopersIO TPS検証: https://dev.classmethod.jp/articles/unity-mcp-tps-game-claude-code-modification/
+- DevelopersIO 2D 3テーマ検証: https://dev.classmethod.jp/articles/unity-mcp-claude-code-2d-game-verification/
+- uLoopMCP / Unity CLI Loop実運用: https://zenn.dev/unsoluble_sugar/articles/cd8d59be7b8f85
+- 30分ヴァンサバ復旧記録: https://note.com/yonayona_ai_game/n/nb1ec6a528bbd
+- Unity MCP比較・ブロック崩し: https://note.com/yasutaka_masuda/n/n74397dbf2abf
+- CatchGame全自動生成: https://note.com/miya19/n/n4503e377dc45
+- マグネットスイーパー移植: https://note.com/miya19/n/n8df417077cb0
+- 神経衰弱 + debug loop: https://note.com/mindpower/n/nba514492f5a5
+- Claude Code / Codexのゲーム生成: https://note.com/4komaai/n/nafd4090dc068
+- 企画→公開workflow: https://qiita.com/umezu_y/items/090a0fd25f9f915ad375
+- 3D鬼ごっこ + EditMode / PlayMode test: https://zuqqhi2.com/coplaydev-unity-mcp-codex-game-dev
+- Unity公式MCP + Roll-a-Ball: https://qiita.com/TsuchiyaK/items/a3de1ac034bf94cf905b
+- Unity MCP + 3D project検証: https://www.uni-spot.com/blog_post/claude-unity-mcp/
+- 『昭和サバイバル』完成記: https://note.com/bunnoneta/n/n91bbcd3fd700
+- 『昭和サバイバル』全6stage開発記: https://note.com/bunnoneta/n/ndd6c132b1abf
+- 『妖怪なんでも相談所』2作目実装記: https://note.com/bunnoneta/n/naa2726ea0a32
+- CoplayDev/unity-mcp v10.1.2: https://github.com/CoplayDev/unity-mcp/releases/tag/v10.1.2
+- 10,400 single-pass Unity generation preprint: https://arxiv.org/abs/2607.10187
+- image2outfit Draft PR #212: https://github.com/KAFKA2306/image2outfit/pull/212
