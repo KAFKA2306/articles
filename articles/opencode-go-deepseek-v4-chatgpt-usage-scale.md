@@ -1,96 +1,113 @@
 ---
-title: "月10ドルのOpenCode Goは安いのか？ Copilot・Cursor・Claude Code・Codexと比べる"
+title: "ChatGPTを使い倒している私に、月10ドルのOpenCode Goが刺さった理由"
 emoji: "♾️"
 type: "tech"
-topics: ["opencode", "ai", "coding", "cost", "capacity"]
+topics: ["opencode", "chatgpt", "coding", "mcp", "local"]
 published: false
 published_at: 2026-08-13 12:09
 ---
 
-OpenCode Goは月$10。
+OpenCode Goは最初の月$5、その後$10/月。
 
-DeepSeek V4 Flashには、公式表で **月158,150 requests相当** とある。
+DeepSeek V4 Flashは、公式が観測した典型的な利用パターンなら **月158,150 requests相当** とされている。
 
-では、他のAI codingサービスと比べても安いのか。
+最初は「安いな」で終わっていた。
 
-## 私はいま、ChatGPTをかなり重く使っている
+でも、自分が最近書いた記事を読み返すと、私にとっての価値は別のところにあった。
 
-私にとってChatGPTは、もう「たまに質問するチャット」ではない。
+**私はすでに、AIにローカルPCでやらせたい仕事を大量に持っていた。**
 
-GitHubの複数repoを横断して状態を確認し、IssueやPR、CIを追う。記事を調査して書き直す。金融データを読む。画像を作る。scheduled taskの設計や運用も任せる。
+## ChatGPTはもう「司令塔」になっている
 
-同じ日に、これらを何本も並行して進めることも普通になった。
+私はChatGPTで、GitHubの複数repoを横断し、Issue、PR、CI、記事、調査、金融、画像、scheduled taskまで扱っている。
 
-使っていて感じるのは、**「何回質問したか」では負荷を表せない**ということだ。
+別の記事では、123個の個人開発を横断すると、重要なのはコード生成より「次にどの仕事を進めるか」だと書いた。
 
-短い確認を1回するのと、大きなrepoを読み、検索し、修正し、CIまで追う1回では重さがまるで違う。
+- [個人開発が123個になって分かった。ChatGPTに任せるべきはコードより「次の1件」だった](https://zenn.dev/kafka2306/articles/chatgpt-multiproject-autonomy)
 
-だからOpenCode Goの「158,150 requests」を見たときも、単純に「ChatGPTより何倍使える」とは思わなかった。
+この役割はChatGPTから動かしたくない。
 
-むしろ気になったのは、**この価格で、どれだけ重い仕事を継続して回せるのか**だった。
+一方で、ChatGPTやGitHub上のagentだけでは扱いにくい仕事が残る。
 
-## 先に比較する
+## 私が「localでやりたい」と書いていたもの
 
-2026年8月15日時点の公式情報を並べるとこうなる。
+Codexとのbridgeを作った記事で、私はローカル実行が必要になる例をすでに列挙していた。
 
-| Service | 月額 | 含まれる利用量の見え方 | 向いている使い方 |
-|---|---:|---|---|
-| **OpenCode Go** | **$10** | DeepSeek V4 Flashは月$60 usage、約158,150 requests相当 | とにかく安く大量に回す |
-| **GitHub Copilot Pro** | **$10** | 1,500 AI Credits = $15相当。code completionは無制限 | GitHub中心の開発 |
-| **Cursor Pro** | **$20** | $20のAPI Agent usage + bonus usage | IDEとAgentを一体で使う |
-| **Claude Pro + Claude Code** | **$20** | 固定request数ではなく5時間・週単位のusage limit | Claudeを開発と日常利用で共用 |
-| **ChatGPT Plus + Codex** | **$20** | 固定request数ではなく、Codexはtoken-based credit pricing | Codex以外のChatGPT機能も使う |
+- 数百GBのローカルデータ
+- GPU環境
+- USBでつながった実機
+- 社内VPN内のシステム
+- 認証済みのデスクトップアプリ
+- commit前の作業中workspace
 
-## OpenCode Goの数字だけは読み方に注意
+- [GitHub IssueをAIの伝言板にしたら、伝言板に全部やらせてはいけないと分かった](https://zenn.dev/kafka2306/articles/codex-chatgpt-github-issue-bridge)
 
-158,150回はhard quotaではない。
+Unityでも同じだった。
 
-OpenCode Goの上限はドル換算で、
+PrefabのAnimator、PhysBone、Contact、Transform階層、Play Modeでの実挙動は、GitHubのコードだけ読んでも確定できない。実際のUnity Editorとprojectを観測する必要がある。
+
+つまり私に足りなかったのは、もう1つの汎用チャットではない。
+
+**自分のPC上で、file、shell、test、local toolを触り続けられる実行側だった。**
+
+## そこでOpenCode Goが刺さる
+
+OpenCodeには、project内でshell commandを実行する`bash`、fileを読む・編集するtoolがあり、local MCP serverも接続できる。
+
+だから私の使い分けはこうなる。
 
 ```text
-5時間  $12
-1週間  $30
-1か月  $60
+ChatGPT
+= control plane
+= 調査 / 判断 / repo横断 / 次の仕事を決める
+
+OpenCode Go
+= local execution plane
+= file / shell / test / local MCP / 作業中workspace
 ```
 
-と定義されている。
+これはChatGPTをOpenCodeへ乗り換える話ではない。
 
-DeepSeek V4 Flashを公式が観測した典型的なtoken / cache patternで使うと、その月$60が**約158,150 requests相当**になる、という意味だ。
+**ChatGPTでは届きにくいローカル実行面を、月$10の推論容量で埋める話**である。
 
-さらに全modelが月$60ではない。DeepSeek V4 Proは月$15相当である。
+## 他サービスと比べても、私には役割が違う
 
-## では、どれを選ぶか
+| Service | 月額 | 私にとっての役割 |
+|---|---:|---|
+| **OpenCode Go** | **$10** | local repo・shell・test・MCPを大量に回すworker |
+| **GitHub Copilot Pro** | **$10** | GitHub/IDE中心のcompletionとCopilot workflow |
+| **Cursor Pro** | **$20** | EditorとAgentを一体で使う |
+| **Claude Pro + Claude Code** | **$20** | Claudeとterminal codingを同じ契約で使う |
+| **ChatGPT Plus + Codex** | **$20** | 私の横断的な調査・判断・agent運用の中心 |
 
-私のようにAIを常時作業レイヤーとして使うなら、かなり単純である。
+OpenCode Goの158,150回はhard quotaではない。DeepSeek V4 Flashの月$60 usageを、公式の典型的なtoken/cache patternからrequest数へ換算した推定値である。
 
-**安い計算資源を大量に欲しいならOpenCode Go。**
+私にとって重要なのは、その数字自体ではなくなった。
 
-同じ$10でも、GitHubとの統合や無制限code completionまで欲しいならCopilot Pro。
+**すでに「この仕事はlocalでやりたい」と感じていた領域へ、安価なagent capacityを置ける。**
 
-IDE、Cloud Agent、MCPまで一体化した製品が欲しいならCursor。
+それなら月$10を払う理由がある。
 
-ClaudeやChatGPTをコーディング以外にも使うなら、Claude ProやChatGPT Plusの方が契約をまとめやすい。
+逆に、実際のrepoやUnity/MCP作業で完了率が低いなら、158,150回使えても意味はない。
 
-私はChatGPTを開発だけでなく、調査、記事、金融、画像、タスク運用まで横断して使っているので、単純な「推論単価」だけでは置き換えられない。
+私が見るべきKPIはrequest数ではなく、**localで完了できた仕事の数**だ。
 
-その一方で、GitHub作業を大量に回す部分だけ切り出すと、OpenCode Goの安さはかなり魅力的に見える。
+## 注意：local実行とlocal推論は別
 
-つまりOpenCode Goの強みは、AI coding全部入りではない。
+OpenCode GoはローカルLLMを買うサービスではない。GoのmodelはOpenCode Go provider経由で利用する。
 
-**月$10で、対応modelの推論容量をかなり安く買えること。**
+つまりここで言うlocalは、**実行場所とtool accessが自分のPCにある**という意味で、推論まで完全offlineという意味ではない。
 
-ヘビーユースしているからこそ、158,150という派手な数字そのものより、こちらの方が重要だと感じる。
+外部送信できないデータを扱う場合は、権限・redaction・tool boundaryやlocal modelを別に設計する必要がある。
 
 ## 公式情報
 
 - OpenCode Go: https://opencode.ai/docs/go/
-- GitHub Copilot individual plans: https://docs.github.com/en/copilot/concepts/billing/individual-plans
-- GitHub Copilot billing: https://docs.github.com/en/billing/concepts/product-billing/github-copilot-billing
+- OpenCode Tools: https://opencode.ai/docs/ja/tools/
+- OpenCode MCP servers: https://opencode.ai/v2/docs/mcp-servers
+- GitHub Copilot plans: https://docs.github.com/en/copilot/concepts/billing/individual-plans
 - Cursor pricing: https://cursor.com/pricing
-- Cursor models & pricing: https://docs.cursor.com/account/pricing
 - Claude Pro: https://support.claude.com/en/articles/8325606-what-is-the-pro-plan
-- ChatGPT Plus: https://help.openai.com/en/articles/6950777-what-is-chatgpt-plus
-- Codex usage limits: https://help.openai.com/en/articles/11369540-codex-and-chatgpt-plan-usage-limits
-- Codex rate card: https://help.openai.com/en/articles/20001106-codex-rate-card
+- Codex usage: https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan/
 
-各社の料金・利用上限は変更される。契約時には現行の公式情報を再確認する。
+料金・model・利用上限は変更される。契約時には現行の公式情報を再確認する。
