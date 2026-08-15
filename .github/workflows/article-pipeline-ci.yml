@@ -50,11 +50,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes zenn-cli@latest preview --no-watch >/tmp/zenn-preview.log 2>&1 &
+          npx --yes zenn-cli@latest preview --no-watch --port 8010 >/tmp/zenn-preview.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            if curl --fail --silent http://127.0.0.1:8000/api/articles?sort=system >/tmp/zenn-articles.json; then
+            if curl --fail --silent http://127.0.0.1:8010/api/articles?sort=system >/tmp/zenn-articles.json; then
               break
             fi
             if ! kill -0 "$server_pid" 2>/dev/null; then
@@ -76,7 +76,7 @@ jobs:
           critical = []
           for article in articles:
               slug = article['slug']
-              with urlopen(f'http://127.0.0.1:8000/api/articles/{slug}') as response:
+              with urlopen(f'http://127.0.0.1:8010/api/articles/{slug}') as response:
                   payload = json.load(response)['article']
               if 'data-body-error' in (payload.get('bodyHtml') or ''):
                   critical.append(f'{slug}: renderer emitted data-body-error')
