@@ -3,7 +3,7 @@ title: "AIの文章に「透かし」があると言われたら、誰がそれ�
 emoji: "🔐"
 type: "tech"
 topics: ["watermark", "security", "llm", "ai", "provenance"]
-published: true
+published: false
 published_at: 2026-08-13 09:00
 ---
 

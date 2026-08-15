@@ -3,7 +3,7 @@ title: "速く出すために、勝手に出さない。GitHubとShopifyに学�
 emoji: "🚦"
 type: "tech"
 topics: ["cicd", "githubactions", "githubpages", "testing", "sre"]
-published: true
+published: false
 published_at: 2026-08-13 16:04
 ---
 

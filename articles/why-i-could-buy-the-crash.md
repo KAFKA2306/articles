@@ -3,7 +3,7 @@ title: "第二の脳の次に必要なのは「意思決定のGit」だ——投
 emoji: "📉"
 type: "idea"
 topics: ["意思決定", "LLM", "GitHub", "投資", "知識管理"]
-published: true
+published: false
 published_at: 2026-08-13 12:33
 ---
 

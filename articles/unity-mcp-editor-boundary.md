@@ -3,7 +3,7 @@ title: "2026年、Unity MCPはどこまで実用か――14件で見えた『作
 emoji: "🛠️"
 type: "tech"
 topics: ["unity", "mcp", "codex", "claudecode", "ai"]
-published: true
+published: false
 published_at: 2026-08-12 16:03
 ---
 
