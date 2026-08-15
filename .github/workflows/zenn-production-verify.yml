@@ -16,14 +16,10 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: zenn-production-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
         with:
@@ -38,13 +34,20 @@ jobs:
         env:
           ZENN_USERNAME: kafka2306
         run: |
+          set -euo pipefail
           wait_seconds=0
           if [ "${{ github.event_name }}" = "push" ]; then
             before="${{ github.event.before }}"
-            if git cat-file -e "$before^{commit}" 2>/dev/null && \
-               ! git diff --quiet "$before" "${{ github.sha }}" -- articles/; then
-              # Only an article change needs to wait for Zenn's asynchronous deploy.
-              wait_seconds=600
+            if git cat-file -e "$before^{commit}" 2>/dev/null; then
+              while IFS= read -r path; do
+                [ -n "$path" ] || continue
+                # A changed/deleted public article can require asynchronous Zenn convergence.
+                # Draft-only edits should not create long-running production polls.
+                if [ ! -e "$path" ] || grep -q '^published: true$' "$path"; then
+                  wait_seconds=900
+                  break
+                fi
+              done < <(git diff --name-only "$before" "${{ github.sha }}" -- articles/)
             fi
           fi
           python -m pipeline.zenn_production \

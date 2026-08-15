@@ -69,6 +69,8 @@ class ZennProductionTests(unittest.TestCase):
         self.assertIn("cron:", workflow)
         self.assertIn("branches: [main]", workflow)
         self.assertIn("wait-seconds", workflow)
+        self.assertIn("grep -q '^published: true$'", workflow)
+        self.assertNotIn("cancel-in-progress", workflow)
 
     def test_manual_release_converges_without_rollback_oscillation(self) -> None:
         workflow = (
