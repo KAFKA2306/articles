@@ -1,356 +1,462 @@
 ---
-title: "CSV一括登録でデータを壊さない。追加・重複・エラーを実行前に全部確認する"
-emoji: "🧪"
+title: "雑なメモ・OCR・CSVを、LLMと一次情報で信頼できるデータ基盤に変える"
+emoji: "🧠"
 type: "tech"
-topics: ["javascript", "dataengineering", "testing", "privacy"]
+topics: ["llm", "dataengineering", "ai", "testing"]
 published: false
 published_at: 2026-08-12 12:30
 ---
 
-CSVから何百件もデータを登録するとき、本当に怖いのは「CSVを読めないこと」ではない。
+手元のデータが最初からきれいなら、データ基盤づくりはそれほど難しくない。
 
-**間違ったデータを、正常に一括登録できてしまうこと**だ。
-
-既存データとの重複、表記揺れ、不正なID、情報不足。これらを含むCSVをそのまま本番データへ書き込むと、あとで人間が重複削除や修正をすることになる。
-
-そこで、本棚データベース `KAFKA2306/books` では、CSVを選んでもすぐには登録しない。
-
-まず全行を既存データと照合し、
-
-- すでに登録済み
-- 新規追加できる
-- 既存作品の別Editionとして追加できる
-- 同じCSV内で重複している
-- ISBNが不正
-- 情報不足
-- 類似タイトルがあり人間確認が必要
-
-のように、**実行前に1行ずつ判定結果を見せる**ようにした。
-
-しかも、この確認中は正準catalogを書き換えない。
-
-この記事では、CSV parserの作り方ではなく、**一括登録を「押してから祈る処理」にしないための設計**を、実装とテストを根拠に整理する。
-
-実装の一次情報はこちら。
-
-- 診断core: https://github.com/KAFKA2306/books/blob/main/src/migration-diagnosis.mjs
-- 非破壊性を含むテスト: https://github.com/KAFKA2306/books/blob/main/tests/migration-diagnosis.test.mjs
-- Browser UI: https://github.com/KAFKA2306/books/blob/main/migration.js
-- 初期実装commit: https://github.com/KAFKA2306/books/commit/e9dbe8c968f17dd3626d9488a3fcb269fdbaaecc
-- Browser版PR: https://github.com/KAFKA2306/books/pull/43
-
-## 「CSVを読み込めた」は成功条件ではない
-
-例えば、手元にこんな記録があるとする。
+実際にはそうならない。
 
 ```text
+1Q84村上春樹
+animal farmオーウェル
+インベスターZ(1)
+To LOVEる―とらぶる― モノクロ版【期間限定無料】 1 (ジャンプコミックスDIGITAL)
 1984 / Kindle
-1984 新訳版 / 購入済み
 一九八四年 / 紙
-サンプル: 1984
 ```
 
-人間なら、4行をそのまま4冊の新規データとは考えない。
+メモ、OCR、購入履歴、CSV、XML、Webサービスのexport。
 
-同じ作品かもしれない。別の版かもしれない。単なるメモが混ざっているかもしれない。
+人間には意味が分かるが、そのままでは検索にも集計にもAIにも使いにくいデータが大量に残る。
 
-一方、単純なCSV importerの成功条件を「構文エラーなく読み込めた」にすると、4行を4件として登録することもできてしまう。
+ここでLLMはかなり役に立つ。
 
-だから必要なのは、importの成否だけではない。
+表記揺れを見つける。タイトルと著者を分ける。巻・版・シリーズらしき情報を抽出する。似たレコードを候補として並べる。構造化候補をJSONとして返す。
 
-**その行を登録したら、既存データに対して何が起きるのか。**
+OpenAIのStructured Outputsも、JSON Schemaに沿った構造化出力をモデルへ要求できる仕組みを公式に提供している。
 
-これを登録前に説明できることが重要になる。
+https://developers.openai.com/api/docs/guides/structured-outputs
 
-## importボタンより先に「登録予定表」を作る
+しかし、**構造化できたことと、正しいデータになったことは別である。**
 
-典型的なimport処理は、次の責務を一つの流れに詰め込みやすい。
+LLMがもっともらしく整えたタイトルをそのまま正準DBへ書けば、誤った補完、別版の混同、既存レコードとの衝突まで高速に量産できる。
+
+そこで `KAFKA2306/books` では、雑な入力を一気に「きれいなCSV」にするのではなく、
 
 ```text
-parse
-→ normalize
-→ validate
-→ existing dataを検索
-→ actionを決める
-→ canonical dataへ書き込む
-→ 結果を返す
+雑な入力
+↓
+候補化・構造化
+↓
+一次情報で同定
+↓
+正準モデルへ分解
+↓
+重複・衝突・意味を機械検証
+↓
+安全なものだけ採用
+↓
+APIとして再利用
 ```
 
-この構造では、判定と書き込みが近い。
+というデータ基盤に変えていった。
 
-途中で「既存データだった」「同じCSV内で重複していた」と判明した時点で、すでに副作用をどう扱うか考えなければならない。
+この記事の主題はCSV importerではない。
 
-そこで最初の実装では、書き込み自体を外した。
+**LLM/AIを使って、雑な個人データや業務データを「再利用できるデータ資産」へ変えるとき、どこをAIに任せ、どこから先を機械検証と一次情報に任せるべきか**である。
+
+ケーススタディの一次情報はすべて公開している。
+
+- Repository: https://github.com/KAFKA2306/books
+- 初期データモデル: https://github.com/KAFKA2306/books/pull/2
+- OCR由来60件の統合: https://github.com/KAFKA2306/books/pull/3
+- Kindle XML 685件の統合: https://github.com/KAFKA2306/books/pull/16
+- NDL/NDC分類: https://github.com/KAFKA2306/books/pull/18
+- 書誌表示正規化: https://github.com/KAFKA2306/books/pull/46
+- collision audit: https://github.com/KAFKA2306/books/pull/52
+- 非衝突データだけを採用した例: https://github.com/KAFKA2306/books/pull/53
+- 書き込み前診断: https://github.com/KAFKA2306/books/pull/43
+
+## 最初にあったのは「DB」ではなく、455件の雑な入力だった
+
+最初の本棚データには455件の入力があった。
+
+PR #2では、それを414作品へ統合した。
+
+https://github.com/KAFKA2306/books/pull/2
+
+ここで重要なのは、455行を455冊としてDBへ入れなかったことだ。
+
+同じ作品でも、
+
+- 上下巻
+- 版違い
+- 雑誌号
+- 電子版
+- 紙版
+
+が混ざる。
+
+そこで最初から、
 
 ```text
-parse
-→ normalize
-→ precheck
-→ diagnose
-→ report
-
-# canonical dataへの書き込みなし
+Work    = 作品
+Edition = ISBN・版・形式
+Holding = 実際の所蔵
 ```
 
-Browser版でユーザーが行うことも単純だ。
+へ分けた。
 
-1. CSVを選ぶ
-2. 「診断する」を押す
-3. 行ごとの結果を確認する
-4. 必要ならJSON / HTML reportを保存する
+後にKindle履歴を取り込む段階では `Acquisition` も分離した。
 
-この段階には「全部適用する」ボタンを置いていない。
-
-機能を減らしたのではなく、**正しい判定を確認する工程と、本番データを書き換える工程を分離した**。
-
-Browser実装では `migration.js` がCSVを読み、公開catalogを取得し、`diagnoseMigration()` を呼び出している。
-
-https://github.com/KAFKA2306/books/blob/main/migration.js
-
-## 成功・失敗ではなく「なぜそう判断したか」を返す
-
-一括登録では、`success: true` だけ返されても判断材料にならない。
-
-必要なのは理由である。
-
-現在の診断coreでは、例えば次のreason codeを返す。
+このモデルがあることで、
 
 ```text
-invalid_isbn
+作品として同じ
+≠
+同じ版
+≠
+実際に所有している
+≠
+一度取得履歴がある
+```
+
+を区別できる。
+
+**AIでデータ整理を始める前に、何を同一とみなすかを決める。**
+
+ここが最初のデータ基盤設計だった。
+
+## OCRの60冊を入れたら、24件は「追加しない」が正解だった
+
+次にKindle蔵書スクリーンショット由来の60件を追加した。
+
+結果は、60件追加ではなかった。
+
+PR #3の確定値では、
+
+- 60件を処理
+- 24件は既存所蔵との重複として停止
+- 36件を新規所蔵として追加
+- 35件の新規Workを作成
+- 61件のISBNを検証済みEditionとして登録
+
+となった。
+
+https://github.com/KAFKA2306/books/pull/3
+
+OCRには誤りもあった。
+
+PRには、`メタスキル`、`宗教認知科学入門`、`身体性認知とは何か`、`投資は金利が9割`、`世界大激変` などの修正が記録されている。
+
+ここで得た教訓は単純だった。
+
+**AI/OCRが60件読めたとしても、DBへ60件追加してよいとは限らない。**
+
+AIの価値は入力速度を上げることにある。
+
+データ基盤の価値は、追加しない24件を正しく止められることにある。
+
+## LLMには「正解」ではなく「候補」を作らせる
+
+雑な入力に対してLLMが得意なのは、意味を推測して候補を作ることだ。
+
+例えば、
+
+```text
+1Q84村上春樹
+```
+
+から、
+
+```json
+{
+  "title_candidate": "1Q84",
+  "author_candidate": "村上春樹"
+}
+```
+
+という候補を作ることはできる。
+
+しかし、これをそのままcanonicalへ書かない。
+
+`books` の継続正規化Issueでは、推測による一括置換を禁止し、ISBN、出版社公式、国立国会図書館などで1冊ずつ確認するルールにした。
+
+https://github.com/KAFKA2306/books/issues/25
+
+実際に、
+
+- `1Q84村上春樹` → `1Q84` / 著者 `村上春樹`
+- `animal farmオーウェル` → `Animal Farm` / 著者 `ジョージ・オーウェル`
+- `5路盤問題集、囲碁文庫` → `画期的囲碁上達法 五路盤問題集`
+
+のような正規化が記録されている。
+
+一方で、版を一意に決められない、同名異書がある、略称しかない場合は保留する。
+
+つまりauthorityは、
+
+```text
+LLMの推測
+< 一次書誌
+< 正準モデルの整合性
+< CIで検証された現在状態
+```
+
+である。
+
+LLMは強力なcandidate generatorだが、master data authorityにはしない。
+
+## 一次情報を引くと、「タイトルをきれいにする」以上の設計が必要になる
+
+国立国会図書館の2026年版メタデータ流通ガイドラインでは、タイトル、巻次、シリーズタイトル、版を別項目として扱う。
+
+https://ndlsearch.ndl.go.jp/guideline/main
+
+DC-NDL（RDF）ver.3.0でも、`title`、`volume`、`seriesTitle`、`edition` は別の書誌要素として定義されている。
+
+https://ndlsearch.ndl.go.jp/renkei/dcndl/version3
+
+これは今回のデータ整理と一致した。
+
+例えば、
+
+```text
+To LOVEる―とらぶる― モノクロ版【期間限定無料】 1 (ジャンプコミックスDIGITAL)
+```
+
+を、単に文字列置換して短くするのではない。
+
+PR #53では、出版社公式書誌で確認したうえで、表示上のWork名を `To LOVEる―とらぶる―` へ正規化した。
+
+https://github.com/KAFKA2306/books/pull/53
+
+「期間限定無料」「1」「ジャンプコミックスDIGITAL」は、作品そのもののidentityとは別の情報である。
+
+**雑な文字列をきれいにするのではなく、意味の違う情報を別フィールドへ戻す。**
+
+これが正規化の本体である。
+
+## Kindle XML 690行も、そのまま690冊にはしなかった
+
+さらにKindleの実データを投入した。
+
+PR #16の入力監査では、raw XMLの `meta_data` が690件あった。
+
+そこから完全重複5件を除き、685レコードになった。
+
+内訳は、
+
+```text
+purchase           455
+sample             204
+prime               10
+kindle_dictionary    1
+unknown              15
+```
+
+だった。
+
+https://github.com/KAFKA2306/books/pull/16
+
+ここでも「685件の本」とは扱っていない。
+
+PurchaseだけをHoldingへ反映し、Sample / Prime / Dictionary / unknownはAcquisitionとして履歴を残した。
+
+Sampleを「持っている本」と解釈してしまえば、データ件数は増える。
+
+しかし意味は壊れる。
+
+LLM時代のデータ整備では、この問題がさらに重要になる。
+
+モデルは曖昧なデータにも何らかの答えを返せる。
+
+だからこそ、**null、unknown、review、ambiguousを消さないデータモデル**が必要になる。
+
+## AIで分類するより、一次情報から分類を生成する
+
+本のカテゴリ分類にも同じ境界を置いた。
+
+PR #18では、国立国会図書館サーチのOpenSearch APIからNDCを取得し、明示的なNDC→カテゴリmappingで分類している。
+
+https://github.com/KAFKA2306/books/pull/18
+
+一次API仕様はこちら。
+
+https://ndlsearch.ndl.go.jp/help/api/specifications
+
+ISBNが確認済みならISBN一致を優先する。
+
+ISBNがない場合は書名類似度0.97以上のみ採用する。
+
+候補カテゴリが競合した場合は `ambiguous` として未分類のまま残す。
+
+これはLLM分類より地味である。
+
+しかし、後から
+
+```text
+なぜこの本が「投資・金融」なのか
+```
+
+を追跡できる。
+
+AIが便利になるほど、**説明可能な決定論レイヤーをどこに残すか**がデータ基盤の品質を決める。
+
+## 一次情報で正しくても、そのまま書くと壊れることがある
+
+もっと重要な失敗もあった。
+
+書誌を確認して、正しいタイトルへ直す。
+
+それでも安全とは限らなかった。
+
+PR #52では、正規化候補を適用すると既存Workと `title_key` が衝突するケースが見つかった。
+
+https://github.com/KAFKA2306/books/pull/52
+
+そこで修正を強行せず、collision diagnosticを追加した。
+
+続くPR #53では、出版社公式書誌で確認した5候補のうち、`寄生獣` だけが既存の正準Workと衝突したため採用しなかった。
+
+https://github.com/KAFKA2306/books/pull/53
+
+これは重要である。
+
+```text
+一次情報で正しい
+```
+
+と
+
+```text
+現在のDBへ安全に適用できる
+```
+
+は別問題だ。
+
+LLMに一次情報検索までさせても、この最後の整合性検査は消えない。
+
+## だからdry-runは記事の主役ではなく、最後の安全弁になる
+
+以前は、この仕組みを「CSV migrationのdry-run」として説明していた。
+
+しかし本質的には、これはもっと大きなパイプラインの最後にある。
+
+`books` には、入力CSVをcanonicalへ書き込まずに、各行が
+
+```text
 existing_holding
-duplicate_in_batch
-insufficient_metadata
-existing_work_without_isbn
-review_similar_title
 safe_new_work
 safe_new_edition
+invalid_isbn
+insufficient_metadata
+duplicate_in_batch
+review_similar_title
 ```
+
+のどれになるかを返す診断がある。
 
 実装:
 https://github.com/KAFKA2306/books/blob/main/src/migration-diagnosis.mjs
 
-これにより、同じ「登録しない」という結果でも意味を分けられる。
-
-| 判定 | 意味 | 次の行動 |
-|---|---|---|
-| `existing_holding` | すでに登録済み | 変更しない |
-| `safe_new_work` | 新しい作品として追加候補 | 自動処理候補 |
-| `safe_new_edition` | 既存作品の別版として追加候補 | 自動処理候補 |
-| `duplicate_in_batch` | 同じ入力内で重複 | 入力を確認 |
-| `invalid_isbn` | ISBNが不正 | 修正 |
-| `review_similar_title` | 類似作品候補あり | 人間確認 |
-
-人間向けUIの文言は後から変えられる。
-
-一方、自動処理や集計に使うreason codeは固定できる。
-
-つまり、**利用者への説明とシステムの判断契約を分離できる**。
-
-## 通常登録とCSV登録で「正解」を分けない
-
-移行機能を別実装にすると、別の事故が起こる。
-
-通常登録では重複扱いなのに、CSV登録では新規扱いになる。
-
-CLIでは要確認なのに、Browserでは自動追加扱いになる。
-
-入力経路ごとに判定ロジックを持つと、「どれが本当の判定か」が分からなくなる。
-
-そこでmigration側は、既存catalogの `precheckCandidates` を再利用している。
-
-```text
-CLI / Browser
-      ↓
-diagnoseMigration()
-      ↓
-precheckCandidates()
-```
-
-`src/migration-diagnosis.mjs` の先頭でも `precheckCandidates` をimportしており、診断結果をその共通判定から組み立てている。
-
-https://github.com/KAFKA2306/books/blob/main/src/migration-diagnosis.mjs
-
-**入力方法は違っても、「このデータをどう扱うか」のauthorityは1か所にする。**
-
-これが、CSV機能そのものより重要だった。
-
-## CSVはBrowserの外へ送らない
-
-本棚データには、書名、ISBN、購入経路、購入履歴などが含まれうる。
-
-診断だけなら、それをサーバへアップロードする必要はない。
-
-Browser版では、選択されたCSVを `File.text()` で読み、公開されている `api/v1/catalog.json` を取得して、ブラウザ内で診断する。
-
-```js
-const [text, response] = await Promise.all([
-  fileInput.files[0].text(),
-  fetch('./api/v1/catalog.json', { cache: 'no-store' }),
-]);
-
-const rows = parseCsv(text);
-const catalog = await response.json();
-currentReport = diagnoseMigration(rows, catalog);
-```
-
-現在のBrowser実装:
-https://github.com/KAFKA2306/books/blob/main/migration.js
-
-PR #43にも、選択したCSVはbrowser memory内で処理し、ユーザーファイルをuploadしないことが設計境界として記録されている。
-
-https://github.com/KAFKA2306/books/pull/43
-
-これは「アップロード後に安全に保管する」設計ではない。
-
-**そもそも診断に不要なデータを送らない**設計である。
-
-## 「書き換えません」という表示だけでは証拠にならない
-
-診断reportは次の情報を持つ。
-
-```json
-{
-  "mode": "dry-run",
-  "catalog_mutated": false
-}
-```
-
-しかし、このフラグだけなら自己申告でしかない。
-
-内部でcatalogを変更してしまったあとに `false` を返すバグも作れる。
-
-そこでテストでは、診断前後のcatalogを比較している。
-
-```js
-const before = JSON.stringify(catalog);
-const report = diagnoseMigration(rows, catalog);
-
-assert.equal(report.mode, 'dry-run');
-assert.equal(report.catalog_mutated, false);
-assert.equal(JSON.stringify(catalog), before);
-```
-
-現在のテスト:
+テスト:
 https://github.com/KAFKA2306/books/blob/main/tests/migration-diagnosis.test.mjs
 
-「壊しません」と説明するだけでなく、**本当に入力catalogが変化していないことを回帰テストにする**。
+Browser版:
+https://github.com/KAFKA2306/books/pull/43
 
-ここまでやって初めて、dry-runが仕様ではなく検証対象になる。
+Browser版は選択したCSVをbrowser memory内で処理し、公開catalogだけを取得する。ユーザーのCSV自体をuploadしない。
 
-## JSONとHTMLを同じ判定結果から作る
+dry-runの価値は「CSV importerが安全」だからではない。
 
-一括登録の確認結果は、開発者だけが読むとは限らない。
+**AIや自動処理が作った候補を、正準データへ入れる直前にもう一度止められる**ことにある。
 
-そのため、同じ診断結果から機械向けJSONと人間向けHTMLを作る。
+## 最終的に作りたいのは「きれいなデータ」ではなく、再利用できる基盤
+
+正規化したデータを一度UIで表示して終わりにはしなかった。
+
+PR #4では、同じ正準catalogからversioned JSON/CSV APIを生成し、件数・bytes・SHA-256をmanifestで監査する構成にした。
+
+https://github.com/KAFKA2306/books/pull/4
+
+さらにPR #46では、書名・著者・カテゴリのraw値を残しながら、公開API/UI用のdisplay fieldを正規化した。
+
+https://github.com/KAFKA2306/books/pull/46
+
+つまり、
 
 ```text
-同じ diagnosis report
-       ├─ JSON → CI / 集計 / 後続処理
-       └─ HTML → 人間レビュー
+raw
+↓
+normalized candidate
+↓
+verified canonical
+↓
+API / UI / agent / analysis
 ```
 
-重要なのは、JSON用とHTML用で再判定しないことだ。
+という再利用経路ができる。
 
-判定は一度だけ行い、表示形式だけを変える。
+ここまで来ると、本棚アプリの話ではない。
 
-`renderDiagnosisHtml(report)` も同じreport objectを入力にしている。
+CRMの顧客名、設備台帳、研究データ、商品マスタ、経費履歴、写真メタデータ、社内Excelでも同じ構造になる。
 
-https://github.com/KAFKA2306/books/blob/main/src/migration-diagnosis.mjs
+## LLM時代のデータ基盤は、この7層にすると扱いやすい
 
-## ユーザーが本当に見たいのは件数ではなく「自分の1行」
+今回の実装から、一般化すると次の7層になる。
 
-「100件中95件成功」というsummaryは便利だ。
+### 1. Rawを確保する
 
-しかし、既存データへ一括登録する場面では、それだけでは安心できない。
+メモ、OCR、CSV、XML、画像、exportをまず入力として扱う。
 
-残り5件が何なのか分からないからだ。
+### 2. LLMに候補を作らせる
 
-ユーザーが確認したいのは、例えばこういう表である。
+抽出、分割、表記揺れ検出、検索query生成、schemaへの変換を任せる。
 
-| 入力行 | 予定action | 理由 |
-|---|---|---|
-| ISBN既存 | 変更なし | `existing_holding` |
-| 新規ISBN + 既存Work | Edition追加候補 | `safe_new_edition` |
-| 新規title | Work追加候補 | `safe_new_work` |
-| 類似title | 保留 | `review_similar_title` |
-| ISBN不正 | 拒否 | `invalid_isbn` |
+### 3. 一次情報でidentityを確定する
 
-つまり、重要なのは「何件通ったか」より、**この1行をシステムがどう理解したのか**である。
+ISBN、公式ID、出版社、行政・公的APIなどをauthorityにする。
 
-## この設計を他のシステムへ移すなら
+### 4. Canonical modelへ分解する
 
-本棚に限った話ではない。
+1行を1entityと決めつけず、意味ごとにWork / Edition / Holding / Acquisitionのように分ける。
 
-顧客台帳、商品マスタ、設備台帳、会員データなど、既存データへ外部ファイルを一括登録する処理なら同じ構造を使える。
+### 5. 決定論的gateを通す
 
-最低限、次の5点を分ける。
+duplicate、ID validity、referential integrity、collision、thresholdをコードで検証する。
 
-### 1. 本番判定を副作用のない関数へ切り出す
+### 6. Ambiguousを無理に埋めない
 
-```js
-function precheckCandidates(candidates, canonical) {
-  // normalize / validate / lookup / decide
-  // canonicalは変更しない
-}
+unknown / review / ambiguousを正規状態として残す。
+
+### 7. APIとprovenanceへ変える
+
+誰が見ても、AIが再利用しても、同じ意味を取得できる形で配布する。
+
+この順番なら、LLMはデータ整備の速度を大きく上げられる。
+
+一方でLLMの誤りが、そのまま正準DBの誤りになることを防げる。
+
+## AIに全部任せるのではなく、AIが働ける土台を作る
+
+LLMが登場する前、雑なデータをきれいにする仕事はコストが高すぎた。
+
+タイトルを1件ずつ確認し、フィールドを分け、重複を探し、外部書誌を引き、分類し直す。
+
+その多くをAIは高速化できる。
+
+だから今まで放置していたExcel、CSV、メモ、OCR、exportにも、再び価値が出てくる。
+
+ただし、LLMへ全部渡して「きれいなJSONが返ったから完成」とすると、データ基盤にはならない。
+
+必要なのは、
+
+```text
+AIが候補を大量に作れること
+×
+一次情報で確定できること
+×
+コードが危険な変更を止めること
+×
+provenanceを後から追えること
 ```
 
-### 2. 書き込み前に予定actionを返す
+である。
 
-```js
-function diagnoseMigration(rows, canonical) {
-  const precheck = precheckCandidates(normalize(rows), canonical);
-  return {
-    mode: 'dry-run',
-    catalog_mutated: false,
-    results: precheck.results.map(toDiagnosticResult),
-  };
-}
-```
-
-### 3. 理由をmachine-readableなcodeにする
-
-UI文言と自動処理の契約を分ける。
-
-### 4. 非破壊性をbefore / afterでテストする
-
-「変更しない予定」ではなく、実際に変更されていないことを検証する。
-
-### 5. CLIとUIで同じ判定coreを使う
-
-入力・表示をadapterにし、意味判定を複製しない。
-
-## dry-runだけでは、本番適用の安全性は完成しない
-
-ここは重要な制約である。
-
-dry-runで「今なら安全」と判定しても、その後に正準データが更新されれば結果は変わりうる。
-
-実際のapply処理まで作るなら、さらに考える必要がある。
-
-- 診断後にcanonicalが更新されるTOCTOU
-- transaction競合
-- 外部APIへの副作用
-- 大規模入力のmemory制約
-- server-side secretが必要な照合
-
-したがって、dry-runは「安全なmigrationが完成した」という意味ではない。
-
-価値は、**本番書き込みを作る前に、判定規則を独立して見せ、テストできること**にある。
-
-## import機能ではなく「実行前に説明できる機能」を作る
-
-最初の要求を「CSVを取り込めるようにする」と置くと、最短経路はimportボタンになる。
-
-しかしユーザー側から要求を置き直すと違う。
-
-> 自分のデータを壊さず、外へ送らず、書き込む前に、各行がどう扱われるか確認したい。
-
-この要求なら、最初に作るべきものはimporterではない。
-
-**登録予定を説明する診断画面**である。
-
-一括登録を安心して使えるかどうかは、「成功しました」と表示できるかでは決まらない。
-
-**実行前に、何をする予定なのかを説明できるか。**
-
-そこから設計した方が、結果として壊れにくい。
+**AI時代に価値が上がるのは、データを生成する能力だけではない。雑な過去データを、AIが安全に使える正準データへ変換する能力である。**
