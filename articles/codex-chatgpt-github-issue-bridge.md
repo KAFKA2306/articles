@@ -3,7 +3,7 @@ title: "GitHub IssueからAIにローカルPCを任せてよいのか？ Unity�
 emoji: "🔁"
 type: "tech"
 topics: ["codex", "github", "unity", "security", "automation"]
-published: false
+published: true
 published_at: 2026-08-12 17:02
 ---
 
