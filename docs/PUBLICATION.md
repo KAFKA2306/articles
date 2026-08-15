@@ -44,6 +44,21 @@ GitHub push直後はZenn同期に時間差があるため、記事変更を含�
 
 最後のルールはZenn自体の制約ではなく、このrepository固有のより厳しいinvariantである。Zenn公式は未来の`published_at`による予約公開をサポートしているが、それを使うと `published:true = 現在public` が成立しなくなるため採用しない。
 
+## Immutable `published_at` recovery
+
+誤って既存記事の `published_at` を変更してしまった場合、新しい日時を再指定しない。Git履歴を先頭から走査し、その記事で最初にcommitされた非nullの `published_at` だけをcanonical originとして復元する。
+
+```text
+first committed published_at
+        │
+        ├─ current valueと同じ -> no-op
+        └─ current valueと違う -> originへの復元のみ許可
+```
+
+`pipeline.publication_diff` は通常の日時変更をFAILにし、Git履歴上のfirst valueへの復元だけを `PUBLICATION_DIFF_REPAIR` として許可する。任意の過去値、現在時刻、推測した公開時刻への変更は許可しない。
+
+このrecoveryはZenn側の既存metadataとの整合を戻すための修復であり、「公開日時を書き換える」機能ではない。
+
 ## Post-deploy fail-closed rules
 
 - GitHub Actions green、commit成功、`published:true` の存在だけでは公開成功と報告しない。
