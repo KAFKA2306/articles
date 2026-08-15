@@ -1,35 +1,22 @@
 ---
-title: "CIを1コマンドに減らす前に、古いgateの削除条件を書く"
+title: "Oxlintは2/2でtscと同点。それでもtscを消さなかった"
 emoji: "🧪"
 type: "tech"
 topics: ["typescript", "oxlint", "ci", "testing", "tooling"]
 published: false
 ---
 
-同じ機能、同じ品質、同じ運用性なら、CI commandもconfigもdependencyも少ない方がよい。
+Oxlint `typeCheck`と`tsc`に同じ型failureを当てたら、両方 **2/2**。clean blocking false positiveも **0** だった。
 
-だから、
+しかもOxlint公式は、`--type-aware --type-check`で独立した`tsc --noEmit` stepを置き換える例まで示している。
 
-```text
-before
-  oxlint
-  tsc --noEmit
+それでも私は`tsc`を消さなかった。
 
-after
-  oxlint --type-aware --type-check
-```
+理由は1つ。**実repoで、置換に使うOxlint `--type-check`そのものがNOT_RUNだった。**
 
-のように **2 command → 1 command（-50%）** へ減らせるなら魅力がある。
+2 commandを1 commandへ減らすのは魅力的だ。だが、未確認をPASS扱いしてまで小さくすると、それは最適化ではなく賭けになる。
 
-Oxlint公式も現在、`--type-aware --type-check`で独立した`tsc --noEmit` stepを置換できる例を示している。
-
-https://oxc.rs/docs/guide/usage/linter/type-aware
-
-ただし、私は今回`tsc`を消さなかった。
-
-固定した型failure 2件では両者とも **2/2**、clean blocking false positiveも **0** だった一方、frozen real repoではOxlint `--type-check`そのものが **NOT_RUN** だったからだ。
-
-**小さくするのは正しい。ただし「同等」を確認してから削る。**
+この記事では「新toolをいつ採用するか」ではなく、**古いgateをいつ安全に消せるか**を決める。
 
 ## controlled fixtureでは同点だった
 
