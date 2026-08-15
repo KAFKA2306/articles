@@ -1,252 +1,273 @@
 # KAFKA2306/articles
 
-**観測された失敗・異常・数字から、読者が「何を信じてよいか」「どこまで任せてよいか」「次へ進んでよいか」を判断できる技術記事を作るrepository。**
+**広い読者が自分事にできる問題を入口に、実体験・実測・失敗から、読後の判断や行動を一段よくする技術記事を作るrepository。**
 
-このrepoは、技術ニュース、ツール紹介、AI要約、ベストプラクティス集を量産するための場所ではありません。
+このrepoの目的は「正しい技術情報を増やすこと」でも「監査可能な記事を増やすこと」でもありません。
 
-公開する価値があるのは、一次情報と公開実装を追った結果、最初の予想が更新され、読者が別の現場へ持ち帰れる**判断規則**が残った記事です。
+最終的な価値は、読者が
 
-> **Observe the failure. Find the boundary. Prove the boundary. Give the reader a decision rule.**
+- 時間を無駄にしない
+- 同じ失敗を避ける
+- 採用・導入・委任・停止を判断できる
+- それまで見えていなかった問題に気づく
+- 自分の仕事へ持ち帰れる考え方を得る
 
-## What we are trying to publish
+ことです。
 
-過去のZenn記事を読み直すと、現在の強い記事には共通した形があります。
+> **Broad door. Original insight. Concrete proof. Useful exit.**
 
-```text
-具体的なscene / failure / number
-        ↓
-もっともらしい最初の解釈
-        ↓
-現在の一次情報 + 公開artifactで検証
-        ↓
-何が証明でき、何が証明できないかを分離
-        ↓
-最初の解釈を更新
-        ↓
-別の現場でも使えるdecision rule
-```
+証拠・一次情報・監査は重要ですが、主役ではありません。これらは**読者価値を壊さないためのquality infrastructure**です。
 
-主題は技術名ではなく、**authority / verification / decision boundary** です。
+## What we want to publish
 
-典型的には次を分離します。
-
-- implementation と validation
-- capability と authority
-- runner と policy / oracle
-- build と release と production verification
-- detection と independent verification
-- value と provenance
-- AIが実行できること と AIへ許可してよいこと
-- artifactが存在すること と visual / runtimeで完成していること
-- 最新ノート と 判断時点の証拠
-
-記事の価値は「詳しく説明した」ではなく、**読者がその境界を使って誤った判断を避けられること**です。
-
-## The article signature
-
-公開候補は最低でも次を持ちます。
-
-1. **Reader job** — 読者は何を決めたいのか。
-2. **Observed anomaly** — 実際に何が起きたのか。数字、失敗、矛盾、反例のどれかを置く。
-3. **Initial hypothesis** — 最初は何が原因・正解だと思ったか。
-4. **Evidence** — 現在取得できる一次情報と公開artifact。
-5. **Boundary** — その証拠が許可する結論と、許可しない結論。
-6. **Hypothesis update** — 何を見て考えを変えたか。
-7. **Decision rule** — 読者が次回使える判定規則。
-8. **Non-goal** — この記事が証明していないこと。
-9. **Half-life** — どの事実が陳腐化しやすく、再検証が必要か。
-
-### 良い記事の例となる問い
+強い記事は次の流れを持ちます。
 
 ```text
-「テストが通った」なら、誰が合格条件を決めたのか？
-「Unityを操作できた」なら、見た目と実挙動まで誰が監査したのか？
-「AI生成だと検出できる」なら、誰が独立して検証できるのか？
-「deployできた」なら、build / validation / release / productionのどこまで成功したのか？
-「数字が増えた」なら、source / scope / methodの何が変わったのか？
+広く認識できるproblem / desire / friction
+        ↓
+具体的なscene / number / failure / comparison
+        ↓
+「普通はこう思う」という自然な予想
+        ↓
+自分たちの実体験・実測・公開artifact
+        ↓
+予想外だった発見 / 見方の更新
+        ↓
+読者が自分の仕事で使える判断・行動
 ```
+
+### 入口は広く、証拠は狭く深く
+
+記事タイトルや冒頭は、技術名を知っている人だけに通じる入口にしません。
+
+```text
+狭い入口:
+Unity MCPのEDITOR_VALIDATED境界
+
+広い入口:
+AIに作らせたものを、誰が「完成」と判定するのか？
+```
+
+本文では必要なところまで専門的に掘ります。間口を広げることは内容を薄めることではありません。
+
+### 顧客価値から逆算する
+
+ここでいう「顧客」は、記事を読む人です。候補を作る前に、読者の利益を具体化します。
+
+- 何分・何時間の調査を減らせるか
+- どんな失敗や手戻りを避けられるか
+- 何を安心して試せるようになるか
+- 何をやめる判断ができるか
+- どんな新しい能力・選択肢を得るか
+- どの不確実性が減るか
+
+`理解できる`、`勉強になる` だけでは弱いと扱います。
+
+## Google / Zennから採用する編集原則
+
+Google Search Centralはpeople-first contentの自己評価として、次を問いかけています。
+
+- 想定読者が直接訪れても有用か
+- first-hand expertise / depth of knowledgeがあるか
+- 読後に目的達成に十分な情報を得られるか
+- 他の検索結果より実質的な価値があるか
+- original information / research / analysisがあるか
+- タイトルが内容を正確かつ有用に要約しているか
+
+一次情報:
+
+- https://developers.google.com/search/docs/fundamentals/creating-helpful-content
+- https://developers.google.com/search/docs/fundamentals/creating-helpful-content?hl=ja
+
+Zennも、生成AIで一般知識を得やすくなった現在、具体的な試行錯誤と書き手固有の視点、実体験に基づく知見を重視しています。
+
+- https://zenn.dev/guideline
+- https://info.zenn.dev/2026-02-03-community-guidelines-update
+- https://info.zenn.dev/2026-03-10-ai-contents-guideline
+
+このrepoではSEOを目的にこれらを使いません。**「読者にとって本当に読む理由があるか」の編集基準**として使います。
+
+## Article value model
+
+記事候補は次の7点でレビューします。
+
+### 1. Reach — 間口
+
+- intended audienceがタイトルだけで自分事にできるか
+- 技術名を知らなくてもproblem / desireを理解できるか
+- nicheな題材なら、そのnicheの外へ持ち帰れる意味があるか
+
+### 2. Customer value — 読者の得
+
+- 読後に時間・失敗・リスク・不確実性のどれかが減るか
+- 新しい判断・行動・能力が増えるか
+- 「知った」で終わらず仕事が変わるか
+
+### 3. Originality — この記事でしか得にくいもの
+
+- 自分たちの実測、失敗、比較、運用、artifactがあるか
+- 公式docsや一般的AI要約で代替できないか
+- obviousな結論を言い直しているだけではないか
+
+### 4. Experience — 書き手固有の経験
+
+- 実際に使った・作った・壊した・直した・運用した経験があるか
+- 成功だけでなく摩擦や予想外が残っているか
+
+### 5. Utility — Useful exit
+
+- checklist / decision rule / design pattern / adoption rule / stop conditionなどへ変換できるか
+- 読者が次に何をするか明確か
+
+### 6. Trust — 信頼
+
+- material claimは一次情報または公開証拠へ接地しているか
+- observation / inference / speculationを混ぜていないか
+- 証拠以上の断定をしていないか
+- 未実証範囲を隠していないか
+
+### 7. Portfolio value — 残す意味
+
+- 既存記事とreader jobが重複していないか
+- 半年後も読む理由があるか、または再検証コストに見合うか
+- この1本が著者の専門性・視点を強めるか、薄めるか
+
+## Article signature
+
+公開候補は最低限次を一文で答えられる必要があります。
+
+- `intended_audience`: 誰のための記事か
+- `broad_entry`: 技術名を知らなくても分かる入口は何か
+- `reader_job`: 読者は何を達成・判断したいか
+- `reader_before`: 今どんな摩擦・損失・不確実性があるか
+- `customer_value`: 何が減り、何が増えるか
+- `original_observation`: 自分たちしか持っていない観測は何か
+- `surprising_finding`: 読む前と後で何が変わるか
+- `proof_of_value`: その発見を支える実測・実装・一次情報は何か
+- `useful_exit`: 読者が持ち帰る判断・行動は何か
+- `non_goal`: 何は証明していないか
+- `half_life`: 何をいつ再検証するか
+- `portfolio_overlap`: 既存記事で代替できない理由
+
+`authority / verification boundary` は必要な場合だけ使います。**境界を見つけること自体を記事化理由にはしません。**
 
 ## What we do not publish
 
-次は、正しく書けても原則として公開しません。
+次は、正しくても原則として公開しません。
 
 - 公式docsの要約
-- インストール手順だけの記事
+- install / setup手順だけ
 - リンク集・サービス一覧
-- 「2026年の最強stack」のような比較表だけの記事
-- tool / libraryの紹介だけの記事
-- repoの変更履歴を記事へ変えただけのもの
-- 二次情報を大量に並べたAIレポート
-- 実装・測定・反証がない独自framework
-- 根拠のない閾値、magic number、成功率
-- 「Aを使ってBを作った」で終わる成功談
-- 読む前から結論が常識的に決まっている記事
-- weak questionを長文・図・引用で救った記事
-- CTAを足しただけの営業記事
+- tool名を並べただけの比較
+- 「2026年の最強stack」のような根拠の弱いランキング
+- repo changelog
+- 二次情報を集めただけのAI report
+- 実体験・実測のない独自framework
+- 「Aを使ってBを作った」で読者価値がない成功談
+- intended audienceが不明な記事
+- titleが技術用語だけで閉じている記事
+- 読後の利益を説明できない記事
+- 既存記事の弱い焼き直し
+- 根拠のない数値・閾値・成功率
+- 読む前から結論が分かる記事
 
-**技術的に正しいことは必要条件であって、公開理由ではありません。**
-
-## Portfolio value
+## Portfolio lifecycle
 
 記事数はKPIではありません。
 
-弱い記事は0点ではなく、読者から見た著者のsignalを薄め、古い主張の再検証コストを増やすため、**負のportfolio value** を持ち得ます。
-
-公開後も記事を次のstateで監査します。
-
 | State | 意味 |
 |---|---|
-| `KEEP` | 現在も証拠・判断規則・読者価値が強い |
-| `REVALIDATE` | 核は強いが、価格・仕様・市場など陳腐化しやすい事実を再確認する |
-| `REWRITE` | 核と証拠は残す価値があるが、現在の編集基準へ書き直す |
-| `MERGE` | より強い記事へ統合し、単独記事を残さない |
-| `RETIRE` | 誤解・重複・陳腐化・弱い証拠によりportfolioから外す |
+| `KEEP` | Reach / customer value / originality / trustが現在も強い |
+| `REVALIDATE` | 核は強いが価格・仕様・市場などvolatile factを再確認する |
+| `REWRITE` | 独自価値はあるが入口・顧客価値・構成が弱い |
+| `MERGE` | より強い記事へ価値とproofを集約する |
+| `RETIRE` | 読む理由が薄い、重複、陳腐化、弱いproof、portfolio dilution |
 
 公開済みだから永久保存、とは扱いません。
 
-現行監査: [`docs/zenn-portfolio-audit-2026-08-15.md`](docs/zenn-portfolio-audit-2026-08-15.md)
+現行監査:
+[`docs/zenn-portfolio-audit-2026-08-15.md`](docs/zenn-portfolio-audit-2026-08-15.md)
 
-## Evidence contract
+## Evidence is a quality gate, not the product
 
-外部事実は、公開時点で取得できる一次情報を優先します。
-
-最低条件は `pipeline/contracts/article.md` と `pipeline/config.json` を正準とします。原則は次です。
-
-- material claimのURLを実際に取得する
-- vendor仕様はvendor公式、標準はstandards body、GitHub固有事実はGitHub上のartifactで確認する
-- repo固有の主張は公開commit / PR / Issue / Actions / artifactへ接地する
-- 数字には対象、期間、単位、比較基準を残す
-- observation / inference / speculationを混ぜない
-- inaccessible / stale / contradictoryなsourceはfail-closeする
-- 取得できない事実を文章力で補完しない
-
-**証拠が許可する以上の結論を書かない**ことを最優先します。
-
-## Reader value contract
-
-記事は、読者の状態を変えなければ公開価値がありません。
+一次情報と監査は次のために使います。
 
 ```text
-reader_before
+reader value
   ↓
-この記事固有のproof / failure / comparison
+original claim
   ↓
-reader_after
+proof / calibration
+  ↓
+trust
 ```
 
-`reader_after` は「理解した」「学んだ」では不十分です。
+順序を逆にしません。
 
-- 判断できる
-- 止められる
-- 採否を決められる
-- 検証できる
-- 再現できる
-- 安全に委任できる
-- 何が未確認か説明できる
+「この証拠は何を許可するか？」は重要ですが、読者がその判断を必要としていなければ記事になりません。
 
-のように、次のactionへ接続させます。
+最低原則:
+
+- material external claimはcurrent primary sourceで確認する
+- 自分たちの成果はpublic commit / PR / Issue / Actions / artifactへ接地する
+- 数字にはtarget / period / unit / scopeを残す
+- observation / inference / speculationを分離する
+- 未確認を成功へ昇格しない
+- sourceが弱ければclaimを削る
+
+## Title and opening rule
+
+タイトルは検索語ではなく、まず人間の問題を表します。
+
+```text
+problem / desire
+  +
+具体的な異常・数字・失敗・結果
+  +
+必要なら技術名
+```
+
+最低3案:
+
+1. `broad_problem`
+2. `concrete_result`
+3. `searchable`
+
+冒頭では500文字以内を目安に、
+
+- 誰の何が困っているか
+- 何が起きたか
+- なぜ続きを読む価値があるか
+
+が分かるようにします。
 
 ## Publication is human-controlled
 
-Zenn公式は、AI利用時も**著者自身が正確性を検証し、経験・洞察を含めること**を「人が主体」として求めています。また、著者の確認が追いつかない速度の自動投稿や機械生成spamを問題視しています。
-
-- https://info.zenn.dev/2026-03-10-ai-contents-guideline
-- https://zenn.dev/guideline
-
-したがって、このrepoではautomationの責務を次に限定します。
+Zennの公開は別side effectです。
 
 ```text
 scheduled automation
-  = discover / draft / source-check / review / compare / report
+  = discover / research / draft / review / compare
 
 manual selection
-  = candidateをZenn-compatible draftへ昇格する
+  = published:false draftへ昇格
 
-explicit human publication
-  = published: true を許可する
+explicit human approval
+  = published:true
 ```
 
-**scheduleだけを理由に `published: true` へ変更してはいけません。**
+schedule、score、CI green、mergeはpublication authorizationではありません。
 
-`pipeline publish` という内部command名は「公開候補を `articles/` のunpublished draftへmaterializeする」意味であり、Zennでpublicにする権限を持ちません。
-
-## Repository state
+## Repository structure
 
 ```text
-artifacts/candidates/YYYY-MM/
-  unpublished candidate。公開safeだがZenn sync surfaceではない。
-
-artifacts/reports/YYYY-MM/
-  source / review / selection evidence。
-
-articles/
-  Zenn-compatible source。published:true と明示承認された記事、および人間が選んだ published:false draftだけ。
-
-pipeline/
-  discovery / evaluation / audit implementation。
-
+articles/                    # Zenn-compatible sources
+artifacts/candidates/        # unpublished candidates
+artifacts/reports/           # evidence / review / selection reports
+pipeline/                    # generation / review / audit implementation
 pipeline/contracts/article.md
-  canonical editorial contract。
+AGENTS.md                    # autonomous-agent operating rules
 ```
-
-`published: false` はhard boundaryです。merge、CI green、選定、完成はpublication authorizationではありません。
-
-## Candidate lifecycle
-
-```text
-public/private-safe idea seed
-  ↓
-current primary evidence
-  ↓
-reader job + anomaly
-  ↓
-question + initial hypothesis
-  ↓
-evidence / experiment
-  ↓
-boundary + hypothesis update
-  ↓
-decision rule + non-goal
-  ↓
-technical / editorial / reader-value review
-  ↓
-KEEP_PRIVATE / REWRITE / MERGE / RETIRE / human-selected draft
-  ↓
-explicit human publication only
-  ↓
-post-publication revalidation
-```
-
-候補が0本でも正常です。公開本数を埋めるために基準を下げません。
-
-## Title rule
-
-タイトルはtool名ではなく、読者が認識できる問題から入ります。
-
-```text
-一般語で分かるproblem
-  → 本文で証明できる具体的な異常・失敗・数字
-  → 必要なら検索用の正式技術名
-```
-
-例:
-
-```text
-弱い: Pyrefly / Ruff / Pydanticの比較
-強い: 型チェックが通っても、外部入力は検証されていない
-```
-
-タイトルで約束した異常を本文で証明できなければ不採用です。
-
-## Images and demos
-
-画像は装飾quotaではなく、理解または証拠密度を上げる場合だけ使います。
-
-- generated illustrationをscreenshot / measurement / historical evidenceとして扱わない
-- 本文は画像がなくても成立させる
-- diagramは1枚1messageを基本にする
-- visual claimは元artifactへ接地する
-- interactive demoは本文の代替にしない
 
 ## Quick verification
 
@@ -270,16 +291,8 @@ Human-triggered selection to an unpublished Zenn draft:
 ARTICLE_MANUAL=1 python -m pipeline.cli publish
 ```
 
-## Canonical documents
-
-- Editorial contract: [`pipeline/contracts/article.md`](pipeline/contracts/article.md)
-- Agent contract: [`AGENTS.md`](AGENTS.md)
-- Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- Current Zenn portfolio audit: [`docs/zenn-portfolio-audit-2026-08-15.md`](docs/zenn-portfolio-audit-2026-08-15.md)
-- Historical audit: [`docs/article-portfolio-audit-2026-08-14.md`](docs/article-portfolio-audit-2026-08-14.md)
-
 ---
 
-**最終成果は記事数ではありません。**
+**残したいのは「監査の厳しい記事」ではありません。**
 
-読者が、誤った成功判定・過剰な一般化・権限の与えすぎ・証拠の読み違いを避け、次の判断を一段良くできる記事だけを残します。
+**広く意味のある問題に、書き手固有の観測で新しい見方を与え、読者の次の行動を良くする記事です。**
