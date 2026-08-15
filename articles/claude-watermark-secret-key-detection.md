@@ -7,8 +7,6 @@ published: true
 published_at: 2026-08-13 09:00
 ---
 
-<!-- zenn-deploy-sync: manual-20260815-1615 -->
-
 採用課題、レポート、ニュース原稿、社内文書。
 
 ある文章を見て、誰かがこう言ったとする。

@@ -6,7 +6,6 @@ topics: ["ai", "vrchat", "character", "ux"]
 published: true
 published_at: 2026-08-15 16:03
 ---
-<!-- zenn-deploy-sync: muchio-20260815-1618 -->
 
 AIキャラクターは、賢いほど面白い。
 

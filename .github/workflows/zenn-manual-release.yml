@@ -4,18 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       slug:
-        description: "Release or reconcile exactly one approved article"
+        description: "Release or reconcile exactly one approved article slug"
         required: true
-        type: choice
-        options:
-          - 2026-08-15-ai-character-intelligence-muchio
-          - chatgpt-multiproject-autonomy
-          - claude-watermark-secret-key-detection
-          - codex-chatgpt-github-issue-bridge
-          - opencode-go-deepseek-v4-chatgpt-usage-scale
-          - unity-mcp-editor-boundary
-          - validate-before-pages-deploy
-          - why-i-could-buy-the-crash
+        type: string
 
 env:
   ZENN_DEPLOY_BRANCH: zenn-release
@@ -58,16 +49,13 @@ jobs:
         shell: bash
         env:
           SLUG: ${{ inputs.slug }}
-          RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
           python - <<'PY'
           import os
-          import re
           from pathlib import Path
 
           slug = os.environ["SLUG"]
-          run_id = os.environ["RUN_ID"]
           path = Path("articles") / f"{slug}.md"
           if not path.is_file():
               raise SystemExit(f"unknown article: {slug}")
@@ -76,72 +64,84 @@ jobs:
           if len(parts) != 3:
               raise SystemExit(f"invalid front matter: {path}")
           front = parts[1]
-          body = parts[2].lstrip("\n")
+          body = parts[2]
           if front.count("published: false") == 1 and "published: true" not in front:
               front = front.replace("published: false", "published: true", 1)
+              path.write_text(f"---\n{front}---\n{body}", encoding="utf-8")
               mode = "promote"
+              main_changed = "true"
           elif front.count("published: true") == 1 and "published: false" not in front:
               mode = "reconcile"
+              main_changed = "false"
           else:
               raise SystemExit(f"ambiguous publication state: {path}")
 
-          body = re.sub(
-              r"^<!-- zenn-deploy-sync: [^>]+ -->\n+",
-              "",
-              body,
-              count=1,
-          )
-          marker = f"<!-- zenn-deploy-sync: {run_id} -->\n\n"
-          path.write_text(
-              f"---\n{front}---\n{marker}{body}",
-              encoding="utf-8",
-          )
           with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as handle:
               handle.write(f"mode={mode}\n")
-          print(f"publication_mode={mode} slug={slug}")
+              handle.write(f"main_changed={main_changed}\n")
+          print(f"publication_mode={mode} slug={slug} main_changed={main_changed}")
           PY
 
       - name: Validate exact main mutation
         shell: bash
         env:
           SLUG: ${{ inputs.slug }}
+          MAIN_CHANGED: ${{ steps.state.outputs.main_changed }}
         run: |
           set -euo pipefail
           python -m pipeline.zenn_slug
           git diff --check
-          changed="$(git diff --name-only)"
-          test "$changed" = "articles/${SLUG}.md" || {
-            echo "unexpected release diff: $changed"
-            exit 1
-          }
+          if [[ "$MAIN_CHANGED" == "true" ]]; then
+            changed="$(git diff --name-only)"
+            test "$changed" = "articles/${SLUG}.md" || {
+              echo "unexpected release diff: $changed"
+              exit 1
+            }
+          else
+            git diff --exit-code
+          fi
 
-      - name: Commit validated publication intent to main
+      - name: Persist publication intent on main when needed
         shell: bash
         env:
           SLUG: ${{ inputs.slug }}
+          MAIN_CHANGED: ${{ steps.state.outputs.main_changed }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "articles/${SLUG}.md"
-          git commit -m "publish: reconcile ${SLUG} through release branch"
 
-          pushed=0
-          for attempt in 1 2 3; do
+          if [[ "$MAIN_CHANGED" == "true" ]]; then
+            git add "articles/${SLUG}.md"
+            git commit -m "publish: approve ${SLUG}"
+
+            pushed=0
+            for attempt in 1 2 3; do
+              git fetch origin main
+              git rebase origin/main
+              python -m pipeline.zenn_slug
+              python -m pipeline.publication_diff --base HEAD^ --head HEAD
+              python -m pipeline.audit
+              if git push origin HEAD:main; then
+                pushed=1
+                break
+              fi
+            done
+            test "$pushed" = "1" || {
+              echo "main moved too quickly; release aborted without force push"
+              exit 1
+            }
+          else
             git fetch origin main
-            git rebase origin/main
+            git reset --hard origin/main
             python -m pipeline.zenn_slug
-            python -m pipeline.publication_diff --base HEAD^ --head HEAD
             python -m pipeline.audit
-            if git push origin HEAD:main; then
-              pushed=1
-              break
-            fi
-          done
-          test "$pushed" = "1" || {
-            echo "main moved too quickly; release aborted without force push"
-            exit 1
-          }
+            grep -q '^published: true$' "articles/${SLUG}.md" || {
+              echo "publication intent changed while reconciling: ${SLUG}"
+              exit 1
+            }
+          fi
+
           echo "publication_intent_sha=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
       - name: Checkout canonical Zenn release snapshot
@@ -275,7 +275,11 @@ jobs:
           git -C "$RELEASE_WORKTREE" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git -C "$RELEASE_WORKTREE" add -A -- "articles/${SLUG}.md" images
           git -C "$RELEASE_WORKTREE" diff --cached --check
-          git -C "$RELEASE_WORKTREE" commit -m "deploy: publish ${SLUG}"
+          if git -C "$RELEASE_WORKTREE" diff --cached --quiet; then
+            git -C "$RELEASE_WORKTREE" commit --allow-empty -m "deploy: reconcile ${SLUG}"
+          else
+            git -C "$RELEASE_WORKTREE" commit -m "deploy: publish ${SLUG}"
+          fi
           git -C "$RELEASE_WORKTREE" push origin "HEAD:${ZENN_DEPLOY_BRANCH}"
           echo "ZENN_DEPLOY_TRIGGERED branch=${ZENN_DEPLOY_BRANCH} sha=$(git -C "$RELEASE_WORKTREE" rev-parse HEAD)"
 

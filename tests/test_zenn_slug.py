@@ -77,11 +77,15 @@ class ZennSlugTests(unittest.TestCase):
         )
         self.assertIn("python -m pipeline.zenn_slug", workflow)
 
-    def test_manual_release_runs_slug_gate(self) -> None:
+    def test_manual_release_is_generic_and_content_clean(self) -> None:
         workflow = Path(".github/workflows/zenn-manual-release.yml").read_text(
             encoding="utf-8"
         )
         self.assertIn("python -m pipeline.zenn_slug", workflow)
+        self.assertIn("type: string", workflow)
+        self.assertNotIn("type: choice", workflow)
+        self.assertNotIn("zenn-deploy-sync", workflow)
+        self.assertIn("commit --allow-empty", workflow)
 
 
 if __name__ == "__main__":
