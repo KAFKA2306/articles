@@ -539,6 +539,24 @@ failed   = 失敗または再確認が必要
 
 つまり中央のAIが賢いから状態を理解できるのではなく、**repo側が理解可能な状態を出している**。
 
+### この圧縮は、公開Dashboardで実物を確認できる
+
+これは概念図だけではない。
+
+`agent-resources` の公開Dashboardでは、public / non-archived repositoryを横断し、Issue / PR / workflowを同じwork surfaceへ集め、`working / waiting / done / failed` のlaneへ投影している。
+
+- GitHub Pages snapshot: https://kafka2306.github.io/agent-resources/dashboard/
+- Live Dashboard: https://agent-resources-one.vercel.app/
+- 実装とデータ境界: https://github.com/KAFKA2306/agent-resources/blob/main/dashboard/LIVE_DATA.md
+
+ここでPages版を「常に最新の一次データ」とは扱っていない。
+
+Pages版はschema validationとpublic boundary auditを通したbaseline snapshotで、live endpointが利用できない、古い、rate-limitされた、またはinvalidな場合にはbaselineを維持し、`SNAPSHOT FALLBACK` / `STALE` と表示する。古いsnapshotをliveとは呼ばない。
+
+だから、このDashboardを証拠として見るときに重要なのは、ある瞬間の「waitingが何件だったか」という数字ではない。
+
+**異なる123個のrepoの状態を、人間とAIが次の行動を選べる少数のwork laneへ圧縮した実運用が、読者自身のブラウザから確認できること**である。
+
 ## 自律化したのは「作業」より「次を決めるループ」だった
 
 現在の制御ループは、だいたい次の形になる。
