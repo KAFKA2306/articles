@@ -1,20 +1,20 @@
 ---
-title: "型チェッカーを変える前に、設定差を製品差から消す"
+title: "Pyreflyが2/5から5/5になった。変えたのは製品ではなく設定だけ"
 emoji: "🧪"
 type: "tech"
 topics: ["python", "typechecking", "ci", "testing", "developerexperience"]
 published: false
 ---
 
-新しい型チェッカーを試して「Aは2/5、Bは5/5」と出たら、Bへ移行したくなる。
+「Aは2/5、Bは5/5。だからBの方が強い」——その比較、製品差ではないかもしれない。
 
-私はそこで一度、結論を間違えた。
+私は実際に一度、そこで結論を間違えた。
 
-同じPyrefly 1.2.0、同じ5つのroot faultでも、`basic` presetでは **2/5**、`default` presetでは **5/5** だった。製品を変えなくても、設定だけで結果が3件動いた。
+同じPyrefly 1.2.0、同じ5つのroot faultなのに、`basic` presetでは **2/5**、`default` presetでは **5/5**。**製品を1つも変えず、設定だけで検出数が3件増えた。**
 
-だから比較表を作る前にやることがある。
+つまり、比較表の1行目で見るべきなのは製品名ではなかった。
 
-**version・preset・config・scope・blocking severityを固定し、設定差を製品差から先に取り除く。**
+**version・preset・config・scope・blocking severityを固定し、設定差を製品差から先に消す。**
 
 ## 2/5から5/5へ動いた
 

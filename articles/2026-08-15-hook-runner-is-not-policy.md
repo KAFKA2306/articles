@@ -1,5 +1,5 @@
 ---
-title: "AIにテストまで任せるなら、合格条件だけは外に置く"
+title: "Claude Codeに全部任せるなら、合格条件だけはClaudeに任せない"
 emoji: "🧪"
 type: "tech"
 topics: ["claudecode", "testing", "ai", "ci", "automation"]
@@ -7,11 +7,17 @@ published: true
 published_at: 2026-08-15 09:33
 ---
 
-Claude Codeに実装、テスト追加、失敗修正まで任せると、レビュー時間は減らせる。そこで最後まで人間が全部を見る設計に戻すと、自動化の価値が消える。
+Claude Codeに実装、テスト追加、失敗修正まで全部任せる。
 
-必要なのは監視を増やすことではない。**何を満たせば合格かを、実装するagentとは別に再実行できる形で固定すること**だ。
+そのとき一番危ないのは、AIがコードを書くことではない。**「何をもって合格とするか」まで同じ変更ループに入ること**だ。
 
-Anthropic公式も、Claude Code Hooksを「LLMが実行を選ぶことに依存しないdeterministic control」と説明し、project rulesの強制やテスト実行に使えるとしている。
+テストがgreenでも、実装が正しくなったとは限らない。fixtureや期待値の方が動けば、同じgreenは作れる。
+
+だから私は、Claude Codeの監視を増やすのではなく、逆に1つだけClaudeから切り離した。
+
+**合格条件である。**
+
+Anthropic公式でも、Claude Code Hooksの`TaskCompleted`はtestやlintなどの完了条件を実行し、失敗時はtask completionをblockできる。
 
 - https://code.claude.com/docs/en/hooks-guide
 - https://code.claude.com/docs/en/hooks
