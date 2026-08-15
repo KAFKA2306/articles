@@ -70,6 +70,17 @@ class ZennProductionTests(unittest.TestCase):
         self.assertIn("branches: [main]", workflow)
         self.assertIn("wait-seconds", workflow)
 
+    def test_manual_release_converges_without_rollback_oscillation(self) -> None:
+        workflow = (
+            zenn_production.ROOT / ".github" / "workflows" / "zenn-manual-release.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Retrigger targeted Zenn deploy", workflow)
+        self.assertIn("zenn-deploy-sync", workflow)
+        self.assertIn("DEPLOY_PENDING", workflow)
+        self.assertIn("no rollback push is emitted", workflow)
+        self.assertNotIn("Roll back failed release", workflow)
+        self.assertNotIn("rollback: Zenn production did not verify", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()
