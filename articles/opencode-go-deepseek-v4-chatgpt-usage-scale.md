@@ -1,5 +1,5 @@
 ---
-title: "ChatGPTとOpenCode Goを競合させない。local実行だけを分離する"
+title: "ChatGPTを使い倒している私に、月10ドルのOpenCode Goが刺さった理由"
 emoji: "♾️"
 type: "tech"
 topics: ["opencode", "chatgpt", "coding", "mcp", "local"]
