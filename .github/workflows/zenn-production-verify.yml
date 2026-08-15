@@ -26,6 +26,8 @@ jobs:
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -38,8 +40,12 @@ jobs:
         run: |
           wait_seconds=0
           if [ "${{ github.event_name }}" = "push" ]; then
-            # Zenn deploy starts after the linked branch is pushed and may take time.
-            wait_seconds=600
+            before="${{ github.event.before }}"
+            if git cat-file -e "$before^{commit}" 2>/dev/null && \
+               ! git diff --quiet "$before" "${{ github.sha }}" -- articles/; then
+              # Only an article change needs to wait for Zenn's asynchronous deploy.
+              wait_seconds=600
+            fi
           fi
           python -m pipeline.zenn_production \
             --wait-seconds "$wait_seconds" \
