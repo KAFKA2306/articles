@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: zenn-production-${{ github.ref }}
+  group: zenn-production-diagnostic-${{ github.sha }}
   cancel-in-progress: true
 
 jobs:
