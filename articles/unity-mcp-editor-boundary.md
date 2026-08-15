@@ -17,7 +17,7 @@ published_at: 2026-08-12 16:03
 
 さらに私たち自身のrepoでも、同じ構造の失敗を経験しています。
 
-- `avatars2509`では、Unity上のMaterial / Animator等を読めても、stereo shader、OSC、実HMDのどの層で壊れているかを分けないと原因を確定できなかった
+- `image2outfit`では、Blender MCP + Unity MCP + Codex integrationを実装しても、live Blender / Unity MCP接続とend-to-end callが`NOT_RUN`なら成功とは呼べなかった
 - `vrmine`では、84 commits、48 changed files、約4,000 additionsまで進んでも、2-client、late join、owner leave、private uploadを証明できずreleaseは`BLOCKED`のままだった
 
 2026年に知りたいのは、もはや
@@ -37,7 +37,7 @@ UnityをAIから操作できるか？
 
 です。
 
-この記事では、2026年8月15日までに公開されたUnity MCP / Unity Editor agentの実運用記録14件を同じ物差しで読み直し、最後に私たち自身のUnity / VRChat系repoの失敗記録を重ねます。
+この記事では、2026年8月15日までに公開されたUnity MCP / Unity Editor agentの実運用記録14件を同じ物差しで読み直し、最後に私たち自身のBlender / Unity / VRChat系repoの失敗記録を重ねます。
 
 14件は14人の独立再現ではありません。越井琢巳氏とmiya氏がそれぞれ2件を公開しているため、中心サンプルは**12の発信主体による14事例**です。
 
@@ -430,66 +430,49 @@ https://note.com/bunnoneta/n/n91bbcd3fd700
 
 外部事例だけなら、「他人はそうだった」で終わります。
 
-私たち自身のrepoでは、数多くの小さな失敗を並べるより、境界が最もはっきり出た2例だけを残します。
+当初は自前の失敗を5例に分けていましたが、記事の論点を最もよく示す**2と5の2例だけ**に集約します。
 
-- `avatars2509`: Editor内で読める状態と、実HMD / OSC / runtimeでしか観測できない状態の境界
-- `vrmine`: verificationを作り込んでも、real multi-client evidenceまで閉じなければreleaseできない境界
-
----
-
-## 自前失敗例1：`avatars2509`――Editorで全部読めても、runtimeの原因は確定しない
-
-`KAFKA2306/avatars2509`では、VRChat上で左右眼の見え方が違う問題を追っています。
-
-Issue #4:
-https://github.com/KAFKA2306/avatars2509/issues/4
-
-過去には、`SkinnedMeshRenderer.sharedMaterials[]`が意図したstandalone `.mat`ではなくFBX/model内のmaterial sub-assetを参照し、**見た目と実参照identityが食い違う**事故がありました。
-
-しかし今回の左右眼差を、過去のMaterial事故と決め打ちはしていません。
-
-```text
-MATERIAL_IDENTITY_VALIDATED
-        ↓
-SHADER_STEREO_VALIDATED
-        ↓
-SDK_VALIDATED
-        ↓
-actual HMD / third-party VR
-```
-
-本人環境では現象を再現できておらず、第三者VRでの確認が必要です。Issueはopenのままです。
-
-同じrepoのMuchio文字盤問題も、同じ原則を示しています。
-
-Issue #8:
-https://github.com/KAFKA2306/avatars2509/issues/8
-
-文字が短時間で消える現象でも、Unity側のAnimationやAnimatorだけを読んで原因とは断定しません。
-
-```text
-VRCPet
-↓
-OSC /avatar/parameters/KAT_Visible
-↓
-Animator parameter
-↓
-VRCFury / Driver / Animation
-↓
-GameObject m_IsActive
-↓
-実画面
-```
-
-`KAT_Visible=true`から`false`までのtimestamp差を採り、OSC自体が短時間でfalseになるなら外部送信側、OSCがtrueのまま表示だけ消えるならUnity/build側へ進む、という切り分けです。
-
-2つのIssueで共通するのは、**Editorを詳しく観測できることと、runtime failureの原因を確定できることは別**だという点です。
-
-**感想:** AIがUnity Editorを自在に触れても、観測するauthorityを間違えれば無関係なMaterial、`.anim`、controllerを編集するだけです。Editor authorityとruntime authorityは分ける必要があります。
+- `image2outfit`: integration codeとstatic contractが揃っても、live MCP E2Eが未実行ならoperation成功ではない
+- `vrmine`: verificationを作り込んでも、real multi-client evidenceまで閉じなければruntime completionではない
 
 ---
 
-## 自前失敗例2：`vrmine`――約4,000行追加しても、releaseはBLOCKEDだった
+## 自前失敗例2：MCP integrationを実装しても、live E2Eが`NOT_RUN`なら成功ではない
+
+`KAFKA2306/image2outfit` PR #212では、Blender MCP + Unity MCP + Codex integrationを実装しました。
+
+PR #212:
+https://github.com/KAFKA2306/image2outfit/pull/212
+
+PRには、Windows setup entry point、version pin、localhost限定、doctor command、Blender-side Assistant UI、static tests等が入り、9 files / 859 additionsまで進んでいます。
+
+しかしPR自身が次を`NOT_RUN`としています。
+
+- local Windows PowerShell setup
+- live Blender MCP connection
+- live Unity MCP connection / package resolution
+- Blender Assistant → Codex → MCP end-to-end call
+
+PRはDraftのままです。
+
+```text
+integration code exists
+static contract exists
+        ↓
+live editor operation: NOT_RUN
+```
+
+この例で問題なのは、設定やadapterを書くことに失敗した点ではありません。むしろstatic integrationはかなり進んでいます。
+
+失敗したのは、**「実装した」ことを「実際のEditorで動いた」ことへ昇格できる証拠がまだない**点です。
+
+外部の「Connected表示でも操作不能だった」事例と同じく、connection/configurationの存在とactual operationは別のstateです。
+
+**感想:** MCPを扱う側ほど、「設定ファイルがある」「toolが登録されている」「CIが通った」をoperation successと錯覚しやすい。live callを実行して、その結果を再観測するまで成功とは呼ばない方が安全です。
+
+---
+
+## 自前失敗例5：`vrmine`――約4,000行追加しても、releaseはBLOCKEDだった
 
 `KAFKA2306/vrmine`は、この記事に最も近い**runtime completion failure**です。
 
@@ -605,15 +588,15 @@ L5 Runtime complete → BLOCKED
 
 | 観測 | 外部事例 | 自前repo |
 | --- | --- | --- |
-| Editor observation ≠ runtime truth | screenshot / local stateでは欠陥を見逃す | `avatars2509`: Material / Animatorを読めても実HMD・OSCの観測が必要 |
-| local test ≠ actual user experience | camera / traversalを人間が発見 | `avatars2509`: 第三者VRでしか左右眼差を確定できない |
+| connection/config ≠ operation | ConnectedでもCodexから操作不能 | `image2outfit`: static integration後もlive MCP E2Eは`NOT_RUN` |
+| tool registration ≠ editor evidence | toolが見えてもcall/状態確認で失敗例 | `image2outfit`: Blender / Unityのactual live call未証明 |
 | simulation ≠ real networking | 公開事例では証拠が薄い | `vrmine`: ClientSimではlate join / ownershipを証明しない |
 | report PASS ≠ valid evidence | test oracleの欠陥 | `vrmine`: 旧G3にclient evidenceなしでPASSし得る経路 |
 | L3 VERIFIED ≠ L5 RUNTIME_COMPLETED | test/build成功例でも最終runtimeは別 | `vrmine`: 長期実装後もrelease `BLOCKED` |
 
 外部レビューの結論は、自前repoを足しても変わりません。
 
-むしろ、**どこをauthorityにするか**という形で具体化されます。
+むしろ、**「設定された」「検証された」「実runtimeで成立した」を別stateにする必要**が具体化されます。
 
 ---
 
@@ -635,7 +618,7 @@ AIが何を確認すべきかを間違える
 
 3月13日のdungeonでは7回testしてもplayer traversalを見ていませんでした。
 
-`avatars2509`ではEditor内の参照やAnimatorを読めても、実HMDやOSCという別authorityを観測しなければ原因を確定できません。
+`image2outfit`ではMCP integration codeとstatic testsが存在しても、live Blender / Unity callを実行していない以上、Editor operationを証明できません。
 
 `vrmine`ではverification reportを作る実装そのものに、current client evidenceなしでPASSし得る穴がありました。
 
@@ -687,8 +670,8 @@ MCPそのものを「toyだからproductionでは無意味」と切り捨てる�
 | art direction | 成功・失敗が混在 | 不安定 |
 | shader / VFX | 高コスト失敗例 | 不安定 |
 | connection lifecycle | Connectedでも失敗例 | 運用監視が必要 |
+| MCP integration / registration | `image2outfit`でstatic実装まで | live E2Eを別gateにする |
 | save / reload persistence | 公開事例で境界あり | 明示gateが必要 |
-| real VR / device-specific rendering | `avatars2509`で未確定問題あり | 実HMD authorityが必要 |
 | real VR networking | `vrmine`で未完了 | ClientSimだけでは不可 |
 | late join / owner leave | `vrmine`でrelease blocker | real clients必要 |
 | external playerの面白さ | 強い自動評価証拠なし | 人間 / player側 |
@@ -796,7 +779,7 @@ MCPをproduction gateにせず、authoring adapterとして扱う方が安全で
 
 ## 結論
 
-14件の公開実例と、自分たちのUnity / VRChat repoを並べて見えてきたのは、「Unity MCPはすごい」でも「まだ使えない」でもありません。
+14件の公開実例と、自分たちのBlender / Unity / VRChat repoを並べて見えてきたのは、「Unity MCPはすごい」でも「まだ使えない」でもありません。
 
 すでにAIは、
 
@@ -827,7 +810,7 @@ buildする
 
 外部では7回testしても最初の部屋から出られないgameがありました。
 
-自分たちの`avatars2509`では、Editor内の参照やAnimatorを読めても、実HMD / OSC側を観測しなければ原因を確定できませんでした。
+自分たちの`image2outfit`では、Blender / Unity MCP integrationを実装しても、live E2Eが`NOT_RUN`ならoperation successとは呼びませんでした。
 
 そして`vrmine`では約4,000行を追加し、verificationとrelease gateを作っても、real multi-client / late join / owner leave / private upload evidenceを閉じられずreleaseは`BLOCKED`のままです。
 
@@ -896,11 +879,9 @@ https://github.com/CoplayDev/unity-mcp
 
 ### 私たち自身のfield evidence
 
-- avatars2509 Issue #4 — Material identity / stereo / actual HMD boundary  
-https://github.com/KAFKA2306/avatars2509/issues/4
-- avatars2509 Issue #8 — OSC → Animator → GameObject troubleshooting boundary  
-https://github.com/KAFKA2306/avatars2509/issues/8
-- vrmine PR #18 — three-game release remains BLOCKED  
+- image2outfit PR #212 — Blender + Unity MCP integration, live E2E still `NOT_RUN`  
+https://github.com/KAFKA2306/image2outfit/pull/212
+- vrmine PR #18 — three-game release remains `BLOCKED`  
 https://github.com/KAFKA2306/vrmine/pull/18
 - vrmine Issue #19 — target-machine G0–G4 and private upload release blocker  
 https://github.com/KAFKA2306/vrmine/issues/19
