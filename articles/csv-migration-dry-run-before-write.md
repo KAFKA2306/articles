@@ -1,5 +1,5 @@
 ---
-title: "CSVを入れる前に「この1行が何になるか」を全部見せる。壊さない移行UXを作った"
+title: "CSV一括登録でデータを壊さない。追加・重複・エラーを実行前に全部確認する"
 emoji: "🧪"
 type: "tech"
 topics: ["javascript", "dataengineering", "testing", "privacy"]
@@ -7,7 +7,41 @@ published: false
 published_at: 2026-08-12 12:30
 ---
 
-同じ本について、手元の記録にこんな4行があったとする。
+CSVから何百件もデータを登録するとき、本当に怖いのは「CSVを読めないこと」ではない。
+
+**間違ったデータを、正常に一括登録できてしまうこと**だ。
+
+既存データとの重複、表記揺れ、不正なID、情報不足。これらを含むCSVをそのまま本番データへ書き込むと、あとで人間が重複削除や修正をすることになる。
+
+そこで、本棚データベース `KAFKA2306/books` では、CSVを選んでもすぐには登録しない。
+
+まず全行を既存データと照合し、
+
+- すでに登録済み
+- 新規追加できる
+- 既存作品の別Editionとして追加できる
+- 同じCSV内で重複している
+- ISBNが不正
+- 情報不足
+- 類似タイトルがあり人間確認が必要
+
+のように、**実行前に1行ずつ判定結果を見せる**ようにした。
+
+しかも、この確認中は正準catalogを書き換えない。
+
+この記事では、CSV parserの作り方ではなく、**一括登録を「押してから祈る処理」にしないための設計**を、実装とテストを根拠に整理する。
+
+実装の一次情報はこちら。
+
+- 診断core: https://github.com/KAFKA2306/books/blob/main/src/migration-diagnosis.mjs
+- 非破壊性を含むテスト: https://github.com/KAFKA2306/books/blob/main/tests/migration-diagnosis.test.mjs
+- Browser UI: https://github.com/KAFKA2306/books/blob/main/migration.js
+- 初期実装commit: https://github.com/KAFKA2306/books/commit/e9dbe8c968f17dd3626d9488a3fcb269fdbaaecc
+- Browser版PR: https://github.com/KAFKA2306/books/pull/43
+
+## 「CSVを読み込めた」は成功条件ではない
+
+例えば、手元にこんな記録があるとする。
 
 ```text
 1984 / Kindle
@@ -16,60 +50,21 @@ published_at: 2026-08-12 12:30
 サンプル: 1984
 ```
 
-人間なら、全部を別の本だとは思わない。
+人間なら、4行をそのまま4冊の新規データとは考えない。
 
-「同じ作品かもしれない」
+同じ作品かもしれない。別の版かもしれない。単なるメモが混ざっているかもしれない。
 
-「版が違うかもしれない」
+一方、単純なCSV importerの成功条件を「構文エラーなく読み込めた」にすると、4行を4件として登録することもできてしまう。
 
-「実際に持っているものと、単なるメモが混ざっているかもしれない」
+だから必要なのは、importの成否だけではない。
 
-と読む。
+**その行を登録したら、既存データに対して何が起きるのか。**
 
-しかしCSV importerは、そこまで気を利かせてくれない。
+これを登録前に説明できることが重要になる。
 
-読み込める4行なら、そのまま4件として登録できてしまう。
+## importボタンより先に「登録予定表」を作る
 
-私が欲しかったのは、importボタンではなかった。
-
-**書き込む前に、この1行が既存データへどう扱われる予定なのかを全部見せる画面**だった。
-
-今回のケーススタディは `KAFKA2306/books` という本棚データベースである。
-
-このDBでは、
-
-- Work = 作品
-- Edition = 版・形式
-- Holding = 実際の所蔵
-
-を分けている。
-
-だから同じCSVでも、行ごとに意味が違う。
-
-```text
-既に持っている
-新しい版として追加できる
-完全に新しい作品
-情報不足
-ISBN不正
-同じCSV内で重複
-似たタイトルがあり人間確認が必要
-```
-
-これを成功 / 失敗の2値へ潰したくなかった。
-
-そこで最初に作ったのはimporterではなく、**正準catalogを一切変更せず、「この行なら何をする予定か」と理由だけを返すdry-run診断**だった。
-
-- 実装・テスト: https://github.com/KAFKA2306/books/commit/e9dbe8c968f17dd3626d9488a3fcb269fdbaaecc
-- Browser版: https://github.com/KAFKA2306/books/pull/43
-
-この記事で扱うのはCSV parsingの方法ではない。
-
-**大切なデータへ書き込む前に、利用者が変更予定を理解し、危ない行だけ止められる移行体験をどう作るか**である。
-
-## importerより先に「予定表」を作った
-
-典型的なimporterは、次の責務を一度に持ちやすい。
+典型的なimport処理は、次の責務を一つの流れに詰め込みやすい。
 
 ```text
 parse
@@ -81,16 +76,11 @@ parse
 → 結果を返す
 ```
 
-問題は、`actionを決める` と `書き込む` が近すぎることだ。
+この構造では、判定と書き込みが近い。
 
-途中で「このISBNは既存Holdingだった」「タイトルが既存Workに似ている」と分かっても、その時点ではもう副作用と向き合う必要がある。
+途中で「既存データだった」「同じCSV内で重複していた」と判明した時点で、すでに副作用をどう扱うか考えなければならない。
 
-- rollbackするのか
-- 部分成功を許すのか
-- 再実行したら重複しないか
-- 人間確認が必要な行だけどう戻すのか
-
-そこでMVPでは、書き込みを消した。
+そこで最初の実装では、書き込み自体を外した。
 
 ```text
 parse
@@ -99,49 +89,31 @@ parse
 → diagnose
 → report
 
-# canonical mutationなし
+# canonical dataへの書き込みなし
 ```
 
-この時点で、利用者ができることは3つだけである。
+Browser版でユーザーが行うことも単純だ。
 
 1. CSVを選ぶ
-2. 診断する
-3. JSON / HTML reportを保存する
+2. 「診断する」を押す
+3. 行ごとの結果を確認する
+4. 必要ならJSON / HTML reportを保存する
 
-**「適用する」ボタンは作らなかった。**
+この段階には「全部適用する」ボタンを置いていない。
 
-機能不足ではある。
+機能を減らしたのではなく、**正しい判定を確認する工程と、本番データを書き換える工程を分離した**。
 
-しかし最初のリリースで守りたかったのは、ワンクリックで全部終わることではなく、**何が起きるか分からないまま正準データが変わらないこと**だった。
+Browser実装では `migration.js` がCSVを読み、公開catalogを取得し、`diagnoseMigration()` を呼び出している。
 
-## 同じ4行でも、返すべきなのは4つの理由
+https://github.com/KAFKA2306/books/blob/main/migration.js
 
-回帰テストでは、同じ診断関数へ次の入力を渡している。
+## 成功・失敗ではなく「なぜそう判断したか」を返す
 
-```js
-[
-  { title: '赤毛のアン', isbn: '9784102113417' },
-  { title: '新しい本', isbn: '' },
-  { title: '', isbn: '1234' },
-  { title: '新しい本', isbn: '' },
-]
-```
+一括登録では、`success: true` だけ返されても判断材料にならない。
 
-期待する結果は単なる `success: true/false` ではない。
+必要なのは理由である。
 
-例えば、
-
-```text
-existing_holding
-safe_new_work
-invalid_isbn
-insufficient_metadata
-duplicate_in_batch
-```
-
-のようなreason codeを返す。
-
-実装には少なくとも次がある。
+現在の診断coreでは、例えば次のreason codeを返す。
 
 ```text
 invalid_isbn
@@ -154,72 +126,61 @@ safe_new_work
 safe_new_edition
 ```
 
-ここで重要なのは、人間向けのエラーメッセージを契約にしないことだ。
+実装:
+https://github.com/KAFKA2306/books/blob/main/src/migration-diagnosis.mjs
 
-UIには、
+これにより、同じ「登録しない」という結果でも意味を分けられる。
 
-> この本はすでに所蔵済みです
+| 判定 | 意味 | 次の行動 |
+|---|---|---|
+| `existing_holding` | すでに登録済み | 変更しない |
+| `safe_new_work` | 新しい作品として追加候補 | 自動処理候補 |
+| `safe_new_edition` | 既存作品の別版として追加候補 | 自動処理候補 |
+| `duplicate_in_batch` | 同じ入力内で重複 | 入力を確認 |
+| `invalid_isbn` | ISBNが不正 | 修正 |
+| `review_similar_title` | 類似作品候補あり | 人間確認 |
 
-と表示してもいい。
+人間向けUIの文言は後から変えられる。
 
-しかしmachine-readableな結果は `existing_holding` に固定する。
+一方、自動処理や集計に使うreason codeは固定できる。
 
-そうすると、
+つまり、**利用者への説明とシステムの判断契約を分離できる**。
 
-- HTMLでは人間に分かりやすく見せる
-- JSONでは件数を集計する
-- 後でsafeだけapplyする
-- reviewだけ人間へ回す
+## 通常登録とCSV登録で「正解」を分けない
 
-といった用途へ分岐できる。
+移行機能を別実装にすると、別の事故が起こる。
 
-**利用者への説明と、システムの判断契約を分けられる。**
+通常登録では重複扱いなのに、CSV登録では新規扱いになる。
 
-## 一番重要だったのは、migration専用ロジックを作らなかったこと
+CLIでは要確認なのに、Browserでは自動追加扱いになる。
 
-移行機能だから、migration専用validatorを作る案は自然だった。
+入力経路ごとに判定ロジックを持つと、「どれが本当の判定か」が分からなくなる。
 
-しかし、それを採ると別の問題が始まる。
-
-通常登録では「既存Holding」なのに、CSV移行では「新規Edition」と判定する。
-
-CLIではreviewなのに、browserではsafeになる。
-
-入力経路によって正解が変わる。
-
-これが一番避けたかった。
-
-そこでmigration側は、既存の `precheckCandidates` を再利用するadapterにした。
+そこでmigration側は、既存catalogの `precheckCandidates` を再利用している。
 
 ```text
-CLI ───────┐
-           ├─> diagnoseMigration()
-Browser ───┘
-                 ↓
-          precheckCandidates()
+CLI / Browser
+      ↓
+diagnoseMigration()
+      ↓
+precheckCandidates()
 ```
 
-CLIもBrowserも、意味判定を持たない。
+`src/migration-diagnosis.mjs` の先頭でも `precheckCandidates` をimportしており、診断結果をその共通判定から組み立てている。
 
-入力方法と表示方法だけが違い、**「このデータをどう扱うか」の正解は1か所だけ**に置く。
+https://github.com/KAFKA2306/books/blob/main/src/migration-diagnosis.mjs
 
-これはdry-runを作った副産物ではなく、むしろ大きな価値だった。
+**入力方法は違っても、「このデータをどう扱うか」のauthorityは1か所にする。**
 
-importerを急いで作らなかったから、後からUIを増やしても判定ロジックを複製せずに済んだ。
+これが、CSV機能そのものより重要だった。
 
-## ブラウザ版では、CSVをアップロードしない
+## CSVはBrowserの外へ送らない
 
-CSVには購入履歴や管理情報が含まれることがある。
+本棚データには、書名、ISBN、購入経路、購入履歴などが含まれうる。
 
-診断するだけなのに、いったんサーバへアップロードする必要はなかった。
+診断だけなら、それをサーバへアップロードする必要はない。
 
-Browser版では、
-
-1. ユーザーが選んだCSVを `File.text()` でbrowser memoryへ読む
-2. 公開済みの `api/v1/catalog.json` だけを取得する
-3. browser内で `diagnoseMigration()` を実行する
-
-という境界にした。
+Browser版では、選択されたCSVを `File.text()` で読み、公開されている `api/v1/catalog.json` を取得して、ブラウザ内で診断する。
 
 ```js
 const [text, response] = await Promise.all([
@@ -232,19 +193,20 @@ const catalog = await response.json();
 currentReport = diagnoseMigration(rows, catalog);
 ```
 
-選択CSVを送信するupload APIはない。
+現在のBrowser実装:
+https://github.com/KAFKA2306/books/blob/main/migration.js
 
-PR #43でも、`selected CSV in browser memory only`、`user file is never uploaded` を設計境界としている。
+PR #43にも、選択したCSVはbrowser memory内で処理し、ユーザーファイルをuploadしないことが設計境界として記録されている。
 
 https://github.com/KAFKA2306/books/pull/43
 
-これはセキュリティ機能を増やしたというより、**そもそも送らなくてよいデータを送らない**というUX判断である。
+これは「アップロード後に安全に保管する」設計ではない。
 
-利用者は「診断するために、自分のCSVをどこかへ預ける」必要がない。
+**そもそも診断に不要なデータを送らない**設計である。
 
-## `catalog_mutated: false` と書くだけでは信用しない
+## 「書き換えません」という表示だけでは証拠にならない
 
-reportには、
+診断reportは次の情報を持つ。
 
 ```json
 {
@@ -253,13 +215,11 @@ reportには、
 }
 ```
 
-を含めている。
+しかし、このフラグだけなら自己申告でしかない。
 
-しかし、このフラグは自己申告でしかない。
+内部でcatalogを変更してしまったあとに `false` を返すバグも作れる。
 
-内部でcatalogを書き換えてから `false` を返すバグも作れる。
-
-そこでテストはbefore/afterを比較する。
+そこでテストでは、診断前後のcatalogを比較している。
 
 ```js
 const before = JSON.stringify(catalog);
@@ -270,78 +230,62 @@ assert.equal(report.catalog_mutated, false);
 assert.equal(JSON.stringify(catalog), before);
 ```
 
-重要なのは、**「壊しません」と書くことではなく、本当に同じデータが残ったことを検証すること**だ。
+現在のテスト:
+https://github.com/KAFKA2306/books/blob/main/tests/migration-diagnosis.test.mjs
 
-この違いは、移行機能を人に使ってもらうときの信頼に直結する。
+「壊しません」と説明するだけでなく、**本当に入力catalogが変化していないことを回帰テストにする**。
 
-## 診断reportは、人と機械の両方が使える形にする
+ここまでやって初めて、dry-runが仕様ではなく検証対象になる。
 
-CLIログだけなら開発者は読める。
+## JSONとHTMLを同じ判定結果から作る
 
-JSONだけなら後段処理はしやすい。
+一括登録の確認結果は、開発者だけが読むとは限らない。
 
-しかし実際の移行では、エンジニア以外が内容を確認することもある。
-
-そこで一つのreport objectから、
-
-- JSON
-- HTML
-
-を生成する。
+そのため、同じ診断結果から機械向けJSONと人間向けHTMLを作る。
 
 ```text
-同じ診断結果
-   ├─ JSON → CI / 集計 / 自動処理
-   └─ HTML → 人間レビュー
+同じ diagnosis report
+       ├─ JSON → CI / 集計 / 後続処理
+       └─ HTML → 人間レビュー
 ```
 
-判定は一度だけ行う。
+重要なのは、JSON用とHTML用で再判定しないことだ。
 
-表示形式ごとに再判定しない。
+判定は一度だけ行い、表示形式だけを変える。
 
-これも「正解を1つにする」ための設計である。
+`renderDiagnosisHtml(report)` も同じreport objectを入力にしている。
 
-## この移行UXで、利用者が先に知りたいこと
+https://github.com/KAFKA2306/books/blob/main/src/migration-diagnosis.mjs
 
-importerの内部実装より、利用者が知りたいのは次の方だと思う。
+## ユーザーが本当に見たいのは件数ではなく「自分の1行」
 
-| 入力行 | 予定action | 理由 | 自動適用 |
-|---|---|---|---|
-| ISBN既存 | 変更なし | `existing_holding` | no-op |
-| 新規ISBN + 既存Work | Edition追加候補 | `safe_new_edition` | 候補 |
-| 新規title | Work追加候補 | `safe_new_work` | 候補 |
-| 類似title | 保留 | `review_similar_title` | 人間確認 |
-| ISBN不正 | 拒否 | `invalid_isbn` | 不可 |
+「100件中95件成功」というsummaryは便利だ。
 
-**「何件成功したか」より、「この行に何が起きるか」が分かる方が重要**である。
+しかし、既存データへ一括登録する場面では、それだけでは安心できない。
 
-特に既存データへ追加するmigrationでは、件数だけのsummaryは安心材料になりにくい。
+残り5件が何なのか分からないからだ。
 
-## dry-runだけでは解決しないこともある
+ユーザーが確認したいのは、例えばこういう表である。
 
-この設計は、書き込み前の意味判定を安全にする。
+| 入力行 | 予定action | 理由 |
+|---|---|---|
+| ISBN既存 | 変更なし | `existing_holding` |
+| 新規ISBN + 既存Work | Edition追加候補 | `safe_new_edition` |
+| 新規title | Work追加候補 | `safe_new_work` |
+| 類似title | 保留 | `review_similar_title` |
+| ISBN不正 | 拒否 | `invalid_isbn` |
 
-しかし、実際にapplyするときには別の問題が残る。
+つまり、重要なのは「何件通ったか」より、**この1行をシステムがどう理解したのか**である。
 
-- 診断後にcanonicalが更新されるTOCTOU
-- transaction競合
-- 外部APIへの副作用
-- 大規模CSVのmemory制約
-- server-side secretが必要な照合
+## この設計を他のシステムへ移すなら
 
-したがって次の段階では、diagnosis reportへcanonical revision/hashを持たせ、apply時に同じrevisionであることを確認する、といった設計が必要になる。
+本棚に限った話ではない。
 
-**dry-runは完成したmigrationではない。**
+顧客台帳、商品マスタ、設備台帳、会員データなど、既存データへ外部ファイルを一括登録する処理なら同じ構造を使える。
 
-その代わり、applyを作る前に「判断ルールが正しいか」を独立して検証できる。
+最低限、次の5点を分ける。
 
-## 別システムへ持ち出すなら、5つだけ真似すればいい
-
-CRM、設備台帳、商品マスタ、アカウント移行などでも、同じ考え方は使える。
-
-最初から大きなmigration frameworkを作る必要はない。
-
-### 1. 本番判定を副作用なしの関数へ切る
+### 1. 本番判定を副作用のない関数へ切り出す
 
 ```js
 function precheckCandidates(candidates, canonical) {
@@ -363,38 +307,50 @@ function diagnoseMigration(rows, canonical) {
 }
 ```
 
-### 3. reason codeを固定する
+### 3. 理由をmachine-readableなcodeにする
 
-人向け文言とmachine contractを分ける。
+UI文言と自動処理の契約を分ける。
 
-### 4. before/afterで非破壊性をテストする
+### 4. 非破壊性をbefore / afterでテストする
 
-自己申告ではなく状態で検証する。
+「変更しない予定」ではなく、実際に変更されていないことを検証する。
 
-### 5. CLIとUIで同じ診断coreを使う
+### 5. CLIとUIで同じ判定coreを使う
 
-入力・表示だけをadapterにする。
+入力・表示をadapterにし、意味判定を複製しない。
 
-この5つがあれば、少なくとも「書き込むまで何が起きるか分からない」状態からは抜けられる。
+## dry-runだけでは、本番適用の安全性は完成しない
 
-## importerを作る前に、利用者へ約束するものを変えた
+ここは重要な制約である。
 
-最初の課題は「CSVを取り込めるようにする」だった。
+dry-runで「今なら安全」と判定しても、その後に正準データが更新されれば結果は変わりうる。
 
-しかし実際に欲しかった体験を言い直すと、違った。
+実際のapply処理まで作るなら、さらに考える必要がある。
 
-> **自分のデータを壊さず、送らず、書き込む前に、どの行がどう扱われるか分かる。**
+- 診断後にcanonicalが更新されるTOCTOU
+- transaction競合
+- 外部APIへの副作用
+- 大規模入力のmemory制約
+- server-side secretが必要な照合
 
-この約束を先に置くと、実装順も変わった。
+したがって、dry-runは「安全なmigrationが完成した」という意味ではない。
 
-importerではなくdiagnosis。
+価値は、**本番書き込みを作る前に、判定規則を独立して見せ、テストできること**にある。
 
-applyではなくreport。
+## import機能ではなく「実行前に説明できる機能」を作る
 
-UI独自判定ではなくshared core。
+最初の要求を「CSVを取り込めるようにする」と置くと、最短経路はimportボタンになる。
 
-「成功しました」ではなくreason code。
+しかしユーザー側から要求を置き直すと違う。
 
-rollbackを豪華にするより先に、**適用前に何をする予定かを本番と同じ規則で説明できること**を作った。
+> 自分のデータを壊さず、外へ送らず、書き込む前に、各行がどう扱われるか確認したい。
 
-移行処理を安心して使えるようにするには、その順番の方が効いた。
+この要求なら、最初に作るべきものはimporterではない。
+
+**登録予定を説明する診断画面**である。
+
+一括登録を安心して使えるかどうかは、「成功しました」と表示できるかでは決まらない。
+
+**実行前に、何をする予定なのかを説明できるか。**
+
+そこから設計した方が、結果として壊れにくい。
