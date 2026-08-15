@@ -1,5 +1,5 @@
 ---
-title: "『AIを使い倒す人』で終わらせない。公開成果を並べたら、何を任せられる人かが見えた"
+title: "『AIを使い倒す人』では、何も伝わらない。成果物を「何を任せられるか」に翻訳する"
 emoji: "🪞"
 type: "idea"
 topics: ["ai", "learning", "career", "communication"]
@@ -7,278 +7,269 @@ published: false
 published_at: 2026-08-13 18:11
 ---
 
-人から「AIをものすごく使っている人」と言われることがある。
+GitHubにリポジトリがたくさんある。
 
-GitHubを見れば、そう見えるのは自然だと思う。
+PythonもTypeScriptも使う。AI agentも作る。データ分析も自動化もする。
 
-投資、データ分析、本棚DB、VRChat、AI agent、自動化、Web UI。
+それでも、初めて見る人には意外なほど何も伝わらない。
 
-入口が多い。
+知りたいのは技術一覧ではなく、たぶんこちらだからだ。
 
-ただ、この説明には少し違和感があった。
+> **この人に、どんな問題を渡すと、どんな状態まで持っていってくれるのか。**
 
-**AIをたくさん使うこと自体は、誰かにとっての価値ではない。**
+以前の私は、この問いに答えるために自分の公開成果を並べた。
 
-仕事や相談で知りたいのは、むしろ次だと思う。
+しかし、並べ方を間違えていた。
 
-> この人に、どんな曖昧な問題を渡すと、どんな状態まで持っていってくれるのか。
+`Work / Edition / Holding`、`AllowedRoot`、`MemoryClaim`、856件、7,699件。
 
-そこで自己分析ではなく、公開している成果物を4つ並べてみた。
+作った本人には具体的でも、初見の読者には内部事情である。
 
-すると、domainは違っても同じ動きがかなり繰り返されていた。
+GoogleのTechnical Writing教材は、よい説明を「読者がタスクを行うために必要な知識 − 読者がすでに持つ知識」と整理し、専門家が初心者の知らない前提を忘れる *curse of knowledge* に注意を促している。
+
+https://developers.google.com/tech-writing/one/audience
+
+そこで、成果物から始めるのをやめた。
+
+**誰でも分かる問題から始め、その問題をどう変えたかの証拠として成果物を置く。**
+
+すると、自分が何を作っている人なのかも、以前よりずっと説明しやすくなった。
+
+## 1. データを入れてから壊れたと気づくのは遅い
+
+たとえば、1,000行のCSVを新しいシステムへ移すとする。
+
+実行後に、
+
+- 既存データと重複していた
+- 同じ行が入力ファイル内に複数あった
+- IDやISBNの形式が壊れていた
+- 新規登録してよい行と、人が確認すべき行が混ざっていた
+
+と分かっても遅い。
+
+欲しいのは「高速に書き込めるimporter」だけではない。
+
+**書き込む前に、何が起きるか分かること**である。
+
+自分の本棚DBでも同じ問題があった。
+
+そこで最初に作ったのは、正準データを書き換えない `dry-run` だった。
+
+公開テストでは、診断後にもcatalogが変化していないことを確認しながら、少なくとも次を別々の理由コードとして返している。
 
 ```text
-曖昧な問題
+existing_holding     すでに所蔵している
+safe_new_work        新規登録候補
+invalid_isbn         ISBNが不正
+duplicate_in_batch   入力内で重複
+```
+
+証拠:
+
+- test: https://github.com/KAFKA2306/books/blob/main/tests/migration-diagnosis.test.mjs
+- implementation: https://github.com/KAFKA2306/books/blob/main/src/migration-diagnosis.mjs
+
+ここで重要なのは「本棚を作った」ことではない。
+
+**破壊的な処理を、実行前に判断できる処理へ変えた**ことである。
+
+この型は本棚以外にも使える。
+
+顧客マスタ移行、商品DB更新、ファイル一括rename、生成AIによる大量編集。
+
+書き込み処理が強力になるほど、先に「何が起きるか」を見せる価値も上がる。
+
+## 2. 同じ数字が856と7,699なら、どちらを信じるのか
+
+次はもっと日常的な問題だ。
+
+昨日の分析では856件だった。
+
+今日取り直すと7,699件になった。
+
+このとき利用者が知りたいのは、新しい数字の方が大きいことではない。
+
+**なぜ変わったのか。どちらを、何の目的で使ってよいのか。**
+
+実際に `investor2` の公開データ分析で、この変化が起きた。
+
+調べると、856と7,699は同じ母集団を数えた値ではなかった。
+
+現在のsnapshotでは、7,699を政府機関が公表した単一の公式合計とは扱っていない。17件のOGE Form 278-T文書を対象にした外部parser cross-check由来の派生集計として、
+
+```text
+purchases: 5,026
+sales:     2,673
+total:     7,699
+status:    derived_external_parser_crosscheck
+```
+
+と保存している。
+
+さらに、以前の856は `previous_partial_count_856_superseded: true` として、狭いscopeだったことを履歴に残した。
+
+証拠:
+
+- snapshot: https://github.com/KAFKA2306/investor2/blob/main/docs/research/data/us_oge_trump_278t_trade_count_2026-08-11.json
+- analysis note: https://github.com/KAFKA2306/articles/blob/main/articles/primary-source-derived-data-provenance.md
+
+W3CのPROV仕様群も、provenanceを「データや物を生み出すのに関わったentity、activity、peopleについての情報」とし、品質・信頼性・trustworthinessを評価するために使えるものとしている。
+
+https://www.w3.org/TR/prov-overview/
+
+つまり、ここで作った価値は「7,699という数字」ではない。
+
+```text
+値
++ 出所
++ 対象範囲
++ 計算方法
++ 状態
++ 過去値との差分
+```
+
+を一緒に残し、**数字が変わったときにも判断を続けられる状態**にしたことである。
+
+この型も投資だけの話ではない。
+
+売上KPI、Webアクセス数、実験結果、製造歩留まり、AI評価スコア。
+
+数字が意思決定に使われるなら、「値」より「なぜその値なのか」が後から追える方が長く使える。
+
+## 3. AIに仕事を任せたい。でもPCを好き勝手触らせたくない
+
+AI agentの話も、技術名から入ると分かりにくい。
+
+問題はもっと単純である。
+
+> **AIに仕事は任せたい。でも、必要以上の権限は渡したくない。**
+
+これはAI特有の考え方でもない。
+
+NISTはleast privilegeを、ユーザーやその代理で動くprocessの権限を、割り当てられた仕事に必要な最小限へ制限するsecurity principleと定義している。
+
+https://csrc.nist.gov/glossary/term/least_privilege
+
+自分が公開しているChatGPT ↔ Codex CLI bridgeでも、同じ考え方を機械的な境界にした。
+
+現在のREADMEで確認できる境界は次の通りである。
+
+```text
+通常          read-only
+書き込み時    workspace-write を明示
+danger-full-access  拒否
+作業directory AllowedRoot 配下だけ
+queue          private repository 必須
+命令元         設定したGitHub loginだけ
+local MCP      deny-by-default + 明示opt-in
+```
+
+証拠:
+
+- implementation README: https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/README.md
+- verification: https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VERIFICATION.md
+
+ここで価値があるのは「AIがPCを操作できた」ことではない。
+
+**どこまでなら任せてよいかを、人間の注意力ではなく実行条件へ変えたこと**である。
+
+「気をつけて使う」は毎回判断が必要になる。
+
+境界をコードにすると、次の仕事でも同じ判断を再利用できる。
+
+## 3つとも、作ったものではなく「変えた状態」で見ると同じだった
+
+本棚DB、公開データ分析、AI agent。
+
+製品名だけ見ると別物である。
+
+しかし、読者が理解できる問題へ翻訳すると、共通点が見える。
+
+| 最初の状態 | 放置したときの困りごと | 変えた状態 | 残した証拠 |
+|---|---|---|---|
+| CSVを入れたい | 書き込んでから重複・不正に気づく | 書く前に結果を診断できる | dry-run test / reason code |
+| 数字が変わった | どちらを信じるか説明できない | scope・出所・方法まで追える | snapshot / source URL / status |
+| AIへ任せたい | 必要以上の権限まで渡る | 任せられる範囲を固定する | AllowedRoot / sandbox / allowlist |
+
+自分が繰り返していたのは、特定の技術ではなかった。
+
+```text
+よく分からない要求
   ↓
-一次情報・現状を調べる
+失敗したら何が困るかを決める
   ↓
-正準な状態を決める
+正しい状態と境界を決める
+  ↓
+機械的に判定できるようにする
   ↓
 実装する
   ↓
-失敗条件をテストする
-  ↓
-公開・運用できる成果物にする
-  ↓
-後から検証できる証拠を残す
+後から確かめられる証拠を残す
 ```
 
-この記事で言いたいのは「何でもできます」ではない。
+**曖昧な問題を、他人が判断でき、機械が繰り返せる状態へ変える。**
 
-**私が比較的強いのは、曖昧な意図を、後から確かめられる仕組みへ変える仕事らしい**、ということだ。
+これが、少なくとも今の公開成果から説明できる共通項だった。
 
-現時点ではプロフィール候補として `published: false` のままにする。
+## 成果物を見るとき、技術名より5つを聞く
 
-## 1. 本棚CSV：欲しかったのはimporterではなく「書き込む前に分かる」ことだった
+これは自己紹介だけの話ではない。
 
-`KAFKA2306/books` では、本の記録をWork / Edition / Holdingへ分けて管理している。
+自分のGitHub、ポートフォリオ、職務経歴書を見るときにも使える。
 
-CSV移行を作るとき、最初にimporterを作らなかった。
+1. **誰にでも分かる元の問題は何だったか**
+2. **失敗すると何が困ったのか**
+3. **どんな境界・判定条件を置いたのか**
+4. **本当にそう動くと何で確認できるのか**
+5. **次に同じ問題が来たとき、何を考え直さなくてよくなったか**
 
-先に、正準catalogを変更せず、
+「Reactを使った」「AI agentを作った」「100 repositoriesある」だけでは、この5つには答えられない。
+
+逆に、小さな成果物でも、
+
+> 入力としてこの問題を渡すと、こういう失敗を防ぎながら、ここまで持っていく。
+
+と説明できれば、依頼側はかなり判断しやすくなる。
+
+## 「何でもできます」ではなく、変換を見せる
+
+以前は、domainの多さをどう一つのプロフィールにまとめるかを考えていた。
+
+今は、無理にdomainをまとめなくてよいと思っている。
+
+重要なのは、毎回何を**変換**しているかである。
 
 ```text
-この行は既所蔵
-この行は新規Work
-この行は類似titleなので人間確認
-このISBNは不正
+書いてみないと分からない
+→ 書く前に分かる
+
+数字はあるが意味が分からない
+→ どこから来た数字か説明できる
+
+AIに任せたいが怖い
+→ 任せてよい範囲が機械的に決まっている
 ```
 
-を返す診断coreを作った。
+この方が「AIを使い倒す人」より、依頼する側にとって使いやすい説明になる。
 
-その後CLIとbrowserを追加しても、どちらも同じ診断coreを使えた。
+AIは速度を上げる。
 
-- article: `csv-migration-dry-run-before-write.md`
-- source repo: https://github.com/KAFKA2306/books
+GitHubは証拠を残す。
 
-ここでやったのはCSV処理ではない。
+PythonやTypeScriptは実装手段になる。
 
-**「データを入れたい」という曖昧な要求を、「書き込む前に何が起きるか説明できる状態」へ変えた。**
+しかし商品になるのは、それらの名前ではない。
 
-私はこういう変換が好きらしい。
+> **人が毎回迷っていた問題を、次からは迷わず扱える状態にすること。**
 
-## 2. 投資データ：856件が7,699件になっても、どちらを信じるか説明できるようにした
+成果物を並べるなら、数ではなく、この変換が見えるように並べたい。
 
-`KAFKA2306/investor2` では、同じテーマの集計が856から7,699へ大きく変わったケースがあった。
+## 根拠
 
-数字だけ見れば、前が間違いだったように見える。
-
-実際にはscopeが違った。
-
-そこで、
-
-- primary source
-- observed value
-- derived aggregate
-- external parser cross-check
-- scope
-- method
-
-を分けてsnapshotへ残した。
-
-- article: `primary-source-derived-data-provenance.md`
-- source repo: https://github.com/KAFKA2306/investor2
-
-これで「数字を出す」から、
-
-**数字が変わったときに理由を説明できる**
-
-へ進めた。
-
-ここでも、作ったものより「なんとなく信じるしかない状態を減らした」ことの方が自分には重要だった。
-
-## 3. AIにPC作業を任せる：自動化より先に「どこまで触ってよいか」をコードにした
-
-GitHub Issueを中継して、ローカルPC上のAIへ仕事を渡すbridgeも作った。
-
-ただし、最初から何でも実行できるようにはしていない。
-
-- 命令できるGitHub userを限定する
-- `AllowedRoot` 外のdirectoryを拒否する
-- 通常はread-only
-- writeが必要な仕事だけworkspace-write
-- tool起動ではなくE2E最終結果まで確認する
-
-- article: `codex-chatgpt-github-issue-bridge.md`
-- public implementation: https://github.com/KAFKA2306/KAFKA2306/tree/main/scripts/codex-chatgpt-bridge
-
-ここで価値があるのは「AIでPCを操作できた」ことではない。
-
-**どこまでなら安心して委任できるかを、自然言語ではなく機械的な境界へ変えたこと**だと思う。
-
-## 4. AIペットの記憶：聞いたログを、勝手に本人の事実へしなかった
-
-`KAFKA2306/vlog` のVRCPet adapterでは、壊れた3行のfixtureを使っている。
-
-```text
-{"text":"hello"}
-{"broken":
-{"text":"world"}
-```
-
-期待値は、
-
-```text
-valid records = 2
-parse issues  = 1
-```
-
-である。
-
-読めた2件はObservationとして残す。
-
-壊れた1件もissueとして残す。
-
-しかし、読めた会話をそのまま本人のMemoryClaimにはしない。
-
-- article: `vrcpet-observation-source.md`
-- source repo: https://github.com/KAFKA2306/vlog
-
-これも同じだった。
-
-**観測したことと、事実として断定してよいことの間に境界を置く。**
-
-## 4つ並べると、domainより作業の型の方が一貫していた
-
-本、投資、AI agent、VRChatペット。
-
-題材だけ見れば別々である。
-
-しかし、自分がやっていることはかなり似ていた。
-
-### 1. 「何が正しい状態か」を先に決める
-
-コードを書く前に、
-
-```text
-何を成功と呼ぶか
-何を未確認と呼ぶか
-何が起きたら止めるか
-```
-
-を分ける。
-
-### 2. 一次情報・実データへ戻る
-
-それらしい説明より、今のrepository、実file、公式資料、実行結果を確認する。
-
-### 3. 失敗条件を成果物へ入れる
-
-READMEへ注意を書くより、test、CI、schema、stateとして残す。
-
-### 4. 「動いた」を完成にしない
-
-tool success、build success、runtime success、publish successを必要に応じて分ける。
-
-### 5. 後から再現できる証拠を残す
-
-commit、source URL、hash、fixture、verification recordを成果物とセットにする。
-
-この5つは、技術stackより再利用されている。
-
-## だから「AIの人」より、「曖昧さを減らして運用へ持っていく人」の方が近い
-
-AIはかなり使う。
-
-GitHubも使う。
-
-PythonもTypeScriptも使う。
-
-でも、それらは結果を作る手段である。
-
-自分が嬉しいのは、
-
-```text
-よく分からない
-```
-
-だったものが、
-
-```text
-何が分かっているか
-何が未確認か
-どうすれば動くか
-何をもって完了か
-```
-
-へ変わったときだ。
-
-以前「世界の中にある『なんとなく』を減らしたい」と書いていた。
-
-今はもう少し業務的に言える。
-
-**曖昧な要求・散らばった情報・一回限りの手作業を、検証可能で繰り返し使える仕組みへ変えること**が、自分の中心に近い。
-
-## 何を任せると相性がよさそうか
-
-公開成果から言える範囲なら、次のような仕事と相性がよい。
-
-### 「毎回人が確認している」を減らしたい
-
-手作業を単にscript化するのではなく、失敗時に止まり、証拠が残るところまで設計する。
-
-### データはあるが「どれが正しいか」が曖昧
-
-source、scope、canonical state、derived valueを分け、利用側が判断できる形へする。
-
-### AIを導入したいが、どこまで任せてよいか分からない
-
-権限・入力・出力・completion boundaryを分け、委任可能な範囲を小さく固定する。
-
-### prototypeは動いたが、運用へ持っていけない
-
-test、CI、state、failure case、production verificationを追加して、「動いた」から「任せられる」へ寄せる。
-
-逆に、完成した仕様どおりに大量実装するだけなら、この強みはあまり必要ないかもしれない。
-
-**問題そのものがまだ曖昧な段階の方が、自分の価値は出やすい。**
-
-## 「何でもできる」は目標にしない
-
-domainが多いと、「何でもできる人」に見えることがある。
-
-しかし、それは使いやすい説明ではない。
-
-何でもできる、では依頼側が何を渡せばよいか分からない。
-
-今回4つの公開成果へ接地してみて、少なくとも次の表現なら証拠と一致すると思う。
-
-> **曖昧な問題を調べ、正準状態と失敗条件を決め、実装・検証・運用までつなぎ、あとから確かめられる形にする。**
-
-AIはその速度を大きく上げる。
-
-ただし、AIを使うこと自体が商品ではない。
-
-その結果、**人が毎回考え直さなくても使える仕組みが残ること**が価値である。
-
-## この原稿をまだ公開しない理由
-
-これは自己紹介としては以前より具体的になった。
-
-一方、営業資産として公開するなら、さらに各成果のproduction利用状況や利用者価値を揃えた方が強い。
-
-そのため現時点では `published: false` を維持する。
-
-根拠のない「高出力」「何でもできる」といった自己評価は使わない。
-
-公開するなら、**何を任せられるかを、公開成果から読者自身が判断できる状態**にしてからにしたい。
+- Google Technical Writing, Audience: https://developers.google.com/tech-writing/one/audience
+- W3C PROV Overview: https://www.w3.org/TR/prov-overview/
+- NIST CSRC, Least Privilege: https://csrc.nist.gov/glossary/term/least_privilege
+- books migration diagnosis test: https://github.com/KAFKA2306/books/blob/main/tests/migration-diagnosis.test.mjs
+- investor2 provenance snapshot: https://github.com/KAFKA2306/investor2/blob/main/docs/research/data/us_oge_trump_278t_trade_count_2026-08-11.json
+- ChatGPT ↔ Codex CLI Bridge: https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/README.md
