@@ -1,604 +1,1043 @@
 ---
-title: "GitHub IssueをAIの伝言板にしたら、伝言板に全部やらせてはいけないと分かった"
-emoji: "📬"
+title: "GitHub IssueからAIにローカルPCを任せてよいのか？ Unity・Blender・動画生成で考える安全な橋"
+emoji: "🔁"
 type: "tech"
-topics: ["codex", "github", "tailscale", "mcp", "automation"]
+topics: ["codex", "github", "unity", "security", "automation"]
 published: true
-published_at: 2026-08-15 12:53
+published_at: 2026-08-15 13:01
 ---
 
-ChatGPTに相談する。
+# GitHub IssueからAIにローカルPCを任せてよいのか？ Unity・Blender・動画生成で考える安全な橋
 
-「このリポジトリ、どこがおかしい？」
+GitHub Issueに仕事を書き、AI coding agentに渡す。
 
-次にローカルのCodex CLIへ移動して、同じ説明をする。
+2026年現在、この部分だけなら珍しい仕組みではありません。GitHub Copilotのcoding agentはIssueを受け取って作業し、Pull Requestを作成できます。GitHubはOpenAI Codexを含むthird-party coding agentsについても、Issueやpromptから仕事を委譲し、PRで人間がレビューする流れを提供しています。
 
-Codexが調べ終わったら、結果をコピーしてChatGPTへ戻す。
+- [GitHub Docs — Kick off a task with Copilot agents](https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/kick-off-a-task)
+- [GitHub Docs — About third-party coding agents](https://docs.github.com/en/copilot/concepts/agents/about-third-party-coding-agents)
 
-修正方針が決まったら、またCodexへ貼る。
-
-数回なら平気です。でも、調査 → 判断 → 修正 → テストを繰り返すと、**自分がAI同士の伝書鳩になっている**ことに気づきます。
-
-そこで私は、private GitHub Issueを2つのAIの間に置きました。
+では、なぜ私はわざわざ次のような仕組みを作ったのでしょうか。
 
 ```text
-ChatGPT / 人間
-  ↓ 依頼を書く
-private GitHub Issue
+GitHub Issue
   ↓
-local daemon
+Windowsの常駐daemon
   ↓
-Codex CLI
-  ↓ 結果を書く
-private GitHub Issue
-  ↓
-ChatGPT / 人間
+ローカルCodex CLI
 ```
 
-感覚としては、会社の受付に置く伝言ノートです。
+理由は単純です。
 
-「この資料を確認してください」と書いておけば、担当者が見つけて仕事をする。終わったら同じノートに「確認しました」と残す。
+**コードだけならcloudで扱える。しかし、仕事がUnity、Blender、GPU、動画、3Dアセットまで広がると、リポジトリの外にあるローカル環境そのものが必要になる。**
 
-最初は、これで十分だと思いました。
+たとえば、こんな仕事です。
 
-**GitHub IssueをAI同士のmessage queueにすればいい。**
+- Unity EditorでFBXやTextureをimportし、Prefabやbuildを確認する
+- Blenderで`.blend`を開き、Python処理やrenderを実行する
+- ローカルGPUで画像・動画生成modelを動かす
+- FFmpegで動画をfilter、transcode、muxする
+- 数GB級の動画や3D assetをローカルディスク上で処理する
+- 特定versionのEditor、SDK、cache、device、認証済み環境を使う
 
-ところがGitHub Actions、Tailscale、OpenAI Secure MCP Tunnel、本物のmessage queueと比べてみると、少し変なことをしていると分かりました。
+このときAIが触るものは、Gitのdiffだけではありません。
 
-会社で言えば、受付の伝言ノートに、
+```text
+source code
++ binary asset
++ local cache
++ installed application
++ GPU
++ generated media
++ build artifact
++ preview image / video
+```
 
-- 誰を社内に入れてよいか
-- どの部屋まで行ってよいか
-- 誰が実作業するか
-- 荷物を何百件どう配送するか
-- 本当に仕事が終わったか
+までが1つの実行環境になります。
 
-まで全部任せようとしていたのです。
+この記事では、この自作bridgeを「AIからPCを操作できた」という成功談としては扱いません。
 
-伝言ノートが悪いのではありません。
-
-**伝言ノートは、伝言ノートとして使えばかなり便利です。**
-
-この記事では、自作bridgeを「これが正解です」と紹介するのではなく、身近な仕事の流れに置き換えながら、GitHub Issue、Actions、Tailscale、MCP Tunnel、専用queueをどう使い分ければよいかを整理します。
+GitHubのcoding agentやActions、OpenAIが公開しているCodexの安全設計、Unity・Blender・FFmpeg・Hugging Face Diffusersの公式仕様、さらに実際に運用している3D衣装制作と動画制作の公開repositoryを照らし合わせながら、**AIにローカルのasset pipelineを任せるとき、何を境界として設計すべきか**を整理します。
 
 公開実装: [KAFKA2306/KAFKA2306 — codex-chatgpt-bridge](https://github.com/KAFKA2306/KAFKA2306/tree/main/scripts/codex-chatgpt-bridge)
 
-> この記事の実装説明は公開コードの仕様を確認して書いています。この記事の公開時点で、最新bundleをWindows実機へ再installしてE2E smoke testを再実行した、という主張はしていません。
+---
 
-## まず「小さな会社」だと思うと分かりやすい
+## 先に結論：コードだけならcloud、ローカル状態が必要ならlocal
 
-AI agentの構成図を見ると、急に難しくなります。
+最初に、使い分けを整理します。
 
-`control plane`、`network plane`、`execution plane`。
+| 方法 | 実行場所 | 向いている仕事 | 主な成果物 |
+|---|---|---|---|
+| GitHub Copilot / third-party coding agent | cloud | コード調査・修正・テスト | branch / PR / CI |
+| GitHub Actions GitHub-hosted runner | ephemeral VM | 再現可能なbuild・test | log / package / artifact |
+| GitHub Actions self-hosted runner | 自分のmachine | 特殊hardware・社内networkを使うCI | log / artifact |
+| local bridge | 自分のPC | Unity、Blender、動画生成、local asset、device | code + binary asset + render + build evidence |
 
-言葉は正しいのですが、最初からこれを読むと「結局どれが何をしているの？」となりがちです。
+リポジトリの中だけで完結するなら、まず既存のcoding agentを使う方が自然です。
 
-なので、いったん5人くらいの小さな会社を想像します。
+```text
+Issue
+  ↓
+agent
+  ↓
+branch
+  ↓
+Pull Request
+  ↓
+CI + human review
+```
 
-朝、あなたが会社に着いて、こんな仕事を頼みたいとします。
+GitHubも、Copilotが生成したPRを通常のcontributionと同じように十分reviewするよう案内しています。
 
-> 昨日から落ちているテストの原因を調べて。勝手に修正はしないで。
+[GitHub Docs — Review output from Copilot](https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/review-copilot-output)
 
-この一言だけでも、実際には5つの仕事があります。
+つまり、**ローカルPCを実行環境にする理由がないなら、ローカルPCを使わない**。
 
-| 日常の仕事 | 技術的な役割 | 代表例 |
-|---|---|---|
-| 受付に依頼を置く | Control | GitHub Issue、PR、workflow input |
-| 担当者が作業場所まで行く | Network | Tailscale、Secure MCP Tunnel |
-| 実際にPCを触って調べる | Execution | Codex CLI、GitHub Actions |
-| 大量の依頼を順番に配る | Delivery | SQS、Pub/Subなど |
-| 「終わった」を確認する | Evidence | test、exit code、HEAD SHA、artifact |
+ここは重要です。
 
-私が最初に作ったbridgeは、このうち何個かをGitHub Issueへ詰め込もうとしていました。
+一方、asset制作ではGitHub上のsourceだけでは表せない状態が大量にあります。その代表例がUnity、Blender、GPUによる生成処理、FFmpegです。
 
-ここを分けるだけで、かなり見通しがよくなりました。
+---
 
-**受付、通路、作業場、配送センター、検収。全部を同じ仕組みにする必要はありません。**
+# なぜasset pipelineではローカル実行が必要になるのか
 
-## 先に結論：身近な例ならこう選ぶ
+## Unity：Gitにあるassetと、Editorが見ている状態は同じではない
 
-### READMEの誤字を直したい
+Unity Editorはcommand lineから`-batchmode`で起動し、`-executeMethod`でproject内のstatic methodを実行できます。Unity公式は、CI、test、build、data preparationなどの用途を案内しています。
 
-GitHub上のファイルだけ見れば終わる仕事です。
+[Unity Manual — Unity Editor command line arguments](https://docs.unity3d.com/ja/current/Manual/EditorCommandLineArguments.html)
+
+たとえば、概念的には次のように実行できます。
+
+```powershell
+Unity.exe \
+  -quit \
+  -batchmode \
+  -projectPath D:\dev\avatar-project \
+  -executeMethod AssetPipeline.Build
+```
+
+ここで重要なのは、Unity projectが単なるGit repositoryではないことです。
+
+UnityのAsset Databaseはsource assetをimportしてartifactを生成し、そのdatabaseをprojectの`Library` folderに保持します。Unityは`Library`をversion controlから除外するよう説明しています。
+
+[Unity Manual — Asset Database](https://docs.unity3d.com/ja/current/Manual/AssetDatabase.html)
+
+つまり、GitHubにある状態と、実際のUnity Editorが扱う状態には差があります。
 
 ```text
 GitHub
-  ↓
-GitHub Actions
-  ↓
-Codex
-  ↓
-PR / artifact / comment
+  Assets/model.fbx
+  Assets/material.mat
+  Assets/texture.png
+  ProjectSettings/...
+
+ローカルUnity
+  上記source
+  + import結果
+  + Library database
+  + installed Editor
+  + modules / SDK
+  + machine固有の実行状態
 ```
 
-この場合、わざわざ自宅PCへ仕事を運ぶ理由は薄いです。
+cloud agentがC#やasset metadataを書き換えただけでは、**Unity Editorが本当にそのassetをimportできたか、Prefabやbuildまで到達できたか**は分かりません。
 
-### GitHub Actionsから社内DBを使ってテストしたい
-
-GitHubのrunnerから、インターネットには公開していないDBへ行く「道」が必要です。
+だからUnityでは、最終的にEditorを実行して確かめる工程が必要になります。
 
 ```text
-GitHub Actions
-  ↓
-Tailscale
-  ↓
-private DB
-```
-
-Tailscaleはこの「道」を担当します。
-
-### ChatGPTから自分のPC上のツールを直接使いたい
-
-その機能をMCP serverとして出せるなら、OpenAIのSecure MCP Tunnelが候補です。
-
-```text
-ChatGPT / Codex
-  ↓
-Secure MCP Tunnel
-  ↓
-private MCP server
-```
-
-### AIに調べてもらったあと、一度自分で読んでから修正させたい
-
-ここではGitHub Issueが使いやすいです。
-
-```text
-調査依頼
-  ↓
 Issue
   ↓
-Codexがread-onlyで調査
+FBX / Texture / configを更新
   ↓
-Issueに結果
+Unity batchmode
   ↓
-人間が読む
+Asset Databaseでimport
   ↓
-修正を許可
+Prefab / material / buildを検証
+  ↓
+Editor log + artifactを回収
 ```
 
-### 毎晩1万件の仕事を複数workerへ配りたい
+ここではPRのdiffだけでは不十分です。
 
-これはもう「伝言板」の仕事ではありません。
+必要なのは、**Unityがそのassetを実際に受理したという証拠**です。
 
-配送センターが必要です。
+---
 
-SQSやPub/Subのような専用message queueを検討する領域です。
+## Blender：3D assetはscriptとrenderまで含めて検証する
 
-## 1. GitHub Actionsは「会社の作業場」
+Blenderもローカル自動化と相性がよいtoolです。
 
-たとえば、PRが作られたら毎回Codexにレビューしてもらいたいとします。
+Blender 5.0の公式manualでは、`-b` / `--background`でUIなしの実行ができ、`-P` / `--python`でPython scriptを起動できます。Python exception時のexit codeも指定できます。
 
-人間の会社なら、受付に毎回メモを置くより、
+[Blender Manual — Command Line Arguments](https://docs.blender.org/manual/ja/5.0/advanced/command_line/arguments.html)
 
-> 新しい申請書が来たら、この手順で自動的に検査する
+```powershell
+blender.exe \
+  -b avatar.blend \
+  --python-exit-code 1 \
+  --python pipeline.py
+```
 
-という作業手順を決めた方が自然です。
+renderもcommand lineから実行できます。
 
-GitHub Actionsはまさにこの役割です。
+```powershell
+blender.exe \
+  -b avatar.blend \
+  -o //renders/frame_ \
+  -f 1
+```
 
-GitHubには`workflow_dispatch`があり、UI、CLI、APIからworkflowを手動実行できます。また`repository_dispatch`は、GitHub外の出来事をきっかけにworkflowを起動するために使えます。
+この仕組みを使えば、
 
-- [GitHub Docs — Events that trigger workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows)
-- [OpenAI — Codex GitHub Action](https://developers.openai.com/codex/github-action)
+- mesh処理
+- scene設定
+- exporter実行
+- animation render
+- preview生成
+- project固有のvalidation
 
-だから、
+をローカルtaskとして扱えます。
 
-> GitHubに置いてあるコードを取ってきて、調べて、テストして、結果をPRへ返す
+そして成果物は`.py`のdiffだけではありません。
 
-だけなら、まずActions側で完結できないか考える方が素直です。
+```text
+.blend
+.fbx / .glb
+texture
+rendered PNG / WebP
+validation JSON
+```
 
-自宅PCで30秒ごとにIssueを見張る必要はありません。
+まで含まれます。
 
-### ではlocal Codexは要らない？
+BlenderはPython auto executionをcommand lineからenable / disableするoptionも持っています。つまり、未知の`.blend`を無人で処理するなら、filesystemだけでなく**script executionも権限境界**として考える必要があります。
 
-ここで話が変わるのが、**そのPCにしかないものを使いたいとき**です。
+---
 
-例えば、
+## 画像・動画生成：GPUとmodel cacheも環境の一部になる
 
-- 数百GBのローカルデータ
-- GPU環境
-- USBでつながった実機
-- 社内VPN内のシステム
-- 認証済みのデスクトップアプリ
-- commit前の作業中workspace
+生成AIでは、ローカル実行が必要になる理由がさらに分かりやすくなります。
+
+Hugging Face Diffusersは画像・動画・音声のgeneration pipelineを提供しており、modelをlocal folderから`from_pretrained()`で読み込めます。公式documentationでは、local pathを指定した場合、その読み込みのためにHubからfileをdownloadしないことも説明されています。
+
+[Hugging Face Diffusers — Loading pipelines](https://huggingface.co/docs/diffusers/en/using-diffusers/loading)
+
+概念的には、次のような処理です。
+
+```python
+pipeline = DiffusionPipeline.from_pretrained(
+    "D:/models/video-model",
+    torch_dtype=torch.bfloat16,
+    device_map="cuda",
+)
+```
+
+Diffusersはvideo generation用pipelineも提供しています。
+
+[Hugging Face Diffusers — Pipeline overview](https://huggingface.co/docs/diffusers/api/pipelines/overview)
+
+このときローカル側には、
+
+```text
+model weights
+GPU / VRAM
+input image / video
+追加weight
+生成途中のframe
+生成済みvideo
+```
+
+があります。
+
+これらを毎回cloud側へ移すより、**指示だけを送って、dataとcomputeはローカルに残す**方が合理的な場合があります。
+
+Stable Video Diffusionのguideでも、video generationをmemory intensiveな処理として扱い、CPU offloadやchunkingなどのmemory低減策が説明されています。
+
+[Hugging Face Diffusers — Stable Video Diffusion](https://huggingface.co/docs/diffusers/main/using-diffusers/svd)
+
+つまり、GPU、VRAM、model cacheまで含めて「実行環境」です。
+
+---
+
+## FFmpeg：動画は「生成した後」にも大量の処理がある
+
+動画生成modelが`.mp4`を出したら終わり、ということはほとんどありません。
+
+実際には、
+
+- resize
+- crop
+- overlay
+- audio mix
+- subtitle
+- codec変換
+- bitrate調整
+- container変換
+- thumbnail生成
+
+といった後処理が続きます。
+
+FFmpegは複数inputを読み込み、filterやtranscodeを行い、outputへ書き出せます。`-filter_complex`では複数のinput / outputを持つfilter graphも構成できます。
+
+- [FFmpeg Documentation](https://ffmpeg.org/ffmpeg.html)
+- [FFmpeg Filters Documentation](https://ffmpeg.org/ffmpeg-filters.html)
+
+この種の処理では、数百MBから数GBのmedia fileをGitHubへ移す必要はありません。
+
+Issueには、
+
+```text
+どのinputを
+どのprofileで
+どのoutputへ変換するか
+```
+
+という指示だけを置き、実データはローカルで処理できます。
+
+---
+
+# 実例1：image2outfitでは「Blenderが終了した」だけでは完成にしない
+
+一般論だけでは分かりにくいので、実際の公開projectを見ます。
+
+[`KAFKA2306/image2outfit`](https://github.com/KAFKA2306/image2outfit)は、SiroinoSotai_PC向け衣装をBlenderで制作し、編集可能source、FBX、Prefab宣言、render、研究記録を1つの再現可能なworkspaceで管理するprojectです。
+
+[image2outfit README](https://github.com/KAFKA2306/image2outfit/blob/main/README.md)
+
+このprojectでは、Blender processが正常終了しただけでは`COMPLETE`になりません。
+
+必要なのは、
+
+- Blender生成成功
+- 編集可能な制作source
+- FBX
+- Prefab資産の正規path宣言
+- 正面・背面・左・右・斜めの実render
+- 必須poseの実render
+- 研究手法の試行記録
+- 実画像を直接開いて確認する`visualAppearanceReview`
 
 です。
 
-GitHubのcheckoutを取ってくるだけでは、その状態は再現できません。
-
-このとき初めて「仕事をローカルへ届ける方法」が重要になります。
-
-## 2. Tailscaleは「社員証が必要な専用通路」
-
-Tailscaleを初めて比較したとき、Issue bridgeの代わりになるのではと思いました。
-
-でも役割が違いました。
-
-Tailscaleは「仕事を何件処理したか」を管理するものではなく、**そもそもその場所へ安全に行けるようにするもの**です。
-
-たとえば会社の奥に、一般のお客さんは入れない検査室があるとします。
-
-GitHub Actionsのrunnerは会社の外にいます。
-
-Tailscaleを使うと、そのrunnerに一時的な社員証を渡して、許可された検査室まで通れるようにするイメージです。
-
-Tailscaleの公式GitHub Actionは、GitHub Actionsのrunnerをtailnetへ参加させ、private deviceや内部サービスへ到達できるようにします。公式文書ではworkload identity federationを推奨しており、GitHubのOIDC tokenを使ってephemeral nodeを作る構成も説明されています。
-
-- [Tailscale Docs — GitHub Action](https://tailscale.com/docs/integrations/github/github-action)
-
-```text
-GitHub Actions runner
-  ↓ 一時的にtailnetへ参加
-Tailscale
-  ↓
-社内API / DB / workstation
-```
-
-仕事が終われば、その一時的なnodeは片付けられます。
-
-ここで大事なのは、Tailscaleが教えてくれるのは主に、
-
-> このrunnerは、あのprivate serverまで行ける
-
-ということです。
-
-> この依頼はまだ未処理か
-
-> 3回失敗したら隔離するか
-
-> 人間の承認待ちか
-
-まではTailscaleの仕事ではありません。
-
-**Tailscaleは道路。Issueは伝言板。競合というより別の仕事です。**
-
-Tailscale Serveも、tailnet内の他deviceからlocal serviceへ到達させる機能です。
-
-- [Tailscale Docs — Serve](https://tailscale.com/docs/features/tailscale-serve)
-
-## 3. Secure MCP Tunnelは「AI専用の通用口」
-
-もっと直接的な選択肢もありました。
-
-OpenAIはSecure MCP Tunnelを提供しています。
-
-これは、private network、on-premises環境、developer machineなどにあるMCP serverをpublic internetへ公開せず、対応するOpenAI製品から利用するための仕組みです。
-
-- [OpenAI — Secure MCP Tunnels](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)
-
-会社の比喩でいえば、受付に伝言を置くのではなく、**AI専用の通用口を作る**感じです。
-
-private側で`tunnel-client`を動かします。外から会社のドアを開けるのではなく、中からOpenAI側へoutbound HTTPS接続を張ります。
-
-公式文書では、`tunnel-client`がqueued MCP workをlong-pollし、local MCP serverへJSON-RPC requestを転送し、responseを同じtunnelで返す構造が説明されています。
-
-```text
-ChatGPT
-  ↓
-OpenAI-hosted tunnel endpoint
-  ↑ outbound HTTPS
-local tunnel-client
-  ↓
-private MCP server
-```
-
-目的が、
-
-> ChatGPTから自宅PCの検索ツールを呼びたい
-
-> Codexから社内の検査APIを使いたい
-
-のような「tool call」なら、この経路はかなり自然です。
-
-ではIssue bridgeは不要でしょうか。
-
-そうとも限りません。
-
-MCPのrequest/responseより、
-
-> まず調査して
-
-> 結果を人間が読む
-
-> よければ次の修正を許可する
-
-という**仕事の受け渡しそのものを履歴として残したい**場合があります。
-
-その場合、Issueという「目で読める伝言板」には別の価値があります。
-
-## 4. GitHub Issueは「受付の伝言板」
-
-ここで最初のbridgeへ戻ります。
-
-GitHub Issueの良いところは、エンジニアなら追加の管理画面を覚えなくても読めることです。
-
-朝PCを開いて、Issueを見る。
-
-```text
-依頼
-「このテストが落ちる理由だけ調べて。修正はしないで」
-
-結果
-「原因はAです。exit_codeは0、HEADはabc123、変更ファイルはありません」
-```
-
-これなら人間も読めます。
-
-次のAIも読めます。
-
-何日か後に「なぜこの修正をしたんだっけ」と振り返ることもできます。
-
-私のbridgeでは、controller commentとworker resultを同じprivate Issueへ残します。
-
-さらに結果は「直しました」だけにしません。
-
-```json
-{
-  "task_id": "task-...",
-  "exit_code": 0,
-  "sandbox": "read-only",
-  "cwd": "D:\\dev\\example",
-  "git": {
-    "head": "<実行時のHEAD>",
-    "status": []
-  }
-}
-```
-
-これは宅配で言えば、
-
-> 届けました
-
-だけではなく、
-
-> どの荷物を、どこへ、いつ届け、受領状態はどうだったか
-
-まで納品書に残す感覚です。
-
-## 5. SQSは「伝言板」ではなく「配送センター」
-
-ここは名前を混ぜると危険です。
-
-私のbridgeは当初、GitHub Issueをmessage queueと呼んでいました。
-
-でも本物のqueueと比べると、かなり違います。
-
-Amazon SQSにはvisibility timeoutがあります。あるconsumerがmessageを処理している間、そのmessageを一時的に他consumerから見えなくできます。処理されず削除されなければ再び可視になります。standard queueはat-least-once deliveryなので、重複処理を考える必要もあります。
-
-- [AWS Docs — Amazon SQS visibility timeout](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html)
-
-身近に言えば、巨大な宅配センターです。
-
-荷物が1000個来ても、
-
-- 誰が今持っているか
-- 配達に失敗したらどうするか
-- 同じ荷物が来ても壊れないか
-- 何度も失敗する荷物をどう隔離するか
-
-を考える世界です。
-
-一方GitHub Issueは、オフィスのホワイトボードに近い。
-
-10件の仕事を人間とAIで相談しながら進めるなら、ホワイトボードの方が見やすいことがあります。
-
-1万件の仕事を20 workerへ配るなら、ホワイトボードに付箋を1万枚貼るのはやめた方がいい。
-
-この違いです。
-
-なので今は、GitHub Issue bridgeを**human-readable control mailbox**と捉えています。
-
-## 6. Webhookは「受付ベル」。でもベルを置く場所が要る
-
-現在のbridgeはIssueを一定間隔で見に行きます。
-
-```text
-30秒ごとに受付を見る
-「新しい依頼ある？」
-```
-
-少し間抜けに見えます。
-
-Webhookなら、依頼が来た瞬間にベルを鳴らせます。
-
-```text
-Issueに新しい依頼
-  ↓
-Webhook
-  ↓
-worker起動
-```
-
-GitHubはWebhookについて、secretによる検証、HTTPS、必要なeventだけの購読、`X-GitHub-Delivery`による識別などを推奨しています。またreceiverは配信から10秒以内に2XXを返す必要があります。
-
-- [GitHub Docs — Best practices for using webhooks](https://docs.github.com/en/webhooks/using-webhooks/best-practices-for-using-webhooks)
-
-ただし、自宅PCにベルを鳴らすには、GitHubからそのPCへ届く経路が必要です。
+さらに各工程はresult JSONへ証拠fileのSHA-256を記録し、runnerが実fileのSHA-256を再計算して一致を確認します。
 
 つまり、
 
-> pollingをなくしたら、今度はprivate PCへどう到達するか
-
-という問題が戻ってきます。
-
-ここでも、受付と道路は別問題です。
-
-pollingは遅い。
-
-でも、外から自宅PCへ入る入口を用意しなくても成立します。
-
-小さな個人用途では、この単純さが価値になることがあります。
-
-## 7. 安全性も「家の鍵」に置き換えると分かりやすい
-
-private Issueだから安全、とは言えません。
-
-もしIssueへ書ける人が、
-
-> `C:\Windows`を消して
-
-と書いたら、そのままlocal agentが実行する設計では困ります。
-
-これは「家族だけが使う伝言板だから、書いてあることは何でも実行する」と言っているのと同じです。
-
-そこでbridgeでは、仕事を受け取る前にいくつかの鍵を確認します。
-
 ```text
-queue repository must be PRIVATE
-controller author == configured GitHub login
-cwd ∈ AllowedRoot
-sandbox ∈ {read-only, workspace-write}
-default sandbox = read-only
-danger-full-access = rejected
+Blender exit 0
 ```
 
-公開daemon: [bridge-daemon.ps1](https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/bridge-daemon.ps1)
-
-例えば`AllowedRoot = D:\dev`なら、`C:\Windows`や別の場所へ勝手に移動するtaskは拒否します。
-
-そして、最初の調査はread-onlyです。
-
-これは同僚に、
-
-> まず棚を見て原因だけ教えて。物の場所は変えないで。
-
-と頼むのに近いです。
-
-調査結果を見てから、必要なときだけ、
-
-> では、この棚だけ直していいよ。
-
-とworkspace-writeへ上げます。
-
-OpenAIのCodex文書でも、non-interactive executionとsandbox permissionを明示的に扱う仕組みが説明されています。
-
-- [OpenAI — Codex non-interactive mode](https://developers.openai.com/codex/non-interactive-mode)
-- [OpenAI — Codex sandboxing](https://developers.openai.com/codex/sandboxing)
-
-## 8. 「終わりました」を信用しない。レシートを見る
-
-AIに仕事を頼むと、最後にこう返ってくることがあります。
-
-> 修正しました。テストも通っています。
-
-人間同士でも、この一言だけでは少し不安です。
-
-宅配なら受領印を見る。
-
-会計ならレシートを見る。
-
-ソフトウェアなら、機械的な証拠を見る方がよい。
-
-私のbridgeでは、worker resultに少なくとも次を残します。
-
-- exit code
-- sandbox
-- absolute cwd
-- Git repository root
-- HEAD SHA
-- bounded `git status --porcelain=v1`
-
-さらにinstallerは、daemonを起動できただけでは成功にしていません。
-
-temporary Git repositoryを作り、Issue経由で実際にCodexへ仕事を送り、
+は必要条件であって、完成条件ではありません。
 
 ```text
-BRIDGE_OK
-exit_code == 0
+source
+  ↓
+Blender execution
+  ↓
+editable source + FBX
+  ↓
+5方向 + pose render
+  ↓
+SHA-256 verification
+  ↓
+direct visual review
+  ↓
+COMPLETE
 ```
 
-まで戻ってきた場合だけ成功扱いにする実装です。
+このprojectから得られる教訓は明快です。
 
-公開installer: [install.ps1](https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/install.ps1)
+**binary assetは「存在する」だけでは足りない。生成経路、hash、見た目まで確認する。**
 
-「店員を雇えた」ではなく、**実際に注文して、商品が届き、レシートまで返ってきた**ところまで確認するsmoke testです。
+もう1つ重要なのは、確認していないことを「確認済み」と扱わないことです。
 
-## 9. 私なら今、こう使い分ける
+image2outfitでは、Unity import/save/reload、Modular Avatar、VRChat Build & Testなどを現在の`COMPLETE`条件から明示的に`OUT_OF_SCOPE`へ置いています。
 
-### GitHubにあるコードだけを触る
-
-**GitHub Actions + Codex**を先に検討します。
-
-### GitHub Actionsから社内・自宅のprivate serviceへ行く
-
-**Tailscale**を「道路」として使います。
-
-### ChatGPT/Codexからprivate MCP toolを直接呼ぶ
-
-**Secure MCP Tunnel**を先に検討します。
-
-### 人間が途中で読んで、次へ進むか決めたい
-
-**GitHub Issue**を「伝言板」として使います。
-
-### 大量のtaskを複数workerへ確実に配りたい
-
-**専用message queue**へ移ります。
-
-こうすると、「TailscaleとGitHub Issueのどっちが強い？」という比較自体が少し変だと分かります。
-
-**道路と受付を比べても仕方がありません。**
-
-## まとめ：AIが増えても、仕事の基本は意外と普通だった
-
-AI agentという言葉を使うと、急に未来のシステムを設計している気分になります。
-
-でも、実際に困ったことを並べると、昔からある仕事の流れとかなり似ています。
+そのため、実際にUnityを実行していない段階では「Unityで動作確認済み」とは表現しません。
 
 ```text
-受付
-  誰が何を頼んだか
-
-通路
-  その人はどこまで入ってよいか
-
-作業場
-  誰が実際に手を動かすか
-
-配送
-  大量の仕事をどう配るか
-
-検収
-  本当に終わったと何で確認するか
+生成した
+≠ importできた
+≠ runtimeで動いた
+≠ 人間が見て採用した
 ```
 
-GitHub Issueは受付として便利でした。
+この状態を混ぜないことが、agent workflowでは重要です。
 
-Tailscaleは通路を作る。
+---
 
-GitHub ActionsやCodexは作業する。
+# 実例2：yt3では「動画ができた」と「公開できた」を分ける
 
-Secure MCP Tunnelはprivate toolへのAI専用通路を作る。
+動画側の実例が[`KAFKA2306/yt3`](https://github.com/KAFKA2306/yt3)です。
 
-SQSのようなqueueは大量配送を扱う。
+YT3はresearch、script、audio / visual production、audit、YouTube publishまでを扱うmedia production systemです。
 
-test、exit code、HEAD SHAは検収に使える。
+[YT3 README](https://github.com/KAFKA2306/yt3/blob/main/README.md)
 
-最初の私は、GitHub Issueという一枚の伝言板に、これらを全部やらせようとしていました。
+production flowは次のように分離されています。
 
-比較して得た一番大きな学びは、特定の新しいツールではありません。
+```text
+source / event
+  ↓
+research
+  ↓
+verified facts
+  ↓
+script
+  ↓
+audio / visual production
+  ↓
+audit
+  ↓
+channel routing audit
+  ↓
+publish
+  ↓
+publish receipt
+  ↓
+public visibility audit
+```
 
-**AIに仕事を任せるときも、「誰が頼む」「どこまで入れる」「誰が作業する」「どう届ける」「何をもって完了とする」を分ければよい。**
+video composerの実装では`fluent-ffmpeg`を使い、audio、複数overlay、thumbnail、subtitleをinputとしてcomplex filterを組み、動画を書き出しています。
 
-そう考えると、agent architectureは少し身近になります。
+[YT3 — video_composer.ts](https://github.com/KAFKA2306/yt3/blob/main/src/domain/media/video_composer.ts)
 
-そしてGitHub Issue bridgeも、万能なAI基盤ではなく、
+つまり実際に、
 
-> 人間とAIが同じ伝言板を見ながら、小さな仕事を安全に受け渡す
+```text
+local / workspace media files
+  ↓
+FFmpeg composition
+  ↓
+video artifact
+```
 
-ための道具として、ちょうどよい位置に落ち着きました。
+というasset processing layerがあります。
+
+しかし、YT3ではvideo file生成をpublication successとは扱いません。
+
+公開成功には、少なくとも次を要求しています。
+
+- content artifactが存在する
+- content auditを通過する
+- publish先のprofile / bucketが明示されている
+- 認証済みchannel identityと意図が一致する
+- publish receiptが残る
+- public visibilityを確認する
+
+つまり、
+
+```text
+video generated
+  ≠ audited
+  ≠ correctly routed
+  ≠ published
+  ≠ publicly visible
+```
+
+です。
+
+image2outfitとYT3は対象が違いますが、設計思想は共通しています。
+
+> **agentの説明ではなく、artifactとevidenceがstateを決める。**
+
+これがlocal asset automationの中心原則です。
+
+---
+
+# コードとassetでは「完了」の形が違う
+
+coding agentの標準的な成果物はPull Requestです。
+
+コードなら、
+
+```text
+diff
+  ↓
+PR
+  ↓
+CI
+  ↓
+review
+```
+
+でかなりの部分を検証できます。
+
+しかしasset pipelineでは、source codeに変更がないtaskもあります。
+
+たとえば、
+
+- 同じBlender scriptで5方向renderを再生成する
+- 既存modelから動画を生成する
+- FBXをUnityへimportしてcompatibilityを確認する
+- FFmpeg profileだけ変えてencodeを比較する
+
+といった仕事です。
+
+この場合、完了条件は次のように広げる必要があります。
+
+```text
+execution
+  tool exit code
+
+provenance
+  tool version
+  input identifier / hash
+  model / config identifier
+
+artifact
+  output path
+  output hash
+  file format
+
+validation
+  Unity import / build result
+  Blender script result
+  expected dimensions / codec / duration
+
+visual evidence
+  preview render
+  representative frames
+
+review
+  source変更ならPR
+  binary変更ならartifact evidence
+```
+
+要するに、
+
+```text
+code workflow
+  diff → PR → CI → review
+
+asset workflow
+  input → execution → binary artifact
+        → machine validation
+        → visual evidence
+        → review
+```
+
+です。
+
+**agentが「終わりました」と返したことではなく、あとから再検証できる成果物が残ったことを成功条件にする。**
+
+ここがコード中心の自動化との大きな違いです。
+
+---
+
+# local bridgeは何を守るべきか
+
+ここまでの具体例から、安全設計を整理します。
+
+## 1. Issueは仕事の記録であって、実行権限ではない
+
+GitHub Issuesは、ideas、feedback、tasks、bugsなどを計画・追跡するための機能です。
+
+[GitHub Docs — About issues](https://docs.github.com/en/issues/tracking-your-work-with-issues/learning-about-issues/about-issues)
+
+Issueはcontrol planeの入口として便利です。
+
+- 誰が依頼したか残る
+- 何を依頼したか残る
+- commentで状態を追える
+- PRやcommitと関連づけられる
+- 後から監査できる
+
+ただし、Issue commentをそのままshell command相当の権限に変換すれば、Issueはremote execution interfaceになります。
+
+```text
+Issueに書かれている
+```
+
+ことと、
+
+```text
+その内容をmachine上で実行してよい
+```
+
+ことは別です。
+
+特にasset pipelineでは、その先にUnity、Blender、GPU、media encoderまで存在します。
+
+**collaboration権限とexecution権限は分ける必要があります。**
+
+---
+
+## 2. 「危ないことをしないで」は安全境界ではない
+
+OpenAIが公開しているCodexの安全運用では、managed configuration、constrained execution、network policies、logs、sandboxing、approvalsなどが独立したcontrolとして扱われています。
+
+[OpenAI — Running Codex safely at OpenAI](https://openai.com/index/running-codex-safely/)
+
+AIへのpromptに、
+
+```text
+他のfolderは見ないで
+危険な操作はしないで
+```
+
+と書くことはできます。
+
+しかし、これはお願いです。
+
+```text
+prompt rule
+  AIへの指示
+
+sandbox / allowlist
+  実行系による強制
+```
+
+は別物です。
+
+asset pipelineなら、filesystemに加えて「どのapplicationを起動してよいか」まで制御対象になります。
+
+---
+
+## 3. 最小権限は6層に分ける
+
+local asset agentでは、少なくとも次の6層を分けて考えると整理しやすくなります。
+
+```text
+1. Identity
+   誰がtaskを発行できるか
+
+2. Filesystem
+   どのproject / assetをread/writeできるか
+
+3. Process
+   Unity / Blender / FFmpegなど何を起動できるか
+
+4. Network / Tool
+   どのAPI、MCP、model repositoryへ接続できるか
+
+5. Compute
+   どのGPU、device、resourceを使えるか
+
+6. Output
+   code / binary / log / previewをどこへ返してよいか
+```
+
+たとえば、「動画生成のためにGPUを使ってよい」と「任意のlocal processを起動してよい」は同じ権限ではありません。
+
+GitHub Copilot coding agentもinternet accessをfirewallで制御でき、GitHubはdata exfiltration riskの管理として説明しています。
+
+[GitHub Docs — Customize the firewall](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-the-firewall)
+
+入力だけでなく、**外へ出ていくnetwork trafficとartifactも境界**です。
+
+---
+
+## 4. local machineは長寿命だからこそ慎重に扱う
+
+local executionには、cloudにはない強みがあります。
+
+- cloudへ置けないlocal data
+- local GPU
+- Unity / Blenderなどのinstalled application
+- local cache / SDK
+- large media
+- device / hardware
+
+しかし、そのmachineはcloud agentのような使い捨て環境ではありません。
+
+GitHubもself-hosted runnerについて、ephemeralでcleanなVMである保証がなく、untrusted codeによって継続的にcompromiseされる可能性があると警告しています。
+
+[GitHub Docs — Secure use reference for GitHub Actions](https://docs.github.com/en/actions/reference/security/secure-use)
+
+違いを単純化すると、こうです。
+
+```text
+cloud agent
+  disposableな作業環境へ仕事を持っていく
+
+local bridge
+  長寿命のmachineへ仕事を持ってくる
+```
+
+だからlocal bridgeは「便利だから使う」のではなく、**local stateそのものが仕事の一部であるときに使う**のが妥当です。
+
+---
+
+# 実際のbridgeをこの基準で見る
+
+現在のbridgeは次の構成です。
+
+```text
+ChatGPT / sender
+        ↓
+private GitHub Issue
+        ↓
+Windows bridge daemon
+        ↓
+local Codex CLI
+        ↓
+final response + exit code + git evidence
+        ↓
+private GitHub Issue
+```
+
+実装: [bridge-daemon.ps1](https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/bridge-daemon.ps1)
+
+安全境界を表にすると、現在は次のようになっています。
+
+| 境界 | 現在の実装 |
+|---|---|
+| 誰が命令できるか | `ControllerLogin`と一致するGitHub userだけ |
+| どこを触れるか | `AllowedRoot`配下だけ |
+| 通常のsandbox | `read-only` |
+| 書き込み | 明示した`workspace-write`だけ |
+| Codex profile | user config / apps / pluginsから分離 |
+| local MCP | hard-coded allowlist + task単位opt-in |
+| raw result | local/private側に保持 |
+
+### Identity
+
+所定のmarkerとJSON blockがあり、comment authorが`ControllerLogin`と一致した場合だけtaskになります。
+
+```text
+正しい形式
+AND
+正しいmarker
+AND
+comment author == ControllerLogin
+```
+
+private repositoryに入れることと、ローカルPCへ命令できることを同一視していません。
+
+### Filesystem
+
+`cwd`はinstall時に設定した`AllowedRoot`配下だけです。
+
+```text
+AllowedRoot = D:\dev
+
+OK
+D:\dev\unity-project
+D:\dev\video-pipeline
+
+REJECT
+C:\Users\...
+D:\private-data
+```
+
+これはpromptではなくPowerShell側で拒否します。
+
+### Sandbox
+
+既定は`read-only`で、許可値も次の2つだけです。
+
+```text
+read-only
+workspace-write
+```
+
+ただし、asset生成やUnity importへ広げるなら、filesystem writeとapplication起動権限を分けた方が強くなります。
+
+今後のhardening候補は、
+
+```text
+filesystem sandbox
++
+executable allowlist
++
+tool-specific argument schema
+```
+
+です。
+
+### Tool profile
+
+bring-up時には、普段使いのCodex環境にある追加MCP / app層がOAuth認証を要求し、無人実行が停止しました。
+
+[Verification record](https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VERIFICATION.md)
+
+そのためautonomous runでは、
+
+```text
+--ignore-user-config
+--disable apps
+--disable plugins
+```
+
+を使い、人間が普段使うinteractive profileから分離しています。
+
+同じ発想はUnityやBlenderにも使えます。
+
+```text
+人間向けenvironment
+  多数のplugin / add-on / preference
+
+agent向けenvironment
+  固定version / 固定project / 固定entry point
+```
+
+無人実行では、便利さより再現性と権限の小ささを優先した方が扱いやすくなります。
+
+### Output
+
+raw resultにはlocal path、repository state、private task内容などが含まれる可能性があります。
+
+asset pipelineなら、さらにmodel名、source media、render、build artifactも加わります。
+
+そのため、
+
+```text
+外へ出してよいmetadata
+privateに残すraw output
+```
+
+を分離します。
+
+---
+
+# 成功条件はtoolごとに変える
+
+2026-08-12のbridge smoke testでは、
+
+```text
+worker exit_code = 0
+final Codex message = BRIDGE_OK
+```
+
+の両方を成功条件にしました。
+
+[Bridge verification record](https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VERIFICATION.md)
+
+しかし、asset pipelineへ広げるならこれだけでは足りません。
+
+### Unity
+
+```text
+Codex exit 0
++
+Unity process exit 0
++
+Asset import成功
++
+expected Prefab / build artifact存在
++
+artifact hash記録
+```
+
+### Blender
+
+```text
+Codex exit 0
++
+Blender Python exit 0
++
+expected .blend / export存在
++
+preview render存在
++
+hash + visual review
+```
+
+### Video
+
+```text
+generation完了
++
+FFmpeg完了
++
+expected codec / resolution / duration確認
++
+representative frame確認
+```
+
+共通する考え方は1つです。
+
+**asset workflowは、agentの返答ではなく生成物を検査して終わる。**
+
+---
+
+# 現在のbridgeに残る弱点
+
+このbridgeは「安全になった」のではなく、境界を増やして危険を狭めている途中です。
+
+特に残る課題は次の4つです。
+
+### 長寿命のlocal machine
+
+Unity、Blender、model weight、credentialが載った実machineなので、compromise時の影響範囲はcloudの使い捨て環境より大きくなります。
+
+### network policy
+
+filesystem root、sandbox、MCP allowlistはありますが、domain単位のnetwork allowlistをbridge独自に持っているわけではありません。model downloadや外部API利用を許すなら、network policyは別に設計する必要があります。
+
+### process allowlist
+
+現行bridgeはUnity / Blender / FFmpeg専用brokerではありません。本格運用なら、許可binary、version、project path、argumentをtask schemaとして固定する方が安全です。
+
+### `workspace-write`は採用承認ではない
+
+agentがassetを書き換えられることと、そのassetを採用してよいことは別です。source changeならPR、binary changeならhash・preview・machine validationを残し、人間が採否を判断できる形にします。
+
+また、Issue commentを実行指示として使う以上、GitHub account、GitHub CLI authentication、repository accessそのものがcontrol planeのcredentialになります。
+
+「private repositoryだから安心」では不十分です。
+
+---
+
+# では、どの方法を選ぶべきか
+
+判断基準はかなり単純です。
+
+### リポジトリだけで完結する
+
+**GitHub上のcoding agentを使う。**
+
+```text
+Issue / prompt
+  ↓
+cloud agent
+  ↓
+branch / PR
+  ↓
+CI + review
+```
+
+### 再現可能なbuild / testだけが必要
+
+**GitHub-hosted Actionsを使う。**
+
+### 特殊hardwareや社内networkだけローカルに必要
+
+**self-hosted runnerを検討する。**
+
+ただしrunner isolationを先に設計します。
+
+### Unity / Blender / 動画 / 3D assetのようにlocal stateそのものが仕事
+
+**local bridgeが候補になる。**
+
+```text
+Unity
+  import / Prefab / build
+
+Blender
+  Python / export / render
+
+Diffusers
+  local GPU inference
+
+FFmpeg
+  encode / filter / mux
+```
+
+この場合は、少なくとも次を設計対象にします。
+
+```text
+identity allowlist
+filesystem allowlist
+read-only default
+explicit write elevation
+executable allowlist
+tool-specific argument schema
+network boundary
+compute boundary
+bounded output
+artifact hash
+machine-verifiable completion
+visual evidence
+PR / human review
+```
+
+---
+
+# 作ったのは「AIへの橋」ではなく、local capability brokerだった
+
+Issueからagentへ仕事を渡すこと自体は、2026年には一般的なworkflowになっています。
+
+自作bridgeに意味が出るのは、その先です。
+
+```text
+GitHubだけでは触れない
+Unity Editor
+Blender
+GPU model
+video file
+3D asset
+local SDK
+```
+
+へ到達するときです。
+
+このときbridgeは、単なるremote shellではありません。
+
+**ローカルPCにしかない能力を、制限付きでagentへ貸し出す仕組み**です。
+
+私はこれを`local capability broker`と考えるのが一番しっくりきます。
+
+そして、image2outfitとYT3を実際に運用して分かったことは、さらに単純です。
+
+> **agentの説明ではなく、artifactとevidenceがstateを決める。**
+
+安全なAI automationを作るために重要なのは、賢いpromptだけではありません。
+
+agentの外側に置いた、突破できない境界。
+
+そして、あとから再検証できる成果物です。
+
+コードだけならcloud agent + PRを使う。
+
+ローカル状態が本当に必要なときだけbridgeを足す。
+
+そしてlocalへ入った瞬間、codeだけでなくapplication、GPU、asset、network、outputまで権限として設計する。
+
+Unity、Blender、動画生成のようなasset productionを考えると、ローカルbridgeを作る理由はそこにあります。
+
+---
 
 ## 一次情報・実装証拠
 
-- [OpenAI Secure MCP Tunnel](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)
-- [OpenAI Codex GitHub Action](https://developers.openai.com/codex/github-action)
-- [OpenAI Codex non-interactive mode](https://developers.openai.com/codex/non-interactive-mode)
-- [OpenAI Codex sandboxing](https://developers.openai.com/codex/sandboxing)
-- [OpenAI Help — Connecting GitHub to ChatGPT](https://help.openai.com/en/articles/11145903-connecting-github-to-chatgpt)
-- [GitHub Actions events](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows)
-- [GitHub webhook best practices](https://docs.github.com/en/webhooks/using-webhooks/best-practices-for-using-webhooks)
-- [Tailscale GitHub Action](https://tailscale.com/docs/integrations/github/github-action)
-- [Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve)
-- [Amazon SQS visibility timeout](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html)
-- [公開bridge](https://github.com/KAFKA2306/KAFKA2306/tree/main/scripts/codex-chatgpt-bridge)
+### GitHub
+
+- [About issues](https://docs.github.com/en/issues/tracking-your-work-with-issues/learning-about-issues/about-issues)
+- [Kick off a task with Copilot agents](https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/kick-off-a-task)
+- [About third-party coding agents](https://docs.github.com/en/copilot/concepts/agents/about-third-party-coding-agents)
+- [Review output from Copilot](https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/review-copilot-output)
+- [Customize Copilot firewall](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-the-firewall)
+- [Secure use reference for GitHub Actions](https://docs.github.com/en/actions/reference/security/secure-use)
+
+### OpenAI
+
+- [Running Codex safely at OpenAI](https://openai.com/index/running-codex-safely/)
+
+### Unity
+
+- [Unity Editor command line arguments](https://docs.unity3d.com/ja/current/Manual/EditorCommandLineArguments.html)
+- [Asset Database](https://docs.unity3d.com/ja/current/Manual/AssetDatabase.html)
+- [AssetDatabase.ImportAsset](https://docs.unity3d.com/ja/current/ScriptReference/AssetDatabase.ImportAsset.html)
+
+### Blender
+
+- [Blender 5.0 Manual — Command Line Arguments](https://docs.blender.org/manual/ja/5.0/advanced/command_line/arguments.html)
+
+### FFmpeg
+
+- [ffmpeg Documentation](https://ffmpeg.org/ffmpeg.html)
+- [FFmpeg Filters Documentation](https://ffmpeg.org/ffmpeg-filters.html)
+
+### Hugging Face Diffusers
+
+- [Loading pipelines](https://huggingface.co/docs/diffusers/en/using-diffusers/loading)
+- [Pipeline overview](https://huggingface.co/docs/diffusers/api/pipelines/overview)
+- [Stable Video Diffusion](https://huggingface.co/docs/diffusers/main/using-diffusers/svd)
+
+### 公開case study
+
+- [image2outfit](https://github.com/KAFKA2306/image2outfit)
+- [image2outfit README / completion contract](https://github.com/KAFKA2306/image2outfit/blob/main/README.md)
+- [YT3 README / media operation contract](https://github.com/KAFKA2306/yt3/blob/main/README.md)
+- [YT3 FFmpeg video composer](https://github.com/KAFKA2306/yt3/blob/main/src/domain/media/video_composer.ts)
+
+### bridge実装
+
+- [Bridge implementation](https://github.com/KAFKA2306/KAFKA2306/tree/main/scripts/codex-chatgpt-bridge)
+- [Bridge daemon](https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/bridge-daemon.ps1)
+- [E2E verification](https://github.com/KAFKA2306/KAFKA2306/blob/main/scripts/codex-chatgpt-bridge/VERIFICATION.md)
+- [Hardened autonomous-run commit](https://github.com/KAFKA2306/KAFKA2306/commit/864774f15d7fc6522572a8e326dfa78573b0df74)
