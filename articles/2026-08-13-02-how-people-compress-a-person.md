@@ -1,9 +1,9 @@
 ---
-title: "スキル一覧では『何を任せられる人か』は分からない。成果物を仕事の証拠に変える"
+title: "人は他人を『何を任せられるか』で圧縮する——成果物が仕事の証拠になるまで"
 emoji: "🪞"
 type: "idea"
 topics: ["career", "portfolio", "github", "ai"]
-published: false
+published: true
 published_at: 2026-08-13 18:11
 ---
 
