@@ -50,3 +50,5 @@ jobs:
           python -m pipeline.zenn_production \
             --wait-seconds "$wait_seconds" \
             --interval-seconds 15
+
+# diagnostic snapshot: 2026-08-15T15:35+09:00
