@@ -1,0 +1,76 @@
+name: Temporary Muchio BOOTH Observation
+
+on:
+  push:
+    branches:
+      - article/muchio-intelligence-value
+    paths:
+      - .github/workflows/tmp-muchio-booth-observe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch current BOOTH item JSON
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import urllib.request
+
+          url = 'https://booth.pm/ja/items/8657397'
+          req = urllib.request.Request(url, headers={'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0'})
+          with urllib.request.urlopen(req, timeout=30) as r:
+              data = json.load(r)
+          print('CURRENT_WISH_LISTS_COUNT=' + str(data.get('wish_lists_count')))
+          print('CURRENT_NAME=' + str(data.get('name')))
+          print('CURRENT_PRICE=' + str(data.get('price')))
+          PY
+
+      - name: Inspect Wayback snapshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import urllib.parse
+          import urllib.request
+
+          target = 'https://booth.pm/ja/items/8657397'
+          cdx = 'https://web.archive.org/cdx/search/cdx?' + urllib.parse.urlencode({
+              'url': target,
+              'from': '20260728',
+              'to': '20260815',
+              'output': 'json',
+              'filter': 'statuscode:200',
+              'fl': 'timestamp,original,digest',
+              'collapse': 'digest',
+          })
+          req = urllib.request.Request(cdx, headers={'User-Agent': 'Mozilla/5.0'})
+          try:
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  rows = json.load(r)
+          except Exception as e:
+              print('WAYBACK_CDX_ERROR=' + repr(e))
+              raise SystemExit(0)
+          print('WAYBACK_ROWS=' + json.dumps(rows, ensure_ascii=False))
+          for row in rows[1:]:
+              ts = row[0]
+              archived = f'https://web.archive.org/web/{ts}id_/{target}'
+              req = urllib.request.Request(archived, headers={'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0'})
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      body = r.read().decode('utf-8', errors='replace')
+                  try:
+                      data = json.loads(body)
+                      count = data.get('wish_lists_count')
+                      print(f'WAYBACK_COUNT {ts} {count}')
+                  except Exception:
+                      print(f'WAYBACK_NONJSON {ts} bytes={len(body)}')
+              except Exception as e:
+                  print(f'WAYBACK_FETCH_ERROR {ts} {e!r}')
+          PY
