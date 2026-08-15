@@ -1,5 +1,5 @@
 ---
-title: "Claude Codeにテストを全部任せるなら、先に「合格条件」を固定する"
+title: "AIにテストまで任せるなら、合格条件だけは外に置く"
 emoji: "🧪"
 type: "tech"
 topics: ["claudecode", "testing", "ai", "ci", "automation"]
@@ -7,117 +7,87 @@ published: true
 published_at: 2026-08-15 09:33
 ---
 
-AIに実装もテストも修正も任せられるようになると、最後に残る人間の仕事は「全部を見ること」ではない。
+Claude Codeに実装、テスト追加、失敗修正まで任せると、レビュー時間は減らせる。そこで最後まで人間が全部を見る設計に戻すと、自動化の価値が消える。
 
-**何を満たせば合格なのかを、実装するagentの外側に固定すること**だ。
+必要なのは監視を増やすことではない。**何を満たせば合格かを、実装するagentとは別に再実行できる形で固定すること**だ。
 
-Claude Codeの公式ドキュメントは、コードを読み、編集し、commandやtestを実行して検証できるagentic coding toolとして説明している。また、Claudeが自分の仕事を検証できるよう、test caseや期待出力のような「照合対象」を与えることを勧めている。
-
-- https://code.claude.com/docs/en/overview
-- https://code.claude.com/docs/en/how-claude-code-works
-
-ここで実務上の落とし穴がある。同じagentがproduction code、test、fixture、configのすべてを変更できると、greenは「実装を直した」だけでなく「合格条件を弱めた」ことでも作れてしまう。
-
-## 問題はAIではなく、oracleまで同じ変更scopeに入ること
-
-たとえば次の依頼は便利だ。
-
-```text
-この機能を実装して。
-必要なテストも追加して。
-失敗したら直して。
-全部通ったら終わり。
-```
-
-しかし、この依頼には4つの別問題が混ざっている。
-
-1. 何を作るか
-2. 何を合格とするか
-3. どう直すか
-4. 何を証拠として残すか
-
-3をagentへ強く委譲しても、2までその場の最適化対象にすると完了判定が弱くなる。
-
-## 実務では4層に分ける
-
-```text
-Outcome / Contract
-  何を実現し、何を壊してはいけないか
-        ↓
-Policy / Oracle
-  tests / schema / invariants / required checks
-        ↓
-Execution
-  Claude Code / hooks / CI / runner
-        ↓
-Evidence
-  test result / diff / artifact / exact-head CI
-```
-
-Claude CodeはExecutionを強くする。だがExecutionが強いこととPolicyが正しいことは別だ。
-
-Claude Code Hooksも、LLMが実行を選ぶことに依存しないdeterministic controlとして公式に説明されている。`TaskCompleted` hookでtest suiteを走らせ、失敗時に完了扱いを止める例もある。
+Anthropic公式も、Claude Code Hooksを「LLMが実行を選ぶことに依存しないdeterministic control」と説明し、project rulesの強制やテスト実行に使えるとしている。
 
 - https://code.claude.com/docs/en/hooks-guide
 - https://code.claude.com/docs/en/hooks
 
-## 何をrepo側へ固定するか
+## 私が変えたのは、agentではなく合格条件の置き場所だった
 
-最低限、次はagentのその場の判断から独立させる。
-
-- 必須test suite
-- acceptance criteria
-- schema / invariant
-- 変更してはいけないartifact
-- testを弱める変更のreview条件
-- mergeをblockする条件
-
-そして可能なら1 commandにまとめる。
-
-```bash
-./scripts/verify
-```
-
-Claude CodeにもlocalにもCIにも同じcommandを実行させる。これで「Claudeが大丈夫と言った」ではなく、**同じ合格条件を別主体でも再実行できる**状態になる。
-
-## 壊れた例
+危ないのはAIそのものではない。production code、test、fixture、config、完了判定を同じ変更ループへ全部入れることだ。
 
 ```text
 agent: 実装
 agent: test追加
 agent: test失敗
-agent: fixtureを簡略化
+agent: fixture/configも変更
 agent: green
 ```
 
-greenは事実でも、最初の期待を満たした証拠とは限らない。
+このgreenだけでは、「実装が要件へ近づいた」のか「要件側が動いた」のかを区別しにくい。
 
-## 改善後
+そこで作業を3つに分ける。
 
 ```text
-人間/repo: acceptance criteria固定
-agent: 実装・test追加・修正
-CI: 固定verifyをexact headで再実行
+1. Contract
+   何を実現し、何を壊してはいけないか
+
+2. Verifier
+   tests / schema / invariant / required checks
+
+3. Worker
+   Claude Codeが実装・修正・反復実行する
 ```
 
-agentは速く回し、人間は毎回すべてを手作業で確認しない。代わりに、**完了条件の所有者を分ける**。
+Workerは何度でも変えてよい。ContractとVerifierは、変更するならその変更自体をレビュー対象にする。
 
-## 読者向けチェックリスト
+## 実運用では、同じverifyをagentとCIの両方から呼ぶ
 
-Claude Codeへテスト自動化を委譲する前に、次の5問だけ確認すればよい。
+この`articles` repositoryでも、PRのArticle Pipeline CIはcompile、contract tests、publication transition guard、Zenn render、privacy audit、clean checkoutをrepository側に固定している。
 
-1. 合格条件はコードと同じagentが自由に弱められるか
-2. 必須checkは1 commandで再実行できるか
-3. test/fixture/config変更もdiffでreview対象になるか
-4. CIはexact headで同じ条件を再実行するか
-5. greenが「何を証明したか」を説明できるか
+https://github.com/KAFKA2306/articles/blob/main/.github/workflows/article-pipeline-ci.yml
 
-1がyesで、残りがnoなら、委譲範囲より先にoracleを固定した方がよい。
+Claude Codeが何を実装したかに関係なく、CIは同じ条件をもう一度実行する。この構造なら「Claudeが大丈夫と言った」ではなく、**別主体が同じ合格条件を再実行した**と言える。
 
-## 証拠の境界
+自分のrepoでも、入口を1 commandへ寄せると扱いやすい。
 
-この記事は「Claude Codeがtestを改ざんする」と主張していない。主張しているのは、**最適化する主体と合格条件を変更できる主体を同一scopeに置くと、完了判定の独立性が弱くなる**という設計上の事実だ。
+```bash
+./scripts/verify
+```
 
-AI coding agentを信用するかどうかではない。速いagentほど、合格条件を外側へ固定した方が委譲できる範囲が広がる。
+中身はprojectごとに違ってよい。重要なのは、Claude Code、ローカル、CIで同じ判定を呼べることだ。
 
-**AIに多く任せたいなら、人間が多く確認するのではなく、合格条件を先に固定する。**
+## 何をagentの外へ残すか
+
+最低限、次の4つは明文化する。
+
+1. **acceptance criteria** — 何ができれば完了か
+2. **must-pass checks** — 必ず通すtest/schema/invariant
+3. **protected assumptions** — fixtureや期待値を変えるならreviewが必要なもの
+4. **merge condition** — どの結果をもって終了とするか
+
+これらを固定したうえで、実装・テスト追加・failure解析・再修正は積極的にagentへ渡す。
+
+## 5分でできる導入チェック
+
+Claude Codeへ「全部通るまで直して」と頼む前に、次だけ確認する。
+
+- 必須checkを1 commandで再実行できる
+- test/fixture/configの変更もdiffに出る
+- acceptance criteriaがpromptだけでなくrepoにも残る
+- CIがPRのexact headで同じverifyを実行する
+- greenが何を証明したか1文で説明できる
+
+この5つが揃えば、人間は全diffを逐語監視するのではなく、**合格条件の変更と最終証拠に集中できる**。
+
+## この記事が言っていないこと
+
+Claude Codeがtestを勝手に弱める、と主張しているわけではない。またHooksだけで品質が保証されるとも言っていない。
+
+言いたいのは、実装主体が高速になるほど、完了条件を独立して再実行できる設計の価値が上がるということだ。
+
+**AIにもっと任せたいなら、人間の監視量を増やすのではなく、合格条件を先に外へ出す。**

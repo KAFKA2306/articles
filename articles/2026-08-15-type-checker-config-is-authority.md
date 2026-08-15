@@ -1,56 +1,24 @@
 ---
-title: "型チェッカー比較で先に固定すべきなのは、製品名ではなく設定"
+title: "型チェッカーを変える前に、設定差を製品差から消す"
 emoji: "🧪"
 type: "tech"
 topics: ["python", "typechecking", "ci", "testing", "developerexperience"]
 published: false
 ---
 
-型チェッカーを比較して「Aは5件中2件、Bは5件中5件だった」と出たら、製品差だと思いたくなる。
+新しい型チェッカーを試して「Aは2/5、Bは5/5」と出たら、Bへ移行したくなる。
 
-今回、それを誤った。
+私はそこで一度、結論を間違えた。
 
-同じPyrefly 1.2.0、同じ5つのroot faultでも、`basic` presetでは2/5、`default` presetでは5/5だった。つまり最初に見えていた差の一部は、**製品差ではなく実行設定の差**だった。
+同じPyrefly 1.2.0、同じ5つのroot faultでも、`basic` presetでは **2/5**、`default` presetでは **5/5** だった。製品を変えなくても、設定だけで結果が3件動いた。
 
-この失敗から得た実務上の結論は単純だ。
+だから比較表を作る前にやることがある。
 
-> 型チェッカーを比較する前に、version・preset・config・scope・severityを固定する。
+**version・preset・config・scope・blocking severityを固定し、設定差を製品差から先に取り除く。**
 
-## なぜこの失敗は起きるのか
+## 2/5から5/5へ動いた
 
-CIではbinary名だけが記録されがちだ。
-
-```text
-pyrefly
-pyright
-mypy
-```
-
-しかし実際にblocking authorityとして動くのはbinary名ではなく、次の組み合わせである。
-
-```text
-authority =
-  tool version
-  + preset / mode
-  + config
-  + project scope
-  + runtime environment
-  + blocking severity policy
-```
-
-Pyrefly公式は、設定のないprojectでは`basic` presetを合成し、`default`や`strict`とはdiagnostic surfaceが異なると説明している。
-
-https://pyrefly.org/en/docs/configuration/
-
-Pyrightも`off` / `basic` / `standard` / `strict`の`typeCheckingMode`を持つ。
-
-https://github.com/microsoft/pyright/blob/main/docs/configuration.md
-
-製品名だけ揃えても、比較条件は揃っていない。
-
-## 実際に何が変わったか
-
-固定fixtureでは次の5 failure classを1件ずつ用意した。
+固定fixtureは5 failure classだけに絞った。
 
 - syntax failure
 - incompatible argument type
@@ -58,51 +26,54 @@ https://github.com/microsoft/pyright/blob/main/docs/configuration.md
 - undefined name
 - async misuse
 
-同じPyrefly 1.2.0で観測した結果はこうだった。
+同じPyrefly 1.2.0の結果はこうだった。
 
-| tested mode | detected |
+| configuration | detected |
 |---|---:|
-| no config → basic | 2/5 |
+| no config → `basic` | 2/5 |
 | `basic` | 2/5 |
 | `default` | 5/5 |
 
-raw calibration:
+raw evidence:
 https://github.com/KAFKA2306/articles/blob/822be109de61e5915799fcf7d79e6345dff4f6b1/benchmarks/verification-stack-v2/results/controlled/pyrefly-preset-calibration.json
 
-修復後の同じ5 mutantでは、mypy / Pyright / ty / Pyreflyのtested configurationはいずれも5/5だった。
+Pyrefly公式も、設定のないprojectでは`basic`を使い、高confidenceなdiagnosticへ絞ると説明している。`default`や`strict`は別のdiagnostic surfaceを持つ。
 
-summary:
-https://github.com/KAFKA2306/articles/blob/822be109de61e5915799fcf7d79e6345dff4f6b1/benchmarks/verification-stack-v2/results/controlled/summary.json
+https://pyrefly.org/en/docs/configuration/
 
-ここから「4製品は同等」とは言えない。5 mutantしか測っていないからだ。言えるのは、**旧2/5対5/5を製品固有のcoverage差として扱えなかった**ことだけである。
+つまり「Pyreflyは2/5だった」という書き方では情報が欠ける。正しくは、**Pyrefly 1.2.0をbasic presetで、この5 faultへ当てたとき2/5だった**だ。
 
-## 壊れた比較
+## 私が捨てた比較方法
 
 ```text
-A: 2/5
-B: 5/5
+pyrefly: 2/5
+pyright: 5/5
 ↓
-Bの方が強い
+pyrightの方が強い
 ```
 
-この推論には、AとBが同じpolicy surfaceで走ったという確認が抜けている。
+この比較は、両者へ何をblockさせたかが揃っていないと製品比較にならない。
 
-## 改善した比較
+修復後、同じ5 mutantに対するtested configurationでは、mypy / Pyright / ty / Pyreflyはいずれも5/5だった。
 
-比較を次の順序に変える。
+https://github.com/KAFKA2306/articles/blob/822be109de61e5915799fcf7d79e6345dff4f6b1/benchmarks/verification-stack-v2/results/controlled/summary.json
 
-1. repoで絶対にblockしたいfailure classをfixture化する
-2. clean baselineを保存する
-3. version / preset / config / scopeをpinする
-4. cleanとmutantを同じexecution contractで走らせる
-5. `clean=pass && mutant=block` のときだけcreditを与える
-6. correctness survivorだけを速度やmigration costへ進める
+ここから「4製品は同等」とも言えない。5件しか測っていない。消えたのは、旧2/5対5/5を**製品固有の差だとする根拠**だけだ。
 
-これなら「設定が強いだけ」を「製品が強い」と誤読しにくい。
+## 比較を6段階にする
 
-## 読者が持ち帰るべきもの
+型チェッカーを移行するときは次の順で十分だった。
 
-型チェッカー導入時に比較表を作る前に、CI logへ次を残す。
+1. repoで絶対にblockしたいfailureを1 root faultずつfixture化する
+2. clean baselineを用意する
+3. tool versionを固定する
+4. preset / mode / config / scope / severityを固定する
+5. `clean=pass && fault=block`だけを成功として数える
+6. correctnessを満たした候補だけ速度・導入コスト・保守量を比べる
+
+最後の段階で機能と運用性が同等なら、**LOC、設定ファイル、dependency、CI commandが少ない方を選ぶ**。複雑性は有効なtie-breakerだが、設定の違う候補を無理に同点扱いするためには使わない。
+
+## benchmark結果と一緒に残す最小メモ
 
 ```text
 checker: pyrefly 1.2.0
@@ -113,14 +84,12 @@ python: 3.12
 blocking severity: error
 ```
 
-この記録がないbenchmarkは、後から再現できても「何を比較したのか」が曖昧になる。
+この6項目があれば、半年後でも「製品を比較したのか、設定を比較したのか」を追いやすい。
 
 ## 証拠の境界
 
-今回の5 mutantはtyping全体のaccuracy benchmarkではない。editor behavior、third-party stubs、incremental analysis、large-repo behaviorも測っていない。
+今回の5 mutantはtyping全体のaccuracyを証明しない。editor behavior、third-party stubs、incremental analysis、大規模repoも未評価だ。
 
-それでも、設定を固定しない比較が危険だという判断には十分だった。なぜなら、**同一binary・同一version・同一fixtureでpresetだけを変えたとき、結果が2/5から5/5へ変わった**からだ。
+それでも比較手順を変える理由にはなった。**同一binary・同一version・同一fixtureで、presetだけを変えると2/5→5/5になった**からだ。
 
-製品比較は最後でいい。
-
-最初に固定すべきなのは、**その製品に実際どの判定権限を与えたのか**である。
+型チェッカーを選ぶ前に、まず比較対象から設定差を消す。それから初めて、製品差と複雑性を比べる。
