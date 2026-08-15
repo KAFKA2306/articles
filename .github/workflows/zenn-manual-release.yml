@@ -19,6 +19,7 @@ on:
 
 env:
   ZENN_DEPLOY_BRANCH: zenn-release
+  RELEASE_WORKTREE: _zenn_release
 
 permissions:
   contents: write
@@ -30,9 +31,10 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
-    timeout-minutes: 22
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout canonical work branch
+        uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 0
@@ -83,9 +85,6 @@ jobs:
           else:
               raise SystemExit(f"ambiguous publication state: {path}")
 
-          # Every release attempt changes exactly the target article so that the
-          # deploy branch receives a new commit even when publication intent was
-          # already true. The marker is non-rendering HTML metadata.
           body = re.sub(
               r"^<!-- zenn-deploy-sync: [^>]+ -->\n+",
               "",
@@ -102,7 +101,7 @@ jobs:
           print(f"publication_mode={mode} slug={slug}")
           PY
 
-      - name: Validate exact release mutation
+      - name: Validate exact main mutation
         shell: bash
         env:
           SLUG: ${{ inputs.slug }}
@@ -116,7 +115,7 @@ jobs:
             exit 1
           }
 
-      - name: Commit publication intent on main
+      - name: Commit validated publication intent to main
         shell: bash
         env:
           SLUG: ${{ inputs.slug }}
@@ -127,12 +126,13 @@ jobs:
           git add "articles/${SLUG}.md"
           git commit -m "publish: reconcile ${SLUG} through release branch"
 
-          # Preserve concurrent editorial work without force-pushing. The release
-          # commit is rebased onto the latest main and must win a normal FF push.
           pushed=0
           for attempt in 1 2 3; do
             git fetch origin main
             git rebase origin/main
+            python -m pipeline.zenn_slug
+            python -m pipeline.publication_diff --base HEAD^ --head HEAD
+            python -m pipeline.audit
             if git push origin HEAD:main; then
               pushed=1
               break
@@ -142,21 +142,142 @@ jobs:
             echo "main moved too quickly; release aborted without force push"
             exit 1
           }
-          echo "release_target_sha=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "publication_intent_sha=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
-      - name: Advance dedicated Zenn deploy branch
+      - name: Checkout canonical Zenn release snapshot
+        uses: actions/checkout@v6
+        with:
+          ref: zenn-release
+          path: _zenn_release
+          fetch-depth: 0
+
+      - name: Copy approved article into release snapshot
+        shell: bash
+        env:
+          SLUG: ${{ inputs.slug }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          import re
+          import shutil
+          import subprocess
+          import urllib.parse
+          from pathlib import Path
+
+          slug = os.environ["SLUG"]
+          release = Path(os.environ["RELEASE_WORKTREE"])
+          source_article = Path("articles") / f"{slug}.md"
+          release_article = release / source_article
+          release_article.parent.mkdir(parents=True, exist_ok=True)
+          shutil.copy2(source_article, release_article)
+
+          text = source_article.read_text(encoding="utf-8")
+          image_refs = set(re.findall(r"/images/[^\s)\"'<>]+", text))
+          copied = []
+          for raw in sorted(image_refs):
+              cleaned = urllib.parse.unquote(raw.split("#", 1)[0].split("?", 1)[0])
+              rel = Path(cleaned.lstrip("/"))
+              if rel.parts[:1] != ("images",) or ".." in rel.parts:
+                  raise SystemExit(f"unsafe image reference: {raw}")
+              source = Path(rel)
+              if not source.is_file():
+                  raise SystemExit(f"referenced image missing: {rel}")
+              dest = release / rel
+              dest.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copy2(source, dest)
+              copied.append(rel.as_posix())
+
+          changed = set(
+              subprocess.check_output(
+                  ["git", "-C", str(release), "diff", "--name-only"],
+                  text=True,
+              ).splitlines()
+          )
+          untracked = set(
+              subprocess.check_output(
+                  ["git", "-C", str(release), "ls-files", "--others", "--exclude-standard"],
+                  text=True,
+              ).splitlines()
+          )
+          observed = {item for item in changed | untracked if item}
+          allowed = {source_article.as_posix(), *copied}
+          unexpected = sorted(observed - allowed)
+          if unexpected:
+              raise SystemExit("unexpected release snapshot changes: " + ", ".join(unexpected))
+          print(f"release_snapshot_article={source_article}")
+          print(f"release_snapshot_images={len(copied)}")
+          PY
+
+      - name: Validate exact release snapshot
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin "$ZENN_DEPLOY_BRANCH"
-          release_sha="$(git rev-parse "origin/${ZENN_DEPLOY_BRANCH}")"
-          target_sha="$release_target_sha"
-          if ! git merge-base --is-ancestor "$release_sha" "$target_sha"; then
-            echo "${ZENN_DEPLOY_BRANCH} diverged from main; refusing force update"
-            exit 1
-          fi
-          git push origin "${target_sha}:refs/heads/${ZENN_DEPLOY_BRANCH}"
-          echo "ZENN_DEPLOY_TRIGGERED branch=${ZENN_DEPLOY_BRANCH} sha=${target_sha}"
+          python -m pipeline.zenn_slug --root "$RELEASE_WORKTREE"
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from pipeline.zenn_production import collect_published_articles
+
+          root = Path(os.environ["RELEASE_WORKTREE"])
+          articles, errors = collect_published_articles(root)
+          if errors:
+              raise SystemExit("\n".join(errors))
+          print(f"RELEASE_CONTRACT_PASS: published={len(articles)}")
+          PY
+
+          (
+            cd "$RELEASE_WORKTREE"
+            rm -f /tmp/zenn-release-preview.log /tmp/zenn-release-articles.json
+            npx --yes zenn-cli@latest preview --no-watch --port 8010 >/tmp/zenn-release-preview.log 2>&1 &
+            server_pid=$!
+            trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+            for attempt in 1 2 3 4 5 6 7 8 9 10; do
+              if curl --fail --silent http://127.0.0.1:8010/api/articles?sort=system >/tmp/zenn-release-articles.json; then
+                break
+              fi
+              if ! kill -0 "$server_pid" 2>/dev/null; then
+                cat /tmp/zenn-release-preview.log
+                exit 1
+              fi
+              if [ "$attempt" -eq 10 ]; then
+                cat /tmp/zenn-release-preview.log
+                exit 1
+              fi
+              sleep 1
+            done
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          from urllib.request import urlopen
+
+          articles = json.loads(Path('/tmp/zenn-release-articles.json').read_text())['articles']
+          critical = []
+          for article in articles:
+              slug = article['slug']
+              with urlopen(f'http://127.0.0.1:8010/api/articles/{slug}') as response:
+                  payload = json.load(response)['article']
+              if 'data-body-error' in (payload.get('bodyHtml') or ''):
+                  critical.append(f'{slug}: renderer emitted data-body-error')
+          if critical:
+              raise SystemExit('\n'.join(critical))
+          print(f'ZENN_RELEASE_RENDER_PASS: rendered {len(articles)} articles')
+          PY
+          )
+
+      - name: Deploy approved snapshot to Zenn branch
+        shell: bash
+        env:
+          SLUG: ${{ inputs.slug }}
+        run: |
+          set -euo pipefail
+          git -C "$RELEASE_WORKTREE" config user.name "github-actions[bot]"
+          git -C "$RELEASE_WORKTREE" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$RELEASE_WORKTREE" add -A -- "articles/${SLUG}.md" images
+          git -C "$RELEASE_WORKTREE" diff --cached --check
+          git -C "$RELEASE_WORKTREE" commit -m "deploy: publish ${SLUG}"
+          git -C "$RELEASE_WORKTREE" push origin "HEAD:${ZENN_DEPLOY_BRANCH}"
+          echo "ZENN_DEPLOY_TRIGGERED branch=${ZENN_DEPLOY_BRANCH} sha=$(git -C "$RELEASE_WORKTREE" rev-parse HEAD)"
 
       - name: Verify Zenn production
         id: verify
@@ -164,7 +285,10 @@ jobs:
         env:
           ZENN_USERNAME: kafka2306
         run: |
-          python -m pipeline.zenn_production --wait-seconds 900 --interval-seconds 15
+          python -m pipeline.zenn_production \
+            --root "$RELEASE_WORKTREE" \
+            --wait-seconds 900 \
+            --interval-seconds 15
 
       - name: Report deploy pending without rollback
         if: steps.verify.outcome != 'success'

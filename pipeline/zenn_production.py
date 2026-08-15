@@ -214,7 +214,7 @@ def _render_summary(
         "## Zenn production verification",
         "",
         f"Authority: Zenn documented public user RSS `https://zenn.dev/{username}/feed?all=1`.",
-        "Invariant: every `published: true` article must be present there with the canonical slug and matching title.",
+        "Invariant: every `published: true` article in the selected release root must be present there with the canonical slug and matching title.",
         "",
         "| slug | result | detail |",
         "| --- | --- | --- |",
@@ -242,16 +242,23 @@ def _render_summary(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Fail closed unless every published:true article is public on Zenn."
+        description="Fail closed unless every published:true article in a release root is public on Zenn."
     )
     parser.add_argument(
         "--username", default=os.environ.get("ZENN_USERNAME", DEFAULT_USERNAME)
+    )
+    parser.add_argument(
+        "--root",
+        type=Path,
+        default=ROOT,
+        help="Repository snapshot whose published:true articles define expected production state.",
     )
     parser.add_argument("--wait-seconds", type=int, default=0)
     parser.add_argument("--interval-seconds", type=int, default=15)
     args = parser.parse_args(argv)
 
-    articles, errors = collect_published_articles()
+    release_root = args.root.resolve()
+    articles, errors = collect_published_articles(release_root)
     results, catalog_error = verify_until_settled(
         articles,
         username=args.username,

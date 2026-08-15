@@ -1,8 +1,6 @@
 name: Zenn Production Verification
 
 on:
-  push:
-    branches: [zenn-release]
   schedule:
     - cron: "17 * * * *"
   workflow_dispatch:
@@ -13,28 +11,29 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 8
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout verifier implementation
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Checkout canonical Zenn release snapshot
+        uses: actions/checkout@v6
         with:
           ref: zenn-release
-          fetch-depth: 2
+          path: _zenn_release
+          fetch-depth: 1
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Verifier contract tests
         run: python -m unittest tests.test_zenn_production -v
-      - name: Verify every published:true article on Zenn production
-        shell: bash
+      - name: Verify zenn-release against Zenn production
         env:
           ZENN_USERNAME: kafka2306
         run: |
-          set -euo pipefail
-          wait_seconds=0
-          if [ "${{ github.event_name }}" = "push" ]; then
-            # Every push to zenn-release is an intentional deploy event.
-            wait_seconds=900
-          fi
           python -m pipeline.zenn_production \
-            --wait-seconds "$wait_seconds" \
+            --root _zenn_release \
+            --wait-seconds 0 \
             --interval-seconds 15

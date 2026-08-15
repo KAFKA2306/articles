@@ -61,31 +61,40 @@ class ZennProductionTests(unittest.TestCase):
         )
         self.assertFalse(mismatch[0].ok)
 
-    def test_production_verifier_observes_only_release_branch(self) -> None:
+    def test_cli_exposes_release_root(self) -> None:
+        source = (zenn_production.ROOT / "pipeline" / "zenn_production.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('"--root"', source)
+        self.assertIn("collect_published_articles(release_root)", source)
+
+    def test_scheduled_verifier_reads_release_snapshot_not_main_articles(self) -> None:
         workflow = (
             zenn_production.ROOT / ".github" / "workflows" / "zenn-production-verify.yml"
         ).read_text(encoding="utf-8")
-        self.assertIn("python -m pipeline.zenn_production", workflow)
-        self.assertIn("cron:", workflow)
-        self.assertIn("branches: [zenn-release]", workflow)
+        self.assertIn("ref: main", workflow)
         self.assertIn("ref: zenn-release", workflow)
-        self.assertIn("wait_seconds=900", workflow)
-        self.assertNotIn("branches: [main]", workflow)
+        self.assertIn("path: _zenn_release", workflow)
+        self.assertIn("--root _zenn_release", workflow)
+        self.assertIn("cron:", workflow)
+        self.assertNotIn("push:\n", workflow)
         self.assertNotIn("cancel-in-progress", workflow)
 
-    def test_manual_release_advances_dedicated_deploy_branch(self) -> None:
+    def test_manual_release_copies_only_approved_snapshot_content(self) -> None:
         workflow = (
             zenn_production.ROOT / ".github" / "workflows" / "zenn-manual-release.yml"
         ).read_text(encoding="utf-8")
         self.assertIn("ZENN_DEPLOY_BRANCH: zenn-release", workflow)
-        self.assertIn("Advance dedicated Zenn deploy branch", workflow)
-        self.assertIn('git push origin "${target_sha}:refs/heads/${ZENN_DEPLOY_BRANCH}"', workflow)
-        self.assertIn("git merge-base --is-ancestor", workflow)
+        self.assertIn("Copy approved article into release snapshot", workflow)
+        self.assertIn("unexpected release snapshot changes", workflow)
+        self.assertIn("ZENN_RELEASE_RENDER_PASS", workflow)
+        self.assertIn('--root "$RELEASE_WORKTREE"', workflow)
+        self.assertIn('git -C "$RELEASE_WORKTREE" push origin "HEAD:${ZENN_DEPLOY_BRANCH}"', workflow)
         self.assertIn("DEPLOY_PENDING", workflow)
         self.assertIn("no rollback push is emitted", workflow)
-        self.assertNotIn("Roll back failed release", workflow)
         self.assertNotIn("git push --force", workflow)
         self.assertNotIn("git push -f", workflow)
+        self.assertNotIn("Roll back failed release", workflow)
 
 
 if __name__ == "__main__":
