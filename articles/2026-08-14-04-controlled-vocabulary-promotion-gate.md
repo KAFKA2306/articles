@@ -1,264 +1,269 @@
 ---
-title: "用語を増やすほど検索が壊れる。294候補から1語だけ正規語へ昇格した理由"
+title: "AIに独自用語と略語を増やさせない。294候補から1語だけ用語集に追加した"
 emoji: "📚"
 type: "tech"
-topics: ["dataengineering", "knowledgegraph", "documentation", "testing", "ai"]
+topics: ["ai", "documentation", "nlp", "testing", "dataengineering"]
 published: false
 ---
 
-用語集は、語を追加するほど便利になると思っていた。
+AIにREADME、Issue、設計文書を書かせると、文章そのものは増やせる。
 
-しかし実際には、追加を急ぐほど検索や集計が壊れやすい。
+でも、読む側の負担まで増やしていないだろうか。
 
-例えば、
+特に気になるのが、**そのプロジェクトでしか通じない用語と略語**である。
 
-```text
-LLM
-Large Language Model
-Large Language Models
-```
+普通に「検証」「完了条件」「作業手順」と書けば伝わるのに、新しい英語名を付け、さらに頭文字で略す。すると文章を読む前に、そのプロジェクト専用の辞書を覚えなければならない。
 
-を見つけた順に3件登録すると、人間には同じ概念に見えてもsystemには別entityとして残る。
+GoogleのDeveloper Documentation Style Guideも、専門集団だけに通じるjargonは明確なコミュニケーションを妨げることがあり、可能なら平易な表現へ置き換えるよう勧めている。略語についても、読者が意味を考えなければならないなら読解を遅くすると説明している。
 
-`KAFKA2306/nlm` では、inventory 294件のうちverifiedを32→33、needs_reviewを262→261へ更新し、`Large Language Model (LLM)` を**1件だけ**canonical glossaryへ昇格した。
+- Jargon: https://developers.google.com/style/jargon
+- Abbreviations: https://developers.google.com/style/abbreviations
+
+そこで、自分の用語データを見直した。
+
+`KAFKA2306/nlm` には、README、論文、AI出力などから集めた用語候補が294件あった。そのうち、2026年8月14日の更新で確認済みを32件から33件へ増やし、要確認を262件から261件へ減らした。
+
+つまり、**294候補から、その更新で新たに用語集へ入れたのは1件だけ**だった。
 
 - commit: https://github.com/KAFKA2306/nlm/commit/24f96d325facbad0857cdcb26d168619b20b7ee6
 
-増やしたのは1語だけ。
+この記事では、この1件を増やした方法よりも、**なぜ293件を急いで増やさなかったのか**を扱う。
 
-しかし、その1語には、
+## 用語集を増やせば読みやすくなる、とは限らない
 
-- stable id
-- preferred term
-- aliases
-- domain
-- definition
-- source URL
-- verified date
-- status
+以前は、分からない言葉があるなら用語集へ登録すればよいと考えていた。
 
-をまとめて持たせた。
+しかし、これは半分しか解決していない。
 
-この記事で扱うのは用語集の書き方ではない。
-
-**人もAIも同じ概念を同じentityとして探せる状態を、候補収集の速度を落とさず維持する方法**について書く。
-
-## 「見つけた」と「正規語にした」を同じstateにしない
-
-新しい語を見つけること自体は簡単である。
-
-README、論文、issue、会話、AI出力から候補は大量に集められる。
-
-問題は、その観測をそのままcanonicalへ書くことだ。
+たとえば、AIが新しく
 
 ```text
-observed term
-   ≠
-canonical concept
+Evidence Completion Gate (ECG)
 ```
 
-そこで2層にする。
+という名前を作ったとする。
+
+用語集へ
 
 ```text
-review inventory
-   ↓ verification
-canonical glossary
+ECG = 証拠がそろったか確認する段階
 ```
 
-candidateは広く集める。
+と登録すれば、意味は調べられる。
 
-canonicalへのpromotionだけを狭くする。
-
-これにより、**新語を取りこぼさないことと、正規データを汚さないことを両立**できる。
-
-## 294件中1件だけ進めても、遅いとは限らない
-
-`nlm` のcommitでは、
+でも、そもそも本文を
 
 ```text
-total        = 294
-verified     = 32 → 33
-needs_review = 262 → 261
+必要な証拠がそろったか確認する
 ```
 
-だった。
+と書けば、用語集は要らない。
 
-件数だけ見ると進捗は1件である。
+ここで増えているのは知識ではなく、**読むために覚える名前**である。
 
-しかし、canonical vocabularyでは「何件増やしたか」より、**あとから同じconceptを再利用できるか**の方が重要だった。
+用語集は必要な専門用語を説明するには役立つ。しかし、不要な独自語を大量に作ってから用語集で補うと、読者の記憶負担は減らない。
 
-`Large Language Model` にはaliasとして `LLM` と複数形表記を紐づけ、stable idへ寄せる。
+だから順番を逆にした。
 
-検索はaliasでもhitできる。
+```text
+新しい言葉を見つける
+        ↓
+既存の一般語・標準用語で表せないか確認する
+        ↓
+それでも区別に必要なら用語として残す
+```
 
-集計はstable idで行える。
+**用語集は独自語を正当化する場所ではなく、削れなかった必要語を確認する最後の場所**と考えるようになった。
 
-UIはpreferred termだけ表示できる。
+## 略語はさらに厳しくする
 
-1件のpromotionで、複数の利用面を同じidentityへ揃えられる。
+独自用語より読みにくくなりやすいのが独自略語だった。
 
-## 一次情報は「説明文」よりidentityを固定するために使う
+Googleの略語ガイドは、標準的で読者の時間を節約する略語を使い、対象読者に馴染みの薄い専門的な略語には注意するよう求めている。また、本文で1回しか使わない略語なら、正式名称と同程度に一般的でない限り、略語自体を入れないとしている。
 
-この例ではNLM MeSHのcontrolled vocabularyを参照した。
+- https://developers.google.com/style/abbreviations
+
+この考え方は、複数のREADME、Issue、Pull Requestを飛び回って読むリポジトリでは特に有効だった。
+
+文書Aの冒頭で
+
+```text
+Evidence Completion Gate (ECG)
+```
+
+と定義しても、文書Bだけを開いた人には`ECG`の意味が分からない。
+
+AIも常に同じ文書の冒頭から読むとは限らない。
+
+そのため、自分のリポジトリでは次のように扱う方が読みやすい。
+
+```text
+API / HTTP / JSON / CI
+→ 対象読者に広く定着しているなら使う
+
+プロジェクト内で作った略語
+→ 原則として作らない
+```
+
+「最初に一度展開したから、その後は略してよい」より、**略さなくても困らないなら略さない**方を優先する。
+
+## 294件の候補から何を1件だけ残したのか
+
+この更新で確認したのは `Large Language Model` だった。
+
+米国国立医学図書館のMeSH Browserには、2026年版の記録として次が公開されている。
+
+- MeSH Heading: `Large Language Models`
+- Entry Term: `Large Language Model`
+- Unique ID: `D000098342`
+
+一次情報:
 
 - https://meshb.nlm.nih.gov/record/ui?ui=D000098342
 - https://id.nlm.nih.gov/mesh/D000098342.html
 
-重要なのは、もっともらしい説明文を得ることではない。
+この外部の管理語彙に接続できたため、少なくとも「自分のリポジトリだけで作った概念名」ではないことを確認できる。
 
-**stable identifierとpreferred conceptを外部の正準体系へ接続できること**である。
+`nlm` 側では `Large Language Model` を表示名とし、`LLM` と複数形を検索用の別名として保持した。これはNLMが`LLM`をMeSHのEntry Termとしている、という意味ではない。実際のMeSH Browserで確認できるEntry Termは `Large Language Model` である。
 
-LLMに定義を書かせることはできる。
+重要だったのは、AIにもっともらしい定義を書かせることではなく、**外部で識別可能な既存概念へ接続できるか**だった。
 
-しかし生成文だけでは、同一entityか、revisionがいつか、別名をどう扱うかまで固定できない。
+## 「AIっぽい言葉」を人間の勘だけで決めない
 
-AIは候補整理に使う。
+一方で、LLMが人間と異なる語彙選択をすること自体は研究対象になっている。
 
-promotionの根拠は検証可能なsourceへ戻す。
+2026年6月のJuzek、Ming、Hernandezのプレプリントは、人間の文章と複数のLLMの文章を比較し、手作業の「AIっぽい単語リスト」を前提にせず、語の過剰使用を自動で検出する方法を提案している。単純な総出現回数だけでなく、一定の窓ごとにその語が現れたかを見る `windowed document prevalence` を使っている。
 
-## promotionをtransactionとして扱う
+- https://arxiv.org/abs/2606.03165
 
-候補をverifiedへ移すとき、複数箇所を別々に手修正するとstateが壊れる。
+この研究から言えるのは、**LLMの語彙選択の偏りを統計的に測る方法がある**ことまでである。
 
-```text
-queueから消えたがcanonicalへ入っていない
-canonicalへ入ったがqueueにも残っている
-verified countだけ変わった
-```
+この論文は、
 
-そこで1件のpromotionを、
+- ソフトウェアのリポジトリで独自の複合語が増えるか
+- 独自略語が読解を悪化させるか
+- AIが一度作った用語を別文書へ自己増殖させるか
 
-```text
-candidateを選ぶ
-→ sourceでidentity確認
-→ canonicalへ追加
-→ aliasesを固定
-→ verified setへ追加
-→ review queueから削除
-→ count更新
-→ public projection更新
-→ tests
-```
+を直接検証したものではない。
 
-という1つのstate transitionとして扱う。
+だから、リポジトリ内の用語を見て「AIが作ったから悪い」とは判定しない。
 
-**用語集をMarkdownではなく、小さなdata productとして扱う。**
-
-## countだけ合っていても壊れる
-
-`33 + 261 = 294` なら算術上は正しい。
-
-しかし同じ語がverifiedとreviewの両方に残っていても、件数だけでは見つけられない。
-
-だから、
+見るのは、もっと単純な事実にする。
 
 ```text
-count invariant
-set invariant
-provenance invariant
+その語はどの文書に何回出るか
+外部の標準・公式文書でも使われているか
+既存の普通の言葉で意味を失わず置き換えられるか
+略語を覚えないと読めないか
 ```
 
-を分ける。
+## 頻度より「何文書へ広がったか」を見る
 
-例えば、
+用語監査では、総出現回数だけでは不十分だと考えている。
 
-```python
-assert verified + needs_review == total
-assert verified_terms.isdisjoint(needs_review_terms)
-assert canonical_ids_are_unique()
-assert every_verified_term_has_source()
-```
+ある語が1つの設計文書で10回使われているのと、README、AGENTS.md、Issue、Pull Request、テスト説明の5か所で2回ずつ使われているのでは、読む人への影響が違う。
 
-のように検証する。
+後者では、その言葉を知らないと複数の入口で止まる。
 
-## UIでは「未確認」を隠さない
-
-候補queueが大きいと、未完成に見える。
-
-しかし全部をverifiedへ押し込むより、
+そこで、自動監査するなら最低限、次を見る。
 
 ```text
-Verified: 33
-Needs review: 261
+表現
+出現回数
+出現した文書数
+初出の文書
+外部の一次資料で確認できるか
+略語か
 ```
 
-と見せた方が、利用者はどこまで信頼してよいか分かる。
+いきなり「AI独自用語スコア」のような新しい指標は作らない。
 
-さらに、candidateを検索結果へ出す場合も、
+それ自体が、また新しい概念を覚えさせるからである。
+
+## 残すかどうかは4つの質問で決める
+
+今は、新しい用語や略語を見つけたら次の順で確認する。
+
+1. **この名前がないと区別できない概念があるか。**
+2. **標準、公式API、主要フレームワーク、一般的な技術用語に既存の名前がないか。**
+3. **普通の文章へ戻しても意味を失わないか。**
+4. **略語は本当に読者の時間を節約するほど一般的か。**
+
+結果は複雑な分類にしない。
 
 ```text
-verified
-candidate / unverified
+既存語を使う
+普通の文章に戻す
+必要なので残す
 ```
 
-を表示で分けられる。
+この3つで十分だった。
 
-**検索できることと、canonicalとして信頼できることを同じにしない。**
+## 用語候補は広く集めてもよい
 
-## discoveryを広くできるのは、promotionが狭いから
+独自語を減らすことと、候補収集を止めることは別である。
 
-この設計の意外な利点は、AIによる候補収集を大胆にできることだった。
-
-candidateが即canonicalにならないなら、多少ノイズがあってもqueueへ置ける。
+`nlm` では294件を候補として保持したまま、確認済みは33件にとどめた。
 
 ```text
-AI / crawler / user input
-      ↓
-wide discovery
-      ↓
-review queue
-      ↓
-strict promotion
+候補 294
+  ├─ 確認済み 33
+  └─ 要確認 261
 ```
 
-入口は広く、出口は狭くする。
+候補は、観測記録として残せる。
 
-これなら知識の増加速度とcanonical品質を同時に上げやすい。
+ただし候補に入っただけで、READMEや設計文書で積極的に使う言葉にはしない。
 
-## 他のmaster dataでも同じ
+この分離によって、
 
-このpatternは用語集だけではない。
+**「新しい表現を見落とさない」ことと「読むための辞書を増やさない」ことを同時にできる。**
 
-- 製品マスタ
-- 企業名寄せ
-- 工場taxonomy
-- タグ辞書
-- 人物entity
-- 業界分類
+## AIに書かせるときの最小ルール
 
-でも使える。
-
-観測した値を即正規データにせず、candidate stateを持つ。
-
-そしてpromotion時に、
+AI向けの指示も、長い用語集より次の方が効くと考えている。
 
 ```text
-identity
-preferred label
-aliases
-source
-status
-verified_at
+- 一般語や標準用語で足りるなら、新しい用語を作らない。
+- プロジェクト固有の略語を作らない。
+- 標準、公式API、主要フレームワークの正式名称を優先する。
+- 名前を付けなくても説明できる概念は、普通の文章で説明する。
+- 既存文書の不要な独自語・略語は、意味を保てる場合は一般的な表現へ戻す。
 ```
 
-を固定する。
+「独自語を作ったら用語集へ追加する」ではない。
 
-## まず1語だけ試すなら
+**まず作らない。必要なものだけ残す。**
 
-既存用語集から、表記揺れが多い語を1つ選ぶ。
+## 294件から1件しか増えなかったことを、失敗と見ない
 
-1. observed variantsを集める
-2. stable identityを確認する
-3. preferred termを決める
-4. aliasesを紐づける
-5. sourceを残す
-6. verifiedへpromotionする
-7. queueから消えたことをtestする
+今回の更新は、数字だけなら33件目を1件追加しただけである。
 
-大量一括更新より、この1件のstate transitionを正しく作る方が先でよい。
+しかし目的を「用語集の件数を増やす」から「読むために覚える言葉を必要以上に増やさない」へ変えると、評価も変わる。
 
-用語集の価値は、何語あるかだけではない。
+外部で確認できた概念は残す。
 
-**同じものを同じものとして、人もAIも迷わず使えること。**
+既存語で足りるものには新しい名前を付けない。
 
-そのために、294候補から1語だけ進めるpromotion gateが必要だった。
+一度しか使わない独自略語は作らない。
+
+意味を失わず普通の文章へ戻せるなら戻す。
+
+AIに大量の文章を書かせる時代ほど、文章量だけではなく、**そのリポジトリを読むために新しく覚えなければならない言葉の数**を増やさない方がよい。
+
+用語集を大きくする前に、まず用語を増やさなくて済むかを考える。
+
+自分の294候補では、その更新で残した答えは1件だった。
+
+## 参照
+
+- Google Developer Documentation Style Guide — Jargon  
+  https://developers.google.com/style/jargon
+- Google Developer Documentation Style Guide — Abbreviations  
+  https://developers.google.com/style/abbreviations
+- NLM MeSH Browser — Large Language Models, D000098342  
+  https://meshb.nlm.nih.gov/record/ui?ui=D000098342
+- Juzek, Ming, Hernandez (2026), *Fully Automated Identification of Lexical Alignment and Preference-Stage Shifts in Large Language Models*  
+  https://arxiv.org/abs/2606.03165
+- 実測に使った `KAFKA2306/nlm` commit  
+  https://github.com/KAFKA2306/nlm/commit/24f96d325facbad0857cdcb26d168619b20b7ee6
