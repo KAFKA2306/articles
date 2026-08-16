@@ -1,322 +1,207 @@
 ---
-title: "警告まで止めると、自動化は使えなくなる。品質ゲートを段階ごとに分ける"
+title: "同じ品質条件を2回判定しない。AI時代の品質ゲートは「追加」より「一本化」する"
 emoji: "🚦"
 type: "tech"
-topics: ["typescript", "cicd", "automation", "quality"]
+topics: ["typescript", "githubactions", "testing", "ai"]
 published: false
-published_at: 2026-08-13 14:08
 ---
 
-品質チェックを増やすほど安全になる、とは限らない。
+品質を上げようとすると、検査を追加したくなる。
 
-`KAFKA2306/yt3` の台本生成コードを追っていて、同じ `ScriptIntegrityLinter` の結果を「生成中」と「監査・運用」で同じ意味にしていないことに気づいた。
+lint、audit、smoke、verifier、harness、score、receipt。
 
-- linter本体: https://github.com/KAFKA2306/yt3/blob/main/src/io/utils/qa/script_linter.ts
-- 生成段階の利用側: https://github.com/KAFKA2306/yt3/blob/main/src/domain/agents/content.ts
-- 日次監査の利用側: https://github.com/KAFKA2306/yt3/blob/main/src/scripts/audit_today.ts
-- 変更を含む公開commit: https://github.com/KAFKA2306/yt3/commit/d1e2c42cfdfdb18d9962d15c38b87bab919df285
+一つずつには理由がある。しかしAIが高速に実装を足せるようになると、別の失敗が起きる。
 
-linterは `OK / WARN / FAIL` の3段階を返す。一方、生成段階では `FAIL` が1件でもあれば再生成するが、`WARN` だけなら通す。これは単なる実装差ではなく、**同じ検査結果でも、どの工程で使うかによって「止める条件」を変える**という設計判断である。
+**同じ事実を複数の場所で判定し始める。**
 
-GitHub Actions自体は、actionの終了コード `0` をsuccess、非0をfailureとして扱う。つまりCIへ接続する最後の境界では、アプリケーション内部の多段階評価を最終的に「通す / 止める」へ射影する必要がある。
+`yt3` の現在の公開コードを見直すと、その兆候が実際にある。
 
-https://docs.github.com/en/actions/how-tos/create-and-publish-actions/set-exit-codes
+## 現在のコードには、すでに2つの「通った」がある
 
-## 1. 問題：WARNとFAILを同じ条件で止めると改善ループが詰まる
+`ScriptIntegrityLinter` は各checkについて `OK / WARN / FAIL` を返し、同時に `score` と `passed` も返す。
 
-### 実際の入力・状況
-
-現在の `ScriptIntegrityLinter` は、検査ごとに `OK / WARN / FAIL` を返し、100点から減点する。
-
-たとえば公開コードでは、次のように扱われている。
-
-- `MetricDensity` が `WARN` なら -10
-- `DialogueTemplateReuse` が `WARN` なら -10
-- `AuthorityMixing` が `WARN` なら -10
-- `ScopeOverload` が `WARN` なら -10
-- `Wording` が `WARN` なら -10
-- `Repetition` が `FAIL` なら -30
-- `FactPlausibility` が `FAIL` なら -20
-
-linter全体の `passed` は次の条件で決まる。
+現在の `passed` は次で決まる。
 
 ```ts
 passed: totalScore >= 70 && !checks.some((c) => c.status === "FAIL")
 ```
 
-出典: https://github.com/KAFKA2306/yt3/blob/main/src/io/utils/qa/script_linter.ts
+一次情報:
 
-ここで重要なのは、スコアとseverityが別軸になっていることだ。
+- https://github.com/KAFKA2306/yt3/blob/main/src/io/utils/qa/script_linter.ts
 
-`WARN` が4件あれば、FAILがなくても100点から40点引かれて60点になる。その場合、linter単体の `passed` は `false` になる。
+ところがcontent生成側は、その `passed` をそのまま使わない。
 
-しかし生成段階の `content.ts` は `auditRes.passed` をそのまま使っていない。`Artifact` を除外した後、次の条件を独自に計算する。
+`Artifact` layerを除外したうえで、残ったcheckに `FAIL` がないかをもう一度計算している。
 
 ```ts
+const relevantChecks = auditRes.checks.filter(
+  (c) => c.layer !== "Artifact",
+);
 const passed = relevantChecks.every((c) => c.status !== "FAIL");
 ```
 
-出典: https://github.com/KAFKA2306/yt3/blob/main/src/domain/agents/content.ts
+一次情報:
 
-つまり生成中は、**WARNは改善材料だが、単独では再生成を強制しない**。
+- https://github.com/KAFKA2306/yt3/blob/main/src/domain/agents/content.ts
 
-## 2. 原因：品質スコアとblocking severityは目的が違う
-
-品質スコアは「どれくらい良いか」を連続値で表すのに向いている。一方、severityは「この状態で次へ進めてよいか」を表す。
-
-この2つを1本のbooleanへ潰すと、次の問題が起こる。
-
-### 壊れた失敗例
-
-生成段階で次のように書くとする。
-
-```ts
-const result = await linter.audit(state);
-if (!result.passed) {
-  regenerate();
-}
-```
-
-この実装では、FAILがゼロでもWARNの累積でscoreが70未満になると再生成する。
-
-たとえばWARNが4件、それぞれ-10ならscoreは60になる。公開されている現在の減点規則から、この状態は成立しうる。
-
-問題は「60点だから悪い」ことではない。生成ループでは最大試行回数が3回に制限されており、`content.ts` は3回で通らなければ例外にする。
-
-```ts
-const maxAttempts = 3;
-```
-
-出典: https://github.com/KAFKA2306/yt3/blob/main/src/domain/agents/content.ts
-
-WARNまでblockingにすると、致命的でない違和感のために有限の再生成予算を消費する。
-
-## 3. 設計判断と代替案：判定を「検査」と「工程ポリシー」に分ける
-
-採用すべき分離は次の2層である。
+つまり同じlinter resultに対して、少なくとも次の2種類の判定が存在する。
 
 ```text
-検査器: 事実を返す
-  └─ OK / WARN / FAIL / score / details
+linter自身
+  score >= 70 AND FAILなし
 
-工程ポリシー: その工程で何を止めるか決める
-  ├─ generation: FAILのみblock
-  ├─ review: WARNも可視化
-  └─ publish/CI: 必須条件をbinaryへ射影
+content生成
+  Artifactを除いてFAILなし
 ```
 
-### 代替案A：全工程で `result.passed` を共有する
+これは直ちにbugという意味ではない。生成途中と公開前でblocking条件が違うこと自体はあり得る。
 
-実装は簡単だが、工程ごとの目的を表現できない。生成中の「改善できる警告」と公開直前の「出してはいけない失敗」が同じ扱いになる。
+問題は、**その差を表現するために判定ロジックを何層増やすか**である。
 
-### 代替案B：scoreだけで閾値判定する
+## 以前の案は、さらに `GatePolicy` を足そうとしていた
 
-`score >= 70` のような条件だけでは、重大なFAILが1件あっても他が高得点なら通る設計になり得る。現在のlinterが `score >= 70` に加えて `FAILがないこと` も要求しているのは、この問題を避ける形になっている。
+この記事の旧版では、ここへ新しい `GatePolicy` abstractionを追加し、工程ごとに `minScore` や `blockOn` を設定する案を出していた。
 
-### 採用案：検査結果は共通、blocking条件は工程側で持つ
+それは局所的にはきれいに見える。
 
-現在の `content.ts` はこの形に近い。linterの詳細結果を受け取り、生成工程ではFAILだけをblockingにする。
+しかしrepository全体を「AIが増やした判断コスト」という観点で見直すと、優先順位が逆だった。
 
-さらに `audit_today.ts` は、監査全体の `decision === "PASS"` と、個別の `Discomfort` 警告を別々に保存している。
+現在すでに、
 
-出典: https://github.com/KAFKA2306/yt3/blob/main/src/scripts/audit_today.ts
+- linterがcheckを作る
+- linterが全体 `passed` を作る
+- content側が別の `passed` を作る
+- retryがその結果を次のpromptへ戻す
 
-この分離により、警告を消さずに運用へ残しつつ、すべての警告を即停止条件にすることも避けられる。
+という経路がある。
 
-## 4. 実装：GatePolicyを検査器の外へ出す
+ここへ新しいpolicy objectを足す前に、**どこを唯一の判定場所にするか**を決めるべきだった。
 
-他のプロジェクトへ移植するなら、severity判定をlinter内部へ埋め込まず、工程ごとのadapterにする。
+## まず「観測」と「停止」を分ける。ただし仕組みは増やさない
+
+必要なのは新しいframeworkではない。
+
+最小形は二つしかない。
+
+```text
+観測
+  checkごとの事実を返す
+
+停止
+  その工程を続けるか決める
+```
+
+たとえばlinterを観測器として使うなら、返す中心は `checks` と必要なら `score` でよい。
 
 ```ts
-type Severity = "OK" | "WARN" | "FAIL";
-
-type Check = {
-  name: string;
-  status: Severity;
-  message: string;
-};
-
 type AuditResult = {
   score: number;
-  checks: Check[];
-};
-
-type GatePolicy = {
-  minScore?: number;
-  blockOn: Severity[];
-};
-
-function evaluateGate(result: AuditResult, policy: GatePolicy) {
-  const blockedChecks = result.checks.filter((check) =>
-    policy.blockOn.includes(check.status),
-  );
-
-  const scoreBlocked =
-    policy.minScore !== undefined && result.score < policy.minScore;
-
-  return {
-    passed: blockedChecks.length === 0 && !scoreBlocked,
-    blockedChecks,
-    scoreBlocked,
-  };
-}
-```
-
-生成工程なら次のようにする。
-
-```ts
-const generationGate: GatePolicy = {
-  blockOn: ["FAIL"],
+  checks: Array<{
+    layer: string;
+    status: "OK" | "WARN" | "FAIL";
+    message: string;
+  }>;
 };
 ```
 
-公開前の厳しい工程では、必要ならscore条件も追加できる。
+そしてblocking条件は、実際に停止する境界で一度だけ決める。
 
 ```ts
-const publishGate: GatePolicy = {
-  minScore: 70,
-  blockOn: ["FAIL"],
-};
+const blocking = result.checks.some((c) => c.status === "FAIL");
+if (blocking) throw new Error("quality check failed");
 ```
 
-CIへつなぐときだけ、最終結果を終了コードへ変換する。
+逆に、linter自身が最終合否まで所有する設計を選ぶなら、利用側は `auditRes.passed` を再計算しない。
 
-```ts
-const gate = evaluateGate(result, publishGate);
-process.exitCode = gate.passed ? 0 : 1;
+大事なのはどちらが絶対に正しいかではない。
+
+**同じ意味のbooleanを複数箇所で作らないこと**だ。
+
+## WARNを止めるかどうかより、所有者が何人いるかを見る
+
+旧版では「生成中はWARNを許容し、公開前は厳しくする」というstage-specific policyを中心にしていた。
+
+この考え自体は使える。
+
+ただし、stageごとの差を理由に次々と
+
+```text
+linter
+↓
+policy
+↓
+gate
+↓
+audit
+↓
+CI adapter
 ```
 
-GitHub Actionsでは終了コード0がsuccess、非0がfailureになるため、このbinary化は境界で1回だけ行う。
+を作ると、品質を証明する仕組みそのものが大きくなる。
 
-公式仕様: https://docs.github.com/en/actions/how-tos/create-and-publish-actions/set-exit-codes
+先に確認すべきなのは次の三点だけでよい。
 
-## 5. 検証：同じWARN集合を2つの工程へ通す
+1. 同じ事実をどこで観測しているか。
+2. その事実から停止を決める場所はどこか。
+3. 別の場所でも同じ停止条件を再計算していないか。
 
-次の入力を使う。
+工程差が本当に必要なら、既存の一つの判定点へ最小の入力差として表現する。
 
-```ts
-const result: AuditResult = {
-  score: 60,
-  checks: [
-    { name: "metric", status: "WARN", message: "dense" },
-    { name: "template", status: "WARN", message: "reused" },
-    { name: "scope", status: "WARN", message: "wide" },
-    { name: "wording", status: "WARN", message: "awkward" },
-  ],
-};
-```
+新しいclass、score体系、policy vocabularyを作るのは、その方法で表現できないことが確認できてからでよい。
 
-生成工程では通る。
+## retryも品質ゲートの一部として監査する
 
-```ts
-evaluateGate(result, { blockOn: ["FAIL"] }).passed === true;
-```
+`content.ts` は現在、生成を最大3回試行する。
 
-公開前にscore 70以上を要求するなら止まる。
-
-```ts
-evaluateGate(result, {
-  minScore: 70,
-  blockOn: ["FAIL"],
-}).passed === false;
-```
-
-### 改善後の例
-
-さらにFAILを1件追加する。
-
-```ts
-result.checks.push({
-  name: "fact",
-  status: "FAIL",
-  message: "unverified numeric claim",
-});
-```
-
-すると生成工程でも公開工程でも止まる。
-
-この挙動なら、WARNは改善候補として保持され、FAILだけは工程をまたいで確実にblockingへできる。
-
-## 6. 失敗と学び：共通linterだから共通boolean、ではない
-
-最初にやりがちな設計は、linter自身へ唯一の `passed` を持たせ、全工程がそれだけを見ることだ。
-
-しかし公開コードを見ると、同じ `ScriptIntegrityLinter` でも利用側が必要とする意味は異なる。
-
-- linter本体: score閾値とFAIL不在を組み合わせる
-- content生成: Artifactを除き、FAIL不在だけを見る
-- 日次監査: audit全体のPASSと個別警告を別々に表示する
-
-出典:
-
-- https://github.com/KAFKA2306/yt3/blob/main/src/io/utils/qa/script_linter.ts
 - https://github.com/KAFKA2306/yt3/blob/main/src/domain/agents/content.ts
-- https://github.com/KAFKA2306/yt3/blob/main/src/scripts/audit_today.ts
 
-学びは、**検査器は観測事実を返し、止める権限は工程側が持つ**、ということだ。
+retryは生成AIでは有効なことがあるが、「失敗したら再試行する」だけでは原因を隠すこともある。
 
-severityを増やす目的は、判定を複雑にすることではない。binaryに潰す場所を遅らせることで、改善可能な警告と致命的な失敗を別の速度で扱えるようにすることにある。
+たとえば同じ決定的なvalidation failureを3回繰り返しても、正しさは増えない。
 
-## 7. 再現方法：10分で試せる最小例
+したがって監査では、retry回数そのものではなく次を見る。
 
-Node.js 20以降を想定し、`gate.mjs` を作る。
-
-```js
-function evaluateGate(result, policy) {
-  const blockedChecks = result.checks.filter((check) =>
-    policy.blockOn.includes(check.status),
-  );
-  const scoreBlocked =
-    policy.minScore !== undefined && result.score < policy.minScore;
-  return {
-    passed: blockedChecks.length === 0 && !scoreBlocked,
-    blockedChecks,
-    scoreBlocked,
-  };
-}
-
-const result = {
-  score: 60,
-  checks: [
-    { name: "metric", status: "WARN" },
-    { name: "template", status: "WARN" },
-    { name: "scope", status: "WARN" },
-    { name: "wording", status: "WARN" },
-  ],
-};
-
-const generation = evaluateGate(result, { blockOn: ["FAIL"] });
-const publish = evaluateGate(result, {
-  minScore: 70,
-  blockOn: ["FAIL"],
-});
-
-console.log({ generation, publish });
+```text
+再試行で入力または条件が変わるか
+変わらないなら同じ失敗を繰り返していないか
+最終失敗が元の原因を保持しているか
 ```
 
-実行する。
+`yt3` のcontent生成は、失敗したcheckを `lastErrorFeedback` として次試行へ渡しているため、単純な同一入力再実行ではない。一方で、このfeedback経路も含めて「本当に3回必要か」は実測で判断すべきである。
 
-```bash
-node gate.mjs
-```
+## GitHub Actionsでは最後だけbinaryにする
 
-期待する結果は、`generation.passed === true`、`publish.passed === false` である。
+CIのjobは最終的にsuccess / failureへ落とす必要がある。
 
-次に1件だけ `FAIL` を追加し、両方が `false` になることを確認する。
+GitHub ActionsのJavaScript actionでは、終了コード0がsuccess、非0がfailureとして扱われる。
 
-この最小例をGitHub Actionsへ入れる場合は、最後に `process.exitCode` を設定すればよい。終了コードとcheck run statusの対応はGitHub公式ドキュメントで確認できる。
+- https://docs.github.com/en/actions/how-tos/create-and-publish-actions/set-exit-codes
 
-https://docs.github.com/en/actions/how-tos/create-and-publish-actions/set-exit-codes
+だからbinary化は必要である。
 
-## 公開コードから確認できる範囲
+ただし、**binary化が必要なのは境界であって、repositoryのあらゆるlayerに `passed` を持たせる理由にはならない。**
 
-この記事で断定しているのは、公開GitHub上で確認できる現在の実装だけである。
+## 結論：品質ゲートを増やす前に、同じ判定を消す
 
-- linterが `OK / WARN / FAIL` とscoreを返す
-- 全体passedはscore 70以上かつFAILなし
-- content生成は最大3回試行する
-- content生成ではFAILだけをblockingにする
-- 日次監査では全体PASSとDiscomfort警告を別に扱う
-- GitHub Actionsは終了コード0をsuccess、非0をfailureとして扱う
+品質事故を防ぐためのtestやvalidationは必要である。
 
-実際にWARNの過剰blockingで公開障害が起きた、という事故記録は確認していない。そのため、この記事の「壊れた失敗例」は現在の公開ルールから作った再現可能な反例であり、過去事故としては扱っていない。
+しかし「安全のため」という理由は、検証経路を無制限に増やしてよい理由にはならない。
+
+GoogleのCode Review Guideは、over-engineeringを「現在必要以上の一般化や、まだ必要でない機能」として警戒し、system全体のcomplexityが増えていないかを見るよう求めている。
+
+- https://google.github.io/eng-practices/review/reviewer/looking-for.html
+
+AIが実装を高速に増やせる環境では、この原則をvalidation codeにも適用する必要がある。
+
+品質ゲートの監査で最初に聞く問いは、
+
+> 「WARNを何点にするか？」
+
+ではない。
+
+> **「この事実は、すでに別の場所で判定していないか？」**
+
+である。
+
+同じ正しさを保てるなら、判定経路が少ない方を選ぶ。
