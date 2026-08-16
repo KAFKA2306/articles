@@ -5,7 +5,8 @@ on:
     branches:
       - research/aidev-vocabulary-study
     paths:
-      - "research/aidev-vocabulary-study/**"
+      - "research/aidev-vocabulary-study/analyze.py"
+      - "research/aidev-vocabulary-study/analyze_task_matched.py"
       - ".github/workflows/aidev-vocabulary-study.yml"
   workflow_dispatch:
 
@@ -23,8 +24,10 @@ jobs:
           python-version: "3.12"
       - name: Install analysis dependencies
         run: python -m pip install --disable-pip-version-check pandas pyarrow scipy numpy
-      - name: Run external-only AIDev analysis
+      - name: Run repository-matched AIDev analysis
         run: python research/aidev-vocabulary-study/analyze.py
+      - name: Run repository-and-task-type matched robustness analysis
+        run: python research/aidev-vocabulary-study/analyze_task_matched.py
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
