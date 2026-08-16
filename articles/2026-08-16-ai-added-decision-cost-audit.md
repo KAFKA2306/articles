@@ -3,7 +3,7 @@ title: "なぜAIに任せるほど、あなたのコードは複雑になるの�
 emoji: "🧹"
 type: "tech"
 topics: ["ai", "codex", "github", "refactoring", "documentation"]
-published: false
+published: true
 ---
 
 GitHubのrepositoryをChatGPTやCodexに渡して、こんな依頼を繰り返す。
