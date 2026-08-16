@@ -9,6 +9,7 @@ on:
       - "articles/**"
       - "artifacts/**"
       - "demos/**"
+      - "scripts/**"
       - "README.md"
       - "AGENTS.md"
       - ".github/workflows/article-pipeline.yml"
@@ -24,6 +25,7 @@ on:
       - "articles/**"
       - "artifacts/**"
       - "demos/**"
+      - "scripts/**"
       - "README.md"
       - "AGENTS.md"
       - ".github/workflows/article-pipeline.yml"
@@ -71,43 +73,7 @@ jobs:
           git cat-file -e "$head^{commit}" 2>/dev/null || git fetch origin "$head" --depth=1
           python -m pipeline.publication_diff --base "$base" --head "$head"
       - name: Zenn CLI compatibility
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx --yes zenn-cli@latest preview --no-watch --port 8010 >/tmp/zenn-preview.log 2>&1 &
-          server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
-          for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            if curl --fail --silent http://127.0.0.1:8010/api/articles?sort=system >/tmp/zenn-articles.json; then
-              break
-            fi
-            if ! kill -0 "$server_pid" 2>/dev/null; then
-              cat /tmp/zenn-preview.log
-              exit 1
-            fi
-            if [ "$attempt" -eq 10 ]; then
-              cat /tmp/zenn-preview.log
-              exit 1
-            fi
-            sleep 1
-          done
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          from urllib.request import urlopen
-
-          articles = json.loads(Path('/tmp/zenn-articles.json').read_text())['articles']
-          critical = []
-          for article in articles:
-              slug = article['slug']
-              with urlopen(f'http://127.0.0.1:8010/api/articles/{slug}') as response:
-                  payload = json.load(response)['article']
-              if 'data-body-error' in (payload.get('bodyHtml') or ''):
-                  critical.append(f'{slug}: renderer emitted data-body-error')
-          if critical:
-              raise SystemExit('\n'.join(critical))
-          print(f'ZENN_CLI_PASS: rendered {len(articles)} articles')
-          PY
+        run: bash scripts/zenn-render-check.sh
       - name: Demo JavaScript syntax
         run: |
           node --check demos/_shared/pyodide-worker.mjs
