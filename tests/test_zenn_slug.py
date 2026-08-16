@@ -85,7 +85,8 @@ class ZennSlugTests(unittest.TestCase):
         self.assertIn("type: string", workflow)
         self.assertNotIn("type: choice", workflow)
         self.assertNotIn("zenn-deploy-sync", workflow)
-        self.assertIn("commit --allow-empty", workflow)
+        self.assertIn("git push origin HEAD:main", workflow)
+        self.assertNotIn("zenn-release", workflow)
 
 
 if __name__ == "__main__":
