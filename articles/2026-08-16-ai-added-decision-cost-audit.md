@@ -1,40 +1,90 @@
 ---
-title: "AIにコードを書かせたら、次のAIが迷う。repo監査を「造語探し」からやり直した"
+title: "AIにrepo改善を任せ続けたら、AIが作った「仕事の仕組み」が負債になった"
 emoji: "🧹"
 type: "tech"
 topics: ["ai", "codex", "github", "refactoring", "documentation"]
 published: false
 ---
 
-最初の監査方法は間違っていた。
+前提はこれだけだ。
 
-`canonical workline` のような独自語を一つ見つけ、その周辺に似た語がないか探していた。見つかった問題自体は実在したが、探索方法が「最初に見つけた症状」に引っ張られていた。
+**複数のrepository改善をAIに繰り返し任せると、AIはコードだけでなく「AIが仕事を進めるための仕組み」まで追加する。**
 
-つまり、**サンプリングバイアスがあった。**
+たとえば、
+
+```text
+AGENTS.md
+README / docs
+prompt / skill / memory
+独自のrole / state / score / protocol
+audit / verifier / harness
+fallback / retry
+manifest / ledger / status
+workflow
+```
+
+である。
+
+一つずつは改善のために追加されたものでも、次のAIから見れば、**読んで、意味を比較し、どれを信じるか判断し、変更時に壊していないか確認する対象**になる。
+
+```text
+AIに改善を任せる
+↓
+コードだけでなく「仕事の仕方」も増える
+↓
+次のAIがそれを解釈する
+↓
+1変更あたりの判断経路が増える
+```
+
+2026年8月16日、repository監査の対象を「独自用語」から、**AIが増やした判断コスト全般**へ変更した。
+
+この記事は、その監査方法をどう変えたかの記録である。
+
+## 最初の監査は「症状」を探していただけだった
+
+以前は `canonical workline` のような独自語を一つ見つけ、その周辺に似た語がないか探していた。
+
+見つかった問題自体は実在した。しかし探索方法は、最初に見つけた単語に引っ張られていた。
+
+つまりサンプリングバイアスがあった。
+
+独自語を検索しても、次のようなものは拾えない。
+
+- 同じvalidationを2本のworkflowで実行している
+- 古いpromptと新しいpromptが両方残っている
+- fallback moduleが本来の失敗原因を隠している
+- 同じstateをmanifestとledgerの両方へ保存している
+- AI向けinstructionがREADME、AGENTS、CLAUDE、GEMINIへ複製されている
 
 本当に知りたかったのは、独自用語が何個あるかではない。
 
-> このrepositoryに存在する各ファイル・rule・test・workflow・fallback・stateは、利用者が欲しい成果を作るために本当に必要か？
+> **このrepositoryに存在する各file / rule / test / workflow / fallback / stateは、利用者が欲しい成果を作るために本当に必要か？**
 
-2026年8月16日から、監査対象をここへ変えた。
+監査の問いをここへ変えた。
 
-## なぜ「文書が多いだけ」では済まないのか
+## なぜAI向け文書は「置いてあるだけ」ではないのか
 
-Codexでは、repository内の `AGENTS.md` は単なる人間向けメモではない。
+少なくともCodexの `AGENTS.md` は、単なる人間向けメモではない。
 
-OpenAIの公式説明では、`AGENTS.md` / `AGENTS.override.md` などのproject instructionsは、Git rootから現在ディレクトリまで探索され、**user instructionsとしてpromptへ集約される**。project docsの上限は既定で32 KiBである。
+OpenAI公式ドキュメントでは、Codexは作業開始前に `AGENTS.md` を読み、project rootからcurrent working directoryまでinstruction chainを組み立てる。該当するproject instructionsはroot側から順に連結され、合計サイズは `project_doc_max_bytes`、既定32 KiBまで取り込まれる。
 
-- https://openai.com/index/unrolling-the-codex-agent-loop/
 - https://developers.openai.com/codex/agent-configuration/agents-md
+- https://openai.com/index/unrolling-the-codex-agent-loop/
 
-つまり、AI向け文書・規則・例外をrepositoryへ残すことには実行時の意味がある。
+OpenAIは同じ公式ページで、code review ruleは簡潔に保ち、formattingやlintのような検査はCIへ任せるよう案内している。
 
-README、AGENTS、CLAUDE、GEMINI、ADR、prompt、skill、memoryへ同じ思想をコピーすれば、単なる「整理不足」ではない。次のAIが読む規則が増え、どれを優先するか判断する仕事も増える。
+つまり `AGENTS.md` にruleを足すことは、documentationを1ファイル増やすだけではない。**次のCodex runへ投入されるinstructionを増やす変更**でもある。
 
-GoogleのCode Review Guideも、レビュー対象を名前の珍しさではなくcomplexityとして扱っている。特にover-engineeringについて、現在必要な問題ではなく将来必要かもしれない問題を先回りして一般化しないよう明示している。
+README、CLAUDE、GEMINI、ADR、prompt、skill、memoryはCodexがすべて自動で同じ方法で読むわけではない。しかしrepository内でそれらを探索・参照する運用なら、同じ考えを複数surfaceへ残すほど「どれが現在の正準か」を判断する仕事は増える。
+
+GoogleのCode Review Guideも、レビューで見るべきものとしてcomplexityを挙げ、現在必要な問題以上に一般化したり、将来必要かもしれない機能を先回りして追加するover-engineeringを避けるよう明示している。またtestも保守対象のcodeであり、testだからcomplexityを許容してよいわけではないとしている。
 
 - https://google.github.io/eng-practices/review/reviewer/looking-for.html
-- https://google.github.io/eng-practices/review/reviewer/standard.html
+
+ここで監査したいのは、名前の珍しさではない。
+
+**成果を作るための経路そのものが、必要以上に増えていないか**である。
 
 ## 監査対象を7つへ広げた
 
@@ -50,7 +100,9 @@ GoogleのCode Review Guideも、レビュー対象を名前の珍しさではな
 
 最後の一点が重要だ。
 
-ファイル数、テスト数、監査数を減らすこと自体が目的ではない。**削除したとき何が壊れるかを説明できるか**を見る。
+ファイル数、テスト数、監査数を減らすこと自体が目的ではない。
+
+**削除したとき何が壊れるかを説明できるか**を見る。
 
 ## `semiconductor-earnings-model`：造語ではなく方法論が実装へ入っていた
 
@@ -141,11 +193,15 @@ Repository tree:
 
 AIはコードだけでなく、説明、分類、役割、検証、例外、fallback、state、監査手順まで高速に追加できる。
 
-だからレビュー対象もコード行数だけでは足りない。
+それらは追加時には「改善」に見える。
 
-次のAIがrepositoryを開いたとき、理解しなければならないもの全体を見る必要がある。
+しかし改善を何度も重ねると、次のAIが理解しなければならない対象そのものが増える。
 
-最初に見つけた28語は無駄ではなかった。ただし、それは全体像ではなく症状だった。
+だから監査対象もコード行数や独自語だけでは足りない。
+
+**AIが追加した「仕事の仕方」まで含めて、repository全体の判断経路を監査する。**
+
+最初に見つけた28語は全体像ではなく、最初の症状だった。
 
 これからの問いは一つにする。
 
