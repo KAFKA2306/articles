@@ -16,6 +16,7 @@ import sys
 import urllib.request
 from collections import Counter
 from pathlib import Path
+from urllib.parse import urlparse
 
 import numpy as np
 import pandas as pd
@@ -74,18 +75,54 @@ def ngrams(tokens: list[str], n_min: int = 2, n_max: int = 4) -> set[str]:
     return result
 
 
-def stable_key(group: str, repo_id: object, pr_id: object) -> str:
-    raw = f"{SEED}|{group}|{repo_id}|{pr_id}".encode()
+def repo_from_url(value: object) -> str | None:
+    if pd.isna(value):
+        return None
+    try:
+        parsed = urlparse(str(value))
+    except ValueError:
+        return None
+    parts = [p for p in parsed.path.split("/") if p]
+    if parsed.netloc == "api.github.com" and len(parts) >= 3 and parts[0] == "repos":
+        return f"{parts[1]}/{parts[2]}".lower()
+    if parsed.netloc in {"github.com", "www.github.com"} and len(parts) >= 2:
+        return f"{parts[0]}/{parts[1]}".lower()
+    return None
+
+
+def add_repository_key(df: pd.DataFrame, group: str) -> pd.DataFrame:
+    url_columns = [c for c in ["repo_url", "repository_url", "html_url", "url"] if c in df.columns]
+    keys: list[str | None] = []
+    for row in df.itertuples(index=False):
+        key = None
+        for column in url_columns:
+            key = repo_from_url(getattr(row, column))
+            if key:
+                break
+        if key is None and "repo_id" in df.columns:
+            value = getattr(row, "repo_id")
+            key = None if pd.isna(value) else f"id:{value}"
+        keys.append(key)
+    out = df.copy()
+    out["repo_key"] = keys
+    if out["repo_key"].notna().sum() == 0:
+        raise RuntimeError(f"{group}: cannot derive repository identity; columns={sorted(df.columns)}")
+    return out
+
+
+def stable_key(group: str, repo_key: object, pr_id: object) -> str:
+    raw = f"{SEED}|{group}|{repo_key}|{pr_id}".encode()
     return hashlib.sha256(raw).hexdigest()
 
 
 def prepare(df: pd.DataFrame, group: str) -> pd.DataFrame:
-    required = {"id", "repo_id", "title", "body"}
+    required = {"id", "title", "body"}
     missing = required - set(df.columns)
     if missing:
-        raise RuntimeError(f"{group}: missing required columns: {sorted(missing)}")
-    out = df.loc[:, [c for c in ["id", "repo_id", "title", "body", "created_at"] if c in df.columns]].copy()
-    out = out.dropna(subset=["repo_id", "id"])
+        raise RuntimeError(f"{group}: missing required columns: {sorted(missing)}; columns={sorted(df.columns)}")
+    df = add_repository_key(df, group)
+    keep = [c for c in ["id", "repo_key", "title", "body", "created_at"] if c in df.columns]
+    out = df.loc[:, keep].copy().dropna(subset=["repo_key", "id"])
     out["group"] = group
     out["tokens"] = [normalize_text(t, b) for t, b in zip(out["title"], out["body"])]
     out = out[out["tokens"].map(len) > 0].copy()
@@ -94,24 +131,27 @@ def prepare(df: pd.DataFrame, group: str) -> pd.DataFrame:
 
 
 def balance(agent: pd.DataFrame, human: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, int]]:
-    shared = sorted(set(agent.repo_id) & set(human.repo_id), key=str)
+    shared = sorted(set(agent.repo_key) & set(human.repo_key), key=str)
     a_parts: list[pd.DataFrame] = []
     h_parts: list[pd.DataFrame] = []
     eligible = 0
-    for repo_id in shared:
-        a = agent[agent.repo_id == repo_id].copy()
-        h = human[human.repo_id == repo_id].copy()
+    for repo_key in shared:
+        a = agent[agent.repo_key == repo_key].copy()
+        h = human[human.repo_key == repo_key].copy()
         n = min(len(a), len(h))
         # At least two documents per class are needed to measure cross-document reuse.
         if n < 2:
             continue
         eligible += 1
-        a["_key"] = [stable_key("agent", repo_id, x) for x in a.id]
-        h["_key"] = [stable_key("human", repo_id, x) for x in h.id]
+        a["_key"] = [stable_key("agent", repo_key, x) for x in a.id]
+        h["_key"] = [stable_key("human", repo_key, x) for x in h.id]
         a_parts.append(a.sort_values("_key").head(n).drop(columns="_key"))
         h_parts.append(h.sort_values("_key").head(n).drop(columns="_key"))
     if not a_parts:
-        raise RuntimeError("No matched repositories with at least two PRs per class")
+        raise RuntimeError(
+            "No matched repositories with at least two PRs per class; "
+            f"agent_keys={agent.repo_key.nunique()}, human_keys={human.repo_key.nunique()}, shared={len(shared)}"
+        )
     a_bal = pd.concat(a_parts, ignore_index=True)
     h_bal = pd.concat(h_parts, ignore_index=True)
     return a_bal, h_bal, {
@@ -143,14 +183,12 @@ def repo_metrics(df: pd.DataFrame) -> dict[str, float]:
 
 
 def paired_summary(metrics: pd.DataFrame, metric: str) -> dict[str, float | int | None]:
-    wide = metrics.pivot(index="repo_id", columns="group", values=metric).dropna()
+    wide = metrics.pivot(index="repo_key", columns="group", values=metric).dropna()
     delta = wide["agent"] - wide["human"]
     stat = wilcoxon(wide["agent"], wide["human"], zero_method="wilcox", alternative="two-sided") if (delta != 0).any() else None
     rng = np.random.default_rng(20260816)
     values = delta.to_numpy(dtype=float)
-    boot = np.array([
-        rng.choice(values, size=len(values), replace=True).mean() for _ in range(10_000)
-    ])
+    boot = np.array([rng.choice(values, size=len(values), replace=True).mean() for _ in range(10_000)])
     return {
         "repositories": int(len(wide)),
         "agent_mean": float(wide["agent"].mean()),
@@ -186,8 +224,8 @@ def main() -> None:
     balanced = pd.concat([a_bal, h_bal], ignore_index=True)
 
     rows: list[dict[str, object]] = []
-    for (repo_id, group), part in balanced.groupby(["repo_id", "group"], sort=True):
-        rows.append({"repo_id": repo_id, "group": group, **repo_metrics(part)})
+    for (repo_key, group), part in balanced.groupby(["repo_key", "group"], sort=True):
+        rows.append({"repo_key": repo_key, "group": group, **repo_metrics(part)})
     metrics = pd.DataFrame(rows)
     metrics.to_csv(out_dir / "repository_metrics.csv", index=False)
 
@@ -212,6 +250,7 @@ def main() -> None:
         },
         "raw_rows": {"agent": int(len(raw_agent)), "human": int(len(raw_human))},
         "nonempty_text_rows": {"agent": int(len(agent)), "human": int(len(human))},
+        "repository_keys": {"agent": int(agent.repo_key.nunique()), "human": int(human.repo_key.nunique())},
         "matching": counts,
         "analysis": summaries,
         "interpretation_boundary": (
