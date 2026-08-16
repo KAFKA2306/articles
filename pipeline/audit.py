@@ -40,7 +40,6 @@ def audit_layout() -> None:
         core.ROOT / "pipeline" / "cli.py",
         core.ROOT / "pipeline" / "core.py",
         core.ROOT / "pipeline" / "editorial.py",
-        core.ROOT / "pipeline" / "runtime.py",
         core.ROOT / "pipeline" / "graphiti.py",
         core.ROOT / "pipeline" / "selection.py",
         core.ROOT / "pipeline" / "contracts" / "article.md",
