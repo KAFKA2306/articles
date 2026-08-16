@@ -1,0 +1,33 @@
+name: AIDev vocabulary study
+
+on:
+  push:
+    branches:
+      - research/aidev-vocabulary-study
+    paths:
+      - "research/aidev-vocabulary-study/**"
+      - ".github/workflows/aidev-vocabulary-study.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install analysis dependencies
+        run: python -m pip install --disable-pip-version-check pandas pyarrow scipy numpy
+      - name: Run external-only AIDev analysis
+        run: python research/aidev-vocabulary-study/analyze.py
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidev-vocabulary-results
+          path: research/aidev-vocabulary-study/results/
+          if-no-files-found: error
