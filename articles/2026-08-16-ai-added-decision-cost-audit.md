@@ -39,7 +39,7 @@ fallbackが本当のエラーを隠している
 
 を調べなければならない。
 
-この記事で扱うのは、この問題である。
+この記事では、この増殖を**「何を削っても成果を保てるか」**という観点から見る。
 
 **AIが追加したコードだけでなく、AIが追加した“仕事を進めるための仕組み”まで整理しないと、repositoryは徐々に変更しにくくなる。**
 
@@ -112,9 +112,11 @@ AI向けのrule、test、fallback、workflowも例外ではない。
 
 **同じ成果を、より少ない仕組みで作れる状態にすること**である。
 
+この7項目は別々に見えるが、共通している。どれも、次の変更時に**理解・選択・確認しなければならない対象**を増やす。独自用語は、その増殖が文書へ現れたときに見つけやすい症状の一つである。
+
 ## 独自用語は「単語」より「作り方」を見る
 
-最初は `canonical workline` のような珍しい語を検索していた。しかし最近の自分のrepositoryや実行記録を見直すと、独自用語は単発ではなく、似た形で繰り返し作られていた。
+最初の監査では `canonical workline` のような珍しい語を検索していた。しかしrepositoryや実行記録を見直すと、独自用語は単発ではなく、似た形で繰り返し作られていた。
 
 ```text
 L4 Decision
@@ -150,7 +152,7 @@ result
   -> L4 / L5 のような独自level
 ```
 
-この観察には、最近の言語学・NLP研究から使える方法がある。
+この観察を監査へ落とすとき、最近の言語学・NLP研究で使われている方法が参考になる。
 
 Automatic Term Extractionの研究では、専門用語の境界を取るとき、意味的に似た例だけでなく**構文的に似た例**を使う方法が有効だった。Chun et al. (ACL 2025) は、3つの専門分野benchmarkでsyntactic retrievalがATEのF1を改善したと報告している。
 
@@ -164,15 +166,11 @@ IT logを対象にしたDangendorf et al. (MWE 2026) も、technical termやprop
 
 - https://aclanthology.org/2026.mwe-1.7/
 
-さらにGude et al. (ACL 2026) は、LLM生成newsと人間が書いたnewsをHPSGで比較し、新しいinstruction-tuned LLMほどsyntactic diversity、とくにlexical diversityが低いという結果を示した。
-
-- https://aclanthology.org/2026.acl-long.1803/
-
 造語検出そのものでは、Rossini & van der Plas (2026, preprint) がgrammatical / extra-grammatical morphologyを使ったrule-based filteringとLLM classificationを組み合わせ、1.246億unique tokensから1,021候補へ絞り、最終的に599件をlexical innovationとして人手確認している。
 
 - https://arxiv.org/abs/2605.06426
 
-これらの研究が「AIはrepositoryで `Compounding asset` を作る」と直接示したわけではない。ここから取れるのは**監査方法**である。
+これらの研究対象はrepository監査そのものではないし、「AIはrepositoryで `Compounding asset` を作る」と示したものでもない。ここから借りるのは**候補の見つけ方**である。
 
 単語のblacklistより、次の順で見る方がよい。
 
@@ -188,7 +186,7 @@ IT logを対象にしたDangendorf et al. (MWE 2026) も、technical termやprop
 
 ## 実行記録と永続ドキュメントを分ける
 
-もう一つ混ざりやすいものがある。
+独自用語が残りやすい経路の一つが、実行記録から永続ドキュメントへの転記である。
 
 定期実行では、PR、SHA、deployment ID、追加件数、PASS / UNVERIFIEDの記録は必要である。これは実行証跡なので、情報量が多くてもよい。
 
@@ -217,6 +215,8 @@ Compounding asset
 永続ドキュメントへ残すのは、次回も必要なschema、外部interface、操作方法、制約、architecture、再現条件である。
 
 **runで何が起きたか**と、**repositoryが今後も守る必要があること**を分けるだけで、AIが一時的な報告用語を次のAIの前提へ変えてしまう経路をかなり減らせる。
+
+この境界は、実際のrepositoryを見るとさらに分かりやすい。
 
 ## 例1：`semiconductor-earnings-model`
 
@@ -304,7 +304,7 @@ AIはコードを書く速度だけでなく、文書、test、workflow、fallba
 
 単語の珍しさだけを見るのでも足りない。複合名詞、修飾語、level、state、framework名のような**用語の作り方**と、それが複数文書へ反復していないかを見る。
 
-そして、定期実行の証跡と、次の実行でも必要な永続ドキュメントを分ける。
+実行記録には必要な証跡を残しつつ、次の実行でも必要な契約だけを永続ドキュメントへ残す。
 
 基準は一つでよい。
 
