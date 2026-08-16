@@ -4,6 +4,7 @@ emoji: "🧹"
 type: "tech"
 topics: ["ai", "codex", "github", "refactoring", "documentation"]
 published: true
+published_at: 2026-08-16 12:24
 ---
 
 GitHubのrepositoryをChatGPTやCodexに渡して、こんな依頼を繰り返す。
