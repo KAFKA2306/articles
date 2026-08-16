@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Compare repeated multiword expressions in matched Agentic-PR and Human-PR corpora.
 
-The input is the public AIDev dataset only. No KAFKA2306 repository content is
-used as study data. Inputs are pinned by SHA-256. The analysis balances the two
-classes within each repository before computing document-frequency measures.
+Study data come only from a pinned public AIDev revision. No KAFKA2306
+repository content is used as research data. Results are reported for PR titles
+alone and for cleaned title+body text, with several minimum-document thresholds
+to expose sensitivity to small repositories and PR-body templates.
 """
 
 from __future__ import annotations
@@ -20,10 +21,11 @@ from urllib.parse import urlparse
 
 import numpy as np
 import pandas as pd
-from scipy.stats import wilcoxon
+from scipy.stats import binomtest, wilcoxon
 
 SEED = "2026-08-16-aidev-vocabulary"
-BASE = "https://huggingface.co/datasets/hao-li/AIDev/resolve/main"
+AIDEV_REVISION = "6200a09fc80606189a50056eb10a50da157bde13"
+BASE = f"https://huggingface.co/datasets/hao-li/AIDev/resolve/{AIDEV_REVISION}"
 INPUTS = {
     "agent": (
         f"{BASE}/pull_request.parquet",
@@ -34,6 +36,8 @@ INPUTS = {
         "910238f8fe5deb544ae82be343232ff6838f271f3de4b4e4787a515336a91248",
     ),
 }
+MINIMUM_DOCUMENTS = (2, 5, 10, 20)
+SCOPES = ("title", "title_body")
 TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9_+.-]*")
 URL_RE = re.compile(r"https?://\S+|www\.\S+", re.I)
 CODE_FENCE_RE = re.compile(r"```.*?```", re.S)
@@ -59,19 +63,21 @@ def download(name: str, out_dir: Path) -> Path:
     return path
 
 
-def normalize_text(title: object, body: object) -> list[str]:
-    text = f"{'' if pd.isna(title) else title}\n{'' if pd.isna(body) else body}"
+def clean_text(value: object) -> str:
+    text = "" if pd.isna(value) else str(value)
     text = CODE_FENCE_RE.sub(" ", text)
     text = INLINE_CODE_RE.sub(" ", text)
-    text = URL_RE.sub(" ", text)
+    return URL_RE.sub(" ", text)
+
+
+def tokenize(text: str) -> list[str]:
     return [m.group(0).lower() for m in TOKEN_RE.finditer(text)]
 
 
 def ngrams(tokens: list[str], n_min: int = 2, n_max: int = 4) -> set[str]:
     result: set[str] = set()
     for n in range(n_min, n_max + 1):
-        if len(tokens) >= n:
-            result.update(" ".join(tokens[i : i + n]) for i in range(len(tokens) - n + 1))
+        result.update(" ".join(tokens[i : i + n]) for i in range(max(0, len(tokens) - n + 1)))
     return result
 
 
@@ -111,11 +117,10 @@ def add_repository_key(df: pd.DataFrame, group: str) -> pd.DataFrame:
 
 
 def stable_key(group: str, repo_key: object, pr_id: object) -> str:
-    raw = f"{SEED}|{group}|{repo_key}|{pr_id}".encode()
-    return hashlib.sha256(raw).hexdigest()
+    return hashlib.sha256(f"{SEED}|{group}|{repo_key}|{pr_id}".encode()).hexdigest()
 
 
-def prepare(df: pd.DataFrame, group: str) -> pd.DataFrame:
+def prepare(df: pd.DataFrame, group: str, scope: str) -> pd.DataFrame:
     required = {"id", "title", "body"}
     missing = required - set(df.columns)
     if missing:
@@ -124,8 +129,14 @@ def prepare(df: pd.DataFrame, group: str) -> pd.DataFrame:
     keep = [c for c in ["id", "repo_key", "title", "body", "created_at"] if c in df.columns]
     out = df.loc[:, keep].copy().dropna(subset=["repo_key", "id"])
     out["group"] = group
-    out["tokens"] = [normalize_text(t, b) for t, b in zip(out["title"], out["body"])]
-    out = out[out["tokens"].map(len) > 0].copy()
+    if scope == "title":
+        texts = [clean_text(t) for t in out["title"]]
+    elif scope == "title_body":
+        texts = [f"{clean_text(t)}\n{clean_text(b)}" for t, b in zip(out["title"], out["body"])]
+    else:
+        raise ValueError(scope)
+    out["tokens"] = [tokenize(x) for x in texts]
+    out = out[out["tokens"].map(len) >= 2].copy()
     out["ngrams"] = out["tokens"].map(ngrams)
     return out
 
@@ -134,15 +145,12 @@ def balance(agent: pd.DataFrame, human: pd.DataFrame) -> tuple[pd.DataFrame, pd.
     shared = sorted(set(agent.repo_key) & set(human.repo_key), key=str)
     a_parts: list[pd.DataFrame] = []
     h_parts: list[pd.DataFrame] = []
-    eligible = 0
     for repo_key in shared:
         a = agent[agent.repo_key == repo_key].copy()
         h = human[human.repo_key == repo_key].copy()
         n = min(len(a), len(h))
-        # At least two documents per class are needed to measure cross-document reuse.
         if n < 2:
             continue
-        eligible += 1
         a["_key"] = [stable_key("agent", repo_key, x) for x in a.id]
         h["_key"] = [stable_key("human", repo_key, x) for x in h.id]
         a_parts.append(a.sort_values("_key").head(n).drop(columns="_key"))
@@ -156,7 +164,7 @@ def balance(agent: pd.DataFrame, human: pd.DataFrame) -> tuple[pd.DataFrame, pd.
     h_bal = pd.concat(h_parts, ignore_index=True)
     return a_bal, h_bal, {
         "shared_repositories_before_minimum": len(shared),
-        "matched_repositories": eligible,
+        "matched_repositories_at_least_2": len(a_parts),
         "balanced_agent_prs": len(a_bal),
         "balanced_human_prs": len(h_bal),
     }
@@ -171,7 +179,7 @@ def repo_metrics(df: pd.DataFrame) -> dict[str, float]:
         document_ngram_events += len(row.ngrams)
         word_counts.append(len(row.tokens))
     unique = len(doc_freq)
-    reused = sum(1 for v in doc_freq.values() if v >= 2)
+    reused = sum(v >= 2 for v in doc_freq.values())
     reused_events = sum(v for v in doc_freq.values() if v >= 2)
     return {
         "documents": float(len(df)),
@@ -182,11 +190,18 @@ def repo_metrics(df: pd.DataFrame) -> dict[str, float]:
     }
 
 
-def paired_summary(metrics: pd.DataFrame, metric: str) -> dict[str, float | int | None]:
+def paired_summary(metrics: pd.DataFrame, metric: str, minimum_documents: int) -> dict[str, float | int | None]:
     wide = metrics.pivot(index="repo_key", columns="group", values=metric).dropna()
+    docs = metrics.pivot(index="repo_key", columns="group", values="documents").dropna()
+    keep = (docs["agent"] >= minimum_documents) & (docs["human"] >= minimum_documents)
+    wide = wide.loc[keep]
     delta = wide["agent"] - wide["human"]
-    stat = wilcoxon(wide["agent"], wide["human"], zero_method="wilcox", alternative="two-sided") if (delta != 0).any() else None
-    rng = np.random.default_rng(20260816)
+    if len(delta) == 0:
+        return {"repositories": 0}
+    nonzero = delta[delta != 0]
+    signed = binomtest(int((nonzero > 0).sum()), n=len(nonzero), p=0.5, alternative="two-sided") if len(nonzero) else None
+    rank = wilcoxon(wide["agent"], wide["human"], zero_method="wilcox", alternative="two-sided") if len(nonzero) else None
+    rng = np.random.default_rng(20260816 + minimum_documents)
     values = delta.to_numpy(dtype=float)
     boot = np.array([rng.choice(values, size=len(values), replace=True).mean() for _ in range(10_000)])
     return {
@@ -195,18 +210,38 @@ def paired_summary(metrics: pd.DataFrame, metric: str) -> dict[str, float | int 
         "human_mean": float(wide["human"].mean()),
         "mean_paired_difference_agent_minus_human": float(delta.mean()),
         "median_paired_difference_agent_minus_human": float(delta.median()),
+        "positive_differences": int((delta > 0).sum()),
+        "negative_differences": int((delta < 0).sum()),
+        "zero_differences": int((delta == 0).sum()),
         "bootstrap_95pct_ci_mean_difference_low": float(np.quantile(boot, 0.025)),
         "bootstrap_95pct_ci_mean_difference_high": float(np.quantile(boot, 0.975)),
-        "wilcoxon_statistic": float(stat.statistic) if stat else None,
-        "wilcoxon_p_value": float(stat.pvalue) if stat else None,
+        "wilcoxon_p_value": float(rank.pvalue) if rank else None,
+        "sign_test_p_value": float(signed.pvalue) if signed else None,
     }
 
 
-def global_reused_phrases(df: pd.DataFrame, minimum_documents: int = 3) -> Counter[str]:
-    counts: Counter[str] = Counter()
-    for phrases in df.ngrams:
-        counts.update(phrases)
-    return Counter({k: v for k, v in counts.items() if v >= minimum_documents})
+def analyze_scope(raw_agent: pd.DataFrame, raw_human: pd.DataFrame, scope: str) -> tuple[pd.DataFrame, dict[str, object]]:
+    agent = prepare(raw_agent, "agent", scope)
+    human = prepare(raw_human, "human", scope)
+    a_bal, h_bal, matching = balance(agent, human)
+    balanced = pd.concat([a_bal, h_bal], ignore_index=True)
+    rows: list[dict[str, object]] = []
+    for (repo_key, group), part in balanced.groupby(["repo_key", "group"], sort=True):
+        rows.append({"scope": scope, "repo_key": repo_key, "group": group, **repo_metrics(part)})
+    metrics = pd.DataFrame(rows)
+    sensitivity: dict[str, object] = {}
+    for minimum in MINIMUM_DOCUMENTS:
+        sensitivity[str(minimum)] = {
+            metric: paired_summary(metrics, metric, minimum)
+            for metric in ["median_words", "reused_unique_share", "reused_event_share"]
+        }
+    summary = {
+        "usable_rows": {"agent": int(len(agent)), "human": int(len(human))},
+        "repository_keys": {"agent": int(agent.repo_key.nunique()), "human": int(human.repo_key.nunique())},
+        "matching": matching,
+        "minimum_documents_sensitivity": sensitivity,
+    }
+    return metrics, summary
 
 
 def main() -> None:
@@ -218,44 +253,31 @@ def main() -> None:
 
     raw_agent = pd.read_parquet(download("agent", data_dir))
     raw_human = pd.read_parquet(download("human", data_dir))
-    agent = prepare(raw_agent, "agent")
-    human = prepare(raw_human, "human")
-    a_bal, h_bal, counts = balance(agent, human)
-    balanced = pd.concat([a_bal, h_bal], ignore_index=True)
 
-    rows: list[dict[str, object]] = []
-    for (repo_key, group), part in balanced.groupby(["repo_key", "group"], sort=True):
-        rows.append({"repo_key": repo_key, "group": group, **repo_metrics(part)})
-    metrics = pd.DataFrame(rows)
-    metrics.to_csv(out_dir / "repository_metrics.csv", index=False)
-
-    summaries = {
-        metric: paired_summary(metrics, metric)
-        for metric in ["median_words", "reused_unique_share", "reused_event_share"]
-    }
-
-    top_rows: list[dict[str, object]] = []
-    for group, part in [("agent", a_bal), ("human", h_bal)]:
-        for phrase, docs in global_reused_phrases(part).most_common(500):
-            top_rows.append({"group": group, "phrase": phrase, "documents": docs})
-    pd.DataFrame(top_rows).to_csv(out_dir / "top_reused_phrases.csv", index=False)
+    all_metrics: list[pd.DataFrame] = []
+    scopes: dict[str, object] = {}
+    for scope in SCOPES:
+        metrics, scope_summary = analyze_scope(raw_agent, raw_human, scope)
+        all_metrics.append(metrics)
+        scopes[scope] = scope_summary
+    pd.concat(all_metrics, ignore_index=True).to_csv(out_dir / "repository_metrics.csv", index=False)
 
     result = {
         "study_input": {
             "dataset": "hao-li/AIDev",
+            "revision": AIDEV_REVISION,
             "agent_file": "pull_request.parquet",
             "human_file": "human_pull_request.parquet",
             "input_sha256": {k: v[1] for k, v in INPUTS.items()},
             "no_kafka2306_repositories_used_as_data": True,
         },
         "raw_rows": {"agent": int(len(raw_agent)), "human": int(len(raw_human))},
-        "nonempty_text_rows": {"agent": int(len(agent)), "human": int(len(human))},
-        "repository_keys": {"agent": int(agent.repo_key.nunique()), "human": int(human.repo_key.nunique())},
-        "matching": counts,
-        "analysis": summaries,
+        "scopes": scopes,
         "interpretation_boundary": (
             "These are descriptive paired comparisons in AIDev's sampled popular-repository corpus. "
-            "They do not identify whether an AI agent caused any phrase, and reused n-grams are not automatically jargon."
+            "Repeated n-grams are not automatically repository-specific terminology or jargon. "
+            "PR-body templates can create repeated text, so title-only results are reported separately. "
+            "No causal claim about AI-generated terminology follows from this observational analysis."
         ),
     }
     (out_dir / "summary.json").write_text(json.dumps(result, indent=2, sort_keys=True), encoding="utf-8")
