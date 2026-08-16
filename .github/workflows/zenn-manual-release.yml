@@ -8,10 +8,6 @@ on:
         required: true
         type: string
 
-env:
-  ZENN_DEPLOY_BRANCH: zenn-release
-  RELEASE_WORKTREE: _zenn_release
-
 permissions:
   contents: write
 
@@ -24,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - name: Checkout canonical work branch
+      - name: Checkout Zenn deployment branch
         uses: actions/checkout@v6
         with:
           ref: main
@@ -53,7 +49,9 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           import os
+          from datetime import datetime
           from pathlib import Path
+          from zoneinfo import ZoneInfo
 
           slug = os.environ["SLUG"]
           path = Path("articles") / f"{slug}.md"
@@ -67,21 +65,22 @@ jobs:
           body = parts[2]
           if front.count("published: false") == 1 and "published: true" not in front:
               front = front.replace("published: false", "published: true", 1)
+              if "published_at:" not in front:
+                  stamp = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y-%m-%d %H:%M")
+                  front = front.replace("published: true\n", f"published: true\npublished_at: {stamp}\n", 1)
               path.write_text(f"---\n{front}---\n{body}", encoding="utf-8")
-              mode = "promote"
               main_changed = "true"
           elif front.count("published: true") == 1 and "published: false" not in front:
-              mode = "reconcile"
               main_changed = "false"
           else:
               raise SystemExit(f"ambiguous publication state: {path}")
 
           with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as handle:
               handle.write(f"main_changed={main_changed}\n")
-          print(f"publication_mode={mode} slug={slug} main_changed={main_changed}")
+          print(f"slug={slug} main_changed={main_changed}")
           PY
 
-      - name: Validate exact main mutation
+      - name: Validate and publish on main
         shell: bash
         env:
           SLUG: ${{ inputs.slug }}
@@ -90,27 +89,16 @@ jobs:
           set -euo pipefail
           python -m pipeline.zenn_slug
           git diff --check
+
           if [[ "$MAIN_CHANGED" == "true" ]]; then
             changed="$(git diff --name-only)"
             test "$changed" = "articles/${SLUG}.md" || {
               echo "unexpected release diff: $changed"
               exit 1
             }
-          else
-            git diff --exit-code
-          fi
 
-      - name: Persist publication intent on main when needed
-        shell: bash
-        env:
-          SLUG: ${{ inputs.slug }}
-          MAIN_CHANGED: ${{ steps.state.outputs.main_changed }}
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          if [[ "$MAIN_CHANGED" == "true" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add "articles/${SLUG}.md"
             git commit -m "publish: approve ${SLUG}"
 
@@ -121,6 +109,7 @@ jobs:
               python -m pipeline.zenn_slug
               python -m pipeline.publication_diff --base HEAD^ --head HEAD
               python -m pipeline.audit
+              bash scripts/zenn-render-check.sh
               if git push origin HEAD:main; then
                 pushed=1
                 break
@@ -131,115 +120,18 @@ jobs:
               exit 1
             }
           else
+            git diff --exit-code
             git fetch origin main
             git reset --hard origin/main
             python -m pipeline.zenn_slug
             python -m pipeline.audit
-            grep -q '^published: true$' "articles/${SLUG}.md" || {
-              echo "publication intent changed while reconciling: ${SLUG}"
-              exit 1
-            }
+            bash scripts/zenn-render-check.sh
           fi
 
-      - name: Checkout canonical Zenn release snapshot
-        uses: actions/checkout@v6
-        with:
-          ref: zenn-release
-          path: _zenn_release
-          fetch-depth: 0
-
-      - name: Copy approved article into release snapshot
-        shell: bash
-        env:
-          SLUG: ${{ inputs.slug }}
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import os
-          import re
-          import shutil
-          import subprocess
-          import urllib.parse
-          from pathlib import Path
-
-          slug = os.environ["SLUG"]
-          release = Path(os.environ["RELEASE_WORKTREE"])
-          source_article = Path("articles") / f"{slug}.md"
-          release_article = release / source_article
-          release_article.parent.mkdir(parents=True, exist_ok=True)
-          shutil.copy2(source_article, release_article)
-
-          text = source_article.read_text(encoding="utf-8")
-          image_refs = set(re.findall(r"/images/[^\s)\"'<>]+", text))
-          copied = []
-          for raw in sorted(image_refs):
-              cleaned = urllib.parse.unquote(raw.split("#", 1)[0].split("?", 1)[0])
-              rel = Path(cleaned.lstrip("/"))
-              if rel.parts[:1] != ("images",) or ".." in rel.parts:
-                  raise SystemExit(f"unsafe image reference: {raw}")
-              source = Path(rel)
-              if not source.is_file():
-                  raise SystemExit(f"referenced image missing: {rel}")
-              dest = release / rel
-              dest.parent.mkdir(parents=True, exist_ok=True)
-              shutil.copy2(source, dest)
-              copied.append(rel.as_posix())
-
-          changed = set(
-              subprocess.check_output(
-                  ["git", "-C", str(release), "diff", "--name-only"],
-                  text=True,
-              ).splitlines()
-          )
-          untracked = set(
-              subprocess.check_output(
-                  ["git", "-C", str(release), "ls-files", "--others", "--exclude-standard"],
-                  text=True,
-              ).splitlines()
-          )
-          observed = {item for item in changed | untracked if item}
-          allowed = {source_article.as_posix(), *copied}
-          unexpected = sorted(observed - allowed)
-          if unexpected:
-              raise SystemExit("unexpected release snapshot changes: " + ", ".join(unexpected))
-          print(f"release_snapshot_article={source_article}")
-          print(f"release_snapshot_images={len(copied)}")
-          PY
-
-      - name: Validate exact release snapshot
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m pipeline.zenn_slug --root "$RELEASE_WORKTREE"
-          python - <<'PY'
-          import os
-          from pathlib import Path
-          from pipeline.zenn_production import collect_published_articles
-
-          articles, errors = collect_published_articles(Path(os.environ["RELEASE_WORKTREE"]))
-          if errors:
-              raise SystemExit("\n".join(errors))
-          print(f"RELEASE_CONTRACT_PASS: published={len(articles)}")
-          PY
-          bash scripts/zenn-render-check.sh "$RELEASE_WORKTREE"
-
-      - name: Deploy approved snapshot to Zenn branch
-        shell: bash
-        env:
-          SLUG: ${{ inputs.slug }}
-        run: |
-          set -euo pipefail
-          git -C "$RELEASE_WORKTREE" config user.name "github-actions[bot]"
-          git -C "$RELEASE_WORKTREE" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git -C "$RELEASE_WORKTREE" add -A -- "articles/${SLUG}.md" images
-          git -C "$RELEASE_WORKTREE" diff --cached --check
-          if git -C "$RELEASE_WORKTREE" diff --cached --quiet; then
-            git -C "$RELEASE_WORKTREE" commit --allow-empty -m "deploy: reconcile ${SLUG}"
-          else
-            git -C "$RELEASE_WORKTREE" commit -m "deploy: publish ${SLUG}"
-          fi
-          git -C "$RELEASE_WORKTREE" push origin "HEAD:${ZENN_DEPLOY_BRANCH}"
-          echo "ZENN_DEPLOY_TRIGGERED branch=${ZENN_DEPLOY_BRANCH} sha=$(git -C "$RELEASE_WORKTREE" rev-parse HEAD)"
+          grep -q '^published: true$' "articles/${SLUG}.md" || {
+            echo "publication intent changed: ${SLUG}"
+            exit 1
+          }
 
       - name: Verify Zenn production
         shell: bash
@@ -249,10 +141,10 @@ jobs:
         run: |
           set -euo pipefail
           if ! python -m pipeline.zenn_production \
-            --root "$RELEASE_WORKTREE" \
+            --root . \
             --wait-seconds 900; then
             echo "DEPLOY_PENDING $SLUG"
-            echo "Publication intent remains published:true; no rollback push is emitted."
+            echo "main remains the single publication source; no rollback push is emitted."
             exit 1
           fi
           echo "PUBLISHED_VERIFIED $SLUG"
