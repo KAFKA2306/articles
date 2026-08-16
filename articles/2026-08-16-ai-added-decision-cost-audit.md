@@ -1,5 +1,5 @@
 ---
-title: "AIにコードを書かせ続けたら、「コード以外」が増えすぎた"
+title: "なぜあなたのコードは、AIに改善させるほど直しにくくなるのか"
 emoji: "🧹"
 type: "tech"
 topics: ["ai", "codex", "github", "refactoring", "documentation"]
