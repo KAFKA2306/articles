@@ -87,7 +87,7 @@ class ZennProductionTests(unittest.TestCase):
         self.assertIn("ZENN_DEPLOY_BRANCH: zenn-release", workflow)
         self.assertIn("Copy approved article into release snapshot", workflow)
         self.assertIn("unexpected release snapshot changes", workflow)
-        self.assertIn("ZENN_RELEASE_RENDER_PASS", workflow)
+        self.assertIn('bash scripts/zenn-render-check.sh "$RELEASE_WORKTREE"', workflow)
         self.assertIn('--root "$RELEASE_WORKTREE"', workflow)
         self.assertIn('git -C "$RELEASE_WORKTREE" push origin "HEAD:${ZENN_DEPLOY_BRANCH}"', workflow)
         self.assertIn("DEPLOY_PENDING", workflow)
