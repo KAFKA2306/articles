@@ -77,7 +77,6 @@ jobs:
               raise SystemExit(f"ambiguous publication state: {path}")
 
           with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as handle:
-              handle.write(f"mode={mode}\n")
               handle.write(f"main_changed={main_changed}\n")
           print(f"publication_mode={mode} slug={slug} main_changed={main_changed}")
           PY
@@ -141,8 +140,6 @@ jobs:
               exit 1
             }
           fi
-
-          echo "publication_intent_sha=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
       - name: Checkout canonical Zenn release snapshot
         uses: actions/checkout@v6
@@ -219,51 +216,12 @@ jobs:
           from pathlib import Path
           from pipeline.zenn_production import collect_published_articles
 
-          root = Path(os.environ["RELEASE_WORKTREE"])
-          articles, errors = collect_published_articles(root)
+          articles, errors = collect_published_articles(Path(os.environ["RELEASE_WORKTREE"]))
           if errors:
               raise SystemExit("\n".join(errors))
           print(f"RELEASE_CONTRACT_PASS: published={len(articles)}")
           PY
-
-          (
-            cd "$RELEASE_WORKTREE"
-            rm -f /tmp/zenn-release-preview.log /tmp/zenn-release-articles.json
-            npx --yes zenn-cli@latest preview --no-watch --port 8010 >/tmp/zenn-release-preview.log 2>&1 &
-            server_pid=$!
-            trap 'kill "$server_pid" 2>/dev/null || true' EXIT
-            for attempt in 1 2 3 4 5 6 7 8 9 10; do
-              if curl --fail --silent http://127.0.0.1:8010/api/articles?sort=system >/tmp/zenn-release-articles.json; then
-                break
-              fi
-              if ! kill -0 "$server_pid" 2>/dev/null; then
-                cat /tmp/zenn-release-preview.log
-                exit 1
-              fi
-              if [ "$attempt" -eq 10 ]; then
-                cat /tmp/zenn-release-preview.log
-                exit 1
-              fi
-              sleep 1
-            done
-            python - <<'PY'
-          import json
-          from pathlib import Path
-          from urllib.request import urlopen
-
-          articles = json.loads(Path('/tmp/zenn-release-articles.json').read_text())['articles']
-          critical = []
-          for article in articles:
-              slug = article['slug']
-              with urlopen(f'http://127.0.0.1:8010/api/articles/{slug}') as response:
-                  payload = json.load(response)['article']
-              if 'data-body-error' in (payload.get('bodyHtml') or ''):
-                  critical.append(f'{slug}: renderer emitted data-body-error')
-          if critical:
-              raise SystemExit('\n'.join(critical))
-          print(f'ZENN_RELEASE_RENDER_PASS: rendered {len(articles)} articles')
-          PY
-          )
+          bash scripts/zenn-render-check.sh "$RELEASE_WORKTREE"
 
       - name: Deploy approved snapshot to Zenn branch
         shell: bash
@@ -284,24 +242,17 @@ jobs:
           echo "ZENN_DEPLOY_TRIGGERED branch=${ZENN_DEPLOY_BRANCH} sha=$(git -C "$RELEASE_WORKTREE" rev-parse HEAD)"
 
       - name: Verify Zenn production
-        id: verify
-        continue-on-error: true
+        shell: bash
         env:
           ZENN_USERNAME: kafka2306
+          SLUG: ${{ inputs.slug }}
         run: |
-          python -m pipeline.zenn_production \
+          set -euo pipefail
+          if ! python -m pipeline.zenn_production \
             --root "$RELEASE_WORKTREE" \
-            --wait-seconds 900 \
-            --interval-seconds 15
-
-      - name: Report deploy pending without rollback
-        if: steps.verify.outcome != 'success'
-        shell: bash
-        run: |
-          echo "DEPLOY_PENDING ${{ inputs.slug }}"
-          echo "Publication intent remains published:true; no rollback push is emitted."
-          exit 1
-
-      - name: Confirm release
-        if: steps.verify.outcome == 'success'
-        run: echo "PUBLISHED_VERIFIED ${{ inputs.slug }}"
+            --wait-seconds 900; then
+            echo "DEPLOY_PENDING $SLUG"
+            echo "Publication intent remains published:true; no rollback push is emitted."
+            exit 1
+          fi
+          echo "PUBLISHED_VERIFIED $SLUG"
