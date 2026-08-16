@@ -13,27 +13,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Checkout verifier implementation
+      - name: Checkout Zenn deployment branch
         uses: actions/checkout@v6
         with:
           ref: main
-          fetch-depth: 1
-      - name: Checkout canonical Zenn release snapshot
-        uses: actions/checkout@v6
-        with:
-          ref: zenn-release
-          path: _zenn_release
           fetch-depth: 1
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Verifier contract tests
         run: python -m unittest tests.test_zenn_production -v
-      - name: Verify zenn-release against Zenn production
+      - name: Verify main against Zenn production
         env:
           ZENN_USERNAME: kafka2306
         run: |
           python -m pipeline.zenn_production \
-            --root _zenn_release \
+            --root . \
             --wait-seconds 0 \
             --interval-seconds 15
