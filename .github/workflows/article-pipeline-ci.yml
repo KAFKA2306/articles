@@ -15,6 +15,7 @@ on:
       - ".github/workflows/article-pipeline.yml"
       - ".github/workflows/article-pipeline-ci.yml"
       - ".github/workflows/zenn-manual-release.yml"
+      - ".github/workflows/zenn-production-verify.yml"
   push:
     branches:
       - main
@@ -31,6 +32,7 @@ on:
       - ".github/workflows/article-pipeline.yml"
       - ".github/workflows/article-pipeline-ci.yml"
       - ".github/workflows/zenn-manual-release.yml"
+      - ".github/workflows/zenn-production-verify.yml"
 
 permissions:
   contents: read
