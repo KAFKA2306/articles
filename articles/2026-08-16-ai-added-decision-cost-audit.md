@@ -6,8 +6,6 @@ topics: ["ai", "codex", "github", "refactoring", "documentation"]
 published: false
 ---
 
-前提はこれだけだ。
-
 **複数のrepository改善をAIに繰り返し任せると、AIはコードだけでなく「AIが仕事を進めるための仕組み」まで追加する。**
 
 たとえば、
@@ -37,19 +35,17 @@ AIに改善を任せる
 1変更あたりの判断経路が増える
 ```
 
-2026年8月16日、repository監査の対象を「独自用語」から、**AIが増やした判断コスト全般**へ変更した。
+この問題を監査する単位は「独自用語」ではない。
 
-この記事は、その監査方法をどう変えたかの記録である。
+> **このrepositoryに存在する各file / rule / test / workflow / fallback / stateは、利用者が欲しい成果を作るために本当に必要か？**
 
-## 最初の監査は「症状」を探していただけだった
+これをrepository全体に対して問う。
 
-以前は `canonical workline` のような独自語を一つ見つけ、その周辺に似た語がないか探していた。
+## 独自用語検索だけでは不十分
 
-見つかった問題自体は実在した。しかし探索方法は、最初に見つけた単語に引っ張られていた。
+`canonical workline` のような独自語は、AIが独自の概念体系を増やしている兆候にはなる。
 
-つまりサンプリングバイアスがあった。
-
-独自語を検索しても、次のようなものは拾えない。
+しかし、語彙検索では次のような問題を拾えない。
 
 - 同じvalidationを2本のworkflowで実行している
 - 古いpromptと新しいpromptが両方残っている
@@ -57,11 +53,7 @@ AIに改善を任せる
 - 同じstateをmanifestとledgerの両方へ保存している
 - AI向けinstructionがREADME、AGENTS、CLAUDE、GEMINIへ複製されている
 
-本当に知りたかったのは、独自用語が何個あるかではない。
-
-> **このrepositoryに存在する各file / rule / test / workflow / fallback / stateは、利用者が欲しい成果を作るために本当に必要か？**
-
-監査の問いをここへ変えた。
+問題は名前ではなく、**同じ成果を作るための判断経路が何本あるか**である。
 
 ## なぜAI向け文書は「置いてあるだけ」ではないのか
 
@@ -82,13 +74,13 @@ GoogleのCode Review Guideも、レビューで見るべきものとしてcomple
 
 - https://google.github.io/eng-practices/review/reviewer/looking-for.html
 
-ここで監査したいのは、名前の珍しさではない。
+監査対象は、名前の珍しさではない。
 
 **成果を作るための経路そのものが、必要以上に増えていないか**である。
 
-## 監査対象を7つへ広げた
+## 監査する7つの対象
 
-今後は語彙検索から始めない。repository全体を見て、次を確認する。
+repository全体を見て、次を確認する。
 
 1. **永続context** — `AGENTS.md`、README、CLAUDE/GEMINI、ADR、prompts、memories、docsへ同じ判断規則が重複していないか。
 2. **独自の概念体系** — framework、role、state、level、score、rule、protocolなど、製品要件ではない分類が増えていないか。
@@ -98,31 +90,27 @@ GoogleのCode Review Guideも、レビューで見るべきものとしてcomple
 6. **残骸** — 一時調査、migration、旧prompt、旧workflow、古いmemory、superseded scriptが次の実装者やAIから見える場所に残っていないか。
 7. **削除可能性** — 消しても利用者価値・正しさ・必要な証拠が変わらないなら、残す理由を再確認する。
 
-最後の一点が重要だ。
-
 ファイル数、テスト数、監査数を減らすこと自体が目的ではない。
 
 **削除したとき何が壊れるかを説明できるか**を見る。
 
-## `semiconductor-earnings-model`：造語ではなく方法論が実装へ入っていた
+## `semiconductor-earnings-model`：造語ではなく方法論が実装へ入っている
 
-`semiconductor-earnings-model` の `AGENTS.md` は、現在 `BFV Kernel` をrepository-level operating policyとして定義している。
+`semiconductor-earnings-model` の `AGENTS.md` は、`BFV Kernel` をrepository-level operating policyとして定義している。
 
 `BFV` は `Bounded Falsification & Verification` の略で、文書内には `Contract`、`Canonical Workline Rule`、`Claim`、`Deletion Test`、`Builder / Auditor Separation`、`Fixed Point`、`Final Report Contract` まで並ぶ。
 
 - https://github.com/KAFKA2306/semiconductor-earnings-model/blob/main/AGENTS.md
 
-ここで問題にしたいのは `BFV` という名前が珍しいことではない。
+問題は `BFV` という名前が珍しいことではない。
 
 金融データのprovenance、period、unit、source validationは実装上必要である。一方、それを守るための**仕事の進め方そのもの**まで独自の方法論として永続contextへ載せると、次のAIは金融データだけでなく、その方法論も理解してから変更する必要がある。
 
-監査すべきなのは名前ではなく、各ruleが既存のtest、schema、CI、GitHub reviewだけでは表現できない必要条件を持っているかどうかだ。
+監査すべきなのは、各ruleが既存のtest、schema、CI、GitHub reviewだけでは表現できない必要条件を持っているかどうかだ。
 
 ## `yt3`：一つの改善思想が複数surfaceへ分裂している
 
-`yt3` はさらに分かりやすい。
-
-2026年8月16日時点のmain treeには、少なくとも次が同時に存在する。
+`yt3` のmain treeには、少なくとも次が同時に存在する。
 
 - `AGENTS.md`
 - `GEMINI.md`
@@ -148,35 +136,29 @@ Repository tree:
 - https://github.com/KAFKA2306/yt3/blob/main/prompts/improvement_round_2.txt
 - https://github.com/KAFKA2306/yt3/blob/main/src/domain/agents/meta_audit_layer.ts
 
-これを「独自用語検索」だけで監査すると、かなりの部分を見落とす。
+独自用語検索だけでは、この構造のかなりの部分を見落とす。
 
 問題は語ではなく、**同じ目的を説明・判定・検証するsurfaceが増殖している可能性**だからだ。
 
 たとえば一つの品質条件が、READMEで説明され、AGENTSで命令になり、ADRで設計判断になり、promptで再記述され、skillで手順化され、audit codeで機械判定される。この6つが全部必要なら残せばよい。しかし一つ消しても出力も正しさも検証可能性も変わらないなら、次のAIにとっては選択肢ではなく判断コストになる。
 
-## 長い文書を消せばよいわけではない
-
-逆の例もある。
+## 長い文書が問題なのではない
 
 `trahist` の `docs/DATA_STANDARDS.md` は、`trades_unified.csv` のcolumn、型、必須性、brokerごとの変換、数値・日付処理、fund unit normalizationなど、データ処理の具体的な契約を記述している。
 
 - https://github.com/KAFKA2306/trahist/blob/main/docs/DATA_STANDARDS.md
 
-これは長いから残骸、という話ではない。
-
 `trade_date`、`transaction_type`、`currency`、broker固有変換のような情報は、実際の入力を同じ意味へ正規化するためのdomain contractである。
 
-区別したいのは、**製品・データ・外部interfaceの意味を決める情報**と、**AIが自分の仕事の進め方を説明するために増えた情報**だ。
+区別すべきなのは、**製品・データ・外部interfaceの意味を決める情報**と、**AIが自分の仕事の進め方を説明するために増えた情報**だ。
 
 前者は長くても必要になり得る。後者は短くても、複数surfaceへ複製されれば負債になる。
 
-## 監査で数えるものも変える
+## 監査で数えるもの
 
-以前は「独自語を何個消したか」を成果にしやすかった。
+成果は「独自語を何個消したか」では測れない。
 
-今後はそれだけでは足りない。
-
-見るべき変化は、たとえば次である。
+見るべき変化は次である。
 
 - 同じruleを所有するファイル数が減ったか
 - 同じ事実を確認するvalidation routeが減ったか
@@ -193,18 +175,14 @@ Repository tree:
 
 AIはコードだけでなく、説明、分類、役割、検証、例外、fallback、state、監査手順まで高速に追加できる。
 
-それらは追加時には「改善」に見える。
-
-しかし改善を何度も重ねると、次のAIが理解しなければならない対象そのものが増える。
+それらは追加時には改善に見えるが、蓄積すると次のAIが理解しなければならない対象そのものが増える。
 
 だから監査対象もコード行数や独自語だけでは足りない。
 
 **AIが追加した「仕事の仕方」まで含めて、repository全体の判断経路を監査する。**
 
-最初に見つけた28語は全体像ではなく、最初の症状だった。
-
-これからの問いは一つにする。
+問いは一つでよい。
 
 > **これを消したら、利用者が受け取る価値、正しさ、必要な証拠のどれが失われるのか？**
 
-答えがないものから削除候補にする。
+答えがないものは削除候補である。
