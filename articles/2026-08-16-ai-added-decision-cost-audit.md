@@ -1,5 +1,5 @@
 ---
-title: "なぜあなたのコードは、AIに改善させるほど直しにくくなるのか"
+title: "なぜAIに任せるほど、あなたのコードは複雑になるのか"
 emoji: "🧹"
 type: "tech"
 topics: ["ai", "codex", "github", "refactoring", "documentation"]
