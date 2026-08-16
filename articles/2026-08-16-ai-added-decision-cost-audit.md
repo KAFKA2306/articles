@@ -1,313 +1,386 @@
 ---
-title: "なぜAIに任せるほど、あなたのコードは複雑になるのか"
+title: "AIが書いたrepositoryを読みにくくする独自用語と略語を減らす"
 emoji: "🧹"
 type: "tech"
-topics: ["ai", "codex", "github", "refactoring", "documentation"]
+topics: ["ai", "codex", "github", "nlp", "documentation"]
 published: true
 published_at: 2026-08-16 12:24
 ---
 
-GitHubのrepositoryをChatGPTやCodexに渡して、こんな依頼を繰り返す。
+AIにREADME、Issue、`AGENTS.md`、設計文書を書かせると、文章はすぐ増やせる。
+
+しかし最近、自分のrepositoryを読み返していて、ファイル数や文章量より先に引っかかるものがあった。
+
+**そのrepositoryでしか通じない用語と略語である。**
+
+実際に現在の `KAFKA2306/semiconductor-earnings-model` の `AGENTS.md` を開くと、冒頭から次の名前が並ぶ。
 
 ```text
-CIを直して
-READMEを分かりやすくして
-品質チェックを追加して
-失敗時に自動復旧できるようにして
-次のAIでも作業を再開できるようにして
-```
-
-AIはコードだけを書くわけではない。
-
-依頼をこなすために、`AGENTS.md`、docs、prompt、test、audit script、fallback、status file、workflowなども追加する。
-
-一つずつを見ると、どれも合理的に見える。
-
-しかし追加を繰り返すと、別の問題が起きる。
-
-```text
-同じルールが3つの文書に書かれている
-同じ確認を2つのworkflowが実行している
-古いpromptと新しいpromptが両方残っている
-fallbackが本当のエラーを隠している
-同じ状態を複数のJSONへ保存している
-```
-
-こうなると、次に作業する人やAIはコードを直す前に、
-
-**「どれが今も必要で、どれを信じればいいのか」**
-
-を調べなければならない。
-
-この記事では、この増殖を**「何を削っても成果を保てるか」**という観点から見る。
-
-**AIが追加したコードだけでなく、AIが追加した“仕事を進めるための仕組み”まで整理しないと、repositoryは徐々に変更しにくくなる。**
-
-## 何を問題にしているのか
-
-対象は、変わった名前や長い文書そのものではない。
-
-たとえば次の二つは意味が違う。
-
-```text
-A. CSVのcolumn名、型、単位、変換規則を定義した仕様書
-B. AIが作業するときの独自role、score、level、protocolを定義した文書
-```
-
-Aは製品やデータの意味を決めるために必要かもしれない。
-
-Bも必要な場合はあるが、testやCIやGitHubの標準機能で同じ目的を達成できるなら、別の仕組みを増やす必要はない。
-
-判断基準は単純である。
-
-> **これを消したら、利用者が受け取る機能、正しさ、必要な証拠のどれが失われるのか？**
-
-何も失われないなら、削除候補になる。
-
-## なぜ `AGENTS.md` まで見るのか
-
-Codexでは `AGENTS.md` は単なるメモではない。
-
-OpenAI公式ドキュメントによると、Codexは作業開始前に `AGENTS.md` を読み、project rootからcurrent working directoryまでのinstructionを連結する。project instructionの合計サイズは `project_doc_max_bytes` で制限され、既定値は32 KiBである。
-
-- https://developers.openai.com/codex/agent-configuration/agents-md
-- https://openai.com/index/unrolling-the-codex-agent-loop/
-
-つまり `AGENTS.md` にruleを追加すると、次のCodex runが読むinstructionそのものが増える。
-
-OpenAIは同じ公式ドキュメントで、code review ruleは簡潔に保ち、formattingやlintはCIへ任せるよう案内している。
-
-GoogleのCode Review Guideも、現在必要な問題以上に一般化したり、将来必要かもしれない機能を先回りして増やすover-engineeringを避けるよう求めている。
-
-- https://google.github.io/eng-practices/review/reviewer/looking-for.html
-
-AI向けのrule、test、fallback、workflowも例外ではない。
-
-## repository全体で見る7項目
-
-確認する対象は次の7つで足りる。
-
-1. **AIが読む文書**  
-   `AGENTS.md`、README、CLAUDE/GEMINI、ADR、prompt、memory、docsに同じ指示が重複していないか。
-
-2. **独自の分類や用語**  
-   role、state、level、score、rule、protocolなどを、製品上の必要性なしに増やしていないか。単語だけでなく、複合語や繰り返される命名パターンも見る。
-
-3. **同じ確認の重複**  
-   test、audit、smoke、harness、verifierが同じ事実を何度も確認していないか。
-
-4. **失敗を隠す仕組み**  
-   fallback、retry、broad catch、compatibility modeが、本来直すべき原因を見えなくしていないか。
-
-5. **同じ状態の重複保存**  
-   config、manifest、ledger、status、provenanceに同じ事実を何度も持っていないか。
-
-6. **使われなくなった残骸**  
-   古いprompt、migration、旧workflow、古いmemory、superseded scriptが残っていないか。
-
-7. **削除しても結果が変わらないもの**  
-   消しても機能・正しさ・証拠が変わらないなら、本当に必要かを再確認する。
-
-目的はファイル数を減らすことではない。
-
-**同じ成果を、より少ない仕組みで作れる状態にすること**である。
-
-この7項目は別々に見えるが、共通している。どれも、次の変更時に**理解・選択・確認しなければならない対象**を増やす。独自用語は、その増殖が文書へ現れたときに見つけやすい症状の一つである。
-
-## 独自用語は「単語」より「作り方」を見る
-
-最初の監査では `canonical workline` のような珍しい語を検索していた。しかしrepositoryや実行記録を見直すと、独自用語は単発ではなく、似た形で繰り返し作られていた。
-
-```text
-L4 Decision
-L5 Compounding
-Decision-ready hypotheses
-Compounding asset
-Stagnation counter
-Verification Gate
-Final Report Contract
-Knowledge Runtime
 BFV Kernel
-canonical workline
+Bounded Falsification & Verification
+Contract
+Canonical Workline Rule
+Deletion Test
+Builder / Auditor Separation
+Fixed Point
+Final Report Contract
 ```
-
-問題は英語を使うことではない。`operating margin`、`regression test`、`JSON Schema`、`provenance`のように、外部でも意味が通じる専門用語は必要である。
-
-注意したいのは、普通の事実や処理へ修飾語を足し、repo内だけの分類・状態・役割として固定するパターンである。
-
-```text
-hypothesis
-  -> decision-ready hypothesis
-
-asset
-  -> compounding asset
-
-check
-  -> verification gate
-
-rules
-  -> kernel / framework / protocol
-
-result
-  -> L4 / L5 のような独自level
-```
-
-この観察を監査へ落とすとき、最近の言語学・NLP研究で使われている方法が参考になる。
-
-Automatic Term Extractionの研究では、専門用語の境界を取るとき、意味的に似た例だけでなく**構文的に似た例**を使う方法が有効だった。Chun et al. (ACL 2025) は、3つの専門分野benchmarkでsyntactic retrievalがATEのF1を改善したと報告している。
-
-- https://aclanthology.org/2025.findings-acl.516/
-
-Multiword Expression (MWE) の研究では、Giraud & Gargett (MWE 2026) がbioinformatics論文を調べ、専門的MWEが主に**短く名詞的**であること、さらにdocument frequencyとGries' DPで、広く再利用される表現と一部文書へ集中する表現を区別している。
-
-- https://aclanthology.org/2026.mwe-1.10/
-
-IT logを対象にしたDangendorf et al. (MWE 2026) も、technical termやproper nounを単語ではなくMWEとして抽出している。16の実システムのlogで候補を評価し、annotation studyでprecision 66%を報告している。
-
-- https://aclanthology.org/2026.mwe-1.7/
-
-造語検出そのものでは、Rossini & van der Plas (2026, preprint) がgrammatical / extra-grammatical morphologyを使ったrule-based filteringとLLM classificationを組み合わせ、1.246億unique tokensから1,021候補へ絞り、最終的に599件をlexical innovationとして人手確認している。
-
-- https://arxiv.org/abs/2605.06426
-
-これらの研究対象はrepository監査そのものではないし、「AIはrepositoryで `Compounding asset` を作る」と示したものでもない。ここから借りるのは**候補の見つけ方**である。
-
-単語のblacklistより、次の順で見る方がよい。
-
-```text
-1. noun phrase / multiword term を候補として抜く
-2. ADJ + NOUN、NOUN + NOUN、X-ready、level + noun などの形を見る
-3. 標準用語・外部文書で普通に使われる表現を除く
-4. repo内の複数文書に偏って反復する表現を見る
-5. 製品・データ・外部interfaceの意味を決めない語だけを削除候補にする
-```
-
-これなら `quality gate` のような一般的表現を機械的に禁止せず、**文法的には自然だが、そのrepositoryだけで勝手に制度化された語**を候補として拾える。
-
-## 実行記録と永続ドキュメントを分ける
-
-独自用語が残りやすい経路の一つが、実行記録から永続ドキュメントへの転記である。
-
-定期実行では、PR、SHA、deployment ID、追加件数、PASS / UNVERIFIEDの記録は必要である。これは実行証跡なので、情報量が多くてもよい。
-
-一方、そのrunで使った評価ラベルまでREADME、`AGENTS.md`、設計文書へ転記する必要はない。
-
-たとえば次の記録はrun logには残せる。
-
-```text
-Verified records: 0 -> 12
-PR #131
-exact head: d2eac55f...
-production verification: PASS
-Playwright: UNVERIFIED
-```
-
-しかし、次のようなrun固有の分類を恒久的な仕様へ昇格させる理由は別に必要である。
-
-```text
-L4 Decision
-L5 Compounding
-Stagnation counter
-Decision-ready hypotheses
-Compounding asset
-```
-
-永続ドキュメントへ残すのは、次回も必要なschema、外部interface、操作方法、制約、architecture、再現条件である。
-
-**runで何が起きたか**と、**repositoryが今後も守る必要があること**を分けるだけで、AIが一時的な報告用語を次のAIの前提へ変えてしまう経路をかなり減らせる。
-
-この境界は、実際のrepositoryを見るとさらに分かりやすい。
-
-## 例1：`semiconductor-earnings-model`
-
-`semiconductor-earnings-model` の `AGENTS.md` には `BFV Kernel` というrepository-level operating policyがある。
-
-中には `Contract`、`Canonical Workline Rule`、`Claim`、`Deletion Test`、`Builder / Auditor Separation`、`Fixed Point`、`Final Report Contract` などが定義されている。
 
 - https://github.com/KAFKA2306/semiconductor-earnings-model/blob/main/AGENTS.md
 
-ここで問題なのは `BFV` という名前ではない。
+個々のルールには妥当な内容も多い。金融データなら、一次情報、期間、単位、出所、再現性、テストは必要である。
 
-金融データでは、source、period、unit、provenanceの検証は必要である。
+問題は、それらを守るために**新しい概念名まで覚える必要があるか**である。
 
-しかし、それを守るために独自の作業方法まで常時AIへ読ませる必要があるかは別問題だ。
+たとえば「作業範囲をIssueに限定する」「必要なテストを実行する」「完了したら止める」で十分なら、`BFV Kernel` や `Fixed Point` という別の名前を覚えなくても同じ行動は説明できる。
 
-たとえば既存のschema、test、CI、PR reviewだけで同じ正しさを守れるruleなら、`AGENTS.md` に別の方法論として残す必要は薄い。
+さらに `BFV` のような独自略語を作ると、読む側は略語を展開し、その定義を探し、他の文書でも同じ意味か確認しなければならない。
 
-## 例2：`yt3`
+この記事では、AIが作ったコード量ではなく、**読むために別途覚えなければならない独自用語と独自略語を減らす**ことに絞る。
 
-`yt3` には、AIの作業方法や品質改善に関係するファイルが複数の場所にある。
+## 一般的な専門用語と、repository固有の名前は分ける
 
-- `AGENTS.md`
-- `GEMINI.md`
-- `.claude/CLAUDE.md`
-- `.claude/agents/`
-- `.claude/skills/`
-- `docs/standard/continuous-improvement-loop.md`
-- `prompts/continuous_improvement_loop.txt`
-- `prompts/agy_100x_viewer_loop_audit.md`
-- `prompts/improvement_round_2.txt`
-- `src/domain/agents/meta_audit_layer.ts`
-- 複数の `audit_*.ts`
+専門用語を全部なくしたいわけではない。
 
-Repository tree:
+たとえば、
 
-- https://api.github.com/repos/KAFKA2306/yt3/git/trees/main?recursive=1
+```text
+Git
+pull request
+CI
+JSON Schema
+SQL
+regression test
+operating margin
+```
 
-個別例:
+は、それぞれ既存の技術、標準、業界で意味が共有されている。
 
-- https://github.com/KAFKA2306/yt3/blob/main/docs/standard/continuous-improvement-loop.md
-- https://github.com/KAFKA2306/yt3/blob/main/prompts/continuous_improvement_loop.txt
-- https://github.com/KAFKA2306/yt3/blob/main/prompts/agy_100x_viewer_loop_audit.md
-- https://github.com/KAFKA2306/yt3/blob/main/prompts/improvement_round_2.txt
-- https://github.com/KAFKA2306/yt3/blob/main/src/domain/agents/meta_audit_layer.ts
+一方、
 
-一つの品質条件が、READMEで説明され、AGENTSで命令になり、promptで再記述され、skillで手順化され、audit codeでも判定されているなら、すべてを残す理由が必要になる。
+```text
+BFV Kernel
+Canonical Workline Rule
+Final Report Contract
+```
 
-一つ消しても出力も正しさも変わらないなら、そのファイルは次の作業者にとって情報ではなく確認項目になる。
+は、少なくともその名前自体はrepository側で定義しないと読者に意味が伝わらない。
 
-## 例3：長い文書でも必要なものはある
+GoogleのDeveloper Documentation Style Guideも、特定集団だけに通じるjargonは明確なコミュニケーションを妨げることがあり、可能なら平易な表現へ置き換えるよう勧めている。
 
-`trahist` の `docs/DATA_STANDARDS.md` は長い。
+- https://developers.google.com/style/jargon
 
-しかし中身は、`trades_unified.csv` のcolumn、型、必須性、brokerごとの変換、数値・日付処理、fund unit normalizationなど、実際のデータ処理を決める仕様である。
+略語についても、対象読者に馴染みの薄いものや過度に専門化されたものを避けるよう案内している。
 
-- https://github.com/KAFKA2306/trahist/blob/main/docs/DATA_STANDARDS.md
+- https://developers.google.com/style/abbreviations
 
-これは「文書が長いから消す」という対象ではない。
+したがって、判断したいのは「専門用語かどうか」ではない。
 
-`trade_date` や `currency` の意味を消せば、同じ入力から同じ結果を作れなくなる。
+**外部でも意味が共有されている語か、それともこのrepositoryを読むためだけに追加で覚える名前か**である。
 
-見るべきなのは文書量ではなく、**その情報が製品やデータの意味を決めているか**である。
+## 略語は独自用語より厳しく見る
 
-## 削除の成果をどう測るか
+独自用語を一度説明すれば、その後は文脈から意味を推測できることがある。
 
-「何ファイル消したか」だけでは不十分である。
+独自略語はさらに情報を落とす。
 
-見るべきなのは、たとえば次の変化だ。
+```text
+Bounded Falsification & Verification
+             ↓
+            BFV
+```
 
-- 同じruleを書く場所が3か所から1か所になった
-- 同じvalidationを実行する経路が2本から1本になった
-- fallbackを消して元のエラーが直接見えるようになった
-- 同じstateの保存先が2つから1つになった
-- 古いpromptやworkflowを削除した
-- 独自のlevel / score / stateを削って、直接観測できる件数やtest結果へ戻した
-- 削除後もtestと利用者が受け取る結果が変わらない
+`BFV` だけを別のIssueやPull Requestで見ても、意味は推測しにくい。
 
-これなら、削除量ではなく**変更時に確認しなければならない対象が減ったか**を見られる。
+repositoryは一冊の本のように最初から最後まで読むものではない。READMEだけ読む人もいれば、Issueから入る人もいる。AIも必要なファイルだけを読む場合がある。
+
+そのため、
+
+```text
+最初に正式名称を書いた
+    ↓
+以後は独自略語でよい
+```
+
+という運用でも、別文書では再び辞書が必要になる。
+
+自分のrepositoryでは、次の方針が読みやすい。
+
+```text
+API / HTTP / JSON / CI
+→ 対象読者に広く定着しているなら使う
+
+repository内で新しく作った略語
+→ 略さなくても困らないなら作らない
+```
+
+略語を禁止するのではなく、**略語によって節約できる文字数より、意味を復元する負担が大きくないか**を見る。
+
+## LLMの語彙選択そのものは測定できる
+
+ここで「AIは独自用語を作りたがる」と決めつける必要はない。
+
+Large Language Model（LLM）の語彙選択が人間と異なることは、別の形で研究されている。
+
+JuzekとWardはCOLING 2025で、科学論文における `delve`、`intricate`、`underscore` などの増加を調べ、LLM利用による増加である可能性が高い21語を抽出した。一方で、なぜそれらが過剰に選ばれるのかについて、モデル構造、アルゴリズム、学習データを原因とする証拠は得られなかったと報告している。
+
+- https://aclanthology.org/2025.coling-main.426/
+
+さらにJuzek、Ming、Hernandezの2026年研究は、手作業の「AIっぽい語リスト」を前提にせず、人間の文章と6つのモデルファミリーの生成文を比較した。
+
+そこで使われているのが、単純な総出現回数ではなく、一定の窓の中にその語が現れたかを見る **windowed document prevalence** である。
+
+- https://arxiv.org/abs/2606.03165
+
+一つの文書で同じ語を何十回も繰り返したケースと、多数の文書に同じ語が広がっているケースを分けて考えられる。
+
+これはrepositoryを見るときにも参考になる。
+
+ただし、この研究は「AIがsoftware repositoryで独自の概念名を作る」「それが別文書へ自己増殖する」「独自略語が読解時間を何%増やす」と証明した研究ではない。
+
+**語彙選択の差を測れることと、repository固有語彙の原因を説明することは分ける。**
+
+2026年8月のRudnickaとJuzekのpreprintも、複数LLMにモデルごとの異なるlinguistic profileがある可能性を論じているが、これもrepository内の独自用語生成を直接調べた研究ではない。
+
+- https://arxiv.org/abs/2608.06589
+
+## 単語だけでなく、複数語の表現を抜く
+
+自分のrepositoryで気になったのは、`delve` のような単語一個より、次のような複数語の名前だった。
+
+```text
+Canonical Workline Rule
+Final Report Contract
+Builder / Auditor Separation
+```
+
+この候補抽出にはAutomatic Term Extractionの研究が参考になる。
+
+ChunらのACL 2025論文は、専門用語抽出で意味的に近い例だけでなく、**構文的に近い例を使う方法**を検証し、3つの専門分野benchmarkでF1-scoreを改善したと報告している。
+
+- https://aclanthology.org/2025.findings-acl.516/
+
+したがって、最初から「怪しいAI語の一覧」を作るより、文章から名詞句や複数語の用語候補を構文的に抜く方がよい。
+
+例えば候補として、
+
+```text
+ADJ + NOUN
+NOUN + NOUN
+X-ready
+X-driven
+level + noun
+名詞化された表現
+```
+
+を見る。
+
+ここで重要なのは、**この形をした語を禁止することではない**。
+
+`access control` や `regression test` のような普通の技術用語も同じ構造を持つ。
+
+構文解析は判定ではなく、見落とさず候補を集めるために使う。
+
+## repositoryでは「何回出たか」より「何文書に出たか」を見る
+
+候補を抜いたら、次に各表現がどこに出ているかを見る。
+
+```text
+README.md
+AGENTS.md
+Issue
+Pull Request
+設計文書
+prompt
+その他のdocs
+```
+
+一つの文書に10回ある表現と、10個の文書に1回ずつある表現では意味が違う。
+
+後者は、そのrepositoryを横断して使われる語彙になっている。
+
+そこで最低限、各用語について次を記録する。
+
+```text
+出現回数
+出現した文書数
+最初に確認できる出現
+現在も使われている文書
+```
+
+独自略語なら、正式名称と略語の両方を数える。
+
+ここでも新しいスコア名は作らない。件数をそのまま見る。
+
+## 外部で通じるか確認する
+
+repository内で繰り返されているからといって、独自用語とは限らない。
+
+次に、外部で意味が定着しているかを確認する。
+
+優先するのは、
+
+1. 標準仕様
+2. APIやframeworkの公式documentation
+3. upstream project
+4. 公的な用語集
+5. 分野のcorpusや主要文献
+
+である。
+
+たとえば `JSON Schema` なら公式仕様へ接続できる。`CI` ならGitHub Actionsを含む一般的なsoftware engineeringの文脈で広く使われる。
+
+一方、`BFV Kernel` は現在のrepository自身が `BFV means Bounded Falsification & Verification` と定義している。
+
+- https://github.com/KAFKA2306/semiconductor-earnings-model/blob/main/AGENTS.md
+
+つまり読む人は、このrepository固有の定義を取得しなければならない。
+
+この時点で削除と決める必要はない。
+
+次の質問へ進む。
+
+> **その名前を普通の語または既存の標準用語へ置き換えると、どの意味の区別が失われるか？**
+
+具体的な区別が失われないなら、置き換え候補になる。
+
+## 用語集を作る前に、用語を減らす
+
+独自用語が増えると、「なら用語集を作ろう」という発想になりやすい。
+
+しかし、用語集を作ると意味を調べられるようになるだけで、覚える語の数は減らない。
+
+例えば、
+
+```text
+Evidence Completion Gate (ECG)
+```
+
+という名前を作り、用語集へ
+
+```text
+ECG = 必要な証拠がそろったか確認する段階
+```
+
+と書くことはできる。
+
+でも本文を最初から
+
+```text
+必要な証拠がそろったか確認する
+```
+
+と書けば、用語集も略語も不要である。
+
+用語集が必要なのは、外部標準の専門用語、データモデル上区別が必要な概念、公開APIの名称など、**普通の文章へ置き換えると意味が失われるもの**である。
+
+独自語を大量に作ってから辞書で救済するより、辞書を必要とする語を減らす方を先にする。
+
+## `AGENTS.md` は特に影響が大きい
+
+Codexでは `AGENTS.md` の内容が作業時のinstructionsに入る。
+
+OpenAIが2026年1月に公開したCodex agent loopの説明では、Git/project rootからcurrent working directoryまでの `AGENTS.md` などが、既定32 KiBの上限のもとでuser instructionsへ集約されることが説明されている。
+
+- https://openai.com/index/unrolling-the-codex-agent-loop/
+
+つまり `AGENTS.md` の独自語は、人間が読むdocumentationに残るだけではない。Codex自身が次の作業で読むinstructionsにもなる。
+
+だから、ここへ
+
+```text
+新しいrole
+新しいlevel
+新しいgate
+新しいworkflow名
+独自略語
+```
+
+を追加する前に、本当に名前が必要かを見る。
+
+自分なら、まず次のような普通の指示へ戻す。
+
+```text
+既存のIssueを確認してから作業する。
+標準的な技術用語を使う。
+独自の略語を作らない。
+同じ情報を複数の文書へ書かない。
+必要以上のコード・設定・依存関係を追加しない。
+完了前にテストまたは実際の出力で確認する。
+```
+
+これなら、別の概念体系を理解してから作業を始める必要がない。
+
+## 実際の監査は5段階で十分だった
+
+現在考えている監査手順は次の通りである。
+
+```text
+1. README / AGENTS.md / docs / Issues から
+   名詞句・複数語の用語候補と大文字略語を抽出する
+
+2. ADJ+NOUN / NOUN+NOUN / X-ready など
+   語の作り方を記録する
+
+3. 標準仕様・公式documentation・外部corpusで
+   同じ表現が定着しているか確認する
+
+4. repository内で何文書に反復しているか数える
+
+5. 既存の一般語・標準用語へ置き換えても
+   意味の区別が失われないものを置き換える
+```
+
+略語は別に、
+
+```text
+repository内で新しく定義された大文字略語
+```
+
+を抽出し、原則として正式名称か普通の説明へ戻す。
+
+この方法なら、「AIっぽい」という印象だけで語を消さない。
+
+外で通じるか、repository内でどれだけ反復しているか、置換すると意味が失われるか、という観測可能な情報で判断できる。
+
+## まだ分かっていないこと
+
+ここまでで確認できているのは、
+
+- 自分の公開repositoryに独自の複合語と略語が実在すること
+- Googleの技術文書ガイドが、不要なjargonや馴染みの薄い略語を避けるよう案内していること
+- LLMの語彙選択差をprevalenceで測る研究が存在すること
+- 構文情報を使ったAutomatic Term Extractionの研究が存在すること
+
+である。
+
+一方、まだ実測していないこともある。
+
+- AIを多用したrepositoryは、人間中心のrepositoryより独自用語が多いか
+- 独自用語が何個増えると読解時間がどれだけ増えるか
+- 一度生成された用語が、AIによって別文書へ伝播する頻度
+- 独自略語を削除したとき、人間やAIの作業時間がどれだけ変わるか
+
+ここは結論を先に置かず、比較できるcorpusを作って測る必要がある。
 
 ## 結論
 
-AIはコードを書く速度だけでなく、文書、test、workflow、fallback、分類、監査手順を増やす速度も上げる。
+AIを使ったrepositoryの読みにくさを考えるとき、最初に見るべきなのはファイル数でも文書量でもなかった。
 
-そのため、AIを使って継続的にrepositoryを改善するなら、追加されたコードだけを見るのでは足りない。
+**読む前に覚えなければならない、repository固有の用語と略語だった。**
 
-単語の珍しさだけを見るのでも足りない。複合名詞、修飾語、level、state、framework名のような**用語の作り方**と、それが複数文書へ反復していないかを見る。
+標準的な専門用語は使う。
 
-実行記録には必要な証跡を残しつつ、次の実行でも必要な契約だけを永続ドキュメントへ残す。
+必要な概念の区別も残す。
 
-基準は一つでよい。
+しかし、普通の「検証」「完了条件」「作業手順」で伝わるものに新しい名前を付けない。
 
-> **これを消したら、利用者が受け取る機能、正しさ、必要な証拠のどれが失われるのか？**
+さらに、その新しい名前を頭文字で略さない。
 
-何も失われないなら、残す理由を説明できるか確認する。
+監査するときは、複数語の用語候補と略語を抽出し、外部での使用とrepository内の文書数を確認する。
+
+最後に一つだけ聞く。
+
+> **この名前を普通の言葉へ戻すと、何の意味が失われるのか？**
+
+何も失われないなら、その名前を覚える必要もない。
