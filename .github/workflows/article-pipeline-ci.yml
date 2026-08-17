@@ -76,27 +76,6 @@ jobs:
           python -m pipeline.publication_diff --base "$base" --head "$head"
       - name: Zenn CLI compatibility
         run: bash scripts/zenn-render-check.sh
-      - name: Zenn production response probe
-        shell: bash
-        run: |
-          set -u
-          for slug in \
-            2026-08-14-05-compatibility-is-not-validation \
-            2026-08-15-affected-set-is-a-contract \
-            2026-08-16-ai-added-decision-cost-audit; do
-            echo "===== $slug ====="
-            code="$(curl --silent --show-error --location \
-              --output /tmp/zenn-body \
-              --write-out '%{http_code}' \
-              "https://zenn.dev/api/articles/$slug")"
-            echo "HTTP $code"
-            cat /tmp/zenn-body
-            echo
-          done
-          echo '===== kafka2306 latest ====='
-          curl --silent --show-error --location \
-            'https://zenn.dev/api/articles?username=kafka2306&order=latest'
-          echo
       - name: Demo JavaScript syntax
         run: |
           node --check demos/_shared/pyodide-worker.mjs
