@@ -12,6 +12,7 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
       - name: Capture Zenn responses
         shell: bash
