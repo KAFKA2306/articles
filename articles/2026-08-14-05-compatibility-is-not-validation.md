@@ -3,7 +3,7 @@ title: "OSSが動いた。でもその判定はまだ使えない。「動く」
 emoji: "🧪"
 type: "tech"
 topics: ["python", "machinelearning", "nlp", "testing"]
-published: false
+published: true
 published_at: 2026-08-14 16:00
 ---
 
