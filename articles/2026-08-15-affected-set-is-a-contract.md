@@ -3,7 +3,8 @@ title: "CIが速くなった。必要なテストを消しただけかもしれ�
 emoji: "🧭"
 type: "tech"
 topics: ["monorepo", "ci", "nx", "turborepo", "testing"]
-published: false
+published: true
+published_at: 2026-08-17 19:11
 ---
 
 CIが30秒短くなった。数字だけ見れば成功だ。
