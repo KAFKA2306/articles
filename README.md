@@ -1,5 +1,9 @@
 # KAFKA2306/articles
 
+[![Article Pipeline CI](https://github.com/KAFKA2306/articles/actions/workflows/article-pipeline-ci.yml/badge.svg)](https://github.com/KAFKA2306/articles/actions/workflows/article-pipeline-ci.yml)
+[![Canonical Article Pipeline](https://github.com/KAFKA2306/articles/actions/workflows/article-pipeline.yml/badge.svg)](https://github.com/KAFKA2306/articles/actions/workflows/article-pipeline.yml)
+[![Zenn Production Verification](https://github.com/KAFKA2306/articles/actions/workflows/zenn-production-verify.yml/badge.svg)](https://github.com/KAFKA2306/articles/actions/workflows/zenn-production-verify.yml)
+
 **広い読者が自分事にできる問題を入口に、実体験・実測・失敗から、読後の判断や行動を一段よくする技術記事を作るrepository。**
 
 このrepoの目的は「正しい技術情報を増やすこと」でも「監査可能な記事を増やすこと」でもありません。
@@ -58,7 +62,7 @@ AIに作らせたものを、誰が「完成」と判定するのか？
 - どんな失敗や手戻りを避けられるか
 - 何を安心して試せるようになるか
 - 何をやめる判断ができるか
-- どんな新しい能力・選択肢を得るか
+- どんな新しい能力・選択肢を得られるか
 - どの不確実性が減るか
 
 `理解できる`、`勉強になる` だけでは弱いと扱います。
