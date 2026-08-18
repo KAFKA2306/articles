@@ -1,172 +1,94 @@
-# Publication contract
+# Zenn publication
 
-## Invariant
-
-このrepositoryで「公開済み」と呼べる状態は次だけとする。
-
-```text
-published: true in canonical Zenn release snapshot
-+
-Zenn公式ユーザーRSSにcanonical slugが存在
-+
-RSS上のtitleがrelease snapshotのtitleと一致
-=
-PUBLISHED_VERIFIED
-```
-
-公開カタログのauthorityはZenn公式ユーザーRSS `https://zenn.dev/kafka2306/feed?all=1` とする。GitHub上の `published: true`、commit成功、Actions green、deploy trigger成功だけでは公開完了と呼ばない。
-
-## Deployment topology
-
-通常作業とZenn production deployをbranchで分離する。
+公開経路は3段階だけにする。
 
 ```text
 main
-  = drafting / review / CI / publication intent
-              │
-              │ explicit one-article release
-              ▼
+  ↓  published: true を人が確定
+Zenn Manual Release
+  ↓  対象1記事だけコピー
 zenn-release
-  = deployed production snapshot
-    + approved target article
-    + that article's referenced images
-              │
-              │ Zenn GitHub integration watches this branch
-              ▼
+  ↓  Zenn Connect
 zenn.dev
-              │
-              ▼
-feed?all=1 verification
 ```
 
-- `main` は正準作業branch。
-- `zenn-release` はZenn deploy専用snapshot branch。
-- `zenn-release` をmainへ丸ごと追従させない。
-- `.github/workflows/zenn-manual-release.yml` だけが承認済みarticleと必要画像をrelease snapshotへ反映する。
-- main上の別article、draft、実験、docsをrelease snapshotへ混入させない。
-- force pushは禁止する。
+## 1. main
 
-## State machine
+`main` は執筆とレビューの正準。
 
-```text
-DRAFT
-  published:false on main
-    │ explicit approval
-    ▼
-PUBLICATION_INTENT
-  published:true on main
-    │ Zenn Manual Release
-    ▼
-RELEASE_SNAPSHOT
-  zenn-release contains approved target version
-    │ Zenn GitHub sync
-    ▼
-PRODUCTION_VERIFICATION
-    ├─ RSS slug + title一致 -> PUBLISHED_VERIFIED
-    └─ missing / mismatch / fetch failure -> DEPLOY_PENDING
+公開する記事だけFront Matterを次の状態にする。
+
+```yaml
+published: true
+published_at: YYYY-MM-DD HH:MM
 ```
 
-verification failureで `published:false` へ自動rollbackしない。公開意思はmain上で保持し、必要なら同じarticleをreconcileする。
+`published_at` は公開retryのために変更しない。
 
-## Zenn slug contract
+## 2. Zenn Manual Release
 
-Zennでは `articles/<slug>.md` のファイル名が記事slugになる。slugは12〜50文字、`a-z`、`0-9`、`-`、`_` のみ。
+`.github/workflows/zenn-manual-release.yml` を手動実行し、slugを1件指定する。
 
-canonical validatorは `pipeline.zenn_slug` とする。
+workflowが行うことは次だけ。
+
+1. slugと記事を検証する
+2. `published: true` と `published_at` を確認する
+3. `articles/<slug>.md` を `zenn-release` へコピーする
+4. `images/<slug>/` があれば同時にコピーする
+5. 差分があれば `zenn-release` をpushする
+6. Zenn公開状態を確認する
+
+workflowはmainの記事本文、`published`、`published_at` を書き換えない。
+
+`zenn-release` が同一内容なら何もしない。デプロイ失敗時はZennダッシュボードのデプロイ履歴で原因を確認し、原因を修正してから再実行する。
+
+## 3. zenn-release
+
+`zenn-release` はZenn Connectが監視するデプロイ専用branch。
+
+通常作業は行わない。
+
+Zenn公式では、登録したbranchに変更があると同期が開始され、変更されたMarkdownファイルがzenn.devへ同期される。
+
+- https://zenn.dev/zenn/articles/connect-to-github
+- https://zenn.dev/zenn/articles/zenn-cli-guide
+
+## 公開完了
+
+GitHubへのpushだけでは完了にしない。
+
+`pipeline.zenn_production` がZenn公式ユーザーRSSでslugとtitleを確認できた時だけ公開済みとする。
 
 ```bash
-python -m pipeline.zenn_slug
-python -m pipeline.zenn_slug --slug my-valid-article-slug
+python -m pipeline.zenn_production --root <zenn-release checkout>
 ```
 
-記事生成時に最終slugをfilesystem mutation前に検証し、repository-wide CIでも全articleを再検証する。公開済みslugはrenameしない。
+定期確認は `.github/workflows/zenn-production-verify.yml` が `zenn-release` を基準に行う。
 
-## Main-side publication intent
+## 画像
 
-Manual Releaseは入力された任意のvalid slugを1本だけ扱う。
-
-- `published:false` なら対象articleだけを `true` にしてmainへcommitする。
-- 既に `published:true` ならmainを変更せずreconcileする。
-- `published_at` は既存値を保持する。
-- mainへの変更がある場合、rebase後のexact commitへ `pipeline.zenn_slug`、`pipeline.publication_diff`、`pipeline.audit` を実行する。
-- mainへのpushはnormal fast-forwardのみとし、force pushしない。
-
-公開retryのためにarticle本文へmarker、timestamp、no-op commentを埋め込まない。
-
-## Release snapshot construction
-
-release snapshotへcopyしてよいものは原則として次だけ。
+記事固有画像は次に置く。
 
 ```text
-articles/<approved-slug>.md
-images/...   # approved articleが実際に参照するものだけ
+images/<slug>/
 ```
 
-workflowはrelease worktreeのchanged/untracked pathsを検査し、上記以外が混入したらfailする。
+これ以外の画像配置を増やさない。
 
-## Pre-deploy gates
+## 禁止
 
-`zenn-release` へpushする前にrelease snapshotそのものへ次を実行する。
+- retry用の本文コメント追加
+- retry用のtimestamp変更
+- retry用の空コミット
+- `published_at` の書き換え
+- `zenn-release` での通常開発
+- `main` をproduction snapshotとして検証すること
+- 複数記事を1回のmanual releaseで公開すること
 
-1. `pipeline.zenn_slug --root <release>`
-2. `collect_published_articles(<release>)` のcontract errors = 0
-3. release diffがtarget article + referenced imagesだけ
-4. Zenn CLI `preview --no-watch` で全article render
-5. render結果に `data-body-error` がない
-6. `git diff --check`
+## Zenn側設定
 
-対象内容が前回releaseと同一のreconcileでは、articleを改変せず `zenn-release` に明示的なempty deploy commitを1件だけ作る。deploy trigger目的のdocs変更、本文marker、rollback commitは作らない。
+Zenn Connectの同期branchは `zenn-release` にする。
 
-## Production verification
+Zenn公式では同期branchをダッシュボードから指定できる。
 
-`pipeline.zenn_production` は `--root` で指定したrelease snapshotの `published:true` をproduction expectationとして扱う。
-
-```bash
-python -m pipeline.zenn_production \
-  --root _zenn_release \
-  --wait-seconds 900 \
-  --interval-seconds 15
-```
-
-- canonical slug missing -> FAIL
-- title mismatch -> FAIL
-- RSS fetch / parse failure -> FAIL
-- 全件一致 -> PASS
-
-定期 `.github/workflows/zenn-production-verify.yml` も `zenn-release` をexpectation sourceとして使う。
-
-## Immutable `published_at`
-
-既存 `published_at` はrelease/reconcile時に変更しない。誤変更の修復時のみ、Git履歴上でそのarticleに最初にcommitされた非null valueをcanonical originとして復元する。
-
-禁止:
-- retry時刻への更新
-- 現在時刻への置換
-- 推測値への置換
-- 任意の過去値への変更
-
-## Branch hygiene
-
-- `main` と `zenn-release` は恒久branchとして保持する。
-- merged / patch-equivalentでopen PRのない作業branchは `.github/workflows/branch-hygiene.yml` が削除する。
-- unique patchまたはopen PRを持つbranchは自動削除しない。
-
-## Canonical implementation
-
-- work branch: `main`
-- deploy branch: `zenn-release`
-- slug validator: `pipeline/zenn_slug.py`
-- transition guard: `pipeline/publication_diff.py`
-- repository CI: `.github/workflows/article-pipeline-ci.yml`
-- one-article release: `.github/workflows/zenn-manual-release.yml`
-- production verifier: `pipeline/zenn_production.py`
-- production observer: `.github/workflows/zenn-production-verify.yml`
-- branch cleanup: `.github/workflows/branch-hygiene.yml`
-- regression tests: `tests/test_zenn_slug.py`, `tests/test_publication_diff.py`, `tests/test_zenn_production.py`
-
-## External authority
-
-- Zenn GitHub integration / sync branch: https://zenn.dev/zenn/articles/connect-to-github
-- Zenn CLI: https://zenn.dev/zenn/articles/zenn-cli-guide
-- Zenn slug: https://zenn.dev/zenn/articles/what-is-slug
-- Zenn RSS: https://zenn.dev/zenn/articles/zenn-feed-rss
+- https://zenn.dev/zenn/articles/connect-to-github
