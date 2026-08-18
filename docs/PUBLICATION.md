@@ -35,12 +35,12 @@ workflowが行うことは次だけ。
 2. `published: true` と `published_at` を確認する
 3. `articles/<slug>.md` を `zenn-release` へコピーする
 4. `images/<slug>/` があれば同時にコピーする
-5. `zenn-release` をpushする
+5. 差分があれば `zenn-release` をpushする
 6. Zenn公開状態を確認する
 
 workflowはmainの記事本文、`published`、`published_at` を書き換えない。
 
-同じ内容を再送する場合は、記事を改変せず `zenn-release` に空のdeploy commitを1件だけ作る。
+`zenn-release` が同一内容なら何もしない。デプロイ失敗時はZennダッシュボードのデプロイ履歴で原因を確認し、原因を修正してから再実行する。
 
 ## 3. zenn-release
 
@@ -79,6 +79,7 @@ images/<slug>/
 
 - retry用の本文コメント追加
 - retry用のtimestamp変更
+- retry用の空コミット
 - `published_at` の書き換え
 - `zenn-release` での通常開発
 - `main` をproduction snapshotとして検証すること
