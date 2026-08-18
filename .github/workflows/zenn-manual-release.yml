@@ -57,26 +57,23 @@ jobs:
           git worktree add _zenn_release origin/zenn-release
 
           cp "articles/${SLUG}.md" "_zenn_release/articles/${SLUG}.md"
-
+          rm -rf "_zenn_release/images/${SLUG}"
           if [[ -d "images/${SLUG}" ]]; then
             mkdir -p "_zenn_release/images"
-            rm -rf "_zenn_release/images/${SLUG}"
             cp -R "images/${SLUG}" "_zenn_release/images/${SLUG}"
           fi
 
           cd _zenn_release
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "articles/${SLUG}.md"
-          if [[ -d "images/${SLUG}" ]]; then
-            git add "images/${SLUG}"
-          fi
+          git add "articles/${SLUG}.md" "images/${SLUG}" 2>/dev/null || true
 
           if git diff --cached --quiet; then
-            git commit --allow-empty -m "deploy: retry ${SLUG}"
-          else
-            git commit -m "deploy: publish ${SLUG}"
+            echo "zenn-release already contains this exact article snapshot"
+            exit 0
           fi
+
+          git commit -m "deploy: publish ${SLUG}"
           git push origin HEAD:zenn-release
 
       - name: Verify Zenn production
