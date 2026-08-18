@@ -66,7 +66,7 @@ jobs:
           cd _zenn_release
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "articles/${SLUG}.md" "images/${SLUG}" 2>/dev/null || true
+          git add -A
 
           if git diff --cached --quiet; then
             echo "zenn-release already contains this exact article snapshot"
