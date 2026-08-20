@@ -4,9 +4,22 @@ on:
   workflow_dispatch:
     inputs:
       slug:
-        description: "Publish exactly one approved article"
+        description: "Sync exactly one approved article"
         required: true
         type: string
+      action:
+        description: "Desired Zenn state for this article"
+        required: true
+        default: publish
+        type: choice
+        options:
+          - publish
+          - unpublish
+      confirm:
+        description: "I intend to trigger one Zenn production deployment"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -34,20 +47,45 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Validate approved article
+      - name: Validate explicit release intent
         shell: bash
         env:
           SLUG: ${{ inputs.slug }}
+          ACTION: ${{ inputs.action }}
+          CONFIRM: ${{ inputs.confirm }}
         run: |
           set -euo pipefail
+          test "$CONFIRM" = "true" || {
+            echo "explicit confirmation is required"
+            exit 1
+          }
+
           python -m pipeline.zenn_slug --slug "$SLUG"
           test -f "articles/${SLUG}.md"
-          grep -q '^published: true$' "articles/${SLUG}.md"
-          grep -q '^published_at:' "articles/${SLUG}.md"
+
+          case "$ACTION" in
+            publish)
+              EXPECTED_PUBLISHED=true
+              grep -q '^published_at:' "articles/${SLUG}.md"
+              ;;
+            unpublish)
+              EXPECTED_PUBLISHED=false
+              ;;
+            *)
+              echo "unsupported action: $ACTION"
+              exit 1
+              ;;
+          esac
+
+          grep -q "^published: ${EXPECTED_PUBLISHED}$" "articles/${SLUG}.md" || {
+            echo "main does not match requested state: ${SLUG} -> published:${EXPECTED_PUBLISHED}"
+            exit 1
+          }
+
           python -m pipeline.audit
           bash scripts/zenn-render-check.sh
 
-      - name: Copy one article to zenn-release
+      - name: Build one-article release diff
         shell: bash
         env:
           SLUG: ${{ inputs.slug }}
@@ -64,24 +102,87 @@ jobs:
           fi
 
           cd _zenn_release
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
 
           if git diff --cached --quiet; then
-            echo "zenn-release already contains this exact article snapshot"
+            echo "NO_DEPLOY: zenn-release already contains the requested snapshot"
             exit 0
           fi
 
-          git commit -m "deploy: publish ${SLUG}"
+          mapfile -t changed < <(git diff --cached --name-only)
+          for path in "${changed[@]}"; do
+            case "$path" in
+              "articles/${SLUG}.md"|"images/${SLUG}/"*)
+                ;;
+              *)
+                echo "refusing unrelated zenn-release change: $path"
+                exit 1
+                ;;
+            esac
+          done
+
+          article_changes="$(printf '%s\n' "${changed[@]}" | grep -c '^articles/.*\.md$' || true)"
+          if [[ "$article_changes" -gt 1 ]]; then
+            echo "refusing multi-article release diff"
+            exit 1
+          fi
+
+          git diff --cached --check
+
+      - name: Push one Zenn deployment
+        shell: bash
+        env:
+          SLUG: ${{ inputs.slug }}
+          ACTION: ${{ inputs.action }}
+        run: |
+          set -euo pipefail
+          cd _zenn_release
+
+          if git diff --cached --quiet; then
+            echo "NO_DEPLOY: no zenn-release commit created"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "deploy: ${ACTION} ${SLUG}"
+
+          # Normal fast-forward push only. If zenn-release moved, fail closed
+          # instead of force-pushing or generating another retry commit.
           git push origin HEAD:zenn-release
 
-      - name: Verify Zenn production
+      - name: Verify requested Zenn state
         shell: bash
         env:
           ZENN_USERNAME: kafka2306
+          SLUG: ${{ inputs.slug }}
+          ACTION: ${{ inputs.action }}
         run: |
-          python -m pipeline.zenn_production \
-            --root _zenn_release \
-            --wait-seconds 900 \
-            --interval-seconds 15
+          set -euo pipefail
+          if [[ "$ACTION" == "publish" ]]; then
+            python -m pipeline.zenn_production \
+              --root _zenn_release \
+              --wait-seconds 900 \
+              --interval-seconds 15
+            exit 0
+          fi
+
+          python - <<'PY'
+          import os
+          import time
+
+          from pipeline.zenn_production import fetch_public_catalog
+
+          slug = os.environ["SLUG"]
+          username = os.environ["ZENN_USERNAME"]
+          deadline = time.monotonic() + 900
+
+          while True:
+              catalog = fetch_public_catalog(username)
+              if slug not in catalog:
+                  print(f"UNPUBLISHED_VERIFIED {slug}")
+                  break
+              if time.monotonic() >= deadline:
+                  raise SystemExit(f"still public after deployment window: {slug}")
+              time.sleep(15)
+          PY
