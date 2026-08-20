@@ -3,7 +3,7 @@ title: "CIが速くなった。必要なテストを消しただけかもしれ�
 emoji: "🧭"
 type: "tech"
 topics: ["monorepo", "ci", "nx", "turborepo", "testing"]
-published: true
+published: false
 published_at: 2026-08-17 19:11
 ---
 
