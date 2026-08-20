@@ -1,6 +1,11 @@
 name: Zenn Production Verification
 
 on:
+  push:
+    branches: [zenn-release]
+    paths:
+      - "articles/**"
+      - "images/**"
   schedule:
     - cron: "17 * * * *"
   workflow_dispatch:

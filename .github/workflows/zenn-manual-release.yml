@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       slug:
-        description: "Sync exactly one approved article"
+        description: "Stage exactly one approved article for Zenn"
         required: true
         type: string
       action:
@@ -16,13 +16,14 @@ on:
           - publish
           - unpublish
       confirm:
-        description: "I intend to trigger one Zenn production deployment"
+        description: "Create one pending Zenn production change"
         required: true
         default: false
         type: boolean
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: zenn-manual-release
@@ -31,7 +32,9 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout main
         uses: actions/checkout@v6
@@ -85,10 +88,26 @@ jobs:
           python -m pipeline.audit
           bash scripts/zenn-render-check.sh
 
-      - name: Build one-article release diff
+      - name: Refuse a second pending production change
+        shell: bash
+        run: |
+          set -euo pipefail
+          open_count="$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --base zenn-release \
+            --state open \
+            --json number \
+            --jq 'length')"
+          if [[ "$open_count" != "0" ]]; then
+            echo "A zenn-release pull request is already pending; merge or close it first."
+            exit 1
+          fi
+
+      - name: Stage exactly one article as a pull request
         shell: bash
         env:
           SLUG: ${{ inputs.slug }}
+          ACTION: ${{ inputs.action }}
         run: |
           set -euo pipefail
           git fetch origin zenn-release
@@ -129,60 +148,29 @@ jobs:
 
           git diff --cached --check
 
-      - name: Push one Zenn deployment
-        shell: bash
-        env:
-          SLUG: ${{ inputs.slug }}
-          ACTION: ${{ inputs.action }}
-        run: |
-          set -euo pipefail
-          cd _zenn_release
-
-          if git diff --cached --quiet; then
-            echo "NO_DEPLOY: no zenn-release commit created"
-            exit 0
-          fi
-
+          branch="zenn-sync/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          git switch -c "$branch"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "deploy: ${ACTION} ${SLUG}"
+          git commit -m "stage: ${ACTION} ${SLUG}"
+          git push origin HEAD:"$branch"
 
-          # Normal fast-forward push only. If zenn-release moved, fail closed
-          # instead of force-pushing or generating another retry commit.
-          git push origin HEAD:zenn-release
+          body="$(cat <<EOF
+          This PR is the only staged production change for Zenn.
 
-      - name: Verify requested Zenn state
-        shell: bash
-        env:
-          ZENN_USERNAME: kafka2306
-          SLUG: ${{ inputs.slug }}
-          ACTION: ${{ inputs.action }}
-        run: |
-          set -euo pipefail
-          if [[ "$ACTION" == "publish" ]]; then
-            python -m pipeline.zenn_production \
-              --root _zenn_release \
-              --wait-seconds 900 \
-              --interval-seconds 15
-            exit 0
-          fi
+          - slug: \`${SLUG}\`
+          - action: \`${ACTION}\`
+          - source: \`main\`
+          - target: \`zenn-release\`
 
-          python - <<'PY'
-          import os
-          import time
+          Merging this PR changes the Zenn Connect branch once and therefore requests one Zenn deployment.
+          Do not add unrelated files or additional article slugs to this PR.
+          EOF
+          )"
 
-          from pipeline.zenn_production import fetch_public_catalog
-
-          slug = os.environ["SLUG"]
-          username = os.environ["ZENN_USERNAME"]
-          deadline = time.monotonic() + 900
-
-          while True:
-              catalog = fetch_public_catalog(username)
-              if slug not in catalog:
-                  print(f"UNPUBLISHED_VERIFIED {slug}")
-                  break
-              if time.monotonic() >= deadline:
-                  raise SystemExit(f"still public after deployment window: {slug}")
-              time.sleep(15)
-          PY
+          gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
+            --base zenn-release \
+            --head "$branch" \
+            --title "Zenn: ${ACTION} ${SLUG}" \
+            --body "$body"
