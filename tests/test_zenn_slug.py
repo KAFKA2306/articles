@@ -83,10 +83,14 @@ class ZennSlugTests(unittest.TestCase):
         )
         self.assertIn("python -m pipeline.zenn_slug", workflow)
         self.assertIn("type: string", workflow)
-        self.assertNotIn("type: choice", workflow)
+        self.assertIn("action:", workflow)
+        self.assertIn("- publish", workflow)
+        self.assertIn("- unpublish", workflow)
         self.assertNotIn("zenn-deploy-sync", workflow)
-        self.assertIn("git push origin HEAD:zenn-release", workflow)
         self.assertIn("git worktree add _zenn_release origin/zenn-release", workflow)
+        self.assertIn("gh pr create", workflow)
+        self.assertIn("--base zenn-release", workflow)
+        self.assertNotIn("git push origin HEAD:zenn-release", workflow)
         self.assertNotIn("git push origin HEAD:main", workflow)
 
 
