@@ -78,20 +78,23 @@ class ZennProductionTests(unittest.TestCase):
         self.assertIn("path: release", workflow)
         self.assertIn("--root ../release", workflow)
         self.assertIn("cron:", workflow)
-        self.assertNotIn("push:\n", workflow)
+        self.assertIn("push:\n", workflow)
+        self.assertIn("branches: [zenn-release]", workflow)
         self.assertNotIn("cancel-in-progress", workflow)
 
-    def test_manual_release_updates_zenn_release_from_main(self) -> None:
+    def test_manual_release_stages_zenn_release_pr_from_main(self) -> None:
         workflow = (
             zenn_production.ROOT / ".github" / "workflows" / "zenn-manual-release.yml"
         ).read_text(encoding="utf-8")
         self.assertIn("ref: main", workflow)
         self.assertIn("git fetch origin zenn-release", workflow)
-        self.assertIn("git push origin HEAD:zenn-release", workflow)
         self.assertIn("published_at:", workflow)
         self.assertIn("bash scripts/zenn-render-check.sh", workflow)
         self.assertIn("git worktree add _zenn_release origin/zenn-release", workflow)
-        self.assertIn("--root _zenn_release", workflow)
+        self.assertIn('branch="zenn-sync/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"', workflow)
+        self.assertIn("gh pr create", workflow)
+        self.assertIn("--base zenn-release", workflow)
+        self.assertNotIn("git push origin HEAD:zenn-release", workflow)
         self.assertNotIn("git push origin HEAD:main", workflow)
         self.assertNotIn("git push --force", workflow)
         self.assertNotIn("git push -f", workflow)
