@@ -17,6 +17,54 @@ Broad door
   -> Useful exit
 ```
 
+## Generic-by-default rule
+
+このrepositoryの**記事編集・評価の規則と、記事本文の中心的な知見は原則として汎用にする**。
+
+汎用とは「抽象的に書く」ことではない。個別のrepository、製品、framework、API、会社、環境、失敗事例は、観測・実測・再現証拠として具体的に使う。一方で、記事の中心結論はその固有名詞を外しても、同じ構造の問題を持つ別project・別tool・別環境で判断に使える形へ一般化する。
+
+```text
+specific case / measurement / failure
+  -> underlying mechanism or decision structure
+  -> generalizable insight
+  -> transfer conditions
+  -> reusable decision / action
+```
+
+### 必須条件
+
+公開候補は次を明示する。
+
+- `generalizable_insight`: 個別事例から得た、他のprojectでも使える中心的な知見。
+- `transfer_conditions`: その知見を他へ適用してよい条件。
+- `non_transfer_conditions`: その知見を一般化してはいけない条件・証拠範囲外。
+
+次は不合格とする。
+
+- 特定repositoryの変更履歴だけで終わる。
+- 特定toolの使い方・設定値・API仕様だけが読後成果になる。
+- 「このprojectではこうした」から、他の読者が自分の状況へ移す判断規則が導かれていない。
+- 固有名詞を別の固有名詞へ置き換えるだけで記事の価値が消える。
+- 一例しか観測していないのに、条件を書かず普遍的なbest practiceとして断定する。
+
+**事例は証拠、一般化された知見は成果**として扱う。
+
+ただし、証拠以上に一般化してはならない。単一事例からの一般化は `INFERRED` として扱い、適用条件・不適用条件を必ず示す。汎用性のためにclaim boundaryを広げることは禁止する。
+
+記事が狭い専門領域を対象にすること自体は問題ではない。その領域内で、別の実装・別のrepository・別の製品にも持ち帰れる判断が残ればよい。
+
+## System portability rule
+
+編集coreは、特定author、repository owner、source provider、LLM provider、publication platformに依存することを前提にしない。
+
+- author固有のsourceは入力データとして扱う。
+- GitHub、Graphiti等の取得方法はsource側の責務とする。
+- Zenn等のfront matter、slug、公開操作はrenderer / publisher側の責務とする。
+- 特定owner名、特定publication URL、特定providerの必須条件をarticle editorial coreへ埋め込まない。
+- coreのcontractは、同じ形式の証拠と記事候補を与えれば別author・別repositoryでも適用できる状態を維持する。
+
+既存実装にこの境界違反がある場合、互換性のために正当化せず、修正対象として扱う。
+
 ## People-first editorial principles
 
 Google Search Centralのpeople-first content自己評価から、次を採用する。
@@ -58,9 +106,11 @@ Primary:
 3. natural expectation
 4. first-hand experience / measurement / public artifact
 5. non-obvious finding / reframing
-6. practical consequence
-7. useful exit
-8. proof limits / non-goal
+6. underlying mechanism / decision structure
+7. generalizable insight + transfer conditions
+8. practical consequence
+9. useful exit
+10. proof limits / non-goal / non-transfer conditions
 ```
 
 技術名・framework名・製品名は、読者がproblemを理解した後に必要な位置で登場させる。
@@ -90,6 +140,12 @@ Primary:
 - `surprising_finding`: 一般docs / generic AI summaryでは得にくい発見。
 - `hypothesis_update`: 実際の観測で何が変わったか。
 - `why_this_article`: 単独記事にする理由。
+
+### Generalization / transfer
+
+- `generalizable_insight`: 固有事例を越えて再利用できる知見。
+- `transfer_conditions`: 同じ知見を適用できる条件。
+- `non_transfer_conditions`: 適用できない条件、または追加検証が必要な範囲。
 
 ### Proof / trust
 
@@ -159,6 +215,20 @@ AIに作らせたものを、誰が「完成」と判定するのか？
 
 `why_this_article` は「分かりやすく説明する」では不合格。
 
+## Generalization gate
+
+記事本文は、固有事例から最低1段一般化する。
+
+合格条件:
+
+- `generalizable_insight` が特定repo名・tool名なしでも意味を持つ。
+- その知見が成立する理由を、観測からmechanism / decision structureとして説明できる。
+- `transfer_conditions` を満たす別projectで、読者が同じ判断規則を試せる。
+- `non_transfer_conditions` により、証拠以上の一般化を止めている。
+- useful exitが特定のCLI commandや設定値だけでなく、少なくとも一つの再利用可能なdecision rule / comparison lens / experiment protocolを含む。
+
+一つでも満たさなければ、`case_specific_without_transfer` としてblockingする。
+
 ## Question / discovery gate
 
 次の最低1つが必要。
@@ -206,13 +276,14 @@ Why does the reader need this proof?
 
 1. changeable external claimはcurrent primary / official sourceで確認する。
 2. vendor仕様はvendor公式、標準はstandards bodyを優先する。
-3. KAFKA2306固有の成果はpublic commit / PR / Issue / Actions / artifactで確認する。
+3. author固有の成果はpublic commit / PR / Issue / Actions / artifact等の公開証拠で確認する。
 4. historical stateが重要ならfixed commit/runを使う。
 5. 数字にはtarget / period / unit / scope / comparison basisを付ける。
 6. observation / inference / speculationを分離する。
 7. inaccessible / contradictory / stale sourceならclaimを弱めるか削除する。
 8. NOT_RUN / unknown / pendingをPASS / 0 / completeへ昇格しない。
 9. citation countは品質の目的関数にしない。
+10. 個別事例から一般化した部分は、その推論とtransfer条件を明示する。
 
 `authority / verification boundary` は読者価値を生む場合だけ本文の中心に置く。
 
@@ -254,6 +325,8 @@ human problem / desire
 
 が分かること。
 
+タイトルで固有tool名を完全禁止はしない。ただし、そのtoolを知らない読者にも問題と持ち帰れる価値が分かること。
+
 ## Story contract
 
 説明順より発見順を優先する。
@@ -265,6 +338,8 @@ friction / desire
   -> experiment / experience
   -> contradiction / discovery
   -> updated model
+  -> generalizable insight
+  -> transfer conditions
   -> useful exit
 ```
 
@@ -299,6 +374,9 @@ LAPRAS AI Reviewで公開されている5軸を参考にした内部proxyを使�
 - `weak_differentiation`
 - `missing_proof_of_value`
 - `missing_useful_exit`
+- `case_specific_without_transfer`
+- `unclear_transfer_conditions`
+- `overgeneralized_from_narrow_evidence`
 - `forced_commercial_cta`
 - `technical_value_as_product`
 - `premature_conclusion_in_opening`
@@ -322,6 +400,9 @@ LAPRAS AI Reviewで公開されている5軸を参考にした内部proxyを使�
 - article whose intended audience is unclear
 - technology-first title hiding the actual problem
 - `Aを使ってBを作った` with no customer value
+- case study that ends at `AでBが起きた` without a transferable insight
+- tool-specific procedure with no reusable decision rule
+- unsupported generalization from one repository, one environment, or one experiment
 - obvious conclusion
 - unsupported numeric guidance
 - duplicate reader job with weaker proof
@@ -352,11 +433,11 @@ schedule、月末、score、CI green、mergeはpublication authorizationでは�
 
 ## Lifecycle after publication
 
-- `KEEP`: Reach / customer value / originality / experience / utility / trustが強い
+- `KEEP`: Reach / customer value / originality / experience / utility / trust / transferabilityが強い
 - `REVALIDATE`: insightは強いがvolatile factあり
-- `REWRITE`: core experienceは価値があるが入口・価値・構成が弱い
+- `REWRITE`: core experienceは価値があるが入口・価値・構成・一般化が弱い
 - `MERGE`: same reader jobをより強い記事へ集約
-- `RETIRE`: 読む理由・独自性・信頼・durable valueが不足
+- `RETIRE`: 読む理由・独自性・信頼・durable value・transferabilityが不足
 
 `RETIRE` / `REWRITE` trigger:
 
@@ -365,6 +446,8 @@ schedule、月末、score、CI green、mergeはpublication authorizationでは�
 - commodity information化した
 - first-hand proofが薄い
 - useful exitがない
+- case-specificで他projectへ持ち帰れる知見がない
+- transfer条件が不明
 - central claimがstale / unverifiable
 - newer articleに上位互換された
 - title/body promise mismatch
@@ -380,11 +463,12 @@ schedule、月末、score、CI green、mergeはpublication authorizationでは�
 2. Reach
 3. customer value
 4. originality / first-hand experience
-5. useful exit
-6. source / trust
-7. overlap
-8. half-life
-9. lifecycle state
+5. generalizable insight / transfer conditions
+6. useful exit
+7. source / trust
+8. overlap
+9. half-life
+10. lifecycle state
 
 公開記事数を増やすより、弱い記事をretireしてportfolio valueを上げる。
 
@@ -401,6 +485,9 @@ Customer value:
 Original observation:
 Natural expectation:
 Surprising finding:
+Generalizable insight:
+Transfer conditions:
+Non-transfer conditions:
 Strongest proof:
 Useful exit:
 What the proof does NOT establish:
