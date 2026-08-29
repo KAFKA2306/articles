@@ -425,3 +425,23 @@ Report only verified state relevant to the task:
 - external blocker and exact human action if one remains.
 
 Do not report Zenn deletion when only a repository file or retirement checklist changed. Do not report evidence that was not fetched.
+
+## 24. Short-context Issue handoff
+
+Every executable GitHub Issue must be usable by an agent that has no prior conversation and limited context.
+
+Canonical format: `docs/short-context-issue-contract.md`.
+
+Rules:
+
+- put `## Short-context handoff` at the top of the Issue body;
+- make that block sufficient to start work without reading historical prose;
+- include `Goal`, `Read first`, `Change only`, `Start here`, `Do not`, and `Done when`;
+- limit `Read first` to at most three canonical resources;
+- keep one Issue to one workline / PR whenever independent completion is possible;
+- do not rely on memory, previous chat, implicit conventions, or another Issue's prose for a required constraint;
+- put background and historical evidence after the handoff block as optional detail;
+- if current repository or production state contradicts the Issue, update the Issue before implementing;
+- parent Issues coordinate order and shared gates only; a short-context agent should be able to receive one child Issue and finish it independently.
+
+For article Issues, the body must additionally state `generalizable_insight`, `transfer_conditions`, `non_transfer_conditions`, the concrete first-hand fixture, and the reusable reader exit. Specific repositories, tools, and products are evidence, not the article's final value.
