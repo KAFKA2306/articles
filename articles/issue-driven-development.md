@@ -86,7 +86,7 @@ Issueに証拠が残る
 
 ## 人間は「次の細かい指示」から降りられる
 
-123個の個人開発を横断したときも、効いたのは全部を記憶することではなく、Issue・PR・CI・main・productionへ状態を外出しすることだった。
+123個の個人開発を横断したときも、効いたのは全部を記憶することではなく、Issue・PR・CI・main・productionへ状態を外部化することだった。
 
 - https://zenn.dev/kafka2306/articles/chatgpt-multiproject-autonomy
 
