@@ -3,7 +3,8 @@ title: "AIに同じ指示を繰り返すのをやめた。Issue駆動開発と�
 emoji: "🎯"
 type: "tech"
 topics: ["ai", "github", "codex", "claudecode", "automation"]
-published: false
+published: true
+published_at: 2026-09-02 22:12
 ---
 
 AI coding agentを使うほど、コードを書く以外の仕事が気になるようになった。
