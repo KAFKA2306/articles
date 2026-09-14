@@ -259,8 +259,11 @@ class PipelineContractTests(unittest.TestCase):
             "design_philosophy": "単一のverified flagより変更理由の追跡可能性を優先し、一次資料と派生集計を分離する",
             "why_this_article": "856→7,699という実数の反転を、17文書の公開evidenceで復元したcaseを扱う",
             "proof_of_value": "17文書と5,026 purchases + 2,673 salesの公開snapshotがある",
-            "desired_reader_action": "重要KPIへsource / scope / methodを追加する",
+            "desired_reader_action": "重要KPIへsource / scope / methodを追加して比較する",
             "non_goal": "7,699をOGE公式合計とは扱わない",
+            "generalizable_insight": "KPIの値だけでなくsource / scope / methodを保存すると、更新時の差分を別案件でも説明可能な判断材料にできる",
+            "transfer_conditions": "同じKPIを複数時点・複数sourceで再計算し、scopeとmethodを比較できる場合",
+            "non_transfer_conditions": "source定義自体が不明で比較軸を復元できない場合や、別populationへ値そのものを外挿する場合",
         }
         self.assertTrue(editorial.story_ready(topic))
         topic.pop("hypothesis_update")
