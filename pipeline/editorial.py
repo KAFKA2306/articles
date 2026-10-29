@@ -27,7 +27,17 @@ STORY_FIELDS = [
     "story_type",
     "evidence_urls",
     "why_interesting",
+    "generalizable_insight",
+    "transfer_conditions",
+    "non_transfer_conditions",
 ]
+GENERALIZATION_BLOCKING_ISSUES = frozenset(
+    {
+        "case_specific_without_transfer",
+        "unclear_transfer_conditions",
+        "overgeneralized_from_narrow_evidence",
+    }
+)
 TITLE_POLICY = dict(core.CONFIG.get("title_policy", {}))
 TITLE_OPTION_ROLES = tuple(
     str(role) for role in TITLE_POLICY.get("candidate_roles", [])
@@ -185,6 +195,13 @@ def choose_topic(signals: list[dict[str, object]]) -> dict[str, object]:
 - FastAPI / Actions / MCP / Pyodide / API統合など、技術名や実装行為そのものを価値として書かない。
 - 記事数を増やすことを価値にしない。reader valueとproofを作れない候補は落とす。
 
+候補ごとに、個別事例を他の状況へ移すための一般化境界も定義してください。
+- `generalizable_insight`: repository名・tool名を外しても意味が残る中心的な判断・仕組みを書く。
+- `transfer_conditions`: 同じ判断を別projectへ適用してよい条件を具体的に書く。
+- `non_transfer_conditions`: 単一事例の証拠範囲を越える条件、追加検証が必要な条件を書く。
+- 一例しかない場合は普遍的best practiceと断定しない。一般化部分は推論として扱い、適用条件を狭くする。
+- 読後成果を特定CLIや設定値だけにしない。少なくともdecision rule / comparison lens / experiment protocolの一つへ変換する。
+
 タイトルは各候補で必ず3案作る:
 1. `general_problem`: 技術名を知らない人でも、自分に関係する問題だと分かる一般語の入口。
 2. `concrete_anomaly`: 本文で証明できる数字、失敗、矛盾、反転、具体的事件を入口にする。
@@ -225,8 +242,11 @@ PUBLIC_GITHUB_SIGNALS:
   "design_philosophy": "読者価値を守る優先順位・trade-off",
   "why_this_article": "一般tutorialでは得られない固有の実測・失敗・判断変更",
   "proof_of_value": "公開証拠で確認できる実績・実測・比較・運用結果",
-  "desired_reader_action": "本文から自然に導ける次action",
-  "non_goal": "この記事が証明しないこと・解決しない範囲"
+  "desired_reader_action": "本文から自然に導けるdecision rule / comparison lens / experiment protocol等の次action",
+  "non_goal": "この記事が証明しないこと・解決しない範囲",
+  "generalizable_insight": "固有名詞を外しても再利用できる中心的な知見",
+  "transfer_conditions": "この知見を別projectへ移してよい条件",
+  "non_transfer_conditions": "適用してはいけない条件・追加検証が必要な範囲"
 }}
 
 JSONのみ返してください。
@@ -234,7 +254,7 @@ JSONのみ返してください。
 """
     result = json.loads(
         core.model_call(
-            "あなたは事実検証を優先する技術編集者です。弱い問いや弱い読者価値を文章力で救済せず、前提を更新する強い問い、公開証拠、読後の具体的な状態変化で記事を選びます。技術名は価値そのものにしません。文体模倣はしません。",
+            "あなたは事実検証を優先する技術編集者です。弱い問いや弱い読者価値を文章力で救済せず、前提を更新する強い問い、公開証拠、読後の具体的な状態変化で記事を選びます。個別事例は証拠として使い、中心知見は適用条件と不適用条件を伴う再利用可能な判断へ変換します。技術名は価値そのものにしません。文体模倣はしません。",
             user,
             temperature=0.0,
             json_mode=True,
@@ -242,7 +262,7 @@ JSONのみ返してください。
     )
     selected = result.get("selected")
     if not isinstance(selected, dict) or not story_ready(selected):
-        raise RuntimeError("topic selection did not produce a story/value-ready candidate")
+        raise RuntimeError("topic selection did not produce a story/value/transfer-ready candidate")
     return result
 
 
@@ -268,7 +288,10 @@ def enrich_topic(
 - `why_this_article` が「詳しく説明する」「分かりやすく解説する」だけなら `publishable` を false にする。
 - `proof_of_value` が公開証拠へ接続できない場合は `publishable` を false にする。
 - `desired_reader_action` は本文の価値から自然に導く。相談・契約を無理に要求しない。
-- 十分な発見または読者価値を作れない場合は `publishable` を false にする。
+- `generalizable_insight` は固有tool/repository名を外しても成立する判断・仕組みにする。
+- `transfer_conditions` と `non_transfer_conditions` を必ず分け、単一事例から証拠以上の普遍化をしない。
+- 読後成果は特定CLI手順だけで終えず、decision rule / comparison lens / experiment protocolの少なくとも一つへ変換する。
+- 十分な発見、読者価値、一般化境界のどれかを作れない場合は `publishable` を false にする。
 - タイトルは `general_problem` / `concrete_anomaly` / `searchable` の3案を作る。
 - 技術名を知らない読者がタイトル前半だけで問題を理解できるようにする。
 - `title` は3案のいずれかをそのまま採用する。
@@ -303,19 +326,22 @@ JSONのみ返してください。
   "why_this_article": "...",
   "proof_of_value": "...",
   "desired_reader_action": "...",
-  "non_goal": "..."
+  "non_goal": "...",
+  "generalizable_insight": "...",
+  "transfer_conditions": "...",
+  "non_transfer_conditions": "..."
 }}
 """
     result = json.loads(
         core.model_call(
-            "あなたは技術テーマを一つの検証可能な発見とreader outcomeへ絞る編集者です。問い・読者価値・proofのどれかが弱ければ公開不可にします。技術名は価値そのものにしません。",
+            "あなたは技術テーマを一つの検証可能な発見、reader outcome、再利用可能な判断へ絞る編集者です。問い・読者価値・proof・transfer boundaryのどれかが弱ければ公開不可にします。技術名は価値そのものにしません。",
             user,
             temperature=0.0,
             json_mode=True,
         )
     )
     if result.get("publishable") is not True or not story_ready(result):
-        raise RuntimeError("topic could not be converted into a story/value-ready candidate")
+        raise RuntimeError("topic could not be converted into a story/value/transfer-ready candidate")
     return result
 
 
@@ -350,7 +376,9 @@ Markdown本文のみ。front matterは不要です。
 - `design_philosophy` は採用技術の列挙ではなく、何を優先し何を捨てたかというtrade-offとして自然に本文へ統合する。
 - `why_this_article` は一般論として宣言せず、実測・失敗・比較・制約・判断変更を本文で見せて証明する。
 - `proof_of_value` を「本当にどこまで動いたか」の境界として本文に置く。未実証範囲は `non_goal` と整合させる。
-- `desired_reader_action` は記事末尾へ広告CTAとして足さない。本文から自然に試せる最小手順、判断表、checklist、template等として組み込む。
+- 個別事例から `generalizable_insight` へ進むmechanism / decision structureを本文で示す。
+- `transfer_conditions` を満たす別projectで再利用できる判断規則を示し、`non_transfer_conditions` で証拠以上の一般化を止める。
+- `desired_reader_action` は記事末尾へ広告CTAとして足さない。decision rule / comparison lens / experiment protocol / checklist等として本文へ組み込む。
 - `## Vision`、`## Design philosophy`、`## Why`、`## Commercial intent` の固定見出しを作らない。
 - 技術名、repository名、ライブラリ名、CI追加を読者価値そのものとして表現しない。
 - 公開URLを冒頭で一覧化しない。証拠は、その事実を使う位置へ置く。
@@ -365,7 +393,7 @@ Markdown本文のみ。front matterは不要です。
 - 最低でもKAFKA2306 GitHub URLを2件、外部の公式一次情報を1件含める。
 """
     return core.model_call(
-        "あなたは調査の過程を読者が追体験できる技術ライターです。正確さ・面白さに加え、読む前から読んだ後への具体的な状態変化とproofを本文で成立させます。技術名や営業文句を価値そのものにしません。",
+        "あなたは調査の過程を読者が追体験できる技術ライターです。正確さ・面白さに加え、読む前から読んだ後への具体的な状態変化、proof、適用条件つきの再利用可能な判断を本文で成立させます。技術名や営業文句を価値そのものにしません。",
         user,
     )
 
@@ -393,6 +421,9 @@ def evaluate(article: str) -> dict[str, object]:
 - `missing_proof_of_value`: 「使える」「安全」「自動化できる」等の価値主張に、実装結果・実測・public evidence・明示的な未実証境界がない。
 - `forced_commercial_cta`: 本文の価値から自然に導けない問い合わせ・契約・購入等を要求している。
 - `technical_value_as_product`: FastAPI / Actions / MCP / Pyodide / API統合 / repository等、技術名や実装行為そのものを価値として売っている。
+- `case_specific_without_transfer`: 個別tool/repositoryの手順や変更履歴で終わり、他projectへ持ち帰れる判断規則・comparison lens・experiment protocolがない。
+- `unclear_transfer_conditions`: 一般化した知見はあるが、どの条件なら適用でき、どの条件なら追加検証が必要か本文から判定できない。
+- `overgeneralized_from_narrow_evidence`: 単一または狭い証拠から、適用条件を示さず普遍的best practiceとして断定している。
 
 `Vision` / `Design philosophy` / `Why` / `Commercial intent` という固定見出しの有無では判定しません。意味が自然な本文に統合されているかを見てください。
 
@@ -439,7 +470,7 @@ JSONのみ返してください。
 """
     result = json.loads(
         core.model_call(
-            "あなたは独立した技術記事の編集査読者です。正確さ・有用性・読み進めたくなる構造・reader value・proofを別々に判定し、技術名や強制CTAで価値を偽装した記事を通しません。",
+            "あなたは独立した技術記事の編集査読者です。正確さ・有用性・読み進めたくなる構造・reader value・proof・一般化境界を別々に判定し、技術名や強制CTAで価値を偽装した記事を通しません。",
             user,
             temperature=0.0,
             json_mode=True,
@@ -520,6 +551,8 @@ def passes_quality(review: dict[str, object], sources_ok: bool) -> bool:
         return False
     if VALUE_BLOCKING_ISSUES & blocking_set:
         return False
+    if GENERALIZATION_BLOCKING_ISSUES & blocking_set:
+        return False
     return bool(
         sources_ok
         and _score(review.get("overall")) >= float(gate["minimum_overall"])
@@ -572,6 +605,9 @@ ARTICLE:
 - `missing_proof_of_value` がある場合、公開証拠で確認できる実績・実測・運用境界を追加する。証拠がなければ価値主張を弱めるか削る。
 - `forced_commercial_cta` がある場合、問い合わせ・契約等の強制CTAを削り、読者がその場で試せる最小手順・checklist・templateへ置き換える。
 - `technical_value_as_product` がある場合、技術名や実装行為を主語から外し、利用者の摩擦・成果・能力へ書き換える。
+- `case_specific_without_transfer` がある場合、固有手順の羅列を削り、観測からmechanism / decision structureを抽出して、別projectで使えるdecision rule / comparison lens / experiment protocolへ変換する。
+- `unclear_transfer_conditions` がある場合、知見が成立する前提と、追加検証なしでは移せない条件を明示する。
+- `overgeneralized_from_narrow_evidence` がある場合、主張を証拠範囲まで狭め、単一事例からの一般化を推論として示す。追加証拠を創作しない。
 - `Vision` / `Design philosophy` / `Why` / `Commercial intent` の固定見出しは新設しない。意味をstoryへ統合する。
 - URL一覧がsceneより先にある場合、URLを事実の使用箇所へ移す。
 - 中心の問いを前進させない正しい節を削る。網羅性を増やさない。
@@ -581,7 +617,7 @@ ARTICLE:
 - 最後を一文の持ち帰りで閉じる。
 """
     return core.model_call(
-        "あなたは記事の論点を削って強くするリビジョン担当です。sceneと問いに加え、reader before→after、trade-off、固有proofを自然な本文へ統合し、技術名や営業CTAで価値を偽装しません。",
+        "あなたは記事の論点を削って強くするリビジョン担当です。sceneと問いに加え、reader before→after、trade-off、固有proof、適用条件つきの再利用可能な判断を自然な本文へ統合し、技術名や営業CTAで価値を偽装しません。",
         user,
         temperature=0.0,
     )
