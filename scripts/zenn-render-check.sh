@@ -14,7 +14,8 @@ catalog="$tmp/articles.json"
   server_pid=$!
   trap 'kill "$server_pid" 2>/dev/null || true; rm -rf "$tmp"' EXIT
 
-  for _ in {1..10}; do
+  # Allow a cold npx install to finish before judging preview readiness.
+  for _ in {1..60}; do
     if curl --fail --silent --max-time 2 \
       "http://127.0.0.1:${port}/api/articles?sort=system" >"$catalog"; then
       break
