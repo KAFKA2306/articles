@@ -321,6 +321,8 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
             if match and match.group(1)[0] == fence_char and len(match.group(1)) >= fence_length and not match.group(2).strip():
                 fence_char = None
                 fence_length = 0
+                # A removed fenced block still separates adjacent Markdown blocks.
+                evidence_lines.append("\n")
     evidence_text = "".join(evidence_lines)
     # Markdown indented code blocks are examples, not article citations.
     evidence_text = re.sub(
