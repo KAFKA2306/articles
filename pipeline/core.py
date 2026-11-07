@@ -284,23 +284,44 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
     # Examples in fenced code and internal comments are not cited evidence.
     # CommonMark fences can remain open to EOF; a shorter or mismatched
     # closing fence must not turn example URLs into citations.
-    # Strip hidden HTML comments before scanning fences: their markers are not Markdown.
-    article = re.sub(r"(?s)<!--.*?-->", "", article)
+    # Scan fences and HTML comments together. Comment delimiters inside
+    # fenced examples are literal text and must not consume later citations.
     evidence_lines = []
     fence_char = None
     fence_length = 0
+    in_comment = False
     for line in article.splitlines(keepends=True):
-        match = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line.rstrip("\r\n"))
         if fence_char is None:
+            visible = []
+            cursor = 0
+            while cursor < len(line):
+                if in_comment:
+                    end = line.find("-->", cursor)
+                    if end < 0:
+                        cursor = len(line)
+                    else:
+                        in_comment = False
+                        cursor = end + 3
+                else:
+                    start = line.find("<!--", cursor)
+                    if start < 0:
+                        visible.append(line[cursor:])
+                        break
+                    visible.append(line[cursor:start])
+                    in_comment = True
+                    cursor = start + 4
+            clean = "".join(visible)
+            match = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", clean.rstrip("\r\n"))
             if match and (match.group(1)[0] == "~" or "`" not in match.group(2)):
                 fence_char, fence_length = match.group(1)[0], len(match.group(1))
                 continue
-            evidence_lines.append(line)
-        elif match and match.group(1)[0] == fence_char and len(match.group(1)) >= fence_length and not match.group(2).strip():
-            fence_char = None
-            fence_length = 0
+            evidence_lines.append(clean)
+        else:
+            match = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line.rstrip("\r\n"))
+            if match and match.group(1)[0] == fence_char and len(match.group(1)) >= fence_length and not match.group(2).strip():
+                fence_char = None
+                fence_length = 0
     evidence_text = "".join(evidence_lines)
-    evidence_text = re.sub(r"(?s)<!--.*?-->", "", evidence_text)
     # Markdown indented code blocks are examples, not article citations.
     evidence_text = re.sub(
         r"(?m)(?:(?<=\n\n)|\A)(?:(?: {4}|\t)(?![-*+]\s|\d+[.)]\s)[^\n]*(?:\n|$))+",
