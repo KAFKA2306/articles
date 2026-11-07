@@ -35,6 +35,13 @@ class GeneralizationContractTests(unittest.TestCase):
             "generalizable_insight": "手順ではなく、判断を成立させる条件と失敗境界を再利用単位にする",
             "transfer_conditions": "同じ目的で入力・観測可能性・失敗コストを比較できる案件",
             "non_transfer_conditions": "安全性や外部制約が異なり、同じ失敗を許容できない案件",
+            "alternatives": [
+                {"kind": kind, "name": kind, "reader_job": "same reader task",
+                 "primary_urls": ["https://github.com/KAFKA2306/articles"], "tradeoff": "time versus accuracy"}
+                for kind in ("incumbent", "direct", "adjacent")
+            ],
+            "unsearched_scope": "unexamined alternatives",
+            "alternative_decision": {"verdict": "unresolved"},
         }
 
     def test_story_ready_requires_all_generalization_fields(self) -> None:
