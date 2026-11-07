@@ -127,7 +127,7 @@ class SourceGateArtifactTests(unittest.TestCase):
             "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
             "https://docs.python.org/3/",
         ]
-        article = " ".join(urls) + "\\nExample: \x60https://example.invalid/not-evidence\x60"
+        article = " ".join(urls) + "\nExample: \x60https://example.invalid/not-evidence\x60"
         with patch.object(core, "verify_url", return_value=True):
             ok, report = core.source_gate(article)
         self.assertTrue(ok)
