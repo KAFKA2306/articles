@@ -282,7 +282,22 @@ def verify_url(url: str) -> bool:
 
 def source_gate(article: str) -> tuple[bool, dict[str, object]]:
     # Examples in fenced code and internal comments are not cited evidence.
-    evidence_text = re.sub(r"(?ms)^\s*(`{3,}|~{3,})[^\n]*\n.*?^\s*\1[^\n]*$", "", article)
+    # CommonMark fences can remain open to EOF; a shorter or mismatched
+    # closing fence must not turn example URLs into citations.
+    evidence_lines = []
+    fence_char = None
+    fence_length = 0
+    for line in article.splitlines(keepends=True):
+        match = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line.rstrip("\\r\\n"))
+        if fence_char is None:
+            if match and (match.group(1)[0] == "~" or "`" not in match.group(2)):
+                fence_char, fence_length = match.group(1)[0], len(match.group(1))
+                continue
+            evidence_lines.append(line)
+        elif match and match.group(1)[0] == fence_char and len(match.group(1)) >= fence_length and not match.group(2).strip():
+            fence_char = None
+            fence_length = 0
+    evidence_text = "".join(evidence_lines)
     evidence_text = re.sub(r"(?s)<!--.*?-->", "", evidence_text)
     # Markdown indented code blocks are examples, not article citations.
     evidence_text = re.sub(
