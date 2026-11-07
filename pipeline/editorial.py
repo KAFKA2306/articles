@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from typing import Callable
 
 from . import core
@@ -91,8 +92,13 @@ PREMATURE_CONCLUSION_MARKERS = (
 
 def _score(value: object) -> float:
     try:
-        return max(0.0, min(5.0, float(value)))
-    except (TypeError, ValueError):
+        number = float(value)
+        # Non-finite model scores must not be promoted to a perfect 5.0.
+        # In Python, min(5.0, float("nan")) evaluates to 5.0.
+        if not math.isfinite(number):
+            return 0.0
+        return max(0.0, min(5.0, number))
+    except (TypeError, ValueError, OverflowError):
         return 0.0
 
 
