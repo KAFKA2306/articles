@@ -45,6 +45,27 @@ class BlockingIssueGateTests(unittest.TestCase):
         self.assertIn("invalid_reviewer_blocking_issues", combined["blocking_issues"])
         self.assertFalse(editorial.passes_quality(combined, True))
 
+    def test_single_dissenting_low_score_cannot_be_hidden_by_median(self):
+        from unittest.mock import patch
+
+        good = dict(self.good)
+        low = {**good, "logic": 1.0, "blocking_issues": []}
+        # Previously the median of [1, 5, 5] passed every score floor.
+        with patch.object(editorial, "evaluate", side_effect=[good, low, good]):
+            combined = editorial.aggregate_evaluations("unsupported claim", rounds=3)
+        self.assertEqual(5.0, combined["logic"])
+        self.assertIn("reviewer_score_below_quality_floor", combined["blocking_issues"])
+        self.assertFalse(editorial.passes_quality(combined, True))
+
+    def test_single_dissenting_interest_score_cannot_be_hidden(self):
+        from unittest.mock import patch
+
+        good = dict(self.good)
+        low = {**good, "interest": 2.0, "blocking_issues": []}
+        with patch.object(editorial, "evaluate", side_effect=[good, low, good]):
+            combined = editorial.aggregate_evaluations("weak opening", rounds=3)
+        self.assertFalse(editorial.passes_quality(combined, True))
+
     def test_complete_clean_reviews_remain_eligible(self):
         from unittest.mock import patch
 

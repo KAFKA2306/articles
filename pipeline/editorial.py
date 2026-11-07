@@ -550,6 +550,23 @@ def aggregate_evaluations(
             blocking_issues.append("invalid_reviewer_blocking_issues")
         else:
             blocking_issues.extend(issues)
+    # A minority reviewer can identify a material failure without emitting a
+    # blocking code. Median aggregation must not erase that negative finding.
+    # Keep score aggregation for ranking, but veto eligibility on any review
+    # falling below an existing quality floor. No new arbitrary thresholds.
+    gate = core.CONFIG["quality_gate"]
+    for review in reviews:
+        if (
+            any(_score(review.get(axis)) < float(gate["minimum_axis"])
+                for axis in TECHNICAL_AXES)
+            or any(_score(review.get(axis)) < float(gate["minimum_story_axis"])
+                   for axis in EDITORIAL_AXES)
+            or _score(review.get("interest")) < float(gate["minimum_interest"])
+            or _score(review.get("overall")) < float(gate["minimum_overall"])
+            or _score(review.get("story_overall")) < float(gate["minimum_story_overall"])
+        ):
+            blocking_issues.append("reviewer_score_below_quality_floor")
+            break
     aggregate["blocking_issues"] = list(dict.fromkeys(blocking_issues))
     aggregate["revision_actions"] = list(
         dict.fromkeys(
