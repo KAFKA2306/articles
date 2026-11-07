@@ -18,6 +18,25 @@ class BlockingIssueGateTests(unittest.TestCase):
     def test_high_scoring_supported_article_is_not_rejected(self):
         self.assertTrue(editorial.passes_quality(self.good, True))
 
+    def test_nonfinite_scores_never_pass_quality_gate(self):
+        # A malformed numeric model output previously made NaN look like 5.0.
+        for bad in (float("nan"), float("inf"), -float("inf"), "NaN", "Infinity"):
+            with self.subTest(score=repr(bad)):
+                for axis in ("logic", "interest", "overall", "story_overall"):
+                    with self.subTest(axis=axis):
+                        self.assertFalse(editorial.passes_quality(
+                            {**self.good, axis: bad}, True))
+
+    def test_nonfinite_minority_review_cannot_be_hidden_by_median(self):
+        from unittest.mock import patch
+
+        good = dict(self.good)
+        corrupted = {**good, "logic": float("nan")}
+        with patch.object(editorial, "evaluate", side_effect=[good, corrupted, good]):
+            combined = editorial.aggregate_evaluations("fixture", rounds=3)
+        self.assertIn("reviewer_score_below_quality_floor", combined["blocking_issues"])
+        self.assertFalse(editorial.passes_quality(combined, True))
+
     def test_source_failure_still_rejects(self):
         self.assertFalse(editorial.passes_quality(self.good, False))
 
