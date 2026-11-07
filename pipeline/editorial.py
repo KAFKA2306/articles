@@ -4,6 +4,7 @@ import json
 from typing import Callable
 
 from . import core
+from .alternatives import alternatives_ready
 
 TECHNICAL_AXES = [
     "logic",
@@ -160,6 +161,7 @@ def story_ready(topic: dict[str, object]) -> bool:
         and len(urls) >= 2
         and title_options_ready(topic)
         and value_contract_ready(topic)
+        and alternatives_ready(topic)
     )
 
 
@@ -173,6 +175,10 @@ def choose_topic(signals: list[dict[str, object]]) -> dict[str, object]:
 {json.dumps(core.CONFIG['story_types'], ensure_ascii=False)}
 
 必須条件:
+- 企画前に現行方式・直接競合・異分野の代替を一次資料から比較する。未探索範囲を残す。
+- alternatives は incumbent/direct/adjacent の各1件以上を持ち、name、reader_job、primary_urls（実在するHTTPS一次資料）、tradeoff を記録する。
+- alternative_decision は unresolved/keep/merge/private/choose。choose は selected と同一読者目的・同一条件の実測結果・公開artifact_urlが揃うときだけ使う。未計測ならunresolved。根拠を創作しない。
+- unsearched_scope に探索未了範囲を記録する。
 - 一つの候補につき、一つの問いと一つの発見だけを置く。
 - `surprising_finding` はPUBLIC_GITHUB_SIGNALSから検証できる事実だけにする。
 - 単なる生成ミス、URL間違い、設定漏れだけで終わる題材は選ばない。
@@ -246,7 +252,10 @@ PUBLIC_GITHUB_SIGNALS:
   "non_goal": "この記事が証明しないこと・解決しない範囲",
   "generalizable_insight": "固有名詞を外しても再利用できる中心的な知見",
   "transfer_conditions": "この知見を別projectへ移してよい条件",
-  "non_transfer_conditions": "適用してはいけない条件・追加検証が必要な範囲"
+  "non_transfer_conditions": "適用してはいけない条件・追加検証が必要な範囲",
+  "alternatives": [{"kind":"incumbent","name":"現行方式","reader_job":"同じ読者の目的","primary_urls":["https://..."],"tradeoff":"条件と制約"},{"kind":"direct","name":"直接競合","reader_job":"同じ読者の目的","primary_urls":["https://..."],"tradeoff":"条件と制約"},{"kind":"adjacent","name":"隣接手段","reader_job":"同じ読者の目的","primary_urls":["https://..."],"tradeoff":"条件と制約"}],
+  "unsearched_scope": "未探索の範囲（なければ空文字）",
+  "alternative_decision": {"verdict":"unresolved"}
 }}
 
 JSONのみ返してください。
@@ -278,6 +287,9 @@ def enrich_topic(
 公開証拠で検証できる一つの発見と具体的な読者価値へ絞り直してください。
 
 重要:
+- alternatives は incumbent/direct/adjacent の比較を一次資料URL、同一reader_job、tradeoff付きで記録する。
+- unsearched_scope に未探索範囲を記す。
+- alternative_decision は unresolved/keep/merge/private/choose。choose は同条件実測の公開artifact_urlと比較結果がある場合のみ。未計測ならunresolved。
 - 元テーマにない事実を創作しない。
 - PUBLIC_GITHUB_SIGNALSで支えられない発見・価値・実績は採用しない。
 - 単なる生成ミス、URL間違い、設定漏れだけの話にはしない。
@@ -329,7 +341,10 @@ JSONのみ返してください。
   "non_goal": "...",
   "generalizable_insight": "...",
   "transfer_conditions": "...",
-  "non_transfer_conditions": "..."
+  "non_transfer_conditions": "...",
+  "alternatives": [{"kind":"incumbent","name":"現行方式","reader_job":"同じ読者の目的","primary_urls":["https://..."],"tradeoff":"条件と制約"},{"kind":"direct","name":"直接競合","reader_job":"同じ読者の目的","primary_urls":["https://..."],"tradeoff":"条件と制約"},{"kind":"adjacent","name":"隣接手段","reader_job":"同じ読者の目的","primary_urls":["https://..."],"tradeoff":"条件と制約"}],
+  "unsearched_scope": "未探索の範囲（なければ空文字）",
+  "alternative_decision": {"verdict":"unresolved"}
 }}
 """
     result = json.loads(
