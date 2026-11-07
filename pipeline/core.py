@@ -281,7 +281,10 @@ def verify_url(url: str) -> bool:
 
 
 def source_gate(article: str) -> tuple[bool, dict[str, object]]:
-    # Examples in fenced code and internal comments are not cited evidence.\n    evidence_text = re.sub(r"(?ms)^\\s*(`{3,}|~{3,})[^\\n]*\\n.*?^\\s*\\1[^\\n]*$", "", article)\n    evidence_text = re.sub(r"(?s)<!--.*?-->", "", evidence_text)\n    urls = sorted(set(URL_RE.findall(evidence_text)))
+    # Examples in fenced code and internal comments are not cited evidence.
+    evidence_text = re.sub(r"(?ms)^\s*(`{3,}|~{3,})[^\n]*\n.*?^\s*\1[^\n]*$", "", article)
+    evidence_text = re.sub(r"(?s)<!--.*?-->", "", evidence_text)
+    urls = sorted(set(URL_RE.findall(evidence_text)))
     valid = [url for url in urls if verify_url(url)]
     # A URL is not an independent experiment merely because it resolves.
     # Restrict first-hand evidence to canonical, stable artifact identities.
