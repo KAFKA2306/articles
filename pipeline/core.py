@@ -284,6 +284,8 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
     # Examples in fenced code and internal comments are not cited evidence.
     # CommonMark fences can remain open to EOF; a shorter or mismatched
     # closing fence must not turn example URLs into citations.
+    # Strip hidden HTML comments before scanning fences: their markers are not Markdown.
+    article = re.sub(r"(?s)<!--.*?-->", "", article)
     evidence_lines = []
     fence_char = None
     fence_length = 0
