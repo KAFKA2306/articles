@@ -28,6 +28,31 @@ class BlockingIssueGateTests(unittest.TestCase):
                 self.assertFalse(editorial.passes_quality(
                     {**self.good, "blocking_issues": [issue]}, True))
 
+    def test_missing_veto_data_fails_closed(self):
+        incomplete = dict(self.good)
+        del incomplete["blocking_issues"]
+        self.assertFalse(editorial.passes_quality(incomplete, True))
+
+    def test_aggregation_does_not_erase_incomplete_review(self):
+        from unittest.mock import patch
+
+        good = dict(self.good)
+        incomplete = dict(good)
+        del incomplete["blocking_issues"]
+        malformed = {**good, "blocking_issues": [None]}
+        with patch.object(editorial, "evaluate", side_effect=[good, incomplete, malformed]):
+            combined = editorial.aggregate_evaluations("fixture", rounds=3)
+        self.assertIn("invalid_reviewer_blocking_issues", combined["blocking_issues"])
+        self.assertFalse(editorial.passes_quality(combined, True))
+
+    def test_complete_clean_reviews_remain_eligible(self):
+        from unittest.mock import patch
+
+        with patch.object(editorial, "evaluate", return_value=dict(self.good)):
+            combined = editorial.aggregate_evaluations("fixture", rounds=3)
+        self.assertEqual([], combined["blocking_issues"])
+        self.assertTrue(editorial.passes_quality(combined, True))
+
     def test_malformed_veto_data_fails_closed(self):
         for value in (None, "unsupported_numeric_claim", [""], [None]):
             with self.subTest(value=value):
