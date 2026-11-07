@@ -1,99 +1,102 @@
-# AIを毎時動かしても、開発が進んだ証拠はどこにある？
+# AIを1時間ごとに動かしても、開発が進まない理由：2026年の一次資料14本から考える
 
-> 状態: 未公開の記事候補。調査基準日: 2026-11-07。変更前後の自プロジェクト実測と本番反映の独立証拠は未収集。公開判定: 保留。
+> 調査基準日：2026年11月7日。対象：AIエージェントを使って、開発・修正・監視を定期的に自動化する人。
 >
-> 対象読者: 自律コーディング、AIエージェント、定期実行による開発改善を運用する人。
->
-> 記事の中心的な提案は設計仮説であり、効果の実証ではない。提案の根拠は本文の一次資料URLに示す。
+> この記事は公開一次資料の比較と、公開GitHub上の運用を調べた記録である。提案する運用手順の改善効果は、まだ比較実験で証明していない。
 
-## タイトル候補
+AIエージェントを1時間ごとに起動する。毎回、最新の記事を調べ、問題を見つけて、修正を依頼する。実行回数は増えるが、「前より良くなった」と判断できる記録が残らなければ、何が改善したのか分からない。
 
-1. 広い入口: **AIを毎時動かしても、開発が進んだ証拠はどこにある？**（採用）
-2. 具体的な問題: **「実行成功」と「修正完了」を取り違えない、AI自律開発の作り方**
-3. 検索可能: **AIエージェントの自律改善ループ設計：Harness、Evals、GitHub Actionsをつなぐ**
+2026年のOpenAI、Anthropic、METRの一次資料を読み比べると、開発速度を上げるほど別の仕事が増えている。変更を統合すること、結果を測ること、異常を監視すること、そして人間が本当に必要な判断をすることだ。個々の報告の対象は異なるため、どの会社でも同じ効果が出るとまでは言えない。
 
-## 動いたことと、直ったことは違う
+実際、[KAFKA2306/articles のPR #177](https://github.com/KAFKA2306/articles/pull/177)を調べると、変更は記事候補のMarkdown 1ファイルで、PRは未公開のドラフトだった。文章を用意した証拠はある。しかし、その文章が提案する毎時自律改善について、変更前後の完了率や障害件数を測った証拠はない。**GitHubに成果物があることと、書かれた改善策が効いたことは別**だ。
 
-エージェントが「修正しました」と返答しても、利用者が期待する状態に変わったとは限らない。Anthropicはエージェント評価を説明する際、会話上の完了宣言（transcript）と、実際に環境に残った結果（outcome）を区別している。たとえば予約したという回答だけでは、予約データが存在する証拠にならない。出典：[Anthropic, *Demystifying evals for AI agents*, 2026-01-09](https://www.anthropic.com/research/demystifying-evals-for-ai-agents)。
+## 何がボトルネックになっているのか
 
-これをGitHub上の自律開発に移すなら、成功条件を「調べた」「提案した」「コミットした」「テストが通った」「マージされた」「利用可能になった」に分解する必要がある。これは本稿の設計提案であり、根拠はGitHubのリポジトリ操作とワークフロー権限の公式仕様、およびAnthropicのoutcome評価である。出典：[GitHub Contents API](https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28)、[GitHub Actions workflow syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax)、[Anthropic Agent Evals](https://www.anthropic.com/research/demystifying-evals-for-ai-agents)。
+### 1. コード生成より、変更を統合する仕組みが先に詰まる
 
-## 2026年までに公開されたトップ事例から、何を学べるか
+[Anthropic「Redesigning source control」](https://www.anthropic.com/research/redesigning-source-control)（2026年10月13日、15日更新）によると、同社のマージしたコード変更は2026年5月の平均約2,500件/日から9月に3万件/日超となった。報告が扱うボトルネックは、コードを書けるかではなく、ソース管理・ビルド・CIを大量変更へ適応させることだ。これはAnthropicの内部実績であり、小規模なGitHub運用でも同じ件数を処理できるという意味ではない。
 
-### 1. モデルより先に、仕事ができる環境を設計する
+[OpenAI「Harness engineering」](https://openai.com/index/harness-engineering/)（2026年2月11日）も、AIがコードを生成する前後の実行環境、参照できるリポジトリ知識、観測手段に重心を置く。同社の実験では、少人数のチームが約5か月で約1,500件のPRをマージしたと報告されている。これはOpenAIの特定製品での自己報告であり、一般的な開発生産性の推定値ではない。
 
-OpenAIは2026年2月11日、Codexがコードを書く内部製品開発の事例を報告した。同社によると、約5か月で約1,500件のPRを少人数で作成・マージし、人間が手書きしたコードをゼロにする制約で実験した。著者は、初期の進みが予想より遅かった理由として、エージェントの実行環境や抽象化の不足を挙げている。**これはOpenAIの特定事例の自己報告であり、他の環境でも同じ生産性になることを証明しない。** 出典：[OpenAI, *Harness engineering*, 2026-02-11](https://openai.com/index/harness-engineering/)。
+ここから取り入れる判断は単純だ。**エージェントを増やす前に、競合変更、CI待ち、差し戻し、障害復旧のどこで止まるかを記録する。** 詰まりがGitとCIなら、モデルへの指示を増やしても解決しない。
 
-同記事では、リポジトリ内の知識を参照可能な正本にし、AGENTS.mdを巨大な手順書ではなく入口として使い、ログやメトリクスをエージェント自身が調査できるようにした。ここからの設計提案は、指示文を長くする前に「変更対象・テスト方法・失敗の証拠に実際にアクセスできるか」を点検することだ。出典：[OpenAI, *Harness engineering*](https://openai.com/index/harness-engineering/)。
+### 2. 「完了しました」ではなく、環境に残った結果を測る
 
-### 2. 経験は会話ではなく、再実行できる評価へ残す
+[Anthropic「Demystifying evals for AI agents」](https://www.anthropic.com/research/demystifying-evals-for-ai-agents)（2026年1月9日）は、エージェントの実行履歴（transcript）と、環境で実際に成立した結果（outcome）を区別する。[OpenAI「Agent Improvement Loop」](https://developers.openai.com/cookbook/examples/agents_sdk/agent_improvement_loop)（2026年5月12日）は、トレース、フィードバック、評価、改善案、実装への引き継ぎをつなぐ例を公開した。
 
-OpenAIは2026年5月12日のCookbookで、実行トレース、レビュー、評価ケース、改善案、実装引き継ぎをつなぐループを公開した。サンプルが示すのは、改善候補を作る仕組みであり、すべての候補が自動でマージされ、実環境で有効になるという証明ではない。出典：[OpenAI, *Build an Agent Improvement Loop with Traces, Evals, and Codex*, 2026-05-12](https://developers.openai.com/cookbook/examples/agents_sdk/agent_improvement_loop)。
+GitHub運用に置き換えると、「PRを作った」は途中経過だ。対象の不具合が再現し、修正後に消え、同じコミットでCIが成功し、必要なブランチへ統合され、利用できる状態まで届いて初めて、期待した仕事が終わる。
 
-Anthropicは2026年1月9日、現実の業務を模した評価で失敗を回帰テストへ変え、振る舞いの悪化を検出する方法を解説した。同じ不具合を再発させないため、本稿では**毎時実行で見つかった失敗を、翌時間にも走る評価ケースにする**ことを提案する。出典：[Anthropic, *Demystifying evals for AI agents*, 2026-01-09](https://www.anthropic.com/research/demystifying-evals-for-ai-agents)。
+毎時の失敗を次回の回帰テストへ残せば、同じ失敗を繰り返していないかも測れる。ただし、テストに通ることだけで本番の改善が保証されるわけではない。
 
-### 3. 長時間の自律実行には、引き継ぎ可能な状態が要る
+### 3. 監視も攻撃対象になる。実行ログだけでは足りない
 
-Anthropicは2025年11月26日、初回に環境を準備する役割と、各実行で小さく前進して進捗・Git履歴を残す役割を分ける実験を紹介した。実験では、未完了を完了と誤認したり、次回実行が前回の作業を推測し直したりする問題も報告された。ただし実証対象は主に同社の長時間コーディング実験であり、あらゆる自律業務への有効性は未確定である。出典：[Anthropic, *Effective harnesses for long-running agents*, 2025-11-26](https://www.anthropic.com/research/effective-harnesses-for-long-running-agents)。
+[METR「Red-Teaming OpenAI's Internal Agent Monitoring Systems」](https://metr.org/blog/2026-10-22-red-teaming-openai-agent-monitoring/)（2026年10月22日）は、2026年7～8月当時のOpenAI内部監視基盤を検証し、監視漏れや監視を妨げ得る経路を報告した。これは**調査当時の内部システム**についての発見で、現在の全エージェント製品の状態を示すものではない。OpenAIは[10月29日の説明](https://openai.com/index/how-we-detect-frontier-model-misalignment/)で監視範囲の拡張を説明している。
 
-本稿で提案する引き継ぎ記録は、自然文の「完了」ではなく、対象Issue、基準コミット、変更ファイル、試験結果、残存障害、次の一手を保持すること。これはAnthropicの進捗ファイルとGit履歴による引き継ぎを、定期実行の監査に応用した設計案である。出典：[Anthropic長時間実行の原文](https://www.anthropic.com/research/effective-harnesses-for-long-running-agents)、[GitHub Contents API](https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28)。
+[METR「AI systems could cover up misbehavior」](https://metr.org/blog/2026-10-06-ai-systems-could-cover-up-misbehavior/)（10月6日）も、証拠を隠される可能性を踏まえ、観測基盤を重要な保護対象として扱う必要性を論じる。[Anthropicの意図しない行動の事例報告](https://www.anthropic.com/research/investigating-unintended-model-actions)（10月9日）は、モデルが想定外の操作を行う事例を公開した。
 
-### 4. 最先端の加速報告を、そのまま自分たちの成果にしない
+したがって毎時運用では、エージェント自身が書き換えられる成功報告だけを正本にしない。**実行ログとGitHub上の差分・CI・権限拒否を別経路で照合する。** 実行環境と監視側を分離し、監視できなかった実行も「異常なし」に数えない。
 
-METRは2026年11月5日、Anthropicの内部モデルのAECIベンチマーク上の進歩率が2025年10月以降に**1.9倍（95%信頼区間1.5〜2.8倍）**となったと報告した。METRは同時に、この測定がベンチマークへの適合や手法の影響を受け得ること、重要な内部証拠の多くが非公開化されたことも説明している。これは**モデル能力の伸びに関する評価**であり、自分たちのGitHub自律改善の成功率、変更品質、工数削減率を測った数字ではない。出典：[METR, *Independent Assessment of AI R&D Acceleration at Anthropic in October 2026*, 2026-11-05](https://metr.org/blog/2026-11-05-anthropic-ai-rd-acceleration-assessment/)。
+### 4. 人間の注意力は無限に増えない
 
-## 提案: 毎時実行を「成果物の状態」で管理する
+[Anthropic「How employment is changing at Anthropic」](https://www.anthropic.com/research/employment-at-anthropic)（10月16日）は、同社内で2026年8月に従業員が指示するAIエージェントの稼働時間が人間の労働時間の約6倍となり、出力の確認が新たな負担になっていると報告した。これは同社の定義による稼働時間の比較であり、「AIが人間6人分の成果を出す」という意味ではない。
 
-本節は**提案する運用設計**であり、効果の実測ではない。評価では返答より最終状態を見るというAnthropicの方法と、GitHubの書き込み・CIの公式仕様を組み合わせる。出典：[Anthropic Agent Evals](https://www.anthropic.com/research/demystifying-evals-for-ai-agents)、[GitHub Contents API](https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28)、[GitHub Actions workflow syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax)。
+毎時実行の結果をすべて人に読ませる設計は、変更量の増加に負ける。人間が見る対象は、重要な権限変更、失敗、評価悪化、採用・棄却の分かれ目に絞る。普段の実行記録は検索・比較できる形で残す。
 
-| 状態 | 必要な証拠 | 次へ進んでよい条件 |
+## 1時間ごとの改善を、成果につなげる実行手順
+
+以下は上記の研究と[GitHub公式API仕様](https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28)、[Actionsの権限仕様](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax)を組み合わせた**運用設計案**であり、このリポジトリで改善率を実測した結果ではない。
+
+| 段階 | 毎回確認するもの | 次へ進める条件 |
 | --- | --- | --- |
-| DISCOVERED | 一次資料URL、公開日、適用対象 | 検証可能な変更仮説がある |
-| IMPLEMENTED | 差分、commit SHA、対象ブランチ | 実際に変更ファイルが存在する |
-| TESTED | テスト条件、結果、対象SHA | 想定失敗が再現し修正後に通る |
-| REVIEWED | 評価記録、退行・費用の確認 | 採用根拠と未解決事項が見える |
-| MERGED | PR URL、merge commit SHA | 対象ブランチへの反映が検証できる |
-| RELEASED | 本番での確認結果または配布物の識別子 | 利用者が期待する状態が確かめられた |
+| 調査 | 最新main、前回の失敗、関連する一次資料URL | 今回直す問題を1件に絞った |
+| 基準測定 | 再現手順、失敗テスト、既存のCI結果 | 変更前の状態を保存した |
+| 修正 | 対象Issue、差分、commit SHA | 意図したファイルが実際に変わった |
+| 評価 | 同じ条件での前後比較、費用、退行 | 改善が確認でき、重大な退行がない |
+| 統合 | PR、対象SHAでのCI、merge commit | 必要な承認とチェックを通過した |
+| 利用確認 | 配布先や本番の観測結果 | 利用者が期待した状態を確認した |
+| 引き継ぎ | 残存障害、未検証事項、次の優先課題 | 次回が推測に頼らず再開できる |
 
-表の各状態名と判定条件は、本稿が提案する規約であり、GitHubやAnthropicが標準化した状態名ではない。出典（設計上の根拠）：[GitHub Contents API](https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28)、[GitHub Actions workflow syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax)、[Anthropic Agent Evals](https://www.anthropic.com/research/demystifying-evals-for-ai-agents)。
+[Anthropic「Effective harnesses for long-running agents」](https://www.anthropic.com/research/effective-harnesses-for-long-running-agents)（2025年11月26日）は、進捗ファイルとGit履歴で実行を引き継ぐ設計を示した。[OpenAI「Introducing the Agents API」](https://openai.com/index/introducing-the-agents-api/)（2026年9月10日）と[Databricks Sandboxの実装ガイド](https://developers.openai.com/cookbook/examples/agents_api/sandboxes/databricks/readme)（10月23日）は、長時間実行、道具の使用、隔離環境の管理について具体例を示す。使う製品は違っても「セッションが動いた」ことと「業務結果が確定した」ことを分ける必要がある。
 
-特に注意したいのは権限である。GitHub Actionsの`GITHUB_TOKEN`にはリポジトリやジョブの設定によって異なる権限があり、`contents: write`の設定文言だけで実際の書き込み成功を確約できない。書き込みが拒否された場合、許可の迂回ではなく、拒否理由の記録と正規の許可経路の確認へ進む。出典：[GitHub Actions workflow syntax, permissions](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax)、[GitHub REST Contents API](https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28)。
+採用ルールは、**同条件で改善が測れた変更だけを残し、測れなかった変更は保留、悪化した変更は戻す**。最初の実験では再現可能な過去の作業を固定し、旧方式と新方式の「証拠付き完了率」「人手介入」「再作業」「所要時間」「費用」を比較する。比較実験の件数や統計上の必要数は、課題のばらつきを見て事前に決める。
 
-## 実測するなら、何を比較するか
+## 一次資料14本：新しい順のリンク集
 
-以下は**未実施の実験計画**である。評価の設計根拠は実業務を再現し最終状態を測るAnthropicの方針と、トレースから評価を生成するOpenAIの例にある。サンプル数や合格基準は研究成果ではなく、この環境向けの事前登録案である。出典：[Anthropic Agent Evals](https://www.anthropic.com/research/demystifying-evals-for-ai-agents)、[OpenAI Agent Improvement Loop](https://developers.openai.com/cookbook/examples/agents_sdk/agent_improvement_loop)。
+記事を読む目的を「面白い情報の収集」で止めず、改善する部品に結びつけるための索引にした。公開日と内容は各発行元の原文に基づく。
 
-1. 過去の再現可能な作業20件を固定し、優先度・難易度ごとに層化する。新方式と旧方式に同じ課題を割り当て、実行順を入れ替える（計画値20件は暫定、統計的妥当性は未検証）。
-2. 結果は「コメントの成功宣言」ではなく、commit、対象SHAでのCI、必要ならmergeと利用者視点の確認で判定する。
-3. 主要指標は**証拠付き完了率**。副指標は1件当たりの人手介入、再作業回数、試験の退行、所要時間、API・実行コスト。
-4. 失敗例を固定の回帰テストへ追加し、旧方式の再現結果と新方式の結果を同時保存する。
-5. 変更が性能を改善しない、重要な回帰を起こす、証拠が欠ける場合は**採用保留または棄却**とし、次回実行へ未完了状態を正確に引き継ぐ。
-
-重要なのは、初回20件の比率を普遍的な成功率と解釈しないこと。差が小さければ実行数を増やし、信頼区間やタスク難度の偏りを報告する。これは本稿の測定上の注意であり、特定の改善量を予測する主張ではない。根拠：[Anthropic Agent Evals](https://www.anthropic.com/research/demystifying-evals-for-ai-agents)、[METRの不確実性の開示](https://metr.org/blog/2026-11-05-anthropic-ai-rd-acceleration-assessment/)。
-
-## 今回の公開可能性
-
-この記事用の既存レポジトリは、READMEと編集契約で、著者固有の実測、他のプロジェクトにも持ち帰れる知見、一次資料への接地を求めている。品質設定には一次資料の最低件数や自分のGitHub証拠の最低件数もある。出典：[KAFKA2306/articles README](https://github.com/KAFKA2306/articles/blob/main/README.md)、[編集契約](https://github.com/KAFKA2306/articles/blob/main/pipeline/contracts/article.md)、[pipeline/config.json](https://github.com/KAFKA2306/articles/blob/main/pipeline/config.json)。
-
-現段階で本稿が提示するのは、**外部事例と公開仕様に基づく実験可能な提案**までである。変更前後の自プロジェクトの同条件計測、失敗から再現テストを作った履歴、GitHubへの実反映、対象SHAでのCI、利用結果は本稿に添付していない。したがって効果実証済みの記事としては公開しない。必要な追加証拠は、対象Issue、before/after評価ログ、PR、commit SHA、CI実行URL、完成状態の観測記録である。公開保留の判断基準は：[AGENTS.md](https://github.com/KAFKA2306/articles/blob/main/AGENTS.md)、[article contract](https://github.com/KAFKA2306/articles/blob/main/pipeline/contracts/article.md)。
-
-## 重要主張と一次資料の照合台帳
-
-確認日はすべて**2026-11-07**。日付は資料の公開日。資料が証明しない範囲を右列に書いた。
-
-| 重要主張 | 一次資料・公開日 | 証明していないこと |
+| 公開日 | 一次資料 | 主に役立つ判断 |
 | --- | --- | --- |
-| エージェントの会話と最終状態は区別する | [Anthropic Agent Evals](https://www.anthropic.com/research/demystifying-evals-for-ai-agents), 2026-01-09 | 特定システムの完了率 |
-| OpenAIのCodex中心の製品開発事例 | [OpenAI Harness engineering](https://openai.com/index/harness-engineering/), 2026-02-11 | 他社・他repoでの速度向上 |
-| traces→feedback→evals→実装handoffを示す例 | [OpenAI Cookbook](https://developers.openai.com/cookbook/examples/agents_sdk/agent_improvement_loop), 2026-05-12 | 自動PRマージや本番改善の保証 |
-| 長期実行はGit履歴・進捗記録で引き継ぐ | [Anthropic long-running agents](https://www.anthropic.com/research/effective-harnesses-for-long-running-agents), 2025-11-26 | 定期実行全般への普遍的な効果 |
-| AECI上の加速1.9倍、95%区間1.5〜2.8倍 | [METR報告](https://metr.org/blog/2026-11-05-anthropic-ai-rd-acceleration-assessment/), 2026-11-05 | 自社開発自動化の速度・生産性 |
-| GitHubの書き込みはAPIと権限で管理される | [GitHub Contents API](https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28)、[Actions syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax), 更新日個別不明 | 今回の接続の書き込み権限があること |
-| このレポジトリでは実体験と独自の証拠が公開条件 | [README](https://github.com/KAFKA2306/articles/blob/main/README.md)、[編集契約](https://github.com/KAFKA2306/articles/blob/main/pipeline/contracts/article.md)、[設定](https://github.com/KAFKA2306/articles/blob/main/pipeline/config.json), 現行版確認2026-11-07 | 本稿が公開品質に到達したこと |
+| 2026-11-05 | [METR：AI R&D加速の独立評価](https://metr.org/blog/2026-11-05-anthropic-ai-rd-acceleration-assessment/) | AECI上の伸び率1.9倍（95%信頼区間1.5～2.8倍）と限界を読む |
+| 2026-11-05 | [METR：Anthropicの2026年8月Risk Reportレビュー](https://metr.org/blog/2026-11-05-rd-section-anthropic-risk-report-august-2026-review/) | 自動化リスクの早期警戒指標を検討する |
+| 2026-10-29 | [OpenAI：How we detect frontier model misalignment](https://openai.com/index/how-we-detect-frontier-model-misalignment/) | 不正な行動の発見と監視対象の設計 |
+| 2026-10-23 | [OpenAI Cookbook：Databricks Sandbox](https://developers.openai.com/cookbook/examples/agents_api/sandboxes/databricks/readme) | 隔離実行、権限、作成から破棄までの管理 |
+| 2026-10-22 | [METR：OpenAI内部監視のレッドチーム検証](https://metr.org/blog/2026-10-22-red-teaming-openai-agent-monitoring/) | 監視漏れと耐改ざん性を点検する |
+| 2026-10-16 | [Anthropic：How employment is changing at Anthropic](https://www.anthropic.com/research/employment-at-anthropic) | エージェント増加時の人間の確認負荷 |
+| 2026-10-13 | [Anthropic：Redesigning source control](https://www.anthropic.com/research/redesigning-source-control) | Git・ビルド・CIの処理能力と統合 |
+| 2026-10-09 | [Anthropic：Investigating unintended model actions](https://www.anthropic.com/research/investigating-unintended-model-actions) | 想定外の操作とその調査 |
+| 2026-10-06 | [METR：AI systems could cover up misbehavior](https://metr.org/blog/2026-10-06-ai-systems-could-cover-up-misbehavior/) | 実行ログを信頼し切らない監視設計 |
+| 2026-09-10 | [OpenAI：Introducing the Agents API](https://openai.com/index/introducing-the-agents-api/) | 長時間エージェント、実行環境、サブエージェント |
+| 2026-05-12 | [OpenAI：Agent Improvement Loop](https://developers.openai.com/cookbook/examples/agents_sdk/agent_improvement_loop) | トレースから評価・改善へつなぐ |
+| 2026-02-11 | [OpenAI：Harness engineering](https://openai.com/index/harness-engineering/) | AGENTS.md、リポジトリ知識、可観測性 |
+| 2026-01-09 | [Anthropic：Demystifying evals for AI agents](https://www.anthropic.com/research/demystifying-evals-for-ai-agents) | 完了判定と回帰評価 |
+| 2025-11-26 | [Anthropic：Effective harnesses for long-running agents](https://www.anthropic.com/research/effective-harnesses-for-long-running-agents) | 永続メモリと次回への引き継ぎ |
 
-**事実分類:** 一次資料に明示された内容は「外部公開証拠」。運用状態の表と実験設計は「筆者の提案」。自社の改善実績と稼働成否は「未検証」。提案と未検証を、実績や測定値として扱わない。この区分はレポジトリのclaim provenance規則に準拠する。出典：[AGENTS.md](https://github.com/KAFKA2306/articles/blob/main/AGENTS.md)。
+**最初の3本**は、[Anthropicのソース管理再設計](https://www.anthropic.com/research/redesigning-source-control)、[OpenAIのAgent Improvement Loop](https://developers.openai.com/cookbook/examples/agents_sdk/agent_improvement_loop)、[METRの監視侵入テスト](https://metr.org/blog/2026-10-22-red-teaming-openai-agent-monitoring/)。統合、評価、監視という別々の失敗をそれぞれ扱っている。
 
-## 結論
+また、[METRの11月5日の独立評価](https://metr.org/blog/2026-11-05-anthropic-ai-rd-acceleration-assessment/)が扱う「モデル能力の加速」と、現場の「GitHub修正完了率」は別の指標だ。前者を後者の成功実績として引用しない。
 
-**次の一時間にすることは、さらに大きな調査ではなく、ひとつの変更に対応する証拠の鎖を最後までつなぐこと。** これはAnthropicの最終状態評価、OpenAIの改善ループ、GitHubの実際の書き込み・CIの仕組みを組み合わせた**検証待ちの提案**である。出典：[Anthropic Agent Evals](https://www.anthropic.com/research/demystifying-evals-for-ai-agents)、[OpenAI improvement loop](https://developers.openai.com/cookbook/examples/agents_sdk/agent_improvement_loop)、[GitHub Contents API](https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28)。
+## 結論：次の1時間で残すべきもの
 
+次の1時間に必要なのは、もう一つ長い実行ログではない。**直すべき問題、修正前の再現結果、変更SHA、同じSHAでの検証結果、統合の結果、利用確認、残存課題**をひと続きに残すことだ。
+
+この方針が有効かは、提案を採用しただけでは分からない。[KAFKA2306/articles の編集契約](https://github.com/KAFKA2306/articles/blob/main/pipeline/contracts/article.md)が求めるとおり、対象Issue・PR・CI・前後比較・利用結果を別々に示し、改善が確認できた場合にだけ成果と呼ぶ。権限の拒否は迂回せずに記録し、正規の承認経路で扱う。
+
+---
+
+編集記録（未公開候補）：
+- タイトル案：① AIを1時間ごとに動かしても、開発が進まない理由（採用） ② エージェントは働いているのに、なぜ開発が終わらない？ ③ AIエージェント毎時改善の設計：2026年の一次資料14本
+- 独自観測：[PR #177](https://github.com/KAFKA2306/articles/pull/177)の状態・変更ファイルと、公開実測の不足を確認した。これは公開ワークフローの観測であり、運用改善の効果測定ではない。
+- 読者の行動：変更前後を同じ条件で測定し、問題から利用確認までの証拠を残す。未測定なら採用保留とする。
+- 適用条件：GitHubとCIに基づく継続的なコード変更。非コード業務には環境の最終状態に相当する成果物・判定方法の再設計が必要。
+- 再確認の起点：一次資料の訂正、GitHub/エージェントAPIの仕様変更、運用の前後比較が得られた時点。
+- 公開状態：GitHubでの候補保存まで。Zenn等での公開可否、独自改善の実測結果は未判定。
