@@ -109,6 +109,14 @@ broadly recognizable friction / desire
 
 The article may discuss authority/verification boundaries when they create reader value, but **finding a boundary is not itself a publication reason**.
 
+## 4A. Alternative-first research before drafting
+
+Before choosing a topic, tool, method, or claim, look beyond the first named product or familiar implementation. Start from the reader's job; compare the existing/default solution, direct competitors, adjacent approaches, and credible recent primary implementations or research. Expand the search when a new category or disconfirming evidence appears.
+
+Record consequential alternatives and why they were rejected, primary URLs and publication/revision dates, gaps in coverage, and what firsthand test would decide between plausible options. Compare with equivalent reader goals and evidence conditions; do not present a tool roundup, an untested winner, or invented firsthand evidence as an original article. Prefer to keep, revise, merge, or reject a weak candidate rather than publish filler.
+
+This discovery rule **does not change** the human-controlled publication boundary in section 13, the editorial value model, or privacy and source requirements.
+
 ## 5. Topic rejection rules
 
 Reject, merge, or keep private when a candidate is only:
