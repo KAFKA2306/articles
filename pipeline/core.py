@@ -288,7 +288,7 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
     fence_char = None
     fence_length = 0
     for line in article.splitlines(keepends=True):
-        match = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line.rstrip("\\r\\n"))
+        match = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line.rstrip("\r\n"))
         if fence_char is None:
             if match and (match.group(1)[0] == "~" or "`" not in match.group(2)):
                 fence_char, fence_length = match.group(1)[0], len(match.group(1))
