@@ -283,30 +283,40 @@ def verify_url(url: str) -> bool:
 def source_gate(article: str) -> tuple[bool, dict[str, object]]:
     urls = sorted(set(URL_RE.findall(article)))
     valid = [url for url in urls if verify_url(url)]
-    # Reachable repository homepages are not evidence of an experiment.
-    # Count a concrete, stable artifact instead of a generic project link.
-    def is_own_artifact(url: str) -> bool:
+    # A URL is not an independent experiment merely because it resolves.
+    # Restrict first-hand evidence to canonical, stable artifact identities.
+    def artifact_identity(url: str) -> str | None:
         parsed = urllib.parse.urlparse(url)
         if parsed.scheme != "https" or parsed.netloc.lower() != "github.com":
-            return False
+            return None
         parts = [part for part in parsed.path.split("/") if part]
         if len(parts) < 4 or parts[0] != str(CONFIG["owner"]):
-            return False
-        kind = parts[2]
-        if kind in {"commit", "pull", "issues"}:
-            return bool(parts[3])
-        if kind == "actions":
-            return len(parts) >= 5 and parts[3] == "runs" and bool(parts[4])
-        if kind == "blob":
-            return len(parts) >= 5 and parts[3] not in {"main", "master", "HEAD"}
-        return False
+            return None
+        repository = "/".join(parts[:2])
+        kind, identifier = parts[2], parts[3]
+        if kind in {"pull", "issues"} and len(parts) == 4 and identifier.isascii() and identifier.isdecimal():
+            return f"{repository}/{kind}/{int(identifier)}"
+        if kind == "commit" and len(parts) == 4 and re.fullmatch(r"[0-9a-fA-F]{40}", identifier):
+            return f"{repository}/commit/{identifier.lower()}"
+        if kind == "actions" and len(parts) == 5 and parts[3] == "runs" and parts[4].isascii() and parts[4].isdecimal():
+            return f"{repository}/actions/runs/{int(parts[4])}"
+        if kind == "blob" and len(parts) >= 5 and re.fullmatch(r"[0-9a-fA-F]{40}", identifier):
+            return f"{repository}/blob/{identifier.lower()}/{'/'.join(parts[4:])}"
+        return None
 
-    own = [url for url in valid if is_own_artifact(url)]
-    # An owner's generic GitHub page is neither original evidence nor
-    # an independent external source.
+    identities: set[str] = set()
+    own: list[str] = []
+    for url in valid:
+        identity = artifact_identity(url)
+        if identity is not None and identity not in identities:
+            identities.add(identity)
+            own.append(url)
+    # GitHub artifacts from another author can be references, but are not
+    # independent official documentation or our first-hand observations.
     external = [
         url for url in valid
-        if not url.startswith(f"https://github.com/{CONFIG['owner']}/")
+        if urllib.parse.urlparse(url).netloc.lower() != "github.com"
+        and not url.startswith(f"https://github.com/{CONFIG['owner']}/")
     ]
     gate = CONFIG["quality_gate"]
     ok = (
