@@ -561,12 +561,13 @@ def aggregate_evaluations(
 def passes_quality(review: dict[str, object], sources_ok: bool) -> bool:
     gate = core.CONFIG["quality_gate"]
     blocking = review.get("blocking_issues", [])
-    blocking_set = set(blocking) if isinstance(blocking, list) else set()
-    if {"premature_conclusion_in_opening", TITLE_BLOCKING_ISSUE} & blocking_set:
+    # A reviewer-reported blocking issue is a veto, not a score penalty.
+    # Unknown issue names must fail closed as the rubric evolves.
+    if not isinstance(blocking, list) or any(
+        not isinstance(issue, str) or not issue.strip() for issue in blocking
+    ):
         return False
-    if VALUE_BLOCKING_ISSUES & blocking_set:
-        return False
-    if GENERALIZATION_BLOCKING_ISSUES & blocking_set:
+    if blocking:
         return False
     return bool(
         sources_ok
