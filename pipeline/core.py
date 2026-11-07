@@ -284,6 +284,11 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
     # Examples in fenced code and internal comments are not cited evidence.
     evidence_text = re.sub(r"(?ms)^\s*(`{3,}|~{3,})[^\n]*\n.*?^\s*\1[^\n]*$", "", article)
     evidence_text = re.sub(r"(?s)<!--.*?-->", "", evidence_text)
+    # Markdown indented code blocks are examples, not article citations.
+    evidence_text = re.sub(
+        r"(?m)(?:(?<=\n\n)|\A)(?:(?: {4}|\t)(?![-*+]\s|\d+[.)]\s)[^\n]*(?:\n|$))+",
+        "", evidence_text,
+    )
     # Inline code is illustrative text, not a citation. Preserve prose links.
     evidence_text = re.sub(r"(?<!`)(`{1,2})(?!`)[^\n`]*\1(?!`)", "", evidence_text)
     urls = sorted(set(URL_RE.findall(evidence_text)))
