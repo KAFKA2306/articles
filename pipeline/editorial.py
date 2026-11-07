@@ -95,9 +95,13 @@ def _score(value: object) -> float:
         number = float(value)
         # Non-finite model scores must not be promoted to a perfect 5.0.
         # In Python, min(5.0, float("nan")) evaluates to 5.0.
-        if not math.isfinite(number):
+        if isinstance(value, bool) or not math.isfinite(number):
             return 0.0
-        return max(0.0, min(5.0, number))
+        # A reviewer score outside the rubric is malformed, not a value to
+        # clamp. 500 must not silently become a perfect 5.0.
+        if not 0.0 <= number <= 5.0:
+            return 0.0
+        return number
     except (TypeError, ValueError, OverflowError):
         return 0.0
 

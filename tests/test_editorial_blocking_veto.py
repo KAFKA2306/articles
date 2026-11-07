@@ -27,6 +27,25 @@ class BlockingIssueGateTests(unittest.TestCase):
                         self.assertFalse(editorial.passes_quality(
                             {**self.good, axis: bad}, True))
 
+    def test_out_of_rubric_scores_cannot_be_promoted_to_perfect(self):
+        # A model returning 500 previously passed as 5.0 after clamping.
+        for bad in (500, 5.1, -1, True, "500"):
+            with self.subTest(score=repr(bad)):
+                for axis in ("logic", "interest", "overall", "story_overall"):
+                    with self.subTest(axis=axis):
+                        self.assertFalse(editorial.passes_quality(
+                            {**self.good, axis: bad}, True))
+
+    def test_out_of_rubric_minority_review_is_not_hidden_by_median(self):
+        from unittest.mock import patch
+
+        good = dict(self.good)
+        corrupted = {**good, "logic": 500}
+        with patch.object(editorial, "evaluate", side_effect=[good, corrupted, good]):
+            combined = editorial.aggregate_evaluations("fixture", rounds=3)
+        self.assertIn("reviewer_score_below_quality_floor", combined["blocking_issues"])
+        self.assertFalse(editorial.passes_quality(combined, True))
+
     def test_nonfinite_minority_review_cannot_be_hidden_by_median(self):
         from unittest.mock import patch
 
