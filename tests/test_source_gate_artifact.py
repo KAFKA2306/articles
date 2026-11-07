@@ -148,6 +148,18 @@ class SourceGateArtifactTests(unittest.TestCase):
         self.assertTrue(ok)
         self.assertEqual(3, len(report["valid_urls"]))
 
+    def test_fenced_html_comment_markers_do_not_hide_prose_evidence(self):
+        urls = [
+            "https://github.com/KAFKA2306/articles/pull/185",
+            "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
+            "https://docs.python.org/3/",
+        ]
+        article = "```html\\n<!--\\n```\\n" + "\\n".join(urls) + "\\n<!-- internal note -->"
+        with patch.object(core, "verify_url", return_value=True):
+            ok, report = core.source_gate(article)
+        self.assertTrue(ok)
+        self.assertEqual(3, len(report["valid_urls"]))
+
     def test_inline_code_urls_do_not_satisfy_evidence_gate(self):
         urls = [
             "https://github.com/KAFKA2306/articles/pull/185",
