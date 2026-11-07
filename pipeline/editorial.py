@@ -539,14 +539,18 @@ def aggregate_evaluations(
     for key in keys:
         values = sorted(_score(review.get(key, 0.0)) for review in reviews)
         aggregate[key] = values[len(values) // 2]
-    aggregate["blocking_issues"] = list(
-        dict.fromkeys(
-            issue
-            for review in reviews
-            for issue in review.get("blocking_issues", [])
-            if isinstance(issue, str)
-        )
-    )
+    # Preserve malformed or absent reviewer vetoes as an explicit failure.
+    # Silently dropping them would turn an incomplete review into approval.
+    blocking_issues: list[str] = []
+    for review in reviews:
+        issues = review.get("blocking_issues")
+        if not isinstance(issues, list) or any(
+            not isinstance(issue, str) or not issue.strip() for issue in issues
+        ):
+            blocking_issues.append("invalid_reviewer_blocking_issues")
+        else:
+            blocking_issues.extend(issues)
+    aggregate["blocking_issues"] = list(dict.fromkeys(blocking_issues))
     aggregate["revision_actions"] = list(
         dict.fromkeys(
             action
@@ -560,7 +564,7 @@ def aggregate_evaluations(
 
 def passes_quality(review: dict[str, object], sources_ok: bool) -> bool:
     gate = core.CONFIG["quality_gate"]
-    blocking = review.get("blocking_issues", [])
+    blocking = review.get("blocking_issues")
     # A reviewer-reported blocking issue is a veto, not a score penalty.
     # Unknown issue names must fail closed as the rubric evolves.
     if not isinstance(blocking, list) or any(
