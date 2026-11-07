@@ -283,12 +283,31 @@ def verify_url(url: str) -> bool:
 def source_gate(article: str) -> tuple[bool, dict[str, object]]:
     urls = sorted(set(URL_RE.findall(article)))
     valid = [url for url in urls if verify_url(url)]
-    own = [
-        url
-        for url in valid
-        if url.startswith("https://github.com/KAFKA2306/")
+    # Reachable repository homepages are not evidence of an experiment.
+    # Count a concrete, stable artifact instead of a generic project link.
+    def is_own_artifact(url: str) -> bool:
+        parsed = urllib.parse.urlparse(url)
+        if parsed.scheme != "https" or parsed.netloc.lower() != "github.com":
+            return False
+        parts = [part for part in parsed.path.split("/") if part]
+        if len(parts) < 4 or parts[0] != str(CONFIG["owner"]):
+            return False
+        kind = parts[2]
+        if kind in {"commit", "pull", "issues"}:
+            return bool(parts[3])
+        if kind == "actions":
+            return len(parts) >= 5 and parts[3] == "runs" and bool(parts[4])
+        if kind == "blob":
+            return len(parts) >= 5 and parts[3] not in {"main", "master", "HEAD"}
+        return False
+
+    own = [url for url in valid if is_own_artifact(url)]
+    # An owner's generic GitHub page is neither original evidence nor
+    # an independent external source.
+    external = [
+        url for url in valid
+        if not url.startswith(f"https://github.com/{CONFIG['owner']}/")
     ]
-    external = [url for url in valid if url not in own]
     gate = CONFIG["quality_gate"]
     ok = (
         len(valid) >= int(gate["minimum_primary_sources"])
