@@ -264,6 +264,13 @@ class PipelineContractTests(unittest.TestCase):
             "generalizable_insight": "KPIの値だけでなくsource / scope / methodを保存すると、更新時の差分を別案件でも説明可能な判断材料にできる",
             "transfer_conditions": "同じKPIを複数時点・複数sourceで再計算し、scopeとmethodを比較できる場合",
             "non_transfer_conditions": "source定義自体が不明で比較軸を復元できない場合や、別populationへ値そのものを外挿する場合",
+            "alternatives": [
+                {"kind": kind, "name": kind, "reader_job": "same reader task",
+                 "primary_urls": ["https://github.com/KAFKA2306/articles"], "tradeoff": "time versus accuracy"}
+                for kind in ("incumbent", "direct", "adjacent")
+            ],
+            "unsearched_scope": "unexamined alternatives",
+            "alternative_decision": {"verdict": "unresolved"},
         }
         self.assertTrue(editorial.story_ready(topic))
         topic.pop("hypothesis_update")
