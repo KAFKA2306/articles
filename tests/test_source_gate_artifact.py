@@ -96,7 +96,7 @@ class SourceGateArtifactTests(unittest.TestCase):
             "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
             "https://docs.python.org/3/",
         ]
-        article = "Example only:\n\`\`\`text\n" + "\n".join(urls) + "\n\`\`\n"
+        article = "Example only:\n```text\n" + "\n".join(urls) + "\n``\n"
         with patch.object(core, "verify_url", return_value=True):
             ok, report = core.source_gate(article)
         self.assertFalse(ok)
@@ -112,7 +112,7 @@ class SourceGateArtifactTests(unittest.TestCase):
             "Evidence: https://github.com/KAFKA2306/articles/pull/185 "
             "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c "
             "https://docs.python.org/3/\n"
-            "\`\`\`text\nhttps://example.invalid/fake\n\`\`\`"
+            "```text\nhttps://example.invalid/fake\n```"
         )
         with patch.object(core, "verify_url", return_value=True):
             ok, report = core.source_gate(article)
