@@ -107,6 +107,71 @@ class SourceGateArtifactTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertEqual([], report["valid_urls"])
 
+    def test_unclosed_and_shorter_fences_do_not_count_example_urls(self):
+        urls = [
+            "https://github.com/KAFKA2306/articles/pull/185",
+            "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
+            "https://docs.python.org/3/",
+        ]
+        examples = [
+            "```text\n" + "\n".join(urls),
+            "````text\n```\n" + "\n".join(urls),
+            "~~~~text\n```\n" + "\n".join(urls),
+        ]
+        for article in examples:
+            with self.subTest(article=article[:20]), patch.object(core, "verify_url", return_value=True):
+                ok, report = core.source_gate(article)
+            self.assertFalse(ok)
+            self.assertEqual([], report["valid_urls"])
+
+    def test_valid_fence_preserves_following_prose_sources(self):
+        urls = [
+            "https://github.com/KAFKA2306/articles/pull/185",
+            "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
+            "https://docs.python.org/3/",
+        ]
+        article = "````text\nhttps://example.invalid/sample\n````\n" + "\n".join(urls)
+        with patch.object(core, "verify_url", return_value=True):
+            ok, report = core.source_gate(article)
+        self.assertTrue(ok)
+        self.assertEqual(3, len(report["valid_urls"]))
+
+    def test_comment_fence_does_not_hide_real_citations(self):
+        urls = [
+            "https://github.com/KAFKA2306/articles/pull/185",
+            "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
+            "https://docs.python.org/3/",
+        ]
+        article = "<!--\n```\n-->\n" + "\n".join(urls)
+        with patch.object(core, "verify_url", return_value=True):
+            ok, report = core.source_gate(article)
+        self.assertTrue(ok)
+        self.assertEqual(3, len(report["valid_urls"]))
+
+    def test_fenced_html_comment_markers_do_not_hide_prose_evidence(self):
+        urls = [
+            "https://github.com/KAFKA2306/articles/pull/185",
+            "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
+            "https://docs.python.org/3/",
+        ]
+        article = "```html\n<!--\n```\n" + "\n".join(urls) + "\n<!-- internal note -->"
+        with patch.object(core, "verify_url", return_value=True):
+            ok, report = core.source_gate(article)
+        self.assertTrue(ok)
+        self.assertEqual(3, len(report["valid_urls"]))
+
+    def test_indented_code_after_fence_is_not_cited_evidence(self):
+        urls = [
+            "https://github.com/KAFKA2306/articles/pull/185",
+            "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
+            "https://docs.python.org/3/",
+        ]
+        article = "Example:\n\x60\x60\x60text\ncode\n\x60\x60\x60\n" + "".join("    " + url + "\n" for url in urls)
+        with patch.object(core, "verify_url", return_value=True):
+            ok, report = core.source_gate(article)
+        self.assertFalse(ok)
+        self.assertEqual([], report["valid_urls"])
+
     def test_inline_code_urls_do_not_satisfy_evidence_gate(self):
         urls = [
             "https://github.com/KAFKA2306/articles/pull/185",
