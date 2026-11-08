@@ -358,7 +358,8 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
             return None
         repository = "/".join(parts[:2])
         kind, identifier = parts[2], parts[3]
-        if kind in {"pull", "issues"} and len(parts) == 4 and identifier.isascii() and identifier.isdecimal():
+        # Issues can describe proposed work; they do not establish completed first-hand evidence.
+        if kind == "pull" and len(parts) == 4 and identifier.isascii() and identifier.isdecimal():
             return f"{repository}/{kind}/{int(identifier)}"
         if kind == "commit" and len(parts) == 4 and re.fullmatch(r"[0-9a-fA-F]{40}", identifier):
             return f"{repository}/commit/{identifier.lower()}"
