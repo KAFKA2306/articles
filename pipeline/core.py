@@ -311,13 +311,13 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
                     in_comment = True
                     cursor = start + 4
             clean = "".join(visible)
-            match = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", clean.rstrip("\r\n"))
+            match = re.match(r"^ *(?:[-*+] |\d+[.)] )? {0,3}(`{3,}|~{3,})(.*)$", clean.rstrip("\r\n"))
             if match and (match.group(1)[0] == "~" or "`" not in match.group(2)):
                 fence_char, fence_length = match.group(1)[0], len(match.group(1))
                 continue
             evidence_lines.append(clean)
         else:
-            match = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line.rstrip("\r\n"))
+            match = re.match(r"^ *(?:[-*+] |\d+[.)] )? {0,3}(`{3,}|~{3,})(.*)$", line.rstrip("\r\n"))
             if match and match.group(1)[0] == fence_char and len(match.group(1)) >= fence_length and not match.group(2).strip():
                 fence_char = None
                 fence_length = 0
