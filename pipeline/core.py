@@ -295,17 +295,22 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
     for line in article.splitlines(keepends=True):
         if fence_char is None:
             visible = []
+            # Inline code markers are literal, not HTML comment delimiters.
+            marker_line = re.sub(
+                r"(?<!`)(`{1,2})(?!`)[^\n`]*\1(?!`)",
+                lambda match: " " * len(match.group(0)), line,
+            )
             cursor = 0
             while cursor < len(line):
                 if in_comment:
-                    end = line.find("-->", cursor)
+                    end = marker_line.find("-->", cursor)
                     if end < 0:
                         cursor = len(line)
                     else:
                         in_comment = False
                         cursor = end + 3
                 else:
-                    start = line.find("<!--", cursor)
+                    start = marker_line.find("<!--", cursor)
                     if start < 0:
                         visible.append(line[cursor:])
                         break
