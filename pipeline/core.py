@@ -425,7 +425,18 @@ JSONのみ返してください。
         "originality",
         "clarity",
     ]
-    values = [float(result.get(key, 0.0)) for key in axes]
+    # Never turn a missing or malformed model verdict into a fabricated score.
+    # The caller must see an invalid review rather than silently treating it
+    # as a real zero (or accepting non-finite JSON numbers).
+    values = []
+    for key in axes:
+        value = result.get(key)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"review score {key} must be numeric")
+        score = float(value)
+        if not (0.0 <= score <= 5.0):
+            raise ValueError(f"review score {key} must be finite and in [0, 5]")
+        values.append(score)
     result["overall"] = round(sum(values) / len(values), 3)
     result["evaluation_kind"] = str(
         CONFIG.get(
