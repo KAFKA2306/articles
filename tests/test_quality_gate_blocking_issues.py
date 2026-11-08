@@ -40,6 +40,25 @@ class BlockingIssueGateTests(unittest.TestCase):
             aggregated = aggregate_evaluations("example")
         self.assertFalse(passes_quality(aggregated, sources_ok=True))
 
+    def test_incomplete_numeric_review_cannot_be_outvoted(self):
+        from unittest.mock import patch
+        from pipeline.core import aggregate_evaluations
+        clean = {**self.review, "blocking_issues": [], "revision_actions": []}
+        incomplete = {**clean}
+        del incomplete["logic"]
+        with patch("pipeline.core.evaluate", side_effect=[clean, incomplete, clean]):
+            aggregated = aggregate_evaluations("example")
+        self.assertFalse(passes_quality(aggregated, sources_ok=True))
+
+    def test_nonfinite_numeric_review_cannot_pass(self):
+        from unittest.mock import patch
+        from pipeline.core import aggregate_evaluations
+        clean = {**self.review, "blocking_issues": [], "revision_actions": []}
+        invalid = {**clean, "overall": float("nan")}
+        with patch("pipeline.core.evaluate", side_effect=[clean, invalid, clean]):
+            aggregated = aggregate_evaluations("example")
+        self.assertFalse(passes_quality(aggregated, sources_ok=True))
+
     def test_clean_review_with_sources_still_passes(self):
         self.assertTrue(passes_quality({**self.review, "blocking_issues": []}, sources_ok=True))
 
