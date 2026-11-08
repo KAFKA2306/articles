@@ -289,6 +289,7 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
     evidence_lines = []
     fence_char = None
     fence_length = 0
+    fence_in_list = False
     in_comment = False
     for line in article.splitlines(keepends=True):
         if fence_char is None:
@@ -314,10 +315,12 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
             match = re.match(r"^ *(?:[-*+] |\d+[.)] )? {0,3}(`{3,}|~{3,})(.*)$", clean.rstrip("\r\n"))
             if match and (match.group(1)[0] == "~" or "`" not in match.group(2)):
                 fence_char, fence_length = match.group(1)[0], len(match.group(1))
+                fence_in_list = bool(re.match(r"^ *(?:[-*+] |\d+[.)] )", clean))
                 continue
             evidence_lines.append(clean)
         else:
-            match = re.match(r"^ *(?:[-*+] |\d+[.)] )? {0,3}(`{3,}|~{3,})(.*)$", line.rstrip("\r\n"))
+            closing_pattern = (r"^ *(?:[-*+] |\d+[.)] )? {0,3}" if fence_in_list else r"^ {0,3}") + r"(`{3,}|~{3,})(.*)$"
+            match = re.match(closing_pattern, line.rstrip("\r\n"))
             if match and match.group(1)[0] == fence_char and len(match.group(1)) >= fence_length and not match.group(2).strip():
                 fence_char = None
                 fence_length = 0
