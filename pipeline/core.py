@@ -455,7 +455,11 @@ def aggregate_evaluations(
         values = sorted(float(review.get(key, 0.0)) for review in reviews)
         aggregate[key] = values[len(values) // 2]
     # A missing or malformed blocker verdict in any round is not a clean review.
-    if not all(isinstance(review.get("blocking_issues"), list) for review in reviews):
+    if not all(
+        isinstance(review.get("blocking_issues"), list)
+        and all(isinstance(issue, str) and issue.strip() for issue in review["blocking_issues"])
+        for review in reviews
+    ):
         aggregate["blocking_issues"] = None
     else:
         aggregate["blocking_issues"] = list(
