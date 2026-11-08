@@ -454,14 +454,18 @@ def aggregate_evaluations(
     for key in axes:
         values = sorted(float(review.get(key, 0.0)) for review in reviews)
         aggregate[key] = values[len(values) // 2]
-    aggregate["blocking_issues"] = list(
-        dict.fromkeys(
-            issue
-            for review in reviews
-            for issue in review.get("blocking_issues", [])
-            if isinstance(issue, str)
+    # A missing or malformed blocker verdict in any round is not a clean review.
+    if not all(isinstance(review.get("blocking_issues"), list) for review in reviews):
+        aggregate["blocking_issues"] = None
+    else:
+        aggregate["blocking_issues"] = list(
+            dict.fromkeys(
+                issue
+                for review in reviews
+                for issue in review["blocking_issues"]
+                if isinstance(issue, str)
+            )
         )
-    )
     aggregate["revision_actions"] = list(
         dict.fromkeys(
             action
