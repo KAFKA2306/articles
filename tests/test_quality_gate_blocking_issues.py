@@ -59,6 +59,32 @@ class BlockingIssueGateTests(unittest.TestCase):
             aggregated = aggregate_evaluations("example")
         self.assertFalse(passes_quality(aggregated, sources_ok=True))
 
+    def test_model_review_missing_score_is_not_silently_zero(self):
+        import json
+        from unittest.mock import patch
+        from pipeline.core import evaluate
+        payload = {"logic": 5, "utility": 5, "readability": 5, "originality": 5}
+        with patch("pipeline.core.model_call", return_value=json.dumps(payload)):
+            with self.assertRaisesRegex(ValueError, "clarity"):
+                evaluate("example")
+
+    def test_model_review_nonfinite_score_is_rejected(self):
+        import json
+        from unittest.mock import patch
+        from pipeline.core import evaluate
+        payload = {"logic": 5, "utility": 5, "readability": 5, "originality": 5, "clarity": float("nan")}
+        with patch("pipeline.core.model_call", return_value=json.dumps(payload)):
+            with self.assertRaisesRegex(ValueError, "clarity"):
+                evaluate("example")
+
+    def test_complete_model_review_retains_mean(self):
+        import json
+        from unittest.mock import patch
+        from pipeline.core import evaluate
+        payload = {"logic": 5, "utility": 4, "readability": 3, "originality": 4, "clarity": 4, "blocking_issues": []}
+        with patch("pipeline.core.model_call", return_value=json.dumps(payload)):
+            self.assertEqual(4.0, evaluate("example")["overall"])
+
     def test_clean_review_with_sources_still_passes(self):
         self.assertTrue(passes_quality({**self.review, "blocking_issues": []}, sources_ok=True))
 
