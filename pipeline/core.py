@@ -459,8 +459,21 @@ def aggregate_evaluations(
         ),
     }
     for key in axes:
-        values = sorted(float(review.get(key, 0.0)) for review in reviews)
-        aggregate[key] = values[len(values) // 2]
+        # Every review must supply a finite score within the declared scale.
+        values = []
+        for review in reviews:
+            value = review.get(key)
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                aggregate[key] = None
+                break
+            score = float(value)
+            if not (0.0 <= score <= 5.0) or score != score:
+                aggregate[key] = None
+                break
+            values.append(score)
+        else:
+            values.sort()
+            aggregate[key] = values[len(values) // 2]
     # A missing or malformed blocker verdict in any round is not a clean review.
     if not all(
         isinstance(review.get("blocking_issues"), list)
@@ -500,15 +513,20 @@ def passes_quality(
         "originality",
         "clarity",
     ]
+    def valid_score(key: str, minimum: float) -> bool:
+        value = review.get(key)
+        return (
+            not isinstance(value, bool)
+            and isinstance(value, (int, float))
+            and minimum <= float(value) <= 5.0
+        )
+
     return bool(
         sources_ok
         and isinstance(review.get("blocking_issues"), list)
         and not review["blocking_issues"]
-        and float(review["overall"]) >= float(gate["minimum_overall"])
-        and all(
-            float(review[key]) >= float(gate["minimum_axis"])
-            for key in axes
-        )
+        and valid_score("overall", float(gate["minimum_overall"]))
+        and all(valid_score(key, float(gate["minimum_axis"])) for key in axes)
     )
 
 
