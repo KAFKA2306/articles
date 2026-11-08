@@ -31,6 +31,15 @@ class BlockingIssueGateTests(unittest.TestCase):
             aggregated = aggregate_evaluations("example")
         self.assertFalse(passes_quality(aggregated, sources_ok=True))
 
+    def test_malformed_blocker_entry_cannot_be_discarded_by_aggregation(self):
+        from unittest.mock import patch
+        from pipeline.core import aggregate_evaluations
+        clean = {**self.review, "blocking_issues": [], "revision_actions": []}
+        malformed = {**self.review, "blocking_issues": [None], "revision_actions": []}
+        with patch("pipeline.core.evaluate", side_effect=[clean, malformed, clean]):
+            aggregated = aggregate_evaluations("example")
+        self.assertFalse(passes_quality(aggregated, sources_ok=True))
+
     def test_clean_review_with_sources_still_passes(self):
         self.assertTrue(passes_quality({**self.review, "blocking_issues": []}, sources_ok=True))
 
