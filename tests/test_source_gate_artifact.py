@@ -201,6 +201,18 @@ class SourceGateArtifactTests(unittest.TestCase):
                     self.assertTrue(ok)
                     self.assertEqual(3, len(report["valid_urls"]))
 
+    def test_backtick_wrapped_comment_closer_restores_later_citations(self):
+        urls = [
+            "https://github.com/KAFKA2306/articles/pull/185",
+            "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
+            "https://docs.python.org/3/",
+        ]
+        article = "<!-- note: `-->`\n" + "\n".join(urls)
+        with patch.object(core, "verify_url", return_value=True):
+            ok, report = core.source_gate(article)
+        self.assertTrue(ok)
+        self.assertEqual(3, len(report["valid_urls"]))
+
     def test_inline_examples_do_not_hide_prose_citations(self):
         urls = [
             "https://github.com/KAFKA2306/articles/pull/185",
