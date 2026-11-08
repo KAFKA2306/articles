@@ -487,6 +487,7 @@ def passes_quality(
     ]
     return bool(
         sources_ok
+        and not review.get("blocking_issues")
         and float(review["overall"]) >= float(gate["minimum_overall"])
         and all(
             float(review[key]) >= float(gate["minimum_axis"])
