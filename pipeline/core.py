@@ -313,7 +313,7 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
                     in_comment = True
                     cursor = start + 4
             clean = "".join(visible)
-            match = re.match(r"^( {0,7})(?:([-*+] |\\d+[.)] ))? {0,3}(`{3,}|~{3,})(.*)$", clean.rstrip("\\r\\n"))
+            match = re.match(r"^( {0,7})(?:([-*+] |\d+[.)] ))? {0,3}(`{3,}|~{3,})(.*)$", clean.rstrip("\r\n"))
             if match and (match.group(3)[0] == "~" or "`" not in match.group(4)):
                 fence_char, fence_length = match.group(3)[0], len(match.group(3))
                 fence_in_list = match.group(2) is not None
@@ -321,7 +321,7 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
                 continue
             evidence_lines.append(clean)
         else:
-            closing_prefix = (r"^ *(?:[-*+] |\\d+[.)] )? {0,3}" if fence_in_list
+            closing_prefix = (r"^ *(?:[-*+] |\d+[.)] )? {0,3}" if fence_in_list
                               else (rf"^ {{{fence_indent},{fence_indent + 3}}}" if fence_indent >= 4 else r"^ {0,3}"))
             closing_pattern = closing_prefix + r"(`{3,}|~{3,})(.*)$"
             match = re.match(closing_pattern, line.rstrip("\r\n"))
