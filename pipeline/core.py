@@ -297,7 +297,7 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
             visible = []
             # Scan code spans only outside comments; inside comments backticks
             # are literal and cannot join spans across comment boundaries.
-            marker = re.compile(r"(?<!`)(`{1,2})(?!`)[^\n`]*\1(?!`)|<!--")
+            marker = re.compile(r"(?<![\\`])(`{1,2})(?!`)[^\n`]*\1(?!`)|<!--")
             cursor = 0
             while cursor < len(line):
                 if in_comment:
@@ -313,6 +313,9 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
                         visible.append(line[cursor:])
                         break
                     visible.append(line[cursor:token.start()])
+                    if token.group(0) != "<!--":
+                        # Keep inline spans for fence recognition; strip later.
+                        visible.append(token.group(0))
                     if token.group(0) == "<!--":
                         in_comment = True
                     cursor = token.end()
