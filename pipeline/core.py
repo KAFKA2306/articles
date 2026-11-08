@@ -513,15 +513,20 @@ def passes_quality(
         "originality",
         "clarity",
     ]
+    def valid_score(key: str, minimum: float) -> bool:
+        value = review.get(key)
+        return (
+            not isinstance(value, bool)
+            and isinstance(value, (int, float))
+            and minimum <= float(value) <= 5.0
+        )
+
     return bool(
         sources_ok
         and isinstance(review.get("blocking_issues"), list)
         and not review["blocking_issues"]
-        and float(review["overall"]) >= float(gate["minimum_overall"])
-        and all(
-            float(review[key]) >= float(gate["minimum_axis"])
-            for key in axes
-        )
+        and valid_score("overall", float(gate["minimum_overall"]))
+        and all(valid_score(key, float(gate["minimum_axis"])) for key in axes)
     )
 
 
