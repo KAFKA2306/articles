@@ -303,7 +303,7 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
             cursor = 0
             while cursor < len(line):
                 if in_comment:
-                    end = marker_line.find("-->", cursor)
+                    end = line.find("-->", cursor)
                     if end < 0:
                         cursor = len(line)
                     else:
