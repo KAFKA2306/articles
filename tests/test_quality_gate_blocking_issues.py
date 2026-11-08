@@ -22,6 +22,15 @@ class BlockingIssueGateTests(unittest.TestCase):
         # A reviewer response without this field is not a clean review.
         self.assertFalse(passes_quality(self.review, sources_ok=True))
 
+    def test_aggregated_review_missing_one_verdict_fails_closed(self):
+        from unittest.mock import patch
+        from pipeline.core import aggregate_evaluations
+        complete = {**self.review, "blocking_issues": [], "revision_actions": []}
+        missing = {**self.review, "revision_actions": []}
+        with patch("pipeline.core.evaluate", side_effect=[complete, missing, complete]):
+            aggregated = aggregate_evaluations("example")
+        self.assertFalse(passes_quality(aggregated, sources_ok=True))
+
     def test_clean_review_with_sources_still_passes(self):
         self.assertTrue(passes_quality({**self.review, "blocking_issues": []}, sources_ok=True))
 
