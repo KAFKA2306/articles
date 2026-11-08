@@ -459,8 +459,21 @@ def aggregate_evaluations(
         ),
     }
     for key in axes:
-        values = sorted(float(review.get(key, 0.0)) for review in reviews)
-        aggregate[key] = values[len(values) // 2]
+        # Every review must supply a finite score within the declared scale.
+        values = []
+        for review in reviews:
+            value = review.get(key)
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                aggregate[key] = None
+                break
+            score = float(value)
+            if not (0.0 <= score <= 5.0) or score != score:
+                aggregate[key] = None
+                break
+            values.append(score)
+        else:
+            values.sort()
+            aggregate[key] = values[len(values) // 2]
     # A missing or malformed blocker verdict in any round is not a clean review.
     if not all(
         isinstance(review.get("blocking_issues"), list)
