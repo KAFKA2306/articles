@@ -289,6 +289,8 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
     evidence_lines = []
     fence_char = None
     fence_length = 0
+    fence_in_list = False
+    fence_indent = 0
     in_comment = False
     for line in article.splitlines(keepends=True):
         if fence_char is None:
@@ -311,13 +313,18 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
                     in_comment = True
                     cursor = start + 4
             clean = "".join(visible)
-            match = re.match(r"^ *(?:[-*+] |\d+[.)] )? {0,3}(`{3,}|~{3,})(.*)$", clean.rstrip("\r\n"))
-            if match and (match.group(1)[0] == "~" or "`" not in match.group(2)):
-                fence_char, fence_length = match.group(1)[0], len(match.group(1))
+            match = re.match(r"^( {0,7})(?:([-*+] |\d+[.)] ))? {0,3}(`{3,}|~{3,})(.*)$", clean.rstrip("\r\n"))
+            if match and (match.group(3)[0] == "~" or "`" not in match.group(4)):
+                fence_char, fence_length = match.group(3)[0], len(match.group(3))
+                fence_in_list = match.group(2) is not None
+                fence_indent = len(match.group(1))
                 continue
             evidence_lines.append(clean)
         else:
-            match = re.match(r"^ *(?:[-*+] |\d+[.)] )? {0,3}(`{3,}|~{3,})(.*)$", line.rstrip("\r\n"))
+            closing_prefix = (r"^ *(?:[-*+] |\d+[.)] )? {0,3}" if fence_in_list
+                              else (rf"^ {{{fence_indent},{fence_indent + 3}}}" if fence_indent >= 4 else r"^ {0,3}"))
+            closing_pattern = closing_prefix + r"(`{3,}|~{3,})(.*)$"
+            match = re.match(closing_pattern, line.rstrip("\r\n"))
             if match and match.group(1)[0] == fence_char and len(match.group(1)) >= fence_length and not match.group(2).strip():
                 fence_char = None
                 fence_length = 0
