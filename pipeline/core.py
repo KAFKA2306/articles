@@ -274,6 +274,18 @@ def verify_url(url: str) -> bool:
             headers={"User-Agent": "KAFKA2306-articles/3.0"},
         )
         with urllib.request.urlopen(request, timeout=15) as response:
+            # urllib follows redirects. Validate the destination, not only the input.
+            final_url = urllib.parse.urlparse(response.geturl())
+            if (
+                final_url.scheme != "https"
+                or final_url.netloc.lower() not in set(CONFIG["allowed_primary_source_hosts"])
+            ):
+                return False
+            if (
+                final_url.netloc.lower() == "zenn.dev"
+                and not final_url.path.startswith("/zenn/articles/")
+            ):
+                return False
             response.read(512)
             return 200 <= int(response.status) < 400
     except Exception:
