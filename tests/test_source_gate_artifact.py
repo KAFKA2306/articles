@@ -349,5 +349,29 @@ class SourceGateArtifactTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertEqual([], report["valid_urls"])
 
+    def test_two_issue_proposals_cannot_pass_as_first_hand_evidence(self):
+        article = (
+            "https://github.com/KAFKA2306/articles/issues/172\n"
+            "https://github.com/KAFKA2306/articles/issues/173\n"
+            "https://docs.python.org/3/\n"
+        )
+        with patch.object(core, "verify_url", return_value=True):
+            ok, report = core.source_gate(article)
+        self.assertFalse(ok)
+        self.assertEqual([], report["own_github"])
+        self.assertEqual(3, len(report["valid_urls"]))
+
+    def test_completed_artifacts_still_pass_with_external_source(self):
+        article = (
+            "https://github.com/KAFKA2306/articles/pull/198\n"
+            "https://github.com/KAFKA2306/articles/commit/6629a66d6bbefcdacf5101b78f60efbbf6eb888f\n"
+            "https://docs.python.org/3/\n"
+        )
+        with patch.object(core, "verify_url", return_value=True):
+            ok, report = core.source_gate(article)
+        self.assertTrue(ok)
+        self.assertEqual(2, len(report["own_github"]))
+
+
 if __name__ == "__main__":
     unittest.main()
