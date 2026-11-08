@@ -295,11 +295,9 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
     for line in article.splitlines(keepends=True):
         if fence_char is None:
             visible = []
-            # Inline code markers are literal, not HTML comment delimiters.
-            marker_line = re.sub(
-                r"(?<!`)(`{1,2})(?!`)[^\n`]*\1(?!`)",
-                lambda match: " " * len(match.group(0)), line,
-            )
+            # Scan code spans only outside comments; inside comments backticks
+            # are literal and cannot join spans across comment boundaries.
+            marker = re.compile(r"(?<!`)(`{1,2})(?!`)[^\n`]*\1(?!`)|<!--")
             cursor = 0
             while cursor < len(line):
                 if in_comment:
@@ -310,13 +308,14 @@ def source_gate(article: str) -> tuple[bool, dict[str, object]]:
                         in_comment = False
                         cursor = end + 3
                 else:
-                    start = marker_line.find("<!--", cursor)
-                    if start < 0:
+                    token = marker.search(line, cursor)
+                    if token is None:
                         visible.append(line[cursor:])
                         break
-                    visible.append(line[cursor:start])
-                    in_comment = True
-                    cursor = start + 4
+                    visible.append(line[cursor:token.start()])
+                    if token.group(0) == "<!--":
+                        in_comment = True
+                    cursor = token.end()
             clean = "".join(visible)
             match = re.match(r"^( {0,7})(?:([-*+] |\d+[.)] ))? {0,3}(`{3,}|~{3,})(.*)$", clean.rstrip("\r\n"))
             if match and (match.group(3)[0] == "~" or "`" not in match.group(4)):
