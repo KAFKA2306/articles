@@ -16,8 +16,9 @@ on:
     paths:
       - ".github/workflows/article-pipeline.yml"
   schedule:
-    # Monday 09:00 JST. Scheduled automation may create/review candidates only.
-    - cron: "0 0 * * 1"
+    # Daily 09:17 JST (00:17 UTC); avoid start-of-hour scheduler congestion.
+    # Scheduled automation may create/review candidates only; no automatic publication.
+    - cron: "17 0 * * *"
 
 permissions:
   contents: write
@@ -119,3 +120,17 @@ jobs:
           # Candidate/draft materialization must not consume the Zenn deploy queue.
           git commit -m "content: ${{ steps.mode.outputs.mode }} canonical article pipeline [skip ci]"
           git push
+
+  revalidate:
+    name: Read-only published-article screening
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Screen published article source links and freshness
+        run: python -m pipeline.portfolio_revalidate
