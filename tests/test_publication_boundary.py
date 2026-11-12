@@ -28,7 +28,7 @@ class PublicationBoundaryTests(unittest.TestCase):
         workflow = (
             core.ROOT / ".github" / "workflows" / "article-pipeline.yml"
         ).read_text(encoding="utf-8")
-        self.assertIn('cron: "0 0 * * 1"', workflow)
+        self.assertIn('cron: "17 0 * * *"', workflow)
         self.assertNotIn('cron: "30 14 28-31 * *"', workflow)
         self.assertIn("select-draft", workflow)
         self.assertIn("Assert automation never grants publication", workflow)
