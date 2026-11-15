@@ -1,5 +1,5 @@
 ---
-title: "YouTubeの自動投稿先を、投稿直前に3点で照合する"
+title: "YouTubeの自動投稿先を間違えないための3点確認"
 emoji: "🛡️"
 type: "tech"
 topics: ["typescript", "youtube", "automation", "testing", "security"]
