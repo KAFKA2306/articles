@@ -263,16 +263,10 @@ for (const c of cases) {
 
 ## 再現方法
 
-最小構成なら、次のコードだけで試せる。
+自分の検査に適用する前に、まず軽い警告が一つある原稿と、完全な重複文がある原稿を選ぶ。既存の判定関数が判断しづらければ、下のコードを `quality-check.mjs` に保存し、Node.jsで結果だけを試す。
 
-```ts
-type Check = {
-  name: string;
-  status: "OK" | "WARN" | "FAIL";
-  penalty: number;
-};
-
-function evaluate(checks: Check[]) {
+```js
+function evaluate(checks) {
   const score = Math.max(
     0,
     100 - checks.reduce((sum, check) => sum + check.penalty, 0),
@@ -292,17 +286,17 @@ console.log(
     { name: "repetition", status: "OK", penalty: 0 },
   ]),
 );
+
+console.log(
+  evaluate([{ name: "repetition", status: "FAIL", penalty: 30 }]),
+);
 ```
 
-期待結果は `score: 90, passed: true` である。
-
-次に `repetition` を `FAIL` に変える。
-
-```ts
-{ name: "repetition", status: "FAIL", penalty: 30 }
+```bash
+node quality-check.mjs
 ```
 
-scoreが70以上残っていても `passed: false` になる。
+警告だけなら `score: 90, passed: true`。完全な重複に相当する `FAIL` があれば、点数が合格ラインの70に届いても `passed: false` になる。
 
 この2ケースを通せれば、最低限「品質score」と「blocking severity」を別の概念として実装できている。
 

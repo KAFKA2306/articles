@@ -66,7 +66,7 @@ real repo / same surface
 
 ## 削除条件を先に6つ書く
 
-新toolを追加する前に、旧gateを削除できる条件を決めておく。
+型チェックを一本化するときは、現行CIの `tsc --noEmit` の呼び出し、対象の `tsconfig`、正常なコミット、必ず拾いたい失敗を一件ずつ起こす変更を用意する。現行と候補を同じ入力にかけて、正常時の終了結果と、失敗時の診断を並べる。
 
 1. **同じ責務** — 旧gateが担うfailure classを公式に持つ
 2. **fixed correctness** — repoで重要なfaultをclean baseline付きで通す
@@ -75,7 +75,7 @@ real repo / same surface
 5. **stability acceptance** — feature statusをblocking authorityとして受け入れられる
 6. **actual deletion** — 条件達成後は旧gateを消し、二重authorityを常設しない
 
-6まで行って初めて、tool consolidationがtool accumulationではなくなる。
+候補を実リポジトリでまだ走らせていない、または必要な診断を取りこぼしたなら、現行コマンドを残す。条件を満たしたら、置換後のCIで正常・失敗の両方を確かめてから旧コマンドを外す。
 
 ## 同等になった後のtie-breaker
 

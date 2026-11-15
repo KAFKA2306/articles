@@ -274,7 +274,7 @@ what destination is actually authenticated/connected?
 
 ## まず1つのpublish jobへ入れるなら
 
-現在の自動publish処理で、次を記録する。
+自動投稿処理から、投稿前の実行データ、選んだ公開先の設定、認証済みチャンネルのIDを一つずつ取り出す。
 
 ```yaml
 run_intent: byosan_money
@@ -289,7 +289,7 @@ intent ↔ profile
 profile ↔ remote identity
 ```
 
-それだけでも、「認証が通ったから投稿する」から一段強くなる。
+照合だけを試し、投稿は呼ばない。三つが対応する例は先へ進み、別用途の実行データ、別チャンネルのID、IDの取得失敗はそれぞれ停止することを確認する。
 
 自動化を増やすほど、成功率だけを上げるのでは足りない。
 

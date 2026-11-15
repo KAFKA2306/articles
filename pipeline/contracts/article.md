@@ -258,6 +258,8 @@ AIに作らせたものを、誰が「完成」と判定するのか？
 - comparison lens
 - mental model
 
+読者がその場で一度試せるように、使う場面、手元に用意するもの、最初に行う操作や判断、結果の見方を本文からたどれるようにする。実装記事では入力例と期待する出力、調査や論考では開く資料と照合順、保留にする条件を具体化する。既存の例や手順に組み込み、詳しい説明や根拠は必要な箇所から参照できるようにする。 [Agent Skillsの本文ガイド](https://agentskills.io/specification#body-content)
+
 CTAはuseful exitではない。
 
 ## Evidence / trust gate

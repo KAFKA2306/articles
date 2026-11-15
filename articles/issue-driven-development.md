@@ -34,6 +34,8 @@ Done条件が未達なら原因を解決して再検証する。
 
 自分の中では、これをIssue駆動開発として使っている。
 
+最初は「既存の不具合を一件直す」くらいで試せる。再現手順と対象環境をIssueに貼り、`Done when` に直ったときの画面や出力、`Verify` に同じ手順で確かめる方法を書く。次の会話にはIssueのURLを渡し、PRとCIから修正の証拠をたどる。公開先の動作も完了条件に書いたなら、公開先で再現手順を確認してからCloseする。
+
 ## Issueは「現在仕様」ではなく、短命な変更契約
 
 Spec-Driven Developmentは有用だ。GitHub Spec Kitも、`Spec → Plan → Tasks → Implement` の順で意図を構造化する。

@@ -146,7 +146,7 @@ if (
 
 ![Read-only boundary](/images/vrcpet-observation-source/03-read-only-boundary.webp)
 
-ここでの成功条件は「読めた」ではなく、**安定した同一状態を読めた**ことです。
+読み取り前後のファイルサイズと更新時刻、読み取れたバイト数が一致した場合に次へ進みます。
 
 ## 4. identityをファイル名ではなくraw bytesへ寄せる
 
@@ -305,7 +305,13 @@ records == 2
 issues == 1
 ```
 
-として `tests/test_vrcpet_adapter.py` を含むsuiteを実行できます。
+とします。上のマージコミットのチェックアウトでテスト依存を用意し、リポジトリのルートから次を実行します。3行の入力はテスト内に入っています。
+
+```bash
+python -m pytest -q tests/test_vrcpet_adapter.py -k malformed_line_is_isolated
+```
+
+自分の取り込み処理に移すなら、同じ3行を使い、前後の観測を保存できること、中央の1行を読み取れなかった記録が残ること、観測から本人についての断定を作らないことを確かめます。
 
 repository:
 https://github.com/KAFKA2306/vlog

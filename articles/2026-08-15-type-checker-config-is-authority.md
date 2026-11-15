@@ -62,7 +62,7 @@ https://github.com/KAFKA2306/articles/blob/822be109de61e5915799fcf7d79e6345dff4f
 
 ## 比較を6段階にする
 
-型チェッカーを移行するときは次の順で十分だった。
+型チェッカーを移行するときは、現在CIが読む設定ファイルと、必ず検出したい失敗を用意する。各失敗は別々のサンプルにし、同じファイル群をすべての候補に渡す。
 
 1. repoで絶対にblockしたいfailureを1 root faultずつfixture化する
 2. clean baselineを用意する
@@ -71,7 +71,7 @@ https://github.com/KAFKA2306/articles/blob/822be109de61e5915799fcf7d79e6345dff4f
 5. `clean=pass && fault=block`だけを成功として数える
 6. correctnessを満たした候補だけ速度・導入コスト・保守量を比べる
 
-最後の段階で機能と運用性が同等なら、**LOC、設定ファイル、dependency、CI commandが少ない方を選ぶ**。複雑性は有効なtie-breakerだが、設定の違う候補を無理に同点扱いするためには使わない。
+同じ候補で検出数が変わったら、どの失敗がどの設定で通ったかを記録し、既定の設定も調べる。必須の失敗を拾い、正常時の動作もそろった候補同士で、速度や設定・依存関係の維持にかかる手間を比べる。
 
 ## benchmark結果と一緒に残す最小メモ
 
