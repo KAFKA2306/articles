@@ -263,9 +263,9 @@ PUBLIC_GITHUB_SIGNALS:
   "generalizable_insight": "固有名詞を外しても再利用できる中心的な知見",
   "transfer_conditions": "この知見を別projectへ移してよい条件",
   "non_transfer_conditions": "適用してはいけない条件・追加検証が必要な範囲",
-  "alternatives": [{"kind":"incumbent","name":"現行方式","reader_job":"同じ読者の目的","primary_urls":["https://..."],"tradeoff":"条件と制約"},{"kind":"direct","name":"直接競合","reader_job":"同じ読者の目的","primary_urls":["https://..."],"tradeoff":"条件と制約"},{"kind":"adjacent","name":"隣接手段","reader_job":"同じ読者の目的","primary_urls":["https://..."],"tradeoff":"条件と制約"}],
+  "alternatives": [{{"kind":"incumbent","name":"現行方式","reader_job":"同じ読者の目的","primary_urls":["https://..."],"tradeoff":"条件と制約"}},{{"kind":"direct","name":"直接競合","reader_job":"同じ読者の目的","primary_urls":["https://..."],"tradeoff":"条件と制約"}},{{"kind":"adjacent","name":"隣接手段","reader_job":"同じ読者の目的","primary_urls":["https://..."],"tradeoff":"条件と制約"}}],
   "unsearched_scope": "未探索の範囲（なければ空文字）",
-  "alternative_decision": {"verdict":"unresolved"}
+  "alternative_decision": {{"verdict":"unresolved"}}
 }}
 
 JSONのみ返してください。
