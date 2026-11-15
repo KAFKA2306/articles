@@ -1,5 +1,5 @@
 ---
-title: "記事の年代別比較で、効果量と年代判定の可否を別々に記録する"
+title: "効果量が大きくても年代は判定できない。記事比較で分けた2つの判断"
 emoji: "📏"
 type: "tech"
 topics: ["python", "statistics", "dataengineering", "testing"]
