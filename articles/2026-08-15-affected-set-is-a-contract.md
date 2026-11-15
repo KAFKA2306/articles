@@ -1,5 +1,5 @@
 ---
-title: "CIが速くなった。必要なテストを消しただけかもしれない"
+title: "CIを速くする前に、変更ごとに必要なテストを決める"
 emoji: "🧭"
 type: "tech"
 topics: ["monorepo", "ci", "nx", "turborepo", "testing"]

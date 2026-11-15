@@ -1,5 +1,5 @@
 ---
-title: "LLMで雑データを整えると、なぜ壊れる？ 455件→414件、60件中24件を止めた実例"
+title: "AIで整えた書誌データを登録前に照合したら、OCRの60件中24件が重複だった"
 emoji: "🧠"
 type: "tech"
 topics: ["llm", "dataengineering", "ai", "testing"]

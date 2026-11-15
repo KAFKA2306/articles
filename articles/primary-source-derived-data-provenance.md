@@ -1,5 +1,5 @@
 ---
-title: "856件が7,699件になっても、分析の信頼を失わないために残したもの"
+title: "資料の集計が856行と7,699行。比較の前に対象範囲と出所を確かめる"
 emoji: "🔎"
 type: "tech"
 topics: ["dataengineering", "provenance", "python", "github"]

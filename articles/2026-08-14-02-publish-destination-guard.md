@@ -1,5 +1,5 @@
 ---
-title: "全部成功したのに、違うチャンネルへ投稿される。その事故を3点照合で止める"
+title: "YouTubeの自動投稿先を、投稿直前に3点で照合する"
 emoji: "🛡️"
 type: "tech"
 topics: ["typescript", "youtube", "automation", "testing", "security"]

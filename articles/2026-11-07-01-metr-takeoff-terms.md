@@ -1,5 +1,5 @@
 ---
-title: "AI開発が2倍速でも、超知能の到来日は分からない"
+title: "AIの能力向上ペースと超知能の到来予測を分けて読む"
 emoji: "📈"
 type: "tech"
 topics: ["ai", "anthropic", "metr", "agi", "research"]

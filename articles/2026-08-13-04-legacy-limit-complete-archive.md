@@ -1,5 +1,5 @@
 ---
-title: "APIは壊れていないのに、61件目が消える。互換性を守りながら「全部見える」を取り戻す"
+title: "公開一覧から消えた61件目を、古いAPIの呼び出しを保ったまま表示する"
 emoji: "📚"
 type: "tech"
 topics: ["api", "pagination", "typescript", "architecture"]

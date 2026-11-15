@@ -1,5 +1,5 @@
 ---
-title: "生成AIのAPI仕様が変わっても、映像の意図まで書き直さない。Storyboardを正準にする"
+title: "動画生成AIのAPI変更に備え、絵コンテとリクエストを分ける"
 emoji: "🎬"
 type: "tech"
 topics: ["python", "ai", "architecture", "videogeneration", "testing"]

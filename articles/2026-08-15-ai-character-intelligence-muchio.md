@@ -1,5 +1,5 @@
 ---
-title: "AIキャラクターは、賢いほど面白いのか？――ムチォがひっくり返した「知能」の価値"
+title: "AIキャラの魅力は賢さで決まる？ VRChatのペット「ムチォ」から考える"
 emoji: "🧠"
 type: "idea"
 topics: ["ai", "vrchat", "character", "ux"]

@@ -1,5 +1,5 @@
 ---
-title: "AIが書いたrepositoryを読みにくくする独自用語と略語を減らす"
+title: "AIに書かせた開発文書から、独自用語と略語を減らす"
 emoji: "🧹"
 type: "tech"
 topics: ["ai", "codex", "github", "nlp", "documentation"]

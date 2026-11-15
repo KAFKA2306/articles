@@ -1,5 +1,5 @@
 ---
-title: "AIの独自用語を増やさない。過去の説明ではなく、毎回一次資料を見る"
+title: "AIが付けた開発用語を、一次資料で確かめて既存の言葉に戻す"
 emoji: "🧭"
 type: "idea"
 topics: ["codex", "llm", "softwareengineering", "github", "aiagent"]

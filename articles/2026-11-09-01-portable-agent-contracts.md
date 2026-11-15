@@ -1,5 +1,5 @@
 ---
-title: "AIエージェントを替えても作業を引き継げるか"
+title: "Unityの作業を別のAIに引き継ぐためのファイル設計"
 emoji: "🔗"
 type: "tech"
 topics: ["ai", "mcp", "github", "unity", "automation"]

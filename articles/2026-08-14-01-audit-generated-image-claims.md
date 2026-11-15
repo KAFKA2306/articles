@@ -1,5 +1,5 @@
 ---
-title: "生成AIの図に「CI成功」と書いてあった。見栄えより先に「信じてよい」を作る"
+title: "AIで作った図の数値やCI結果を、公開前に元の記録と照合する"
 emoji: "🔎"
 type: "tech"
 topics: ["chatgpt", "imagegeneration", "testing", "automation", "zenn"]

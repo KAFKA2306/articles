@@ -1,5 +1,5 @@
 ---
-title: "Claude Codeに全部任せるなら、合格条件だけはClaudeに任せない"
+title: "Claude Codeに実装を任せるとき、合格条件を別に管理する"
 emoji: "🧪"
 type: "tech"
 topics: ["claudecode", "testing", "ai", "ci", "automation"]

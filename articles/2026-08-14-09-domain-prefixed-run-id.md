@@ -1,5 +1,5 @@
 ---
-title: "同じ日付のrunが混ざる。run IDをdomainで区切る"
+title: "実行IDに用途を入れて、設定と保存先の取り違えを防ぐ"
 emoji: "🧭"
 type: "tech"
 topics: ["typescript", "backend", "workflow", "design"]

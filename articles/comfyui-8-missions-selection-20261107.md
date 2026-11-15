@@ -1,5 +1,5 @@
 ---
-title: "22,213件集めても「最良」とは言えなかった：ComfyUIの8用途別Workflow選定結果"
+title: "ComfyUIのワークフロー22,213件を集め、8用途で試す候補を絞った"
 emoji: "🧪"
 type: "tech"
 topics: ["comfyui", "githubactions", "python", "workflow", "ai"]

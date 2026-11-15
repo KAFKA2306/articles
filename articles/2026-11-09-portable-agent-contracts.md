@@ -1,5 +1,5 @@
 ---
-title: "AIを替えるたびに同じ指示を書かない。作業契約をGitで共有する設計"
+title: "AIを替えるとき、作業手順と合格条件をGitで引き継ぐ設計"
 emoji: "🧩"
 type: "tech"
 topics: ["aiagents", "github", "mcp", "codex", "unity"]

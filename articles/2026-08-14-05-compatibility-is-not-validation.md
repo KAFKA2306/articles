@@ -1,5 +1,5 @@
 ---
-title: "OSSが動いた。でもその判定はまだ使えない。「動く」と「使ってよい」を4状態に分ける"
+title: "AI生成文の検出ツールは、日本語で動けば結果を使えるか"
 emoji: "🧪"
 type: "tech"
 topics: ["python", "machinelearning", "nlp", "testing"]
