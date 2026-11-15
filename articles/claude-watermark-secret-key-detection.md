@@ -25,7 +25,7 @@ published_at: 2026-08-13 09:00
 
 AnthropicのTransparency Hubは、Claudeが現在text-based outputsを提供していること、watermarkingについてindustry・academiaで技術動向を追っていることを説明している。しかし、その公開ページは**Claudeのtext outputへ現在どのwatermark方式を実装しているか、secret/keyをどう管理するか、第三者向けtext detectorを提供しているか**までは述べていない。
 
-- Anthropic Transparency Hub: https://www.anthropic.com/transparency/voluntary-commitments/security%26privacy
+- Anthropic Transparency Hub: https://www.anthropic.com/transparency/voluntary-commitments
 
 つまり、ここで「Claudeには秘密のtext watermarkがある」と話を進めると、記事の一番大事な部分を推測で埋めることになる。
 
@@ -238,7 +238,7 @@ specific_claude_text_watermark_implementation = not established here
 
 ## 一次情報
 
-- Anthropic Transparency Hub: https://www.anthropic.com/transparency/voluntary-commitments/security%26privacy
+- Anthropic Transparency Hub: https://www.anthropic.com/transparency/voluntary-commitments
 - Google DeepMind SynthID: https://deepmind.google/models/synthid/
 - Dathathri et al., *Scalable watermarking for identifying large language model outputs*: https://www.nature.com/articles/s41586-024-08025-4
 - google-deepmind/synthid-text: https://github.com/google-deepmind/synthid-text
