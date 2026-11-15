@@ -1,5 +1,5 @@
 ---
-title: "品質チェックの合否が二重になる。工程を止める条件を一か所で管理する"
+title: "品質チェックが重複すると何が困るか。公開停止の判断を一本化する"
 emoji: "🚦"
 type: "tech"
 topics: ["typescript", "githubactions", "testing", "ai"]
