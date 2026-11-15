@@ -8,7 +8,7 @@ published: false
 
 AIに仕事を任せても、毎回「動いた？」「出典は合っている？」「音源は最後まで聴いた？」と聞き直すなら、確認の仕事が人間に残ります。だからといって、テストが通っただけで「完了」にすると、実際に使える状態かどうかを見落とします。
 
-私たちは、開発・研究・制作を支える `.codex` を刷新します。人間が仕事の目的と操作を許す範囲を定め、Codexがその範囲で作業を進めます。完了は、依頼の目的に対応する証拠を別の担当が確かめて判定します。同じ成果物でも目的が違えば証拠が変わります。この違いを評価基準に残し、品質と人の介入を比較します。前回は複数の仕事をGitHubの記録から再開できるようにしました。 [複数リポジトリの運用記録](https://github.com/KAFKA2306/articles/blob/e3001144bb04ba2b80233ccb96c5576483588cce/articles/chatgpt-multiproject-autonomy.md)
+私たちは、開発・研究・制作を支える `.codex` を刷新します。人間が目的と権限を定め、Codexがその範囲で作業します。各プロジェクトの既存ツールが成果物を読み戻し、依頼の目的に合った証拠で完了を判定します。同じ成果物でも目的が違えば証拠は変わります。この違いを評価基準に残し、品質と人の介入を比較します。 [複数リポジトリの運用記録](https://github.com/KAFKA2306/articles/blob/e3001144bb04ba2b80233ccb96c5576483588cce/articles/chatgpt-multiproject-autonomy.md)
 
 ## 公開フラグを変えて検査に通してみた
 
@@ -46,7 +46,7 @@ OpenAIのCodex運用事例でも、エージェントがアプリを操作して
 
 ## Evals Agentは「ドメイン × 目的」で基準を選ぶ
 
-Evals Agentは、依頼時に指定した目的と基準の版を読み、成果物と実行結果を照合します。機械で確かめられる条件は既存のテストや計測器を使います。根拠の意味や作品意図との一致には、具体例で校正した評価基準を使い、判断が割れる事例を人間に回します。実行ログはツールの使用や復旧の経緯を確認する材料で、成果の判定には実際の成果物や環境の状態を使います。 [Anthropicの評価設計](https://www.anthropic.com/research/demystifying-evals-for-ai-agents) ／ [OpenAIの評価設計](https://developers.openai.com/api/docs/guides/evaluation-best-practices)
+Evals Agentは、依頼に付けた「ドメイン × 目的」と基準の版を読み、成果物と実行結果を照合する役割です。実行主体はCodexの単独セッションです。決まった採点は既存のテストや計測器を呼ぶスクリプトが行います。一次資料が主張を支えるか、音声の間が演出意図に沿うかなどは、同じセッションに典型例と該当箇所を渡します。評価側は版を固定した基準と証拠を読み、セッションからは所見だけを受け取ります。根拠が不足した項目は未確認で返します。 [Anthropicの評価設計](https://www.anthropic.com/research/demystifying-evals-for-ai-agents) ／ [OpenAIの評価設計](https://developers.openai.com/api/docs/guides/evaluation-best-practices)
 
 | ドメイン × 目的 | 確認する証拠 | 誤って「完了」としやすい例 |
 | --- | --- | --- |
@@ -63,8 +63,20 @@ Evals Agentは、依頼時に指定した目的と基準の版を読み、成果
 最初に `AGENTS.md`、Skills、Agents、MCP、自動化を棚卸しし、実際に読み込まれた指示、使えるツール、定時実行が残した証拠、重複した判定を確かめます。既存の自動化に評価の呼び出しを足し、同じ仕事を回すスケジュールの重複を避けます。
 
 - `AGENTS.md` には共通の作業方針と、各プロジェクトの契約を探す場所を置きます。繰り返す手順は既存のSkillsに寄せ、Codexが探索する `.agents/skills` など、実際に読み込まれる場所で維持します。 [OpenAIのAGENTS.mdガイド](https://learn.chatgpt.com/docs/agent-configuration/agents-md) ／ [Skillsガイド](https://learn.chatgpt.com/docs/build-skills)
-- `.codex/agents/` にある評価担当を起点にし、目的別の基準を渡します。評価担当に成果物や採点基準を書き換える権限を与えない構成は、親セッションまたは別の評価実行環境の権限と資格情報で担保します。個別AgentのTOMLは親セッションのサンドボックスやMCP設定を上書きしません。 [OpenAIのSubagentsガイド](https://learn.chatgpt.com/docs/agent-configuration/subagents#custom-agent-file-schema)
-- MCPは一次資料や実行証跡の取得に既存の接続を利用し、必要なツールを許可します。自動化は手動実行で入出力を確認し、既存ジョブへ組み込みます。途中で失敗した場合は記録したコミットや成果物から再開し、再実行前に外部への書き込みが済んでいるかを調べます。権限の変更、例外の承認、重要な公開判断は人間が引き受けます。 [OpenAIのMCPガイド](https://learn.chatgpt.com/docs/extend/mcp?surface=cli) ／ [自動化ガイド](https://learn.chatgpt.com/docs/automations?surface=app) ／ [Anthropicのエージェント設計](https://www.anthropic.com/research/building-effective-agents)
+- 既存のAgentsに書かれた観測点をMasterへ移し、評価の実行はプロジェクトの標準コマンドへ集約します。MCPは一次資料と現在状態を取得する既存接続を使います。外部書き込みの権限、例外、公開の判断は人間が先に定め、運用中の処理は定時ジョブとスクリプトで進めます。 [OpenAIの実装事例](https://openai.com/index/harness-engineering/) ／ [OpenAIのMCPガイド](https://learn.chatgpt.com/docs/extend/mcp?surface=cli) ／ [Anthropicの制作・評価の実装事例](https://www.anthropic.com/research/harness-design-long-running-apps)
+
+## 判定をUNIXコマンドでつなぐ
+
+既存ジョブは「現状を取得 → 目的別の検査を実行 → 書き込み先で読み戻す → 台帳に追記 → 集計」の順に呼びます。終了コードは `0` が合格、`1` が不合格、`2` が未確認。標準出力には案件ID、成果物の版、基準版、項目、判定、証拠への参照、観測値をJSON Linesで出し、診断は標準エラーへ送ります。応答が途切れたら同じ案件IDで書き込み先を照会し、済んだ操作は確認結果を再利用します。
+
+| 受け持つ仕事 | 2026年公開の版と既存の入口 |
+| --- | --- |
+| 作業と意味の確認 | Codex CLI 0.164.0の `codex exec --json`。GPT-6 Astraに渡すのは目的、基準の該当項目、差分、証拠の該当箇所。判定と再集計の定型処理ではモデル呼び出し0回。使用量はCLIのJSONLから拾う。 [CLIリリース](https://github.com/openai/codex/releases/tag/rust-v0.164.0) ／ [非対話実行](https://learn.chatgpt.com/docs/non-interactive-mode) ／ [Skillsとプロンプトの実測](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra) |
+| ブラウザの操作確認 | リポジトリの利用経路テストを優先し、新規のブラウザテストはPlaywright 1.61.0の `playwright test --reporter=json` で記録する。 [リリース](https://github.com/microsoft/playwright/releases/tag/v1.61.0) ／ [JSONレポーター](https://playwright.dev/docs/test-reporters) |
+| 研究の再計算と横断集計 | DuckDB CLI 1.5.4で、取得済みの表の単位・時点をそろえて再計算し、同じ実行ファイルでLedgerを集計する。一次資料の取得は各案件の正規経路を使う。 [CLI初出](https://duckdb.org/2026/03/09/announcing-duckdb-150) ／ [1.5.4リリース](https://duckdb.org/2026/06/17/announcing-duckdb-154) |
+| 音声ファイルの検査 | FFmpeg 8.1.3の `ffprobe` でストリームと長さを取り、`ffmpeg` でデコードとラウドネス・ピークを確認する。演技や間の所見には台本の行と再生時刻を添える。 [リリース](https://ffmpeg.org/download.html#release_8.1) ／ [ffprobe](https://ffmpeg.org/ffprobe.html) ／ [音声フィルター](https://ffmpeg.org/ffmpeg-filters.html) |
+
+新しく加える直接依存は、公開日・採用版・使う機能・一次URLをプロジェクトに記録します。自作は、既存コマンドの入出力をつなぐ短いスクリプトと、案件でしか決められない評価基準に絞ります。同じ目的の候補は必須条件で絞り、Masterで先に決めた優先指標で比較します。同点は現行版を採用し、試作は破棄します。判定を再現する証拠と採用理由を残します。
 
 ## 評価を後から再現できるようにする
 
@@ -74,7 +86,19 @@ Ledger、Master、Star Schemaは今回の運用設計です。既存のGit、実
 | --- | --- |
 | Ledger | 案件と評価のID、成果物の版、基準の版、条件ごとの判定と根拠、例外や介入、失敗と復旧結果。再評価と訂正は元の記録を参照する新しい行にする |
 | Master | ドメインと目的ごとの必須条件、使う証拠、判定方法、許容差、判断を人に戻す条件の版。変更理由と適用開始を残す |
-| Star Schema | 1行を「1回の評価 × 1条件」とする事実表をLedgerから作り、案件、ドメイン、目的、基準版、日付で集計する。介入や復旧は案件・実行単位で数え、条件の数だけ重複計上しない |
+| Star Schema | 案件、ドメイン、目的、基準版、日付を共有する。条件判定は「評価 × 条件」に1行。利用量と介入は「実行」に1行。復旧は「障害」に1行。各粒度で先に集計してから比較する |
+
+例えば、1回の実行に100トークン、必須条件が2件あるとします。条件行と結合した後に利用量を足すと200になり、実行単位で先に足すと100になります。次の合成データをDuckDB CLI 1.5.4で実行して両方の出力を確認しました。
+
+~~~sh
+duckdb -csv -c "
+WITH runs(id, tokens) AS (VALUES ('run-1', 100)),
+     checks(run_id, criterion) AS (VALUES ('run-1', 'action'), ('run-1', 'readback'))
+SELECT (SELECT sum(tokens) FROM runs JOIN checks ON id = run_id) AS joined_total,
+       (SELECT sum(tokens) FROM runs) AS run_total;"
+~~~
+
+出力は `joined_total=200`、`run_total=100`。再試行の負担を評価するには、失敗した実行の利用量も実行表へ入れます。`input_tokens` と `output_tokens` を合計し、キャッシュ済み入力と推論出力は内訳として保持します。記録が欠けた実行は未計測件数として出します。 [Codexの利用量イベント](https://learn.chatgpt.com/docs/non-interactive-mode)
 
 ## 実案件で任せられる範囲を広げる
 
@@ -86,7 +110,8 @@ Ledger、Master、Star Schemaは今回の運用設計です。既存のGit、実
 | 不要な人間の介入 | 権限内で証拠から処理できた確認の件数と所要時間を、対象案件数とともに記録する。人間の判断が必要だった介入も件数を残す |
 | 誤った完了判定 | 既知の不合格のうち、検出・誤合格・保留の件数を記録する。既知の合格についても、誤却下と保留を数える |
 | 失敗からの復旧 | 復旧可能な失敗を分母に、完了条件を再確認でき、外部への二重書き込みが生じなかった件数と復旧時間を記録する |
+| トークン | 成功・失敗を含む総入力・出力と使用量の取得率を出す。完了を証拠で確認できた案件数を分母に比較し、合格0件のときは総量と件数を出す |
 
-「作業は続けられるが証拠が消えた」「外部操作は成功したが応答が途切れた」ケースも、隔離した環境で試します。正解を付ける側はサンプルを独立に確認し、採点基準を調整するときに使った案件と導入判断に使う案件を分けます。品質と誤判定が悪化せず、不要な介入が減り、復旧できることを確認できた目的から適用範囲を広げます。件数が少ない段階では、件数と観測範囲を示します。
+「作業は続けられるが証拠が消えた」「外部操作は成功したが応答が途切れた」ケースも、隔離した環境で試します。試験の期待結果は先に固定し、採点基準を調整する案件と導入判断に使う案件を分けます。品質と誤判定を維持または改善し、通常の手動確認が減り、復旧できた目的から適用を広げます。
 
 全プロジェクトでの品質、介入削減、誤判定検出、復旧率はこれから測ります。自分の案件で試すなら、いま「完了」を決めている工程を一つ選び、手前の検査を通っても目的を達成していない成果物を用意してください。それを完了と判定するなら、依頼の成功を直接確認できる証拠を一つ加えます。
