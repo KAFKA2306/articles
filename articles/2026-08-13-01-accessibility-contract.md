@@ -115,7 +115,7 @@ grep -q 'role="status"' web/index.html
 
 この方法は大規模なaccessibility programがなくても始められる。
 
-最初に、自分のUIで「次のリファクタリングで消えたら困る体験」を3つ選ぶ。
+最初に、変更する画面のHTMLとCSSを開き、「次の改修で消えたら困る体験」を3つ選ぶ。
 
 たとえば:
 
@@ -125,16 +125,24 @@ grep -q 'role="status"' web/index.html
 
 そのうち、**静的に存在を確認できるものだけ**を最初のCI contractにする。
 
-そして1つずつ意図的に壊して、CIが落ちることを確認する。
+CIに入れる前に、元のHTMLと `role="status"` を消したコピーへ同じ検査をかける。
 
 ```sh
-cp web/index.html /tmp/index.html
-sed -i 's/ role="status"//' web/index.html
-! grep -q 'role="status"' web/index.html
-mv /tmp/index.html web/index.html
+(
+  set -eu
+  broken_html=$(mktemp)
+  trap 'rm -f "$broken_html"' EXIT
+  grep -q 'role="status"' web/index.html
+  sed 's/role="status"//g' web/index.html > "$broken_html"
+  if grep -q 'role="status"' "$broken_html"; then
+    exit 1
+  else
+    test "$?" -eq 1
+  fi
+)
 ```
 
-このnegative testが通れば、「正しい状態ではgreen」だけでなく「守りたい要件が消えればred」まで確認できる。
+元のHTMLで一致し、コピーで一致しなければ、記述の削除は検出できる。通知が実際に読み上げられるかは、画面を操作して別途確認する。
 
 ## このやり方が向いているチーム
 

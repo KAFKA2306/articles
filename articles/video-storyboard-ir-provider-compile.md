@@ -406,7 +406,7 @@ live_generation:
 
 ## provider変更時のdecision matrix
 
-新しいprovider/modeへ移るとき、次の表を作るとよい。
+生成先を替えるときは、参照画像や終端フレームを含む代表カットを一つ選ぶ。絵コンテ、移行先の公式API仕様、旧リクエストがあればその3点を手元に置く。カットに必要な要素を、移行先の各モードで表現できるか表にする。
 
 | Intent | IRに保持 | Target providerで表現可能 | Action |
 |---|---|---|---|
@@ -417,9 +417,14 @@ live_generation:
 | reference video | yes | adapter-dependent | fail if lossless mappingなし |
 | exact duration | yes | provider-dependent | fail / split shot |
 
-ここで重要なのは、`no` を自動で消さないことだ。
+表に従ってモードを選び、送信前のコンパイル結果と絵コンテを照合する。必須の終端フレームや参照の役割を移せなければ、その項目をエラーに残し、カットを分割するか別モードを選ぶ。コンパイルで確認できるのはリクエストの組み立てまで。生成映像の確認は、実際の応答を取得できたときに行う。
 
-**差分を人が選べる状態にする。**
+Klingのマージコミットで追試するなら、Python 3.11の仮想環境を用意し、リポジトリのルートで次を実行する。テストにフレーム画像の参照を含む入力があり、開始・終了フレームがあるカットはImage-to-Video、終了フレームだけのカットはエラーになることを検査できる。 [追試に使う入力と期待値](https://github.com/KAFKA2306/kling/blob/1e014f7da47bc162afd90076ad67b66c97ba4543/tests/test_storyboard_adapter.py)
+
+```bash
+python -m pip install -e '.[dev]'
+python -m pytest -q tests/test_storyboard_adapter.py
+```
 
 ## この設計で減らしたいのは、API errorより書き直し
 

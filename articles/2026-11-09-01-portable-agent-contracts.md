@@ -689,7 +689,7 @@ git add .gitmodules .agent-packs/avatar
 
 ## 検証のしかた
 
-共通リポジトリを実際に作成して固定した場合、次を利用できる。
+実際に共通リポジトリを作成したら、まず衣装の参照確認を一件選び、利用側に固定した共有ファイルと、対象のパス・GUID・合格条件を書いた `.agent-jobs/outfit.json` を用意する。先に依頼だけを検査し、Unityでの確認を終えて結果JSONができたら、依頼と結果を一緒に検査する。
 
 ```bash
 git submodule update --init --recursive
@@ -707,7 +707,7 @@ uv run --with PyYAML --with jsonschema \
   --result .agent-runs/example/result.json
 ```
 
-`uv`、Python、Gitは利用環境に用意する。上記のコマンドは、まだ共有リポジトリが存在しない現時点での成功実績を意味しない。
+`uv`、Python、Gitは利用環境に用意する。依頼だけを検査した出力では `result_checked` が `false`、結果まで照合すると `true` になる。例示の `BLOCKED` は、接続を確認してから再開する状態だ。コマンドが通っても、目視確認やUnityでの動作は結果内の証拠を開いて判断する。
 
 ## 他のプロジェクトに移せる判断規則
 

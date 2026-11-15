@@ -236,7 +236,7 @@ unknown file / locally modified bytes
 
 大きなregistryを最初から作る必要はない。
 
-1つの共有fileについて、
+対象を共有画像1枚に絞る。配布元のコミットとファイルの場所、利用先の配置先を手元に置き、配布元からその版の画像を取り出してSHA-256を計算する。次の項目を採用記録に残す。
 
 ```yaml
 source_repo: KAFKA2306/prompt-vault
@@ -245,11 +245,7 @@ source_sha256: 8c45dfb3...
 destination: public/assets/hero.webp
 ```
 
-をlockへ置く。
-
-CIでdestinationのSHA-256を再計算する。
-
-それだけでも、`main` hotlinkよりかなり説明可能になる。
+CIで配置先のSHA-256を再計算し、採用記録と一致すれば次に進む。公開後は画像のURLからファイルを取り直し、同じ値になるか確かめる。不一致なら、取り込み直後、ビルド後、公開後の順に比べると、変わった場所を特定できる。
 
 中央assetを更新しても、consumerが勝手に変わらない。
 

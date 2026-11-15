@@ -199,6 +199,8 @@ specific_claude_text_watermark_implementation = not established here
 
 今後、AI生成物のmarkingやprovenance機能を見るときは、私は次の5つを先に確認する。
 
+製品を一つ選び、対象の生成物を明記した公式説明と、あれば検証手順を用意する。各回答に、根拠が載っているページと確認日を添える。
+
 1. **現在、本当に実装済みか**  
    research / exploration / commitmentとproduction deploymentを分ける。
 
@@ -214,7 +216,7 @@ specific_claude_text_watermark_implementation = not established here
 5. **providerなしで将来も検証できるか**  
    long-term provenanceとして使うなら、ここが効いてくる。
 
-この5問を通すだけで、「watermarkがあるらしい」という曖昧な説明から、実際に使えるverification designへ進める。
+研究の記述までなら「製品への実装は未確認」と記録する。提供元の画面やAPIで判定できる場合は「提供元の判定を取得できる」と書く。独立検証と記録できるのは、第三者が提供元の判定サービスを介さずに使える検証手順と材料を確認できた場合だ。文章への判定結果を使うときは、誤判定率や編集後の扱いも確かめる。
 
 ## 最後に
 

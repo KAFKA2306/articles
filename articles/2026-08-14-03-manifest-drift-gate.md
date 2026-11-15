@@ -161,50 +161,36 @@ manifestをCI artifactとして毎回作るだけなら、repositoryへcommitし
 
 ことまで必要になる。
 
-## 最小例は4ファイルで再現できる
+## 更新忘れを一時ディレクトリで再現する
 
-```text
-data/a.txt
-data/manifest.json
-build_manifest.py
-verify_manifest.py
-```
-
-最初に、
+GitとPythonがあれば、入力ファイルとそのSHA-256を保存するマニフェストの2ファイルで試せる。何を記録するかは本番と同じで、再生成と照合は短いコマンドで置き換える。
 
 ```bash
-printf 'v1\n' > data/a.txt
-python build_manifest.py
-git add .
-git commit -m 'initial'
+(
+  set -eu
+  scratch=$(mktemp -d)
+  trap 'rm -rf "$scratch"' EXIT
+  cd "$scratch"
+  git init -q
+
+  digest() {
+    python -c 'from hashlib import sha256; from pathlib import Path; print(sha256(Path("input.txt").read_bytes()).hexdigest())'
+  }
+
+  printf 'v1\n' > input.txt
+  digest > manifest.sha256
+  git add input.txt manifest.sha256
+  git -c user.name=Example -c user.email=example@example.com commit -qm initial
+  git diff --exit-code -- manifest.sha256
+
+  printf 'v2\n' > input.txt
+  digest > manifest.sha256
+  test "$(cat manifest.sha256)" = "$(digest)"
+  git diff --exit-code -- manifest.sha256
+)
 ```
 
-とする。
-
-次にsourceだけ変える。
-
-```bash
-printf 'v2\n' > data/a.txt
-```
-
-この状態で、
-
-```bash
-python build_manifest.py
-python verify_manifest.py
-```
-
-だけ実行するとPASSできる。
-
-builderがmanifestを新しいhashへ更新したからだ。
-
-しかし、
-
-```bash
-git diff --exit-code -- data/manifest.json
-```
-
-を続ければ失敗する。
+最初の差分検査は終了コード0。入力だけを書き換えた後は、再生成したハッシュと入力の照合が通っても、最後の差分検査は差分を表示し、終了コード1を返す。CIでこの終了コードを失敗として扱えば、更新をコミットし忘れた状態を検出できる。
 
 **「正しいmanifestを作れた」ではなく「最初から正しいmanifestをcommitしていたか」を観測できる。**
 

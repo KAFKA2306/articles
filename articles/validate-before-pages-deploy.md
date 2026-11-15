@@ -476,6 +476,8 @@ deploy the same artifact
 
 ## まず既存CI/CDを直すなら、この8項目を見る
 
+対象のworkflow定義と直近の実行ログを1件ずつ開く。どのジョブが成果物を作り、どのジョブがその成果物を検証し、どこで公開されるかをログに沿ってたどる。
+
 1. PRでもbuild / testが必ず動くか
 2. deploy失敗でtest結果まで意味不明になっていないか
 3. deployはvalidation成功後だけに進むか
@@ -485,9 +487,11 @@ deploy the same artifact
 7. productionへ出した後にもhealth / E2E確認があるか
 8. failed / validated / blocked / deployed / verifiedを区別できるか
 
-GitHub Pagesなら、最小形はこれでよい。
+修正後はPRでビルドとローカルHTTP検証が通ることを確かめる。検証が落ちた実行では公開へ進まず、公開が許可された実行では検証済みの成果物で公開URLが応答するところまで追う。Pages未設定なら、ローカルでの検証成功と公開待ちをそれぞれ記録する。
 
-```yaml
+GitHub Pagesなら、ジョブの関係は次のようになる。実際のworkflowでは、各行を対象リポジトリのコマンドやActionsに置き換える。
+
+```text
 jobs:
   validate:
     steps:
