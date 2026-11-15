@@ -390,6 +390,12 @@ Before creating a branch or PR:
 9. merge only after acceptance criteria pass;
 10. verify merged `main` and affected publication state.
 
+### Repository ownership and retention
+
+- `main` is the sole editing source of truth. `zenn-release` is the output of the existing authorized Zenn release workflow. Article edits and operational rule changes enter through a PR to `main`. [Zenn's GitHub integration](https://zenn.dev/zenn/articles/connect-to-github)
+- Keep one canonical article per reader problem. Rework its existing path and slug when extending it. Store unpublished candidates and public-safe evaluation reports in the locations in section 12. Reference durable evidence by commit, run, or artifact ID from the corresponding PR or report. Discard temporary comparisons and render output after verification.
+- Inspect the exact PR head, check status, and changed files before merge. After merge, read back the article on `main`, verify its publication flag, and confirm the merged work branch was removed. Verify the public page when a Zenn release is explicitly authorized. [GitHub branch removal](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-your-repositorys-settings-and-features/managing-the-automatic-deletion-of-branches)
+
 ## 21. Validation ladder
 
 Use the cheapest deterministic verifier that can falsify the change, then escalate.
