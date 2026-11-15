@@ -1,5 +1,5 @@
 ---
-title: "AIが作った確認画面をEscで閉じたら、次の入力は元のボタンに届くか"
+title: "確認画面をEscで閉じたあと、キーボード操作は元のボタンに戻るか"
 emoji: "⌨️"
 type: "tech"
 topics: ["html", "playwright", "accessibility", "ai", "evals"]
