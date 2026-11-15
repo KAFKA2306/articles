@@ -44,7 +44,7 @@ Spec-Driven Developmentは有用だ。GitHub Spec Kitも、`Spec → Plan → Ta
 
 一方、Spec Kit自身も、specを実装後に捨てる・維持する・source of truthにする、といった複数のpersistence modelを認めている。
 
-- https://github.github.com/spec-kit/concepts/spec-persistence.html
+- https://github.github.com/spec-kit/how-to/persisting-specs.html
 
 自分は多くの変更で、もっと寿命を短くした方が楽だった。
 
