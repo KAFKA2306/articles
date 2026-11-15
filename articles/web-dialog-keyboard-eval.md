@@ -6,13 +6,13 @@ topics: ["html", "playwright", "accessibility", "ai", "evals"]
 published: false
 ---
 
-公開前の確認画面をキーボードで開き、考え直して `Escape` で閉じます。そこでフォーカスが「公開する」ボタンへ戻れば、操作を続けられます。見出しへ飛ばされた場合は、同じ場所からやり直せません。どちらも開いている間は同じ見た目で、閉じるところまでのテストも通ります。
+「公開する」を押したあとで考え直し、確認画面を `Escape` で閉じる。そこで次にキーを押すと、どこに入力が届くでしょうか。
 
-AIに画面を作らせるとき、確認したいのは「新しいAPIを使ったか」よりも、この一連の操作を利用者が完了できるかです。今回は、同じHTMLからフォーカスの戻り先だけを変えた二つの実装を用意し、どこまでテストすれば差が分かるかを試しました。
+同じ見た目の確認画面を二つ作って試すと、どちらも `Escape` で閉じました。片方では「公開する」ボタンにフォーカスが戻り、もう片方ではページの見出しに移りました。AIに作らせた画面を確かめるときも、閉じた直後のフォーカスをテストに入れると、この違いを拾えます。
 
-## 開く・移動する・閉じる。最後の一手だけ差が出た
+## 閉じた直後に、フォーカスが分かれた
 
-二つともネイティブの `<dialog>` を `showModal()` で開きます。片方にだけ、閉じたときにページ見出しへフォーカスを移す処理を加えました。Playwright 1.64.0とChromium 153.0.8010.0を使い、画面幅390pxでTab、Enter、Tab、Escapeの順に操作した結果です。 [Playwrightの使用版](https://github.com/microsoft/playwright/releases/tag/v1.64.0)
+二つとも `<dialog>` を `showModal()` で開きます。片方にだけ、閉じたときにページ見出しへフォーカスを移す処理を足しました。画面幅390pxで、Tab、Enter、Tab、Escapeの順にキーを押しました。使用したのはPlaywright 1.64.0とChromium 153.0.8010.0です。 [Playwrightの使用版](https://github.com/microsoft/playwright/releases/tag/v1.64.0)
 
 | 観測した動作 | 標準の動作 | 閉じたあと見出しへ移す実装 |
 | --- | --- | --- |
@@ -21,11 +21,11 @@ AIに画面を作らせるとき、確認したいのは「新しいAPIを使っ
 | Escapeで閉じる | 通過 | 通過 |
 | 「公開する」ボタンへ戻る | 通過 | 失敗。見出しへ移動 |
 
-同じAPIを使う実装でも、最後に追加した処理で操作は変わります。W3Cのモーダルダイアログのパターンでは、起点が残っている場合は原則としてそこへフォーカスを戻し、起点が消えた場合や作業の流れに沿う場合には別の場所を選びます。この例では、取り消した後に元のボタンが残るので、そのボタンを期待値にしました。 [W3Cのモーダルダイアログのパターン](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/) ／ [HTMLのdialogを使う手法](https://www.w3.org/WAI/WCAG22/Techniques/html/H102)
+この画面では、公開を見送っても「公開する」ボタンが残ります。そこで、テストの期待値をそのボタンにしました。W3Cも、原則として開く操作に使った要素へフォーカスを戻すよう案内しています。その要素が消えた場合や、次の操作に適した場所がある場合は、作業の流れに合わせて戻り先を選びます。 [W3Cのモーダルダイアログのパターン](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/) ／ [HTMLのdialogを使う手法](https://www.w3.org/WAI/WCAG22/Techniques/html/H102)
 
 ### 自分の画面で再現する
 
-既存のPlaywright Testで、開くボタンとダイアログ名を実画面に合わせます。この例ではキャンセルが初期フォーカスで、閉じた後も起点が残ることを前提にしています。
+既存のPlaywright Testに加えるなら、URLとボタン名、ダイアログ名を自分の画面に合わせてください。この例では、開いた直後に「キャンセル」にフォーカスし、閉じた後は「公開する」に戻ることを確かめます。
 
 ```ts
 import { expect, test } from '@playwright/test'
@@ -46,14 +46,16 @@ test('確認を取り消すと公開ボタンに戻る', async ({ page }) => {
 })
 ```
 
-検査の感度を確かめるには、一時的に見出しに `tabindex="-1"` を付け、`close` イベントでその見出しに `focus()` します。閉じたことの検査は通り、戻り先の検査で落ちるはずです。全ページの回帰検査では起点までTabで到達できるかも確かめます。採点はロール・名前・フォーカスの観測で行えるので、既存のデザインシステムが同じ操作を実現していれば同じテストで判定できます。 [Playwrightのアクセシビリティ検査](https://playwright.dev/docs/accessibility-testing)
+戻り先の間違いを拾えるか、自分でも試せます。見出しに一時的に `tabindex="-1"` を付け、`close` イベントでその見出しを `focus()` します。この変更を入れた画面では、閉じたことの検査は通過し、最後の `toBeFocused()` が失敗します。ページ全体を通して検査するなら、冒頭の `trigger.focus()` に代えて、Tabで「公開する」ボタンまでたどります。ボタンやダイアログはロールと名前で探すので、同じ操作を実現する既存コンポーネントにもテストを使えます。 [Playwrightのアクセシビリティ検査](https://playwright.dev/docs/accessibility-testing)
 
-## ガイドを引けることと、採用する価値を別々に測る
+## ガイドを使うと手戻りは減るか
 
-Modern Web Guidance 1.0.0は、検索結果から必要なガイドをIDで取得できます。隔離環境で公式スキルを導入し、短い検索語 `confirmation modal dialog` の先頭が `dialog` になること、その本文を取得できること、既存コードの走査からJSONが返ることを確認しました。公式スキルの配布設定はリリースコミット、実行するCLIはnpm版を固定し、各呼び出しには `DISABLE_TELEMETRY=1` を渡しました。 [導入と動作確認のPR](https://github.com/KAFKA2306/agent-resources/pull/586) ／ [検証時の配布設定](https://github.com/KAFKA2306/agent-resources/blob/035cec2ac8a9929e942406d20f516ff39dbdb5b7/.agents/plugins/marketplace.json) ／ [公式CLIとテレメトリー](https://github.com/GoogleChrome/modern-web-guidance#telemetry--privacy)
+この確認画面を題材に、Web標準の実装例を検索できるModern Web Guidance 1.0.0も試しました。`confirmation modal dialog` で検索すると、先頭に `dialog` が出ました。そのIDでガイド本文を取得し、既存コードの走査がJSONを返すことも確認しました。スキルはリリースコミット、CLIはnpmのバージョンを固定し、実行時は `DISABLE_TELEMETRY=1` を渡しました。 [導入と動作確認のPR](https://github.com/KAFKA2306/agent-resources/pull/586) ／ [検証時の配布設定](https://github.com/KAFKA2306/agent-resources/blob/035cec2ac8a9929e942406d20f516ff39dbdb5b7/.agents/plugins/marketplace.json) ／ [公式CLIとテレメトリー](https://github.com/GoogleChrome/modern-web-guidance#telemetry--privacy)
 
-公開ベンチマークは、ガイドの有無で同じ課題の自動チェック通過率を比較しています。自分のチームで投資対効果を知りたいときは、同じ課題・コミット・採点を固定し、ガイドなし、必要時の検索、ガイドID指定の三条件を回します。まず対応ブラウザーで主要操作と既存の回帰検査を通し、次に初回完了率と修正回数を比較します。同等の品質を保てた候補から、失敗・再試行を含めた総トークンを合格課題数で割り、最も小さい構成を採用します。合格が0件なら、総量と件数をそのまま残します。ここで実測したのは取得経路と一つの操作の差までです。生成品質やトークン削減は、各チームの課題で評価します。 [公式評価ダッシュボード](https://googlechrome.github.io/modern-web-guidance-src/) ／ [noteの導入比較](https://developer.chrome.com/blog/mwg-with-internal-component)
+公式ベンチマークは、同じ課題でガイドを使った場合と使わない場合のチェック通過率を集計しています。今回の実測は、ガイドを取得できることと、二つの画面でフォーカスの戻り先が異なることまでです。 [公式評価ダッシュボード](https://googlechrome.github.io/modern-web-guidance-src/) ／ [noteの導入比較](https://developer.chrome.com/blog/mwg-with-internal-component)
 
-繰り返す場合は、既存コードの候補抽出を `legacy-scan --json`、互換性の照合をWebDX Baseline、操作の採点をPlaywrightのJSONレポーターに任せます。スクリプトはガイドID・判定・消費量を課題ごとのJSONLにまとめ、モデルに渡すのは対象の差分、選んだガイド、失敗した検査だけです。ガイド更新時は同じ課題を再実行し、受け入れ条件に落ちたら以前の構成を保持します。 [既存コードを走査する公式手順](https://developer.chrome.com/docs/modern-web-guidance/modernization-workflow) ／ [WebDX Baseline](https://github.com/web-platform-dx/web-features/blob/main/docs/baseline.md) ／ [PlaywrightのJSONレポーター](https://playwright.dev/docs/test-reporters)
+自分のチームで試すなら、課題・開始時のコミット・テストをそろえ、「ガイドを使わない」「必要に応じて検索する」「ガイドIDを指定する」の三通りを比べます。対応ブラウザーで主要操作と既存テストを通したうえで、初回で合格した課題の割合と、合格までの修正回数を数えます。品質が同等なら、失敗と再試行も含めた総トークンを合格課題数で割り、値が最も小さい構成を採用します。合格が0件なら、総トークンと合格件数を記録します。
 
-手元で始めるなら、テストが「開いた」「閉じた」で終わっている画面を一つ選び、利用者が次に押すキーを一つ決めます。そのキーがどの要素に届くかを期待値に入れ、戻り先を変えた実装で実際に落ちることを確かめます。このやり方は、操作の前後で状態を引き継ぐメニューやフォームにも持ち込めます。
+繰り返し測るなら、`legacy-scan --json` で既存コードから候補を拾い、WebDX Baselineで対応状況を確かめます。Playwrightの結果、ガイドID、トークン数は、スクリプトで課題ごとにJSONLへ記録できます。モデルに渡すのは差分、選んだガイド、失敗したテストです。ガイドを更新したときも同じ課題を回し、テストに落ちた場合は元の版を使い続けます。 [既存コードを走査する公式手順](https://developer.chrome.com/docs/modern-web-guidance/modernization-workflow) ／ [WebDX Baseline](https://github.com/web-platform-dx/web-features/blob/main/docs/baseline.md) ／ [PlaywrightのJSONレポーター](https://playwright.dev/docs/test-reporters)
+
+まずは、テストが「閉じた」で終わっている画面を一つ選んでください。閉じた人が次にどこから操作を続けるかを決めて、そこにフォーカスがあることをテストの最後に加えます。メニューを閉じるときや、フォームの編集を取り消すときにも使える確認です。
