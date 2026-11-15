@@ -1,5 +1,5 @@
 ---
-title: "Cohen's dが0.76でも「判定できる」とは言わない。数字と利用許可を分ける"
+title: "記事の年代別比較で、効果量と年代判定の可否を別々に記録する"
 emoji: "📏"
 type: "tech"
 topics: ["python", "statistics", "dataengineering", "testing"]

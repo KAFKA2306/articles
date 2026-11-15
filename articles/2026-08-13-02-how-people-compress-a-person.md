@@ -1,5 +1,5 @@
 ---
-title: "人は他人を『何を任せられるか』で圧縮する——成果物が仕事の証拠になるまで"
+title: "何を任せられる人かが伝わるポートフォリオの作り方"
 emoji: "🪞"
 type: "idea"
 topics: ["career", "portfolio", "github", "ai"]

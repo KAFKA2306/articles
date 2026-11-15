@@ -1,5 +1,5 @@
 ---
-title: "AIを監視していたのに事故が起きた理由"
+title: "AIの監視はどこで途切れたか。Anthropicの事故報告を読む"
 emoji: "🔍"
 type: "tech"
 topics: ["ai", "anthropic", "security", "aiagents", "sre"]

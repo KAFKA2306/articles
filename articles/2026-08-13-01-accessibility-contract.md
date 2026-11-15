@@ -1,5 +1,5 @@
 ---
-title: "UIを速く作り直しても、利用者を置き去りにしない。アクセシビリティ退行をCIで止める"
+title: "UI改修で読み上げ通知や動きの軽減に必要な記述が消えたら、CIで止める"
 emoji: "♿"
 type: "tech"
 topics: ["accessibility", "css", "html", "githubactions"]

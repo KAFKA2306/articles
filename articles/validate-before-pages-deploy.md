@@ -1,5 +1,5 @@
 ---
-title: "速く出すために、勝手に出さない。GitHubとShopifyに学ぶRelease Engineering"
+title: "検証を通った変更だけをGitHub Pagesで公開する仕組み"
 emoji: "🚦"
 type: "tech"
 topics: ["cicd", "githubactions", "githubpages", "testing", "sre"]

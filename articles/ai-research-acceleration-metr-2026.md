@@ -1,5 +1,5 @@
 ---
-title: "AI開発はもう人間だけの仕事ではない。Anthropicの進歩が約2倍に加速した"
+title: "METRが測ったAnthropicのAI能力指数、伸び率は従来の約2倍"
 emoji: "🚀"
 type: "tech"
 topics: ["ai", "anthropic", "claude", "metr", "automation"]

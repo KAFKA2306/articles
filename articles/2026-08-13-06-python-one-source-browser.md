@@ -1,5 +1,5 @@
 ---
-title: "業務ロジックをUIにコピーするな。「正解」を1か所に置く設計"
+title: "ブラウザとテストで、同じPythonの計算ルールを使う"
 emoji: "🎯"
 type: "tech"
 topics: ["architecture", "python", "javascript", "webassembly"]

@@ -1,5 +1,5 @@
 ---
-title: "Pyreflyが2/5から5/5になった。変えたのは製品ではなく設定だけ"
+title: "Pyreflyの設定を変えたら、型チェックで検出できた不具合が2件から5件に増えた"
 emoji: "🧪"
 type: "tech"
 topics: ["python", "typechecking", "ci", "testing", "developerexperience"]

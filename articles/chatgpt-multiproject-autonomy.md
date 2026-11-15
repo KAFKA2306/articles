@@ -1,5 +1,5 @@
 ---
-title: "個人開発が123個になって分かった。ChatGPTに任せるべきはコードより「次の1件」だった"
+title: "123の個人開発リポジトリで、ChatGPTに次の作業を選ばせる方法"
 emoji: "🛰️"
 type: "tech"
 topics: ["chatgpt", "github", "automation", "githubactions"]

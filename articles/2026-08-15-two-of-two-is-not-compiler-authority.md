@@ -1,5 +1,5 @@
 ---
-title: "Oxlintは2/2でtscと同点。それでもtscを消さなかった"
+title: "Oxlintでtscを置き換える前に、実際のリポジトリで型チェックを試す"
 emoji: "🧪"
 type: "tech"
 topics: ["typescript", "oxlint", "ci", "testing", "tooling"]

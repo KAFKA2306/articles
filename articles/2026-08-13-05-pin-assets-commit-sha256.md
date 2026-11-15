@@ -1,5 +1,5 @@
 ---
-title: "中央の画像を更新しても、公開サイトが勝手に変わらない。共有assetをcommitとhashで固定する"
+title: "共有画像をコミットで固定し、公開後もSHA-256で照合する"
 emoji: "📌"
 type: "tech"
 topics: ["github", "ci", "frontend", "architecture"]

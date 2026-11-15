@@ -1,5 +1,5 @@
 ---
-title: "『売上上位50社』を、そのまま信じなくていいようにする。51位まで証拠に残した"
+title: "売上上位50社の集計で、51位も記録する理由"
 emoji: "📏"
 type: "tech"
 topics: ["python", "dataengineering", "testing", "api"]

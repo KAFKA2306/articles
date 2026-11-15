@@ -1,5 +1,5 @@
 ---
-title: "ChatGPTを使い倒している私に、月10ドルのOpenCode Goが刺さった理由"
+title: "ChatGPTで方針を決めたあと、OpenCode Goにどの作業を任せるか"
 emoji: "♾️"
 type: "tech"
 topics: ["opencode", "chatgpt", "coding", "mcp", "local"]

@@ -1,5 +1,5 @@
 ---
-title: "型チェックはgreen。それでも壊れたJSONは通る"
+title: "型チェックを通っても、APIから届くJSONは実行時に検証する"
 emoji: "🚧"
 type: "tech"
 topics: ["python", "typescript", "pydantic", "zod", "testing"]

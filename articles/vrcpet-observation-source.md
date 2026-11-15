@@ -1,5 +1,5 @@
 ---
-title: "ペットが聞いた会話を、そのまま『記憶』にしてはいけない：壊れた1行から観測と事実を分ける"
+title: "VRChatのペットが拾った会話と、確認済みの事実を分けて記録する"
 emoji: "👂"
 type: "tech"
 topics: ["python", "dataengineering", "privacy", "architecture", "vrchat"]

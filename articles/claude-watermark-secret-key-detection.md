@@ -1,5 +1,5 @@
 ---
-title: "AIの文章に「透かし」があると言われたら、誰がそれを証明できるのか"
+title: "AI生成文の透かしを、第三者はどこまで検証できるか"
 emoji: "🔐"
 type: "tech"
 topics: ["watermark", "security", "llm", "ai", "provenance"]

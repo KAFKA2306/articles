@@ -1,5 +1,5 @@
 ---
-title: "同じ品質条件を2回判定しない。AI時代の品質ゲートは「追加」より「一本化」する"
+title: "品質チェックの合否が二重になる。工程を止める条件を一か所で管理する"
 emoji: "🚦"
 type: "tech"
 topics: ["typescript", "githubactions", "testing", "ai"]

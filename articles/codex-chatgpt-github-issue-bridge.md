@@ -1,5 +1,5 @@
 ---
-title: "GitHub IssueからAIにローカルPCを任せてよいのか？ Unity・Blender・動画生成で考える安全な橋"
+title: "GitHub IssueからUnityやBlenderを動かすAIに、どこまで権限を渡すか"
 emoji: "🔁"
 type: "tech"
 topics: ["codex", "github", "unity", "security", "automation"]
@@ -7,7 +7,7 @@ published: false
 published_at: 2026-08-12 17:02
 ---
 
-# GitHub IssueからAIにローカルPCを任せてよいのか？ Unity・Blender・動画生成で考える安全な橋
+# GitHub IssueからUnityやBlenderを動かすAIに、どこまで権限を渡すか
 
 GitHub Issueに仕事を書き、AI coding agentに渡す。
 

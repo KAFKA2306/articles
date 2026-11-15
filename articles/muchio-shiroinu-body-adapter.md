@@ -1,5 +1,5 @@
 ---
-title: "「モデル差し替え」を作ろうとしたら、公式説明の1行で設計が変わった"
+title: "VRChatのペット「ムチォ」に別のモデルを組み込む前に、何を確かめるか"
 emoji: "🐶"
 type: "tech"
 topics: ["vrchat", "unity", "modularavatar", "architecture"]
@@ -7,7 +7,7 @@ published: false
 published_at: 2026-08-12 14:18
 ---
 
-# 「モデル差し替え」を作ろうとしたら、公式説明の1行で設計が変わった
+# VRChatのペット「ムチォ」に別のモデルを組み込む前に、何を確かめるか
 
 この原稿は、現時点では公開しません。
 

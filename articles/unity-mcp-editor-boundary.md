@@ -1,5 +1,5 @@
 ---
-title: "2026年、Unity MCPはどこまで実用か――14件で見えた『作れるが、見た目と挙動を監査し切れない』壁"
+title: "Unity MCPで作ったものの見た目と動作を、どこまで確かめられるか"
 emoji: "🛠️"
 type: "tech"
 topics: ["unity", "mcp", "codex", "claudecode", "ai"]
@@ -7,7 +7,7 @@ published: false
 published_at: 2026-08-12 16:03
 ---
 
-# 2026年、Unity MCPはどこまで実用か――14件で見えた「作れるが、見た目と挙動を監査し切れない」壁
+# Unity MCPで作ったものの見た目と動作を、どこまで確かめられるか
 
 2026年、AIがUnity Editorを操作すること自体は、もう珍しくありません。
 

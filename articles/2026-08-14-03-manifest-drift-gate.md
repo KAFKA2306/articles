@@ -1,5 +1,5 @@
 ---
-title: "CIが自分で直してからgreenになる。manifestの「更新忘れ」を差分で止める"
+title: "CIでマニフェストを再生成し、差分が出たら失敗させる"
 emoji: "🧾"
 type: "tech"
 topics: ["python", "githubactions", "dataengineering", "testing", "ci"]

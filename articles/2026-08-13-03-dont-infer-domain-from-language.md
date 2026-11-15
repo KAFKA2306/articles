@@ -1,5 +1,5 @@
 ---
-title: "分類できないなら、無理に埋めない。unclassifiedを残した方がUIは信頼できた"
+title: "GitHubのリポジトリ一覧で、用途が分からないものを未分類にする"
 emoji: "🗂️"
 type: "tech"
 topics: ["github", "metadata", "python", "architecture"]
