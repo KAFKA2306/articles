@@ -1,5 +1,5 @@
 ---
-title: "型チェックを通っても、APIから届くJSONは実行時に検証する"
+title: "型チェックが通ってもAPIのJSONは壊れ得る。実行時検証が必要な理由"
 emoji: "🚧"
 type: "tech"
 topics: ["python", "typescript", "pydantic", "zod", "testing"]
