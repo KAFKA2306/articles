@@ -1,5 +1,5 @@
 ---
-title: "CIでマニフェストを再生成し、差分が出たら失敗させる"
+title: "CIが自動修正して成功扱いになる問題を、差分検査で防ぐ"
 emoji: "🧾"
 type: "tech"
 topics: ["python", "githubactions", "dataengineering", "testing", "ci"]
