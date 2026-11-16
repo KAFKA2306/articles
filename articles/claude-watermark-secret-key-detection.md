@@ -21,15 +21,7 @@ published_at: 2026-08-13 09:00
 
 私は最初、Claudeを題材に「秘密のtext watermarkを第三者がどう検出するか」を考えていた。
 
-ところが2026年8月15日にAnthropicの一次情報へ戻ると、その出発点を捨てる必要があった。
-
-AnthropicのTransparency Hubは、Claudeが現在text-based outputsを提供していること、watermarkingについてindustry・academiaで技術動向を追っていることを説明している。しかし、その公開ページは**Claudeのtext outputへ現在どのwatermark方式を実装しているか、secret/keyをどう管理するか、第三者向けtext detectorを提供しているか**までは述べていない。
-
-- Anthropic Transparency Hub: https://www.anthropic.com/transparency/voluntary-commitments
-
-つまり、ここで「Claudeには秘密のtext watermarkがある」と話を進めると、記事の一番大事な部分を推測で埋めることになる。
-
-そこで問いを変えた。
+2026年8月15日に私が読んだ[AnthropicのTransparency Hub](https://www.anthropic.com/transparency/voluntary-commitments#transparency-of-ai-generation)には、透かし技術の調査が記されていた。そこで、Claudeの実装を前提にするのをやめ、問いを変えた。
 
 **AI生成物を第三者が検証できることと、生成側の秘密情報を第三者へ配ることは、本当に同じ要件なのか。**
 
@@ -168,32 +160,11 @@ C2PAのContent Credentialsは、provenance情報をmanifestとして持ち、cla
 
 **誰が、何を根拠に、どこまで独立して検証できるか**である。
 
-## Claudeについては「未確認」を正しいstateにする
+## Claudeの透かしを誰が検出できるか
 
-この記事を書き直して一番大きく変わったのはここだった。
+2026年11月16日にAnthropicの公式資料を確認した。対応するClaudeモデルは生成文に透かしを埋め込む。Anthropicの2026年8月14日付の技術解説では、Google DeepMindのSynthID-Textをもとにした方式を使うと説明している。対応状況はモデルや利用経路によって異なり、公式ヘルプで確認できる。
 
-旧稿では、Claudeにsecret watermarkがあると仮定したときの設計を中心に考えていた。
-
-しかし現行一次情報へ戻ると、Anthropicはwatermarkingへの取り組みを説明しているものの、この記事で必要なClaude text watermarkの具体実装は公開確認できない。
-
-だからstateを、
-
-```text
-implemented_secret_text_watermark
-```
-
-ではなく、
-
-```text
-vendor_publicly_discusses_watermarking
-specific_claude_text_watermark_implementation = not established here
-```
-
-へ戻す。
-
-**分からないものを、別providerの例で埋めない。**
-
-これはwatermarkに限らない。AI productを比較するとき、公開されていない内部設計を「たぶん同じだろう」で補うと、もっともらしい説明ほど危険になる。
+検出APIは、利用資格を持つ組織などを対象にした限定プレビューだ。APIを利用できる第三者はAnthropicの判定を得られる。鍵の管理方法や、Anthropicのサービスを使わずに第三者が検出するための手順と材料は、確認した公式資料では見つからなかった。
 
 ## 読者が持ち帰る5つの質問
 
@@ -238,7 +209,8 @@ specific_claude_text_watermark_implementation = not established here
 
 ## 一次情報
 
-- Anthropic Transparency Hub: https://www.anthropic.com/transparency/voluntary-commitments
+- Anthropicの技術解説: https://www.anthropic.com/news/claude-text-watermark
+- Anthropicの対応モデルと検出APIの案内: https://support.claude.com/en/articles/16266773-how-claude-marks-ai-generated-content
 - Google DeepMind SynthID: https://deepmind.google/models/synthid/
 - Dathathri et al., *Scalable watermarking for identifying large language model outputs*: https://www.nature.com/articles/s41586-024-08025-4
 - google-deepmind/synthid-text: https://github.com/google-deepmind/synthid-text
