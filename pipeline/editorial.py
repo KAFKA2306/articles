@@ -115,6 +115,22 @@ def opening_has_premature_conclusion(
     return any(marker in opening for marker in PREMATURE_CONCLUSION_MARKERS)
 
 
+def has_reader_evidence(article: str, evidence: object) -> bool:
+    if not isinstance(evidence, dict):
+        return False
+    opening = evidence.get("opening")
+    outcome = evidence.get("outcome")
+    return (
+        isinstance(opening, str)
+        and isinstance(outcome, str)
+        and bool(opening.strip())
+        and bool(outcome.strip())
+        and opening.strip() != outcome.strip()
+        and opening.strip() in article[:500]
+        and outcome.strip() in article
+    )
+
+
 def title_options_ready(topic: dict[str, object]) -> bool:
     title = str(topic.get("title", "")).strip()
     options = topic.get("title_options")
@@ -440,6 +456,8 @@ def evaluate(article: str) -> dict[str, object]:
 - narrative: scene→自然な予想→観測/実験→仮説更新→結論の因果が通るか
 - context: 本文だけで固有名詞・数値・技術の意味を追えるか
 
+タイトル・冒頭・見出しだけを順に読み、読者が自分の用事に関係するか、答えがどこにあるかを確かめてください。`reader_evidence.opening` に読む理由を示す冒頭500文字以内の一節、`reader_evidence.outcome` に読後の判断・行動を可能にする別の一節を、原稿からそのまま引用してください。該当箇所がなければ空文字にしてください。
+
 読者価値もblocking判定してください。次の場合は `blocking_issues` に指定codeを入れてください。
 - `weak_reader_value`: 読む前の具体的な摩擦と、読後に可能になる判断・行動・運用を本文だけで説明できない。読後が「理解した」「学んだ」だけでも該当。
 - `weak_differentiation`: 一般tutorial / 公式docs / AI要約との違いが、実測・失敗・比較・制約・判断変更で証明されていない。
@@ -489,6 +507,7 @@ JSONのみ返してください。
   "discovery": 0.0,
   "narrative": 0.0,
   "context": 0.0,
+  "reader_evidence": {{"opening": "", "outcome": ""}},
   "blocking_issues": [],
   "revision_actions": []
 }}
@@ -503,6 +522,14 @@ JSONのみ返してください。
     )
     for key in TECHNICAL_AXES + EDITORIAL_AXES:
         result[key] = _score(result.get(key, 0.0))
+
+    if not has_reader_evidence(article, result.get("reader_evidence")):
+        blocking = result.get("blocking_issues")
+        if isinstance(blocking, list) and "weak_reader_value" not in blocking:
+            blocking.append("weak_reader_value")
+        actions = result.get("revision_actions")
+        if isinstance(actions, list):
+            actions.append("冒頭に読む理由を示し、本文に読後の判断か行動ができる一節を置く。")
 
     if opening_has_premature_conclusion(article):
         result["interest"] = min(_score(result.get("interest")), 3.4)
