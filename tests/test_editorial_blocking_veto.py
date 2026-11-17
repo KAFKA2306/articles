@@ -1,6 +1,8 @@
 """Regression: a high score cannot override a reviewer's explicit veto."""
 
+import json
 import unittest
+from unittest.mock import patch
 
 from pipeline import editorial
 
@@ -17,6 +19,26 @@ class BlockingIssueGateTests(unittest.TestCase):
 
     def test_high_scoring_supported_article_is_not_rejected(self):
         self.assertTrue(editorial.passes_quality(self.good, True))
+
+    def test_reader_evidence_must_be_in_the_article_even_with_perfect_scores(self):
+        opening = "公開候補が一件でも、読んだ版と一致するか分からない。"
+        outcome = "公開用PRの原稿を実行時点のコミットと照合する。"
+        article = f"# 公開候補の版を確かめる\n\n{opening}\n\n## 原稿を照合する\n\n{outcome}"
+        review = {**self.good, "revision_actions": []}
+        for evidence, eligible in (
+            (None, False),
+            ({"opening": opening, "outcome": ""}, False),
+            ({"opening": opening, "outcome": "原稿をすべて再生成する。"}, False),
+            ({"opening": opening, "outcome": outcome}, True),
+        ):
+            with self.subTest(evidence=evidence), patch.object(
+                editorial.core, "model_call", return_value=json.dumps(
+                    {**review, "reader_evidence": evidence}
+                )
+            ):
+                evaluated = editorial.evaluate(article)
+                self.assertEqual(eligible, editorial.passes_quality(evaluated, True))
+                self.assertEqual(not eligible, "weak_reader_value" in evaluated["blocking_issues"])
 
     def test_nonfinite_scores_never_pass_quality_gate(self):
         # A malformed numeric model output previously made NaN look like 5.0.

@@ -123,6 +123,8 @@ For article and pipeline changes, use `charter` to name the reader's next decisi
 
 Use the installed plugin where available. For an interactive environment without it, resolve the current `main` SHA and read the relevant files at that revision. The scheduled pipeline uses Copilot without file or web tools. Its [editorial contract](pipeline/contracts/article.md#文章の推敲と反証) includes the applicable instructions in each draft, revision, and review prompt. The source for this adaptation is [Kafstyler 0.5.9](https://github.com/KAFKA2306/kafstyler/blob/f0e05572899150dc8b0fdcd1a1ceab5d951d7bb8/AGENTS.md#コマンドの連携).
 
+Before drafting, identify the reader's situation, reason for opening the article, and what they should be able to decide or do afterward. Review the title, opening, and headings in isolation, then point to the passages that deliver both the reason to read and the promised outcome. Use the [two primary references in Kafstyler's reading list](https://github.com/KAFKA2306/kafstyler/blob/main/BIBLES.md#読者から記事を設計する).
+
 ## 5. Topic rejection rules
 
 Reject, merge, or keep private when a candidate is only:
