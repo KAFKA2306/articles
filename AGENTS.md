@@ -125,6 +125,16 @@ Use the installed plugin where available. For an interactive environment without
 
 Before drafting, identify the reader's situation, reason for opening the article, and what they should be able to decide or do afterward. Review the title, opening, and headings in isolation, then point to the passages that deliver both the reason to read and the promised outcome. Use the [two primary references in Kafstyler's reading list](https://github.com/KAFKA2306/kafstyler/blob/main/BIBLES.md#読者から記事を設計する).
 
+## 4C. Full Kafstyler review for every Markdown file
+
+Apply all seven current Kafstyler skills to **every Markdown file changed or reviewed** in this repository, including articles, README, contracts, reports, and this operating contract. Read each skill's current `SKILL.md` at a pinned Kafstyler commit. Do not equate merely mentioning a skill with applying it.
+
+For each file, record in the existing review report or PR evidence: file path, content SHA, Kafstyler commit, each skill's finding, resulting edit or justified no-change decision, and verification. Use `charter` to define the reader's intended outcome; `schema` to check frontmatter, tags, metadata and references; `humanizer` to revise title, vocabulary, structure and prose; `scrutiny` to challenge claims and assumptions; `benchmark` to test the promised reader action and compare revisions; `deliver` to carry the fix to the intended entry point; and `prune` to remove redundant prose, dead links, duplicate material and obsolete files without discarding unique evidence.
+
+Review **every** Markdown file, not just the flagship article. Prioritize broken reader journeys, misleading claims, duplicated articles and missing original evidence over cosmetic edits. A skill with no relevant defect still receives a concrete assessment, not a fabricated action. Preserve original observations, citations, publication metadata and the human-only publication boundary. Do not automatically set `published: true` or silently delete already-published material.
+
+After edits, rerun applicable repository audit and tests, check navigation and Markdown metadata, inspect the diff, commit all intended changes, and verify the resulting commit. Keep the review ledger current so the next pass can identify files not yet assessed and changed files that need reassessment.
+
 ## 5. Topic rejection rules
 
 Reject, merge, or keep private when a candidate is only:
