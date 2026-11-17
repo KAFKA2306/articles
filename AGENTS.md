@@ -117,6 +117,12 @@ Record consequential alternatives and why they were rejected, primary URLs and p
 
 This discovery rule **does not change** the human-controlled publication boundary in section 13, the editorial value model, or privacy and source requirements.
 
+## 4B. Apply Kafstyler to editorial work
+
+For article and pipeline changes, use `charter` to name the reader's next decision or action and its acceptance condition. Use `humanizer` to review the title, headings, and terminology, `scrutiny` to try a plausible failure against the proposed check, and `benchmark` to compare the existing and revised outputs on the same input. Verify the result through the reader's usual entry point. Record the Kafstyler commit and evidence in the PR. When a failure recurs outside this repository, verify it against the shared Kafstyler procedure before proposing a change there.
+
+Use the installed plugin where available. For an interactive environment without it, resolve the current `main` SHA and read the relevant files at that revision. The scheduled pipeline uses Copilot without file or web tools. Its [editorial contract](pipeline/contracts/article.md#文章の推敲と反証) includes the applicable instructions in each draft, revision, and review prompt. The source for this adaptation is [Kafstyler 0.5.9](https://github.com/KAFKA2306/kafstyler/blob/f0e05572899150dc8b0fdcd1a1ceab5d951d7bb8/AGENTS.md#コマンドの連携).
+
 ## 5. Topic rejection rules
 
 Reject, merge, or keep private when a candidate is only:
