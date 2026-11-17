@@ -86,7 +86,8 @@ class ZennProductionTests(unittest.TestCase):
         workflow = (
             zenn_production.ROOT / ".github" / "workflows" / "zenn-manual-release.yml"
         ).read_text(encoding="utf-8")
-        self.assertIn("ref: main", workflow)
+        self.assertIn("ref: ${{ github.sha }}", workflow)
+        self.assertIn('test "$GITHUB_REF" = "refs/heads/main"', workflow)
         self.assertIn("git fetch origin zenn-release", workflow)
         self.assertIn("published_at:", workflow)
         self.assertIn("bash scripts/zenn-render-check.sh", workflow)
