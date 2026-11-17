@@ -137,6 +137,32 @@ done
 
 `benchmark` は、正しい例が通り、誤った例が落ちるかを確かめるよう定めています。今回はそれを記事の評価に適用し、読者の操作を確認項目に加えました。Kafstylerの共通手順そのものに不足が見つかった場合は、使った版と再現入力を残し、元の案件と別分野の案件で修正前後を比べます。記事に固有の不足は記事側で直します。 [評価手順](https://github.com/KAFKA2306/kafstyler/blob/f0e05572899150dc8b0fdcd1a1ceab5d951d7bb8/skills/benchmark/SKILL.md) · [本体の更新手順](https://github.com/KAFKA2306/kafstyler/blob/f0e05572899150dc8b0fdcd1a1ceab5d951d7bb8/MISSION.md#更新手順)
 
+## 手元のGitで原稿AとBの取り違えを再現する
+
+GitとBashが使える環境で、次を空の作業ディレクトリから実行します。GitHub Actionsや公開用PRは作成せず、「処理開始時の `main`」と「手動実行時点のコミット」で取得内容が変わる部分だけを確かめます。
+
+```sh
+mkdir release-ref-check && cd release-ref-check
+git init -b main
+git config user.name "Release Test"
+git config user.email "release-test@example.invalid"
+mkdir articles
+printf 'published: true\nbody: A\n' > articles/demo.md
+git add articles/demo.md
+git commit -m "Original A"
+source_sha=$(git rev-parse HEAD)
+
+printf 'published: true\nbody: B\n' > articles/demo.md
+git commit -am "Later B"
+
+old=$(git show main:articles/demo.md | tail -n 1)
+new=$(git show "$source_sha":articles/demo.md | tail -n 1)
+printf '変更前=%s / 変更後=%s\n' "$old" "$new"
+test "$old" = 'body: B' && test "$new" = 'body: A'
+```
+
+期待する表示は `変更前=body: B / 変更後=body: A` で、最後の `test` が成功すれば終了コードは0です。失敗すれば0以外になります。後片付けは作業ディレクトリの外に戻って `rm -rf release-ref-check` で行えます（そのディレクトリだけを削除してください）。これは取得するGit参照の違いを示す最小実験です。実際のワークフローの検証範囲と制限は[修正PR #228](https://github.com/KAFKA2306/articles/pull/228)を参照してください。
+
 ## 自分の仕事で、誤った成果物を止められるか試す
 
 AIに任せたあとで「次はこれ」と付け足した仕事を一つ選び、何を見てその指示を出し、結果がどう変わったかを書き出します。
