@@ -13,7 +13,7 @@ AIにREADME、Issue、`AGENTS.md`、設計文書を書かせると、文章は�
 
 **そのrepositoryでしか通じない用語と略語である。**
 
-実際に現在の `KAFKA2306/semiconductor-earnings-model` の `AGENTS.md` を開くと、冒頭から次の名前が並ぶ。
+2026年8月14日時点の `KAFKA2306/semiconductor-earnings-model` の `AGENTS.md` を開くと、冒頭から次の名前が並ぶ。
 
 ```text
 BFV Kernel
@@ -26,7 +26,7 @@ Fixed Point
 Final Report Contract
 ```
 
-- https://github.com/KAFKA2306/semiconductor-earnings-model/blob/main/AGENTS.md
+- https://github.com/KAFKA2306/semiconductor-earnings-model/blob/9e28bb9d7db2359a18ae081330da1143e82d73d2/AGENTS.md
 
 個々のルールには妥当な内容も多い。金融データなら、一次情報、期間、単位、出所、再現性、テストは必要である。
 
@@ -230,9 +230,9 @@ repository内で繰り返されているからといって、独自用語とは�
 
 たとえば `JSON Schema` なら公式仕様へ接続できる。`CI` ならGitHub Actionsを含む一般的なsoftware engineeringの文脈で広く使われる。
 
-一方、`BFV Kernel` は現在のrepository自身が `BFV means Bounded Falsification & Verification` と定義している。
+一方、`BFV Kernel` は2026年8月14日時点のrepositoryが `BFV means Bounded Falsification & Verification` と定義している。
 
-- https://github.com/KAFKA2306/semiconductor-earnings-model/blob/main/AGENTS.md
+- https://github.com/KAFKA2306/semiconductor-earnings-model/blob/9e28bb9d7db2359a18ae081330da1143e82d73d2/AGENTS.md
 
 つまり読む人は、このrepository固有の定義を取得しなければならない。
 
