@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from datetime import datetime, timedelta
 from pathlib import Path
 
 from . import core, filenames
@@ -17,10 +16,6 @@ EDITORIAL_EVALUATION_KIND = str(
 )
 AXIS_KEYS = list(TECHNICAL_AXES)
 STORY_KEYS = list(EDITORIAL_AXES)
-
-
-def strip_pipeline_meta(text: str) -> str:
-    return core.strip_internal_meta(text)
 
 
 def review_rank_key(
@@ -59,8 +54,9 @@ def improve_candidate(
         review = core.aggregate_evaluations(article, rounds=review_rounds)
         review["evaluation_kind"] = EVALUATION_KIND
         review["editorial_evaluation_kind"] = EDITORIAL_EVALUATION_KIND
+        passes_gate = core.passes_quality(review, sources_ok)
         key = (
-            int(core.passes_quality(review, sources_ok)),
+            int(passes_gate),
             int(sources_ok),
             *review_rank_key(review, source_report),
         )
@@ -69,7 +65,7 @@ def improve_candidate(
             best_key = key
         attempts_used = attempt
         if (
-            core.passes_quality(review, sources_ok)
+            passes_gate
             and float(review["overall"]) >= target
             and float(review["story_overall"]) >= story_target
         ):
@@ -106,11 +102,6 @@ def generate_public_candidate() -> Path:
     )
 
 
-def is_month_end(moment: datetime) -> bool:
-    """Calendar helper retained for historical reports/tests, not publication authority."""
-    return (moment + timedelta(days=1)).month != moment.month
-
-
 def scheduled_publish_allowed() -> bool:
     """Only an explicit human-triggered pipeline run may select a Zenn draft."""
     return os.environ.get("ARTICLE_MANUAL") == "1"
@@ -119,7 +110,7 @@ def scheduled_publish_allowed() -> bool:
 def evaluate_monthly_candidates(paths: list[Path]) -> list[dict[str, object]]:
     evaluated: list[dict[str, object]] = []
     for path in paths:
-        article = strip_pipeline_meta(path.read_text(encoding="utf-8"))
+        article = core.strip_internal_meta(path.read_text(encoding="utf-8"))
         sources_ok, source_report = core.source_gate(article)
         review = core.aggregate_evaluations(article, rounds=3)
         review["evaluation_kind"] = EVALUATION_KIND
