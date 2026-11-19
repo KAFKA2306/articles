@@ -138,22 +138,7 @@ Zennも、生成AIで一般知識を得やすくなった現在、具体的な�
 
 ## Article signature
 
-公開候補は最低限次を一文で答えられる必要があります。
-
-- `intended_audience`: 誰のための記事か
-- `broad_entry`: 技術名を知らなくても分かる入口は何か
-- `reader_job`: 読者は何を達成・判断したいか
-- `reader_before`: 今どんな摩擦・損失・不確実性があるか
-- `customer_value`: 何が減り、何が増えるか
-- `original_observation`: 自分たちしか持っていない観測は何か
-- `surprising_finding`: 読む前と後で何が変わるか
-- `proof_of_value`: その発見を支える実測・実装・一次情報は何か
-- `useful_exit`: 読者が持ち帰る判断・行動は何か
-- `non_goal`: 何は証明していないか
-- `half_life`: 何をいつ再検証するか
-- `portfolio_overlap`: 既存記事で代替できない理由
-
-`authority / verification boundary` は必要な場合だけ使います。**境界を見つけること自体を記事化理由にはしません。**
+誰が読み、読後に何を判断できるか、どの実体験や実測が根拠になるかを、執筆前に一文ずつ書きます。必要な項目は[記事候補の必須項目](pipeline/contracts/article.md#required-candidate-fields)で確認できます。
 
 ## What we do not publish
 
