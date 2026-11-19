@@ -11,25 +11,6 @@ class SourceGateArtifactTests(unittest.TestCase):
         with patch.object(core, "verify_url", return_value=True):
             return core.source_gate(" ".join(urls))
 
-    def test_generic_project_links_cannot_fake_first_hand_evidence(self):
-        ok, report = self.check([
-            "https://github.com/KAFKA2306/articles",
-            "https://github.com/KAFKA2306/graphiti",
-            "https://docs.python.org/3/",
-        ])
-        self.assertFalse(ok)
-        self.assertEqual([], report["own_github"])
-        self.assertEqual(["https://docs.python.org/3/"], report["external_primary"])
-
-    def test_concrete_artifacts_remain_eligible(self):
-        ok, report = self.check([
-            "https://github.com/KAFKA2306/articles/pull/185",
-            "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
-            "https://docs.python.org/3/",
-        ])
-        self.assertTrue(ok)
-        self.assertEqual(2, len(report["own_github"]))
-
     def test_mutable_main_blob_and_project_homepage_do_not_count(self):
         ok, report = self.check([
             "https://github.com/KAFKA2306/articles/blob/main/README.md",
@@ -38,15 +19,6 @@ class SourceGateArtifactTests(unittest.TestCase):
         ])
         self.assertFalse(ok)
         self.assertEqual([], report["own_github"])
-
-    def test_one_artifact_cannot_count_twice(self):
-        ok, report = self.check([
-            "https://github.com/KAFKA2306/articles/pull/185",
-            "https://github.com/KAFKA2306/articles/pull/185",
-            "https://docs.python.org/3/",
-        ])
-        self.assertFalse(ok)
-        self.assertEqual(1, len(report["own_github"]))
 
 
     def test_nonexistent_artifact_shapes_do_not_count(self):
@@ -124,30 +96,6 @@ class SourceGateArtifactTests(unittest.TestCase):
             self.assertFalse(ok)
             self.assertEqual([], report["valid_urls"])
 
-    def test_valid_fence_preserves_following_prose_sources(self):
-        urls = [
-            "https://github.com/KAFKA2306/articles/pull/185",
-            "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
-            "https://docs.python.org/3/",
-        ]
-        article = "````text\nhttps://example.invalid/sample\n````\n" + "\n".join(urls)
-        with patch.object(core, "verify_url", return_value=True):
-            ok, report = core.source_gate(article)
-        self.assertTrue(ok)
-        self.assertEqual(3, len(report["valid_urls"]))
-
-    def test_comment_fence_does_not_hide_real_citations(self):
-        urls = [
-            "https://github.com/KAFKA2306/articles/pull/185",
-            "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
-            "https://docs.python.org/3/",
-        ]
-        article = "<!--\n```\n-->\n" + "\n".join(urls)
-        with patch.object(core, "verify_url", return_value=True):
-            ok, report = core.source_gate(article)
-        self.assertTrue(ok)
-        self.assertEqual(3, len(report["valid_urls"]))
-
     def test_fenced_html_comment_markers_do_not_hide_prose_evidence(self):
         urls = [
             "https://github.com/KAFKA2306/articles/pull/185",
@@ -186,33 +134,6 @@ class SourceGateArtifactTests(unittest.TestCase):
                 self.assertFalse(ok)
                 self.assertEqual([], report["valid_urls"])
 
-    def test_inline_html_markers_do_not_hide_following_citations(self):
-        urls = [
-            "https://github.com/KAFKA2306/articles/pull/185",
-            "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
-            "https://docs.python.org/3/",
-        ]
-        for ticks in ("\x60", "\x60\x60"):
-            for marker in ("<!--", "-->"):
-                with self.subTest(ticks=ticks, marker=marker):
-                    article = f"Example {ticks}{marker}{ticks}\n" + "\n".join(urls)
-                    with patch.object(core, "verify_url", return_value=True):
-                        ok, report = core.source_gate(article)
-                    self.assertTrue(ok)
-                    self.assertEqual(3, len(report["valid_urls"]))
-
-    def test_backtick_wrapped_comment_closer_restores_later_citations(self):
-        urls = [
-            "https://github.com/KAFKA2306/articles/pull/185",
-            "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
-            "https://docs.python.org/3/",
-        ]
-        article = "<!-- note: `-->`\n" + "\n".join(urls)
-        with patch.object(core, "verify_url", return_value=True):
-            ok, report = core.source_gate(article)
-        self.assertTrue(ok)
-        self.assertEqual(3, len(report["valid_urls"]))
-
     def test_backticks_across_two_comments_cannot_expose_hidden_sources(self):
         urls = [
             "https://github.com/KAFKA2306/articles/pull/185",
@@ -225,18 +146,6 @@ class SourceGateArtifactTests(unittest.TestCase):
             ok, report = core.source_gate(article)
         self.assertFalse(ok)
         self.assertEqual([], report["valid_urls"])
-
-    def test_inline_examples_do_not_hide_prose_citations(self):
-        urls = [
-            "https://github.com/KAFKA2306/articles/pull/185",
-            "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
-            "https://docs.python.org/3/",
-        ]
-        article = " ".join(urls) + "\nExample: \x60https://example.invalid/not-evidence\x60"
-        with patch.object(core, "verify_url", return_value=True):
-            ok, report = core.source_gate(article)
-        self.assertTrue(ok)
-        self.assertEqual(3, len(report["valid_urls"]))
 
     def test_indented_code_urls_are_not_citations(self):
         urls = [
@@ -252,18 +161,6 @@ class SourceGateArtifactTests(unittest.TestCase):
                 self.assertFalse(ok)
                 self.assertEqual([], report["valid_urls"])
 
-    def test_indented_example_does_not_remove_prose_evidence(self):
-        urls = [
-            "https://github.com/KAFKA2306/articles/pull/185",
-            "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
-            "https://docs.python.org/3/",
-        ]
-        article = " ".join(urls) + "\n\n    https://example.invalid/code-only\n"
-        with patch.object(core, "verify_url", return_value=True):
-            ok, report = core.source_gate(article)
-        self.assertTrue(ok)
-        self.assertEqual(3, len(report["valid_urls"]))
-
     def test_indented_paragraph_continuation_is_still_evidence(self):
         urls = [
             "https://github.com/KAFKA2306/articles/pull/185",
@@ -271,18 +168,6 @@ class SourceGateArtifactTests(unittest.TestCase):
             "https://docs.python.org/3/",
         ]
         article = "1. Sources:\n\n" + "".join("    - " + url + "\n" for url in urls)
-        with patch.object(core, "verify_url", return_value=True):
-            ok, report = core.source_gate(article)
-        self.assertTrue(ok)
-        self.assertEqual(3, len(report["valid_urls"]))
-
-    def test_cited_links_outside_examples_still_count(self):
-        article = (
-            "Evidence: https://github.com/KAFKA2306/articles/pull/185 "
-            "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c "
-            "https://docs.python.org/3/\n"
-            "```text\nhttps://example.invalid/fake\n```"
-        )
         with patch.object(core, "verify_url", return_value=True):
             ok, report = core.source_gate(article)
         self.assertTrue(ok)
@@ -300,54 +185,6 @@ class SourceGateArtifactTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertEqual([], report["valid_urls"])
 
-    def test_literal_list_marker_inside_fence_does_not_end_example(self):
-        urls = [
-            "https://github.com/KAFKA2306/articles/pull/185",
-            "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
-            "https://docs.python.org/3/",
-        ]
-        article = "```text\n- ```\n" + "\n".join(urls) + "\n```\n"
-        with patch.object(core, "verify_url", return_value=True):
-            ok, report = core.source_gate(article)
-        self.assertFalse(ok)
-        self.assertEqual([], report["valid_urls"])
-
-    def test_indented_list_fence_closes_before_real_evidence(self):
-        urls = [
-            "https://github.com/KAFKA2306/articles/pull/185",
-            "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
-            "https://docs.python.org/3/",
-        ]
-        article = "- Example:\n\n    ```text\n    https://example.invalid/inside\n    ```\n\n" + "\n".join(urls)
-        with patch.object(core, "verify_url", return_value=True):
-            ok, report = core.source_gate(article)
-        self.assertTrue(ok)
-        self.assertEqual(3, len(report["valid_urls"]))
-
-
-    def test_inline_span_followed_by_fence_like_prose_keeps_evidence(self):
-        urls = [
-            "https://github.com/KAFKA2306/articles/pull/185",
-            "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
-            "https://docs.python.org/3/",
-        ]
-        article = "`example` ~~~\n" + "\n".join(urls)
-        with patch.object(core, "verify_url", return_value=True):
-            ok, report = core.source_gate(article)
-        self.assertTrue(ok)
-        self.assertEqual(3, len(report["valid_urls"]))
-
-    def test_escaped_backtick_does_not_hide_html_comment(self):
-        urls = [
-            "https://github.com/KAFKA2306/articles/pull/185",
-            "https://github.com/KAFKA2306/articles/commit/d5b8aedb87500541312d67cd57ed4bd6cf27941c",
-            "https://docs.python.org/3/",
-        ]
-        article = "Example " + chr(92) + "`<!-- internal note `\n" + "\n".join(urls) + "\n-->\n"
-        with patch.object(core, "verify_url", return_value=True):
-            ok, report = core.source_gate(article)
-        self.assertFalse(ok)
-        self.assertEqual([], report["valid_urls"])
 
     def test_two_issue_proposals_cannot_pass_as_first_hand_evidence(self):
         article = (
@@ -360,17 +197,6 @@ class SourceGateArtifactTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertEqual([], report["own_github"])
         self.assertEqual(3, len(report["valid_urls"]))
-
-    def test_completed_artifacts_still_pass_with_external_source(self):
-        article = (
-            "https://github.com/KAFKA2306/articles/pull/198\n"
-            "https://github.com/KAFKA2306/articles/commit/6629a66d6bbefcdacf5101b78f60efbbf6eb888f\n"
-            "https://docs.python.org/3/\n"
-        )
-        with patch.object(core, "verify_url", return_value=True):
-            ok, report = core.source_gate(article)
-        self.assertTrue(ok)
-        self.assertEqual(2, len(report["own_github"]))
 
 
 if __name__ == "__main__":

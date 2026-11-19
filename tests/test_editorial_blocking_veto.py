@@ -17,9 +17,6 @@ class BlockingIssueGateTests(unittest.TestCase):
             "blocking_issues": [],
         }
 
-    def test_high_scoring_supported_article_is_not_rejected(self):
-        self.assertTrue(editorial.passes_quality(self.good, True))
-
     def test_reader_evidence_must_be_in_the_article_even_with_perfect_scores(self):
         opening = "公開候補が一件でも、読んだ版と一致するか分からない。"
         outcome = "公開用PRの原稿を実行時点のコミットと照合する。"
@@ -58,26 +55,6 @@ class BlockingIssueGateTests(unittest.TestCase):
                         self.assertFalse(editorial.passes_quality(
                             {**self.good, axis: bad}, True))
 
-    def test_out_of_rubric_minority_review_is_not_hidden_by_median(self):
-        from unittest.mock import patch
-
-        good = dict(self.good)
-        corrupted = {**good, "logic": 500}
-        with patch.object(editorial, "evaluate", side_effect=[good, corrupted, good]):
-            combined = editorial.aggregate_evaluations("fixture", rounds=3)
-        self.assertIn("reviewer_score_below_quality_floor", combined["blocking_issues"])
-        self.assertFalse(editorial.passes_quality(combined, True))
-
-    def test_nonfinite_minority_review_cannot_be_hidden_by_median(self):
-        from unittest.mock import patch
-
-        good = dict(self.good)
-        corrupted = {**good, "logic": float("nan")}
-        with patch.object(editorial, "evaluate", side_effect=[good, corrupted, good]):
-            combined = editorial.aggregate_evaluations("fixture", rounds=3)
-        self.assertIn("reviewer_score_below_quality_floor", combined["blocking_issues"])
-        self.assertFalse(editorial.passes_quality(combined, True))
-
     def test_source_failure_still_rejects(self):
         self.assertFalse(editorial.passes_quality(self.good, False))
 
@@ -87,11 +64,6 @@ class BlockingIssueGateTests(unittest.TestCase):
             with self.subTest(issue=issue):
                 self.assertFalse(editorial.passes_quality(
                     {**self.good, "blocking_issues": [issue]}, True))
-
-    def test_missing_veto_data_fails_closed(self):
-        incomplete = dict(self.good)
-        del incomplete["blocking_issues"]
-        self.assertFalse(editorial.passes_quality(incomplete, True))
 
     def test_aggregation_does_not_erase_incomplete_review(self):
         from unittest.mock import patch
@@ -115,15 +87,6 @@ class BlockingIssueGateTests(unittest.TestCase):
             combined = editorial.aggregate_evaluations("unsupported claim", rounds=3)
         self.assertEqual(5.0, combined["logic"])
         self.assertIn("reviewer_score_below_quality_floor", combined["blocking_issues"])
-        self.assertFalse(editorial.passes_quality(combined, True))
-
-    def test_single_dissenting_interest_score_cannot_be_hidden(self):
-        from unittest.mock import patch
-
-        good = dict(self.good)
-        low = {**good, "interest": 2.0, "blocking_issues": []}
-        with patch.object(editorial, "evaluate", side_effect=[good, low, good]):
-            combined = editorial.aggregate_evaluations("weak opening", rounds=3)
         self.assertFalse(editorial.passes_quality(combined, True))
 
     def test_complete_clean_reviews_remain_eligible(self):

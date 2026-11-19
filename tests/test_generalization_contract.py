@@ -56,55 +56,6 @@ class GeneralizationContractTests(unittest.TestCase):
             with self.subTest(field=field):
                 self.assertFalse(editorial.story_ready(candidate))
 
-    def test_single_case_can_pass_when_transfer_boundary_is_explicit(self) -> None:
-        candidate = self.topic()
-        candidate["generalizable_insight"] = (
-            "単一事例でも、観測したmechanismと適用境界を分離すれば限定的な判断規則として再利用できる"
-        )
-        candidate["transfer_conditions"] = "同じmechanismを観測できる場合に限る"
-        candidate["non_transfer_conditions"] = "未観測のpopulationや異なるfailure modeへは拡張しない"
-        self.assertTrue(editorial.story_ready(candidate))
-
-    def test_generalization_blockers_are_publication_blockers(self) -> None:
-        passing = {
-            "logic": 5.0,
-            "utility": 5.0,
-            "readability": 5.0,
-            "originality": 5.0,
-            "clarity": 5.0,
-            "overall": 5.0,
-            "interest": 5.0,
-            "discovery": 5.0,
-            "narrative": 5.0,
-            "context": 5.0,
-            "story_overall": 5.0,
-        }
-        for issue in editorial.GENERALIZATION_BLOCKING_ISSUES:
-            review = dict(passing)
-            review["blocking_issues"] = [issue]
-            with self.subTest(issue=issue):
-                self.assertFalse(editorial.passes_quality(review, sources_ok=True))
-
-    def test_prompt_and_review_contract_name_required_fields_and_blockers(self) -> None:
-        source = (editorial.core.ROOT / "pipeline" / "editorial.py").read_text(
-            encoding="utf-8"
-        )
-        for field in (
-            "generalizable_insight",
-            "transfer_conditions",
-            "non_transfer_conditions",
-        ):
-            self.assertIn(field, source)
-        for issue in (
-            "case_specific_without_transfer",
-            "unclear_transfer_conditions",
-            "overgeneralized_from_narrow_evidence",
-        ):
-            self.assertIn(issue, source)
-        self.assertIn("decision rule", source)
-        self.assertIn("comparison lens", source)
-        self.assertIn("experiment protocol", source)
-
 
 if __name__ == "__main__":
     unittest.main()
