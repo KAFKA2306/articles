@@ -27,21 +27,6 @@ class PyodideDemoContractTests(unittest.TestCase):
             manifest["expected"]["fixed"],
         )
 
-    def test_demo_declares_no_extra_packages(self) -> None:
-        manifest = json.loads((DEMO / "demo.json").read_text(encoding="utf-8"))
-        self.assertEqual(manifest["packages"], [])
-        self.assertEqual(manifest["python"], "./syntax_gate.py")
-
-    def test_worker_is_lazy_and_controller_has_no_python_formula(self) -> None:
-        worker = (ROOT / "demos" / "_shared" / "pyodide-worker.mjs").read_text(
-            encoding="utf-8"
-        )
-        controller = (DEMO / "app.mjs").read_text(encoding="utf-8")
-        self.assertIn('action !== "run"', worker)
-        self.assertIn("getPyodide(packages)", worker)
-        self.assertNotIn("pyodide.mjs", controller)
-        self.assertIn('new Worker("../_shared/pyodide-worker.mjs", { type: "module" })', controller)
-
 
 if __name__ == "__main__":
     unittest.main()

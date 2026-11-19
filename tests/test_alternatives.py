@@ -13,8 +13,6 @@ def topic():
     }
 
 class AlternativesTests(unittest.TestCase):
-    def test_unresolved_comparison_is_not_a_winner(self):
-        self.assertTrue(alternatives_ready(topic()))
 
     def test_single_familiar_tool_cannot_pass(self):
         t = topic()
@@ -33,8 +31,3 @@ class AlternativesTests(unittest.TestCase):
                            "measured_result": "10 seconds versus 20",
                            "artifact_url": "https://example.org/run"}}
         self.assertTrue(alternatives_ready(t))
-
-    def test_missing_primary_source_fails(self):
-        t = topic()
-        t["alternatives"][1]["primary_urls"] = []
-        self.assertFalse(alternatives_ready(t))

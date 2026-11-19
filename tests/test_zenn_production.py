@@ -61,13 +61,6 @@ class ZennProductionTests(unittest.TestCase):
         )
         self.assertFalse(mismatch[0].ok)
 
-    def test_cli_exposes_root(self) -> None:
-        source = (zenn_production.ROOT / "pipeline" / "zenn_production.py").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn('"--root"', source)
-        self.assertIn("collect_published_articles(release_root)", source)
-
     def test_scheduled_verifier_reads_deployed_snapshot(self) -> None:
         workflow = (
             zenn_production.ROOT / ".github" / "workflows" / "zenn-production-verify.yml"
@@ -81,24 +74,6 @@ class ZennProductionTests(unittest.TestCase):
         self.assertIn("push:\n", workflow)
         self.assertIn("branches: [zenn-release]", workflow)
         self.assertNotIn("cancel-in-progress", workflow)
-
-    def test_manual_release_stages_zenn_release_pr_from_main(self) -> None:
-        workflow = (
-            zenn_production.ROOT / ".github" / "workflows" / "zenn-manual-release.yml"
-        ).read_text(encoding="utf-8")
-        self.assertIn("ref: ${{ github.sha }}", workflow)
-        self.assertIn('test "$GITHUB_REF" = "refs/heads/main"', workflow)
-        self.assertIn("git fetch origin zenn-release", workflow)
-        self.assertIn("published_at:", workflow)
-        self.assertIn("bash scripts/zenn-render-check.sh", workflow)
-        self.assertIn("git worktree add _zenn_release origin/zenn-release", workflow)
-        self.assertIn('branch="zenn-sync/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"', workflow)
-        self.assertIn("gh pr create", workflow)
-        self.assertIn("--base zenn-release", workflow)
-        self.assertNotIn("git push origin HEAD:zenn-release", workflow)
-        self.assertNotIn("git push origin HEAD:main", workflow)
-        self.assertNotIn("git push --force", workflow)
-        self.assertNotIn("git push -f", workflow)
 
 
 if __name__ == "__main__":

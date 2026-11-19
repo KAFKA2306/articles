@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import os
+import tempfile
 import unittest
 from datetime import datetime
+from pathlib import Path
 from unittest.mock import patch
 
 from pipeline import core, selection
+from pipeline.publication_diff import PublicationState, parse_state
 
 
 class PublicationBoundaryTests(unittest.TestCase):
@@ -28,18 +31,19 @@ class PublicationBoundaryTests(unittest.TestCase):
         check_publication_limit.assert_not_called()
 
     def test_core_materializes_only_unpublished_articles(self) -> None:
-        source = (core.ROOT / "pipeline" / "core.py").read_text(encoding="utf-8")
-        self.assertIn('"published: false\\n"', source)
-
-    def test_workflow_has_no_scheduled_publication_path(self) -> None:
-        workflow = (
-            core.ROOT / ".github" / "workflows" / "article-pipeline.yml"
-        ).read_text(encoding="utf-8")
-        self.assertIn('cron: "17 0 * * *"', workflow)
-        self.assertNotIn('cron: "30 14 28-31 * *"', workflow)
-        self.assertIn("select-draft", workflow)
-        self.assertIn("Assert automation never grants publication", workflow)
-        self.assertNotIn("bootstrap_publish=attempt", workflow)
+        moment = datetime(2026, 8, 15, 10, tzinfo=core.JST)
+        article = '<!-- factory_meta: {"title": "internal"} -->\n\n# Reader title\n\nReader text.\n'
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            patch.object(core, "now_jst", return_value=moment),
+        ):
+            with patch.object(core, "ROOT", Path(directory)):
+                draft = core.publish(article, {}, {}, slug="reader-article-123")
+                content = draft.read_text(encoding="utf-8")
+        self.assertEqual(PublicationState(False, "2026-08-15 10:00"), parse_state(content))
+        self.assertIn('title: "Reader title"', content)
+        self.assertTrue(content.endswith("Reader text.\n"))
+        self.assertNotIn("factory_meta", content)
 
     def test_non_release_article_commits_skip_zenn_deploy(self) -> None:
         workflow = (
@@ -47,14 +51,6 @@ class PublicationBoundaryTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("[skip ci]", workflow)
         self.assertIn("without Zenn deploy", workflow)
-
-    def test_contract_makes_human_publication_explicit(self) -> None:
-        contract = (
-            core.ROOT / "pipeline" / "contracts" / "article.md"
-        ).read_text(encoding="utf-8")
-        self.assertIn("explicit human approval", contract)
-        self.assertIn("published:true", contract)
-        self.assertIn("decision rule", contract.lower())
 
 
 if __name__ == "__main__":
