@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import unittest
+from datetime import datetime
 from unittest.mock import patch
 
 from pipeline import core, selection
@@ -17,8 +18,14 @@ class PublicationBoundaryTests(unittest.TestCase):
             self.assertTrue(selection.scheduled_publish_allowed())
 
     def test_calendar_month_end_is_not_publication_authority(self) -> None:
-        with patch.dict(os.environ, {}, clear=True):
-            self.assertFalse(selection.scheduled_publish_allowed())
+        month_end = datetime(2028, 2, 29, tzinfo=core.JST)
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch.object(core, "now_jst", return_value=month_end),
+            patch.object(core, "published_this_month") as check_publication_limit,
+        ):
+            self.assertIsNone(selection.publish_best())
+        check_publication_limit.assert_not_called()
 
     def test_core_materializes_only_unpublished_articles(self) -> None:
         source = (core.ROOT / "pipeline" / "core.py").read_text(encoding="utf-8")

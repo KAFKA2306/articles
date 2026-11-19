@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
 import json
 import unittest
 
@@ -331,13 +330,13 @@ class PipelineContractTests(unittest.TestCase):
         )
         self.assertEqual(result, {"topic": {"title": "public"}})
 
-    def test_pipeline_meta_is_removed_before_monthly_review(self) -> None:
+    def test_pipeline_meta_is_removed(self) -> None:
         sample = (
             '<!-- pipeline_meta: {"private": false} -->\n\n'
             "# Public article\n"
         )
         self.assertEqual(
-            selection.strip_pipeline_meta(sample),
+            core.strip_internal_meta(sample),
             "# Public article\n",
         )
 
@@ -347,13 +346,6 @@ class PipelineContractTests(unittest.TestCase):
             "# Public article\n"
         )
         self.assertEqual(core.strip_internal_meta(sample), "# Public article\n")
-        self.assertEqual(selection.strip_pipeline_meta(sample), "# Public article\n")
-
-    def test_true_calendar_month_end(self) -> None:
-        self.assertTrue(selection.is_month_end(datetime(2026, 2, 28)))
-        self.assertTrue(selection.is_month_end(datetime(2028, 2, 29)))
-        self.assertTrue(selection.is_month_end(datetime(2026, 8, 31)))
-        self.assertFalse(selection.is_month_end(datetime(2026, 8, 30)))
 
     def test_weekly_compaction_prefers_human_sections(self) -> None:
         text = """# Weekly Diary
