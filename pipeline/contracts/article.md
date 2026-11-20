@@ -81,14 +81,15 @@ specific case / measurement / failure
 
 ### 文章の推敲と反証
 
-執筆・改稿の原典は、[英国国家統計局の読者の用事と合格条件](https://service-manual.ons.gov.uk/content/writing-for-users/user-needs)と、[Nielsen Norman Groupの見出しを拾い読みする行動の研究](https://www.nngroup.com/articles/layer-cake-pattern-scanning/)。
+初稿・改稿・査読の共通手順。参照版は [Kafstyler 0.7.0の作業規約](https://github.com/KAFKA2306/kafstyler/blob/36d819f5222981c88295642a6e4534f54a7582ba/AGENTS.md#コマンドの連携)。読者の用事と見出しの設計は、[英国国家統計局の編集ガイド](https://service-manual.ons.gov.uk/content/writing-for-users/user-needs)と、[Nielsen Norman Groupの視線計測](https://www.nngroup.com/articles/layer-cake-pattern-scanning/)に基づく。
 
-- 書く前に、誰がどんな場面でこの記事を読むか、どの判断や行動をできるようになりたいかを読者の言葉で書く。困り事は利用者の相談、実際の操作、観測した失敗などから確かめる。根拠が足りなければ想定として扱う。
+- 誰がどんな場面で読み、読後に何を判断・実行するかを決める。初稿を書く前に、合格時に観測できる結果と失敗例を一つずつ決める。困り事は利用者の相談、実際の操作、観測した失敗で確かめ、確認できない場合は想定とする。
 - タイトル・冒頭・見出しだけを順に読み、初見の読者が自分の用事に関係するか、答えをどこで見つけられるかを確かめる。タイトルを変えるときは、読者の困り事と得られる結果が異なる角度から伝わる案を比べる。同じ意味には同じ語を使い、用語を直したら本文、図表、手順を照合する。
 - 読み終えた人が何を見てどう判断するか、または何を実行すればよいかを本文に示す。査読では、読む理由が伝わる冒頭の一節と、判断や行動ができるようになる本文の一節を、原稿から引用して確かめる。どちらかを示せなければ差し戻す。
 - 査読では、記事どおりに進めても読者の用事が済まない例を一つ考え、原稿と与えられた一次証拠に照らす。たとえば件数が同じでも対象の版が違う、コマンドが成功しても公開先に届いていない、必須の承認や前提が途中で抜けている場合を疑う。URLがあることと、その資料が主張を支えることを分けて判定する。
 - 査読で中心となる操作や主張を支える証拠が本文や入力資料から確認できなければ、`blocking_issues` に `missing_proof_of_value` を入れ、確認できなかった条件と必要な資料を `revision_actions` に記す。実施した記録のない測定、操作、読者テストは実施済みと書かない。
-- 改稿後は同じ入力と合格条件で確認し、主張の強さ、数値、条件、出典が意図せず変わっていないか確かめる。査読用の判定や作業記録は記事本文に入れない。
+- 改稿後は同じ入力と合格条件で確認する。査読で試した条件は `revision_actions` に残し、改稿でも使う。主張の強さ、数値、条件、出典を照合し、読者の判断や再現に必要な根拠を残して重複を削る。査読用の判定や作業記録は記事本文に入れない。
+- 初稿と改稿は本文だけを返す。候補を `articles/` へ昇格するときの front matter は昇格処理が生成する。`title`、`emoji`、`type`、`topics`、`published`、`published_at` はZennでの意味と型を保つ。記事の検索分類には `topics` を使い、追加の編集メタデータは候補または作業記録に置く。公開の承認と同期は[公開手順](../../docs/PUBLICATION.md)に従う。[Zenn CLI公式ガイド](https://zenn.dev/zenn/articles/zenn-cli-guide)
 
 ## People-first editorial principles
 
