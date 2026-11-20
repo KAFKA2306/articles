@@ -119,21 +119,20 @@ This discovery rule **does not change** the human-controlled publication boundar
 
 ## 4B. Apply Kafstyler to editorial work
 
-For article and pipeline changes, use `charter` to name the reader's next decision or action and its acceptance condition. Use `humanizer` to review the title, headings, and terminology, `scrutiny` to try a plausible failure against the proposed check, and `benchmark` to compare the existing and revised outputs on the same input. Verify the result through the reader's usual entry point. Record the Kafstyler commit and evidence in the PR. When a failure recurs outside this repository, verify it against the shared Kafstyler procedure before proposing a change there.
+Use the installed Kafstyler plugin where available. Otherwise, resolve [Kafstyler `main`](https://api.github.com/repos/KAFKA2306/kafstyler/commits/main) to a full commit SHA and read `AGENTS.md`, `MISSION.md`, and the applicable `SKILL.md` files at that SHA. Use the existing Issue or PR as the work record. Record the reader's intended action, the acceptance check, the Kafstyler SHA, and the observed result at the reader's usual entry point.
 
-Use the installed plugin where available. For an interactive environment without it, resolve the current `main` SHA and read the relevant files at that revision. The scheduled pipeline uses Copilot without file or web tools. Its [editorial contract](pipeline/contracts/article.md#文章の推敲と反証) includes the applicable instructions in each draft, revision, and review prompt. The source for this adaptation is [Kafstyler 0.5.9](https://github.com/KAFKA2306/kafstyler/blob/f0e05572899150dc8b0fdcd1a1ceab5d951d7bb8/AGENTS.md#コマンドの連携).
-
-Before drafting, identify the reader's situation, reason for opening the article, and what they should be able to decide or do afterward. Review the title, opening, and headings in isolation, then point to the passages that deliver both the reason to read and the promised outcome. Use the [two primary references in Kafstyler's reading list](https://github.com/KAFKA2306/kafstyler/blob/main/BIBLES.md#読者から記事を設計する).
+Scheduled Copilot receives the [editorial contract](pipeline/contracts/article.md#文章の推敲と反証) in each draft, revision, and review prompt. That contract holds the instructions the model can follow from the supplied evidence. The repository workflow owns fetching, validation, and output. Verify the adaptation against upstream when updating the contract. Bring reproducible failures shared by multiple repositories back to Kafstyler with the input and observed result.
 
 ## 4C. Full Kafstyler review for every Markdown file
 
-Apply all seven current Kafstyler skills to **every Markdown file changed or reviewed** in this repository, including articles, README, contracts, reports, and this operating contract. Read each skill's current `SKILL.md` at a pinned Kafstyler commit. Do not equate merely mentioning a skill with applying it.
+Apply all seven current Kafstyler skills to each Markdown file changed or assessed in an editorial review. Prioritize broken reader journeys, misleading claims, duplicated articles, and missing original evidence. Record the path, content SHA, Kafstyler SHA, finding and decision for each skill, and verification in the existing review report or PR.
 
-For each file, record in the existing review report or PR evidence: file path, content SHA, Kafstyler commit, each skill's finding, resulting edit or justified no-change decision, and verification. Use `charter` to define the reader's intended outcome; `schema` to check frontmatter, tags, metadata and references; `humanizer` to revise title, vocabulary, structure and prose; `scrutiny` to challenge claims and assumptions; `benchmark` to test the promised reader action and compare revisions; `deliver` to carry the fix to the intended entry point; and `prune` to remove redundant prose, dead links, duplicate material and obsolete files without discarding unique evidence.
+- `reconceptualize` defines what the reader should be able to do. `adjudicate` fixes the observable success condition and failure example before drafting and uses them again on the revision.
+- `canonicalize` checks metadata and references against the source of truth. For `articles/`, use the Zenn front matter defined in the [editorial contract](pipeline/contracts/article.md#文章の推敲と反証).
+- `disprove` checks primary evidence and tries a counterexample. `humanizer` makes the title, headings, and text tell readers where to find the answer and act on it.
+- `autocatalyze` carries the work through the normal delivery path and records the result. `decommission` removes redundant text, dead links, and obsolete material after confirming that unique evidence and necessary reader paths are accounted for.
 
-Review **every** Markdown file, not just the flagship article. Prioritize broken reader journeys, misleading claims, duplicated articles and missing original evidence over cosmetic edits. A skill with no relevant defect still receives a concrete assessment, not a fabricated action. Preserve original observations, citations, publication metadata and the human-only publication boundary. Do not automatically set `published: true` or silently delete already-published material.
-
-After edits, rerun applicable repository audit and tests, check navigation and Markdown metadata, inspect the diff, commit all intended changes, and verify the resulting commit. Keep the review ledger current so the next pass can identify files not yet assessed and changed files that need reassessment.
+Review the full Markdown inventory, including repository and pipeline documentation. Use the review ledger to track unassessed files across passes. After changes, run the applicable checks in section 21 and follow the publication and retention rules in sections 12–15 and 20.
 
 ## 5. Topic rejection rules
 
