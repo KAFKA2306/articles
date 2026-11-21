@@ -4,6 +4,8 @@ emoji: "🧪"
 type: "tech"
 topics: ["typescript", "oxlint", "ci", "testing", "tooling"]
 published: false
+created_at: "2026-08-15"
+updated_at: "2026-11-21"
 ---
 
 **新しい検査が2/2を出しても、古い検査を消す理由にはならない。**

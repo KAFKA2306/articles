@@ -4,6 +4,8 @@ emoji: "🧭"
 type: "tech"
 topics: ["typescript", "backend", "workflow", "design"]
 published: false
+created_at: "2026-08-14"
+updated_at: "2026-11-21"
 ---
 
 **IDの衝突がないというだけで、別の用途の処理が混ざらないと思うな。**

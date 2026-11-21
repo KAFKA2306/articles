@@ -4,6 +4,8 @@ emoji: "🧭"
 type: "idea"
 topics: ["codex", "llm", "softwareengineering", "github", "aiagent"]
 published: false
+created_at: "2026-08-20"
+updated_at: "2026-11-21"
 ---
 
 Codexを長く使っていたら、開発の説明に見覚えのない用語が増えていた。

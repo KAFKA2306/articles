@@ -5,6 +5,8 @@ type: "tech"
 topics: ["architecture", "python", "javascript", "webassembly"]
 published: false
 published_at: 2026-08-14 00:20
+created_at: "2026-08-14"
+updated_at: "2026-11-15"
 ---
 
 画面が増えるほど、**正解まで増えてはいけない。**

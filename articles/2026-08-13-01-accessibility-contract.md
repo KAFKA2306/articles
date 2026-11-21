@@ -5,6 +5,8 @@ type: "tech"
 topics: ["accessibility", "css", "html", "githubactions"]
 published: false
 published_at: 2026-08-13 16:58
+created_at: "2026-08-13"
+updated_at: "2026-11-21"
 ---
 
 **UIを刷新するなら、以前できたことを壊す条件を先に固定せよ。**

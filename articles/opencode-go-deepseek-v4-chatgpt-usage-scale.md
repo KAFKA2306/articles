@@ -5,6 +5,8 @@ type: "tech"
 topics: ["opencode", "chatgpt", "coding", "mcp", "local"]
 published: false
 published_at: 2026-08-13 12:09
+created_at: "2026-08-13"
+updated_at: "2026-11-21"
 ---
 
 OpenCode Goを見たとき、最初は単純に安いと思った。

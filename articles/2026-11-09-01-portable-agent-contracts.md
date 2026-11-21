@@ -4,6 +4,8 @@ emoji: "🔗"
 type: "tech"
 topics: ["ai", "mcp", "github", "unity", "automation"]
 published: false
+created_at: "2026-11-09"
+updated_at: "2026-11-15"
 ---
 
 AIエージェントを乗り換えたり、別のリポジトリで同じ作業を委任したりするとき、説明文をコピーするだけでは引き継げないものがある。

@@ -5,6 +5,8 @@ type: "tech"
 topics: ["llm", "dataengineering", "ai", "testing"]
 published: false
 published_at: 2026-08-12 12:30
+created_at: "2026-08-12"
+updated_at: "2026-11-15"
 ---
 
 生成AIを使えば、OCR、CSV、Excel、メール、自由記述からJSONを作るのは、かなり簡単になった。

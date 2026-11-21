@@ -5,6 +5,8 @@ type: "tech"
 topics: ["vrchat", "unity", "modularavatar", "architecture"]
 published: false
 published_at: 2026-08-12 14:18
+created_at: "2026-08-12"
+updated_at: "2026-11-15"
 ---
 
 # VRChatのペット「ムチォ」に別のモデルを組み込む前に、何を確かめるか

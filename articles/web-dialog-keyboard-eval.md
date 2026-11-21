@@ -4,6 +4,8 @@ emoji: "⌨️"
 type: "tech"
 topics: ["html", "playwright", "accessibility", "ai", "evals"]
 published: false
+created_at: "2026-11-15"
+updated_at: "2026-11-15"
 ---
 
 「公開する」を押したあとで考え直し、確認画面を `Escape` で閉じる。そこで次にキーを押すと、どこに入力が届くでしょうか。

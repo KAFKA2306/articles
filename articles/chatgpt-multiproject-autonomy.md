@@ -5,6 +5,8 @@ type: "tech"
 topics: ["chatgpt", "github", "automation", "githubactions"]
 published: true
 published_at: 2026-08-15 09:40
+created_at: "2026-08-15"
+updated_at: "2026-11-21"
 ---
 
 **AIに「前回どこまでやったか」を覚えさせるな。毎回、外部の正本から再開させよ。**

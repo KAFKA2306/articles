@@ -38,10 +38,12 @@ class PublicationBoundaryTests(unittest.TestCase):
             patch.object(core, "now_jst", return_value=moment),
         ):
             with patch.object(core, "ROOT", Path(directory)):
-                draft = core.publish(article, {}, {}, slug="reader-article-123")
+                draft = core.publish(article, {}, {}, slug="2026-08-15-01-reader-article-123")
                 content = draft.read_text(encoding="utf-8")
         self.assertEqual(PublicationState(False, "2026-08-15 10:00"), parse_state(content))
         self.assertIn('title: "Reader title"', content)
+        self.assertIn('created_at: "2026-08-15"', content)
+        self.assertIn('updated_at: "2026-08-15"', content)
         self.assertTrue(content.endswith("Reader text.\n"))
         self.assertNotIn("factory_meta", content)
 

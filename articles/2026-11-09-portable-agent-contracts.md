@@ -4,6 +4,8 @@ emoji: "🧩"
 type: "tech"
 topics: ["aiagents", "github", "mcp", "codex", "unity"]
 published: false
+created_at: "2026-11-09"
+updated_at: "2026-11-15"
 ---
 
 同じ開発作業をCodexからClaude Codeへ引き継ぐ。別のGitHubリポジトリでも、過去に学んだ失敗や完了条件を使いたい。

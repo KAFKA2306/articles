@@ -4,6 +4,8 @@ emoji: "🧪"
 type: "tech"
 topics: ["comfyui", "githubactions", "python", "workflow", "ai"]
 published: false
+created_at: "2026-11-07"
+updated_at: "2026-11-21"
 ---
 
 **見つかった順序を、使える順序だと呼ぶな。** 候補の発見、用途への適合、実機での成功、制作への採用は別の判定だ。

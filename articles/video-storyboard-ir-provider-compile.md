@@ -5,6 +5,8 @@ type: "tech"
 topics: ["python", "ai", "architecture", "videogeneration", "testing"]
 published: false
 published_at: 2026-08-12 14:09
+created_at: "2026-08-12"
+updated_at: "2026-11-15"
 ---
 
 動画生成AIのadapterを作った2日後、記事を読み直すためにMiniMaxの現行docsを確認した。

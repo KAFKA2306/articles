@@ -664,7 +664,9 @@ def publish(
     slug: str | None = None,
 ) -> Path:
     article = strip_internal_meta(article)
-    final_slug = require_valid_slug(slug or slug_for(article))
+    final_slug = require_valid_slug(
+        slug or f"{now_jst():%Y-%m-%d}-01-article-{hashlib.sha256(article.encode()).hexdigest()[:10]}"
+    )
     out = output_dir("published")
     title = article_title(article).replace('"', "'")
     body = re.sub(
@@ -683,6 +685,8 @@ def publish(
         # Fail-close: generation never grants publication approval.
         "published: false\n"
         f"published_at: {now_jst():%Y-%m-%d %H:%M}\n"
+        f'created_at: "{now_jst():%Y-%m-%d}"\n'
+        f'updated_at: "{now_jst():%Y-%m-%d}"\n'
         "---\n\n"
     )
     path = create_article_file(

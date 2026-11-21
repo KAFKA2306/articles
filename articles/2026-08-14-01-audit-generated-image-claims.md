@@ -4,6 +4,8 @@ emoji: "🔎"
 type: "tech"
 topics: ["chatgpt", "imagegeneration", "testing", "automation", "zenn"]
 published: false
+created_at: "2026-08-14"
+updated_at: "2026-11-15"
 ---
 
 生成AIに技術記事の図を頼むと、かなりそれらしいものが出てくる。

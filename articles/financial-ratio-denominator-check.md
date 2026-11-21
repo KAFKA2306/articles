@@ -4,6 +4,8 @@ emoji: "📊"
 type: "tech"
 topics: ["決算", "データ検証", "python", "自動化"]
 published: false
+created_at: "2026-11-15"
+updated_at: "2026-11-21"
 ---
 
 **百分率が同じでも、分母が違えば同じ数字ではない。**

@@ -4,6 +4,8 @@ emoji: "🚦"
 type: "tech"
 topics: ["typescript", "githubactions", "testing", "ai"]
 published: false
+created_at: "2026-08-13"
+updated_at: "2026-11-21"
 ---
 
 **同じ工程の合否を二か所で計算するな。観測値は共有し、止める判断の所有者を一つにせよ。**

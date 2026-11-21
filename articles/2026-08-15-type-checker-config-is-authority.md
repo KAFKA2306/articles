@@ -4,6 +4,8 @@ emoji: "🧪"
 type: "tech"
 topics: ["python", "typechecking", "ci", "testing", "developerexperience"]
 published: false
+created_at: "2026-08-15"
+updated_at: "2026-11-21"
 ---
 
 **異なる設定の測定値を、製品の優劣として比べるな。**

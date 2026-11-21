@@ -8,6 +8,9 @@ from pipeline.zenn_slug import (
     InvalidZennSlug,
     create_article_file,
     validate_article_paths,
+    validate_article_metadata,
+    validate_new_article,
+    validate_repository,
     validate_slug,
 )
 
@@ -41,14 +44,59 @@ class ZennSlugTests(unittest.TestCase):
     def test_creation_uses_final_valid_slug_and_never_overwrites(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             articles_dir = Path(tmp) / "articles"
-            slug = "2026-08-15-runtime-validation-boundary"
-            path = create_article_file(articles_dir, slug, "first\n")
+            slug = "2026-08-15-01-runtime-validation-boundary"
+            first = (
+                '---\ntitle: "Example"\n'
+                'emoji: "🧪"\ntype: "tech"\ntopics: []\n'
+                'published: false\n'
+                'created_at: "2026-08-15"\nupdated_at: "2026-08-15"\n'
+                '---\n\nfirst\n'
+            )
+            path = create_article_file(articles_dir, slug, first)
             self.assertEqual(path.name, f"{slug}.md")
-            self.assertEqual(path.read_text(encoding="utf-8"), "first\n")
+            self.assertEqual(path.read_text(encoding="utf-8"), first)
             with self.assertRaises(FileExistsError):
-                create_article_file(articles_dir, slug, "second\n")
-            self.assertEqual(path.read_text(encoding="utf-8"), "first\n")
+                create_article_file(articles_dir, slug, first)
+            self.assertEqual(path.read_text(encoding="utf-8"), first)
 
+    def test_new_article_dates_must_match_filename(self) -> None:
+        body = (
+            '---\ncreated_at: "2026-11-21"\n'
+            'updated_at: "2026-11-21"\npublished: false\n---\n\nExample\n'
+        )
+        self.assertEqual(
+            [],
+            validate_new_article("articles/2026-11-21-01-example.md", body),
+        )
+        self.assertTrue(validate_new_article("articles/example-article.md", body))
+        self.assertTrue(validate_new_article("articles/2026-11-20-01-example.md", body))
+        self.assertTrue(validate_new_article("articles/2026-11-21-example.md", body))
+
+    def test_invalid_dates_are_rejected_without_guessing(self) -> None:
+        bad = (
+            '---\ncreated_at: "2026-02-30"\n'
+            'updated_at: "2026-02-28"\n---\n\nExample\n'
+        )
+        self.assertTrue(validate_article_metadata("articles/sample.md", bad))
+        reverse = (
+            '---\ncreated_at: "2026-11-21"\n'
+            'updated_at: "2026-11-20"\n---\n\nExample\n'
+        )
+        self.assertTrue(validate_article_metadata("articles/sample.md", reverse))
+
+    def test_full_scan_checks_existing_metadata_without_renaming(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp) / "articles"
+            directory.mkdir()
+            legacy = directory / "existing-zenn-article.md"
+            legacy.write_text(
+                '---\ncreated_at: "2026-08-15"\n'
+                'updated_at: "2026-11-21"\npublished: true\n---\n\nText\n',
+                encoding="utf-8",
+            )
+            self.assertEqual([], validate_repository(Path(tmp)))
+            legacy.write_text('---\npublished: true\n---\n\nText\n', encoding="utf-8")
+            self.assertTrue(validate_repository(Path(tmp)))
 
 if __name__ == "__main__":
     unittest.main()

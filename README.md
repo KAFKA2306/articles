@@ -264,6 +264,14 @@ explicit human approval
 
 schedule、score、CI green、mergeはpublication authorizationではありません。
 
+## 記事ファイル名と日付
+
+新規記事は `articles/YYYY-MM-DD-NN-topic.md` とする。`YYYY-MM-DD` は作成日の日本時間、`NN` は当日の2桁連番、`topic` は短い英数字の説明。Zennの12〜50文字のslug制約を守る。
+
+全記事のfrontmatterに `created_at: "YYYY-MM-DD"`（作成日）と `updated_at: "YYYY-MM-DD"`（改定日）を明記する。新規作成時は両者を同日とし、本文を改定した日は `updated_at` を更新する。`published_at` はZennの公開日時であり、両者と混同しない。
+
+既存記事の初期値にはGitで確認できる初回記録日・最終変更日（JST）を用いた。原稿の執筆開始日そのものを証明するものではない。既存の非日付slugは参照先や公開URLの互換性を保つため維持し、新規作成には使わない。[編集契約](pipeline/contracts/article.md#記事ファイル名と作成改定日) · [Zennのslug仕様](https://zenn.dev/zenn/articles/what-is-slug)
+
 ## Repository structure
 
 ```text

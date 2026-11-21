@@ -5,6 +5,8 @@ type: "tech"
 topics: ["codex", "github", "unity", "security", "automation"]
 published: false
 published_at: 2026-08-12 17:02
+created_at: "2026-08-12"
+updated_at: "2026-11-15"
 ---
 
 # GitHub IssueからUnityやBlenderを動かすAIに、どこまで権限を渡すか

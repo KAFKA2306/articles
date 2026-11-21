@@ -128,7 +128,7 @@ Scheduled Copilot receives the [editorial contract](pipeline/contracts/article.m
 Apply all seven current Kafstyler skills to each Markdown file changed or assessed in an editorial review. Prioritize broken reader journeys, misleading claims, duplicated articles, and missing original evidence. Record the path, content SHA, Kafstyler SHA, finding and decision for each skill, and verification in the existing review report or PR.
 
 - `reconceptualize` defines what the reader should be able to do. `adjudicate` fixes the observable success condition and failure example before drafting and uses them again on the revision.
-- `canonicalize` checks metadata and references against the source of truth. For `articles/`, use the Zenn front matter defined in the [editorial contract](pipeline/contracts/article.md#文章の推敲と反証).
+- `canonicalize` checks metadata and references against the source of truth. For `articles/`, use the Zenn front matter and dated `YYYY-MM-DD-NN-topic.md` rule defined in the [editorial contract](pipeline/contracts/article.md#記事ファイル名と作成改定日). Existing slugs are immutable for URL and reference compatibility. Keep `created_at`, `updated_at`, and `published_at` distinct.
 - `disprove` checks primary evidence and tries a counterexample. `humanizer` makes the title, headings, and text tell readers where to find the answer and act on it.
 - `autocatalyze` carries the work through the normal delivery path and records the result. `decommission` removes redundant text, dead links, and obsolete material after confirming that unique evidence and necessary reader paths are accounted for.
 

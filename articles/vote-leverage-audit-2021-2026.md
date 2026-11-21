@@ -4,6 +4,8 @@ emoji: "🗳️"
 type: "idea"
 topics: ["政治", "選挙", "経済", "データ分析"]
 published: false
+created_at: "2026-08-15"
+updated_at: "2026-11-15"
 ---
 
 > 検証基準日：2026年8月15日

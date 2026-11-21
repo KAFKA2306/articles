@@ -4,6 +4,8 @@ emoji: "🧾"
 type: "tech"
 topics: ["python", "githubactions", "dataengineering", "testing", "ci"]
 published: false
+created_at: "2026-08-14"
+updated_at: "2026-11-21"
 ---
 
 **CIが勝手に修復してgreenになったPRを、完成した成果と呼ぶな。**

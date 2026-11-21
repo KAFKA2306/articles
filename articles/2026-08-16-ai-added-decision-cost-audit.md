@@ -5,6 +5,8 @@ type: "tech"
 topics: ["ai", "codex", "github", "nlp", "documentation"]
 published: true
 published_at: 2026-08-16 12:24
+created_at: "2026-08-16"
+updated_at: "2026-11-15"
 ---
 
 AIにREADME、Issue、`AGENTS.md`、設計文書を書かせると、文章はすぐ増やせる。

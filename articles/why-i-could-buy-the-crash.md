@@ -5,6 +5,8 @@ type: "idea"
 topics: ["意思決定", "LLM", "GitHub", "投資", "知識管理"]
 published: false
 published_at: 2026-08-13 12:33
+created_at: "2026-08-13"
+updated_at: "2026-11-15"
 ---
 
 NotionやObsidianは、知識を残し、探し、つなぐための道具を大きく前進させた。

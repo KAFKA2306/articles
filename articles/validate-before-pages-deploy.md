@@ -5,6 +5,8 @@ type: "tech"
 topics: ["cicd", "githubactions", "githubpages", "testing", "sre"]
 published: false
 published_at: 2026-08-13 16:04
+created_at: "2026-08-13"
+updated_at: "2026-11-15"
 ---
 
 > **“Sorry, I couldn’t deploy github/my-feature: github and enterprise are still building.”**
