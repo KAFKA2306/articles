@@ -5,6 +5,8 @@ type: "tech"
 topics: ["dataengineering", "provenance", "python", "github"]
 published: false
 published_at: 2026-08-12 11:21
+created_at: "2026-08-12"
+updated_at: "2026-11-15"
 ---
 
 最初の集計は **856行** だった。

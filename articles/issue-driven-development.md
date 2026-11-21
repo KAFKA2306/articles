@@ -5,6 +5,8 @@ type: "tech"
 topics: ["ai", "github", "codex", "claudecode", "automation"]
 published: true
 published_at: 2026-09-02 22:12
+created_at: "2026-09-02"
+updated_at: "2026-11-21"
 ---
 
 **終わった要求を、いつまでも現在仕様として保守するな。**

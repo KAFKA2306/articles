@@ -4,6 +4,8 @@ emoji: "📝"
 type: "tech"
 topics: ["ライティング", "evals", "ai", "jq", "自動化"]
 published: false
+created_at: "2026-11-15"
+updated_at: "2026-11-21"
 ---
 
 「学ぶコストは下がった。でも、差は開いている。」

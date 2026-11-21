@@ -5,6 +5,8 @@ type: "tech"
 topics: ["ai", "claudecode", "codex", "agentskills", "testing"]
 published: true
 published_at: 2026-11-17 22:03
+created_at: "2026-11-17"
+updated_at: "2026-11-21"
 ---
 
 半年前に公表した数字に訂正が出たとします。何十ものリポジトリを運用するプロジェクトで、Web、ダウンロード用のCSV、報告書はそれぞれ別のリポジトリから公開されています。当時の担当者も、作業に使ったAIも、もう替わっています。どこを直せば三つがそろうのか。半年前の数字を、当時の資料からもう一度出せるのか。
