@@ -5,7 +5,7 @@ import re
 import subprocess
 from dataclasses import dataclass
 
-from pipeline.zenn_slug import validate_article_paths
+from pipeline.zenn_slug import validate_article_paths, validate_new_article
 
 
 @dataclass(frozen=True)
@@ -138,6 +138,9 @@ def main() -> int:
     }
     errors = validate_article_paths(collect_article_paths(args.head))
     errors.extend(validate_transition(changes, original_published_at=origins))
+    for path, old, new in changes:
+        if old is None and new is not None:
+            errors.extend(validate_new_article(path, _show(args.head, path) or ""))
     if errors:
         for error in errors:
             print(f"PUBLICATION_DIFF_FAIL: {error}")

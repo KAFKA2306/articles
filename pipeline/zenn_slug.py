@@ -3,10 +3,13 @@ from __future__ import annotations
 import argparse
 import re
 from collections.abc import Iterable
+from datetime import date
 from pathlib import Path
 
 
 ZENN_SLUG_RE = re.compile(r"^[a-z0-9_-]{12,50}$")
+DATED_SLUG_RE = re.compile(r"^(?P<date>\d{4}-\d{2}-\d{2})-[a-z0-9][a-z0-9_-]*$")
+FRONTMATTER_RE = re.compile(r"\A---\n(?P<fields>[\s\S]*?)\n---\n")
 
 
 class InvalidZennSlug(ValueError):
@@ -41,6 +44,9 @@ def create_article_file(articles_dir: Path, slug: str, content: str) -> Path:
     Invalid slugs fail before mkdir/open. Existing paths fail rather than overwrite.
     """
     path = article_path_for_slug(articles_dir, slug)
+    date_errors = validate_new_article(str(path), content)
+    if date_errors:
+        raise InvalidZennSlug("; ".join(date_errors))
     articles_dir.mkdir(parents=True, exist_ok=True)
     try:
         with path.open("x", encoding="utf-8", newline="\n") as handle:
@@ -48,6 +54,54 @@ def create_article_file(articles_dir: Path, slug: str, content: str) -> Path:
     except FileExistsError as exc:
         raise FileExistsError(f"article already exists: {path}") from exc
     return path
+
+
+
+def validate_article_metadata(path: str, content: str) -> list[str]:
+    """The editorial dates are distinct from Zenn's published_at."""
+    match = FRONTMATTER_RE.match(content)
+    if not match:
+        return [f"{path}: missing YAML front matter"]
+    fields = match.group("fields")
+    dates: dict[str, date] = {}
+    errors: list[str] = []
+    for key in ("created_at", "updated_at"):
+        found = re.search(
+            rf"""^{key}:\s*['"]?(\d{{4}}-\d{{2}}-\d{{2}})['"]?\s*$""",
+            fields,
+            re.MULTILINE,
+        )
+        if not found:
+            errors.append(f"{path}: missing or invalid {key} (YYYY-MM-DD)")
+            continue
+        try:
+            dates[key] = date.fromisoformat(found.group(1))
+        except ValueError:
+            errors.append(f"{path}: invalid calendar date for {key}")
+    if len(dates) == 2 and dates["updated_at"] < dates["created_at"]:
+        errors.append(f"{path}: updated_at precedes created_at")
+    return errors
+
+
+def validate_new_article(path: str, content: str) -> list[str]:
+    """New articles require dated slugs; published legacy slugs never change."""
+    errors = validate_article_metadata(path, content)
+    slug = Path(path).stem
+    match = DATED_SLUG_RE.fullmatch(slug)
+    if not match or validate_slug(slug):
+        return [f"{path}: new article slug must start YYYY-MM-DD-"] + errors
+    try:
+        date.fromisoformat(match.group("date"))
+    except ValueError:
+        return [f"{path}: invalid date prefix"] + errors
+    created = re.search(
+        r"""^created_at:\s*['"]?(\d{4}-\d{2}-\d{2})['"]?\s*$""",
+        content.split("---\n", 2)[1] if content.startswith("---\n") else "",
+        re.MULTILINE,
+    )
+    if created and created.group(1) != match.group("date"):
+        errors.append(f"{path}: filename date must equal created_at")
+    return errors
 
 
 def validate_article_paths(paths: Iterable[str]) -> list[str]:
@@ -73,7 +127,11 @@ def collect_repository_article_paths(root: Path = Path(".")) -> list[str]:
 
 
 def validate_repository(root: Path = Path(".")) -> list[str]:
-    return validate_article_paths(collect_repository_article_paths(root))
+    paths = collect_repository_article_paths(root)
+    errors = validate_article_paths(paths)
+    for path in paths:
+        errors.extend(validate_article_metadata(path, (root / path).read_text(encoding="utf-8")))
+    return errors
 
 
 def main() -> int:
@@ -103,7 +161,7 @@ def main() -> int:
         checked = len(args.slug)
     else:
         paths = collect_repository_article_paths(args.root)
-        errors = validate_article_paths(paths)
+        errors = validate_repository(args.root)
         checked = len(paths)
 
     if errors:
