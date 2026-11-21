@@ -5,6 +5,8 @@ type: "tech"
 topics: ["python", "dataengineering", "privacy", "architecture", "vrchat"]
 published: false
 published_at: 2026-08-12 13:21
+created_at: "2026-08-12"
+updated_at: "2026-11-15"
 ---
 
 synthetic fixtureに、3行の会話ログを置きました。

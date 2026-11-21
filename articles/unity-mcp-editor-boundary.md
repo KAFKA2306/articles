@@ -5,6 +5,8 @@ type: "tech"
 topics: ["unity", "mcp", "codex", "claudecode", "ai"]
 published: false
 published_at: 2026-08-12 16:03
+created_at: "2026-08-12"
+updated_at: "2026-11-15"
 ---
 
 # Unity MCPで作ったものの見た目と動作を、どこまで確かめられるか
