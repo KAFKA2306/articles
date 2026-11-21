@@ -1,10 +1,12 @@
 ---
-title: "品質チェックの合否が二重になる。工程を止める条件を一か所で管理する"
+title: "品質判定の所有者を増やすな。観測と停止を分ける"
 emoji: "🚦"
 type: "tech"
 topics: ["typescript", "githubactions", "testing", "ai"]
 published: false
 ---
+
+**同じ工程の合否を二か所で計算するな。観測値は共有し、止める判断の所有者を一つにせよ。**
 
 品質を上げようとすると、検査を追加したくなる。
 
@@ -58,6 +60,34 @@ content生成
 これは直ちにbugという意味ではない。生成途中と公開前でblocking条件が違うこと自体はあり得る。
 
 問題は、**その差を表現するために判定ロジックを何層増やすか**である。
+
+## 同じ検査結果から別の合否が出る反例
+
+上の二つの式へ、意図的に違う入力を渡すと何が起きるか。以下は**公開コードの式から導いた論理例**であり、`yt3` で実際に発生した不具合や、本番で再現した実績ではない。
+
+| 入力の仮定 | Linterの `passed` | Content側の `passed` | 不一致の原因 |
+| --- | --- | --- | --- |
+| `score=69`、FAILなし | `false` | `true` | Content側は70点の閾値を見ない |
+| `score=90`、ArtifactだけFAIL | `false` | `true` | Content側はArtifactを除外する |
+| `score=90`、Artifact以外でFAIL | `false` | `false` | 双方が停止する |
+
+Node.jsで式そのものを確認できる最小例。架空の `score` と `checks` を使うため、実際のLinterがこの点数を算出することまでは証明しない。
+
+```js
+const compare = (score, checks) => ({
+  linter: score >= 70 && !checks.some(c => c.status === "FAIL"),
+  content: checks.filter(c => c.layer !== "Artifact")
+    .every(c => c.status !== "FAIL"),
+});
+console.log(compare(69, [{ layer: "Script", status: "WARN" }]));
+console.log(compare(90, [{ layer: "Artifact", status: "FAIL" }]));
+console.log(compare(90, [{ layer: "Script", status: "FAIL" }]));
+// { linter: false, content: true }
+// { linter: false, content: true }
+// { linter: false, content: false }
+```
+
+だから「結果が二つ違う」だけで一方を消してはいけない。工程ごとに判定対象が本当に異なるなら、必要な工程差を明示して、**同一工程に二つの真偽値を置かない**。一方の値が単なる重複なら、片方の再計算を廃止する。これが提案する規律の適用条件だ。
 
 ## 以前の案は、さらに `GatePolicy` を足そうとしていた
 
@@ -207,3 +237,5 @@ AIが実装を高速に増やせる環境では、この原則をvalidation code
 である。
 
 同じ正しさを保てるなら、判定経路が少ない方を選ぶ。
+
+**撤回条件**：工程ごとに監査責任や安全上の停止条件が独立していると証明できる場合、単一の真偽値への統合は危険になる。二つの判定が必要なら、その責任と入力の差を文書化し、同じ意味の `passed` として扱わない。今回の式比較だけでは、実装変更後の不具合減少や処理速度の改善は実証していない。
