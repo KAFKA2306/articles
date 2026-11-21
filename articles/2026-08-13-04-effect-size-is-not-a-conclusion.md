@@ -7,45 +7,11 @@ published: false
 published_at: 2026-08-13 21:00
 ---
 
-探索分析で **Cohen's d ≈ -0.760** が出た。
+**大きな効果量が出たという理由で、未検証の自動判定を許可するな。**
 
-数字だけを見ると、かなり差がありそうに見える。
+[detectiveの探索](https://github.com/KAFKA2306/detective/commit/64bf09e86ddf76601a4378ac95d7d4d7cb7ffc4e)では2022年と2026年の記事各12件、先頭1000文字を比較し、Cohen's dは約 **-0.760** だった。平均12.0と6.5833、pooled SD約7.125で計算できる。しかし24件の差から未知の記事の年代を判定したり、AI生成が原因と決めつけたりはできない。
 
-ここで次のコードを書きたくなる。
-
-```python
-if abs(cohen_d) > 0.7:
-    result["year_signal"] = True
-```
-
-しかし今回、それはしなかった。
-
-`KAFKA2306/detective` のpilotは、2022年と2026年から各12件、先頭1000文字を解析した小規模な探索だった。
-
-- 2022 mean: 12.0
-- 2026 mean: 6.5833
-- pooled SD: 約7.125
-- Cohen's d: 約-0.760
-
-観測された差は残す。
-
-一方で、
-
-```text
-年代を判定できる
-AI生成が原因である
-未知記事へ一般化できる
-```
-
-とは言わない。
-
-この記事で扱うのは効果量の計算方法ではない。
-
-**派手な数字が出ても、証拠の強さを超えて意思決定へ昇格させない分析UX**について書く。
-
-- script: https://github.com/KAFKA2306/detective/blob/main/scripts/summarize_2026_oss_distribution_shift.py
-- artifact: https://github.com/KAFKA2306/detective/blob/main/reports/zenn_2026_oss_distribution_shift.json
-- commit: https://github.com/KAFKA2306/detective/commit/64bf09e86ddf76601a4378ac95d7d4d7cb7ffc4e
+[計算スクリプト](https://github.com/KAFKA2306/detective/blob/main/scripts/summarize_2026_oss_distribution_shift.py)と[結果](https://github.com/KAFKA2306/detective/blob/main/reports/zenn_2026_oss_distribution_shift.json)は残す。それでも汎用規律は **「数字を観測する権利と、それを判断に使う権限を分けよ」**。正しい計算でも、不適切な用途での自信は作れる。
 
 ## 数字を消すのではなく、権限を狭くする
 
@@ -267,3 +233,10 @@ allowed_use:
 この分離により、**探索の速度を落とさず、過剰解釈だけを止める**ことができる。
 
 Cohen's dが0.76だったことより重要なのは、その数字にどの権限を与えたかだった。
+
+
+## この規律が適用できる条件と撤回条件
+
+広告A/Bテストの効果、モデルのベンチマーク、金融の特徴量でも、探索用の観測と自動採否を分ける判断を試せる。これらは**応用仮説**であり三分野で性能を測った結果ではない。
+
+独立した検証データと誤判定コストの比較で、特定用途に十分な性能が示せたなら、その用途に限って自動判断へ進める。規律は「数字を永久に使うな」ではない。**何が計算できたかと、何を決めてよいかを別の欄に残す。**

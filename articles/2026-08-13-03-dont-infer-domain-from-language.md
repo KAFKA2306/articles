@@ -7,25 +7,13 @@ published: false
 published_at: 2026-08-13 20:01
 ---
 
-GitHubのrepository一覧を分類するとき、空欄は気になる。
+**分からないものを、もっともらしい分類で埋めるな。**
 
-PythonならAI。
+GitHub一覧で「PythonだからAI」「TypeScriptだからWeb」と推測すれば空欄は減る。しかし言語は実装の一部であって、リポジトリの用途を証明しない。根拠のない推測を事実として表示するほど、一覧はきれいになっても判断の質は下がる。
 
-TypeScriptならWeb。
+[agent-resourcesのcollector](https://github.com/KAFKA2306/agent-resources/blob/main/dashboard/collectors/repositories.py)では、明示的な`agent-zone-*`のtopicがある場合に用途を取り、それ以外は`unclassified`とした。[テスト](https://github.com/KAFKA2306/agent-resources/blob/main/dashboard/tests/test_repository_collector.py)と[PR #60](https://github.com/KAFKA2306/agent-resources/pull/60)に変更の証拠がある。
 
-そう埋めれば、一覧はすぐ整う。
-
-しかし、その瞬間からUIは**分かっていないことまで分かった顔をする**。
-
-`KAFKA2306/agent-resources` では、project zoneを明示的な `agent-zone-*` topicがある場合だけ採用し、それ以外は `unclassified` にするよう変更した。
-
-- collector: https://github.com/KAFKA2306/agent-resources/blob/main/dashboard/collectors/repositories.py
-- tests: https://github.com/KAFKA2306/agent-resources/blob/main/dashboard/tests/test_repository_collector.py
-- PR #60: https://github.com/KAFKA2306/agent-resources/pull/60
-
-この記事で扱うのはtaxonomyの作り方ではない。
-
-**情報不足をそれらしい推測で埋めず、「まだ分からない」を利用者へ正しく見せる設計**について書く。
+汎用規律は **「確認できない推定を事実欄へ入れるな。未知を独立の状態として残せ」**。分類率の高さは正答率の高さではない。
 
 ## languageは分かっても、domainは分からない
 
@@ -235,3 +223,10 @@ languageがPythonならB
 分からないときに、賢そうな答えを作らない。
 
 それがこの分類UIで一番守りたかったことだった。
+
+
+## この規律を採るときと撤回するとき
+
+顧客情報、文書カテゴリ、障害原因の分類でも、表示した用途に正確さが必要なら未知を示す方法を試せる。ただし、これらは**応用仮説**であって利用者の誤判断が減ったという実測ではない。
+
+推定分類が明示的に許され、誤判定率と損失を評価して十分低いと確認できたら「推定」と表示して使う余地はある。それでも確認済みと同じ欄へ混ぜてはいけない。さらに明示topicが複数ある入力では現在の簡易実装が一つを選ぶ境界が残る。**不明を埋める前に、確からしさを確かめる。**

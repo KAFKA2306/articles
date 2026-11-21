@@ -6,23 +6,13 @@ topics: ["testing", "ci", "typescript", "quality"]
 published: false
 ---
 
-自動生成物の品質チェックを増やすと、次の問題が起きる。
+**重大な欠陥を、ほかの項目の加点で相殺するな。**
 
-- 数字が多すぎる
-- 同じ文が繰り返される
-- 構成が二重になる
-- 文体が少し不自然になる
-- 出典にない数値が混ざる
+自動生成した文章が100点満点で90点でも、出典にない数値が混ざればそのまま公開できない。一方、語尾の違和感ひとつで公開を止め続ければ検査が使われなくなる。どちらも種類の違う失敗を一つのscoreに混ぜた結果だ。
 
-これらを全部同じ `FAIL` にすると、軽微な違和感でもpipelineが止まる。一方、全部を点数だけで扱うと、重大な欠陥が別の加点で相殺される。
+[yt3のscript linter](https://github.com/KAFKA2306/yt3/blob/849592ae98ce4ea1ea179ae5dd8997b227301791/src/io/utils/qa/script_linter.ts)は`OK/WARN/FAIL`を分け、[監査への統合](https://github.com/KAFKA2306/yt3/blob/849592ae98ce4ea1ea179ae5dd8997b227301791/src/domain/agents/audit.ts)でscoreとは別にblockingを扱う。[起点commit](https://github.com/KAFKA2306/yt3/commit/d1e2c42cfdfdb18d9962d15c38b87bab919df285)
 
-2026年8月13日に公開された `KAFKA2306/yt3` の実装には、この問題に対して **`OK / WARN / FAIL` を分け、さらに総合scoreとblocking条件を別に持つ** 実例がある。
-
-- implementation: https://github.com/KAFKA2306/yt3/blob/849592ae98ce4ea1ea179ae5dd8997b227301791/src/io/utils/qa/script_linter.ts
-- integration: https://github.com/KAFKA2306/yt3/blob/849592ae98ce4ea1ea179ae5dd8997b227301791/src/domain/agents/audit.ts
-- originating commit: https://github.com/KAFKA2306/yt3/commit/d1e2c42cfdfdb18d9962d15c38b87bab919df285
-
-この記事では、この設計を汎用的な品質ゲートとして分解する。
+汎用規律は **「合計点で契約違反を帳消しにするな。止める欠陥と改善の助言を分離せよ」**。
 
 ## 問題: 1個のscoreだけでは重大度を表せない
 
@@ -319,3 +309,10 @@ score      blocking
 **WARNは改善の信号、FAILは契約違反の証拠として扱い、scoreでFAILを相殺しない。**
 
 この分離をしておくと、品質ルールを増やしても「厳しすぎて何も通らないCI」と「点数だけ高ければ重大欠陥も通るCI」の両方を避けやすくなる。
+
+
+## 別分野での利用と撤回条件
+
+データ公開、決算報告、プログラム生成でも、**発生してはいけない違反**と**改善したい品質差**が共存するときにこの分離を試せる。これはyt3以外への応用仮説であり、事故率改善を実測したわけではない。
+
+すべての検査項目が同じ損失へ正しく換算でき、相殺しても重大事故の見逃しが増えないと確認できれば単一scoreで十分かもしれない。逆に小さな問題をFAILにして稼働を止め続けるならseverityの定義を見直す。**何を止めるかは、点数でなく失敗時の実害から決める。**
