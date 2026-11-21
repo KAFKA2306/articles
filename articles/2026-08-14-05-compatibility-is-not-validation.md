@@ -1,5 +1,5 @@
 ---
-title: "AI生成文の検出ツールは、日本語で動けば結果を使えるか"
+title: "「動いた」を「使ってよい」と呼ぶな"
 emoji: "🧪"
 type: "tech"
 topics: ["python", "machinelearning", "nlp", "testing"]
@@ -7,42 +7,11 @@ published: true
 published_at: 2026-08-14 16:00
 ---
 
-外部OSSを試すとき、一番気持ちいい瞬間は値が返ったときだ。
+**結果が返ったというだけで、その結果を判断へ使うな。**
 
-```python
-result = detector("これは日本語のテキストです")
-print(result)
-```
+`stylometric-ai-detector` 0.2.4は日本語記事60件へ値を返した。しかし、正解ラベルで照合していないので日本語の判定精度は不明だ。一方、別の検出器は英語spaCyモデル`en_core_web_sm`がないとimport時点で止まった。
 
-例外なし。
-
-予測値あり。
-
-CIもgreen。
-
-ここまで揃うと、「日本語でも使える」と言いたくなる。
-
-しかし、`KAFKA2306/detective` でAI生成文検出系OSSを調べたとき、**実行できることと、その出力を判断へ使ってよいことは全く別だった。**
-
-あるライブラリは、日本語を評価する前にspaCyの `en_core_web_sm` がなくimport段階で止まった。
-
-別の `stylometric-ai-detector` 0.2.4は日本語記事60件へ実際に値を返したが、upstreamの適用範囲は英語単一dataset由来のbaselineだった。
-
-だから結果が出ても、
-
-```json
-{
-  "status": "measured_not_validated",
-  "use_for_ai_authorship": false,
-  "use_for_year_inference": false
-}
-```
-
-とした。
-
-この記事で扱うのはOSS評価のchecklistそのものではない。
-
-**「動いた」という成功体験に引っ張られず、どこまで使ってよいかを利用者へ正しく伝える方法**である。
+[detectiveの検証](https://github.com/KAFKA2306/detective)で分けるべきだったのは`installed`、`runnable`、`validated`、`allowed_use`である。**プログラムの実行成功は、現実の用途で正しい答えを返す証拠ではない。**
 
 ## `success` という1語が強すぎる
 
@@ -353,3 +322,10 @@ allowed_use
 先に既に動く入力を通し、その後で対象言語を試す。両方で値が出た段階では `runnable` を記録する。対象データで判定の妥当性まで確かめてから `validated` を更新し、`allowed_use` には根拠がそろった用途を書き込む。
 
 OSSを速く試しながら、**どこまで信用してよいかを利用者へ正確に伝える**ことができる。
+
+
+## 汎用規律の移植と撤回条件
+
+OCR、検索モデル、外部APIでも、動作確認と目的に沿った品質検査を別にする設計を試せる。これは**応用仮説**であって、他分野の精度測定ではない。
+
+正解が分かる独立評価データで誤判定率と費用を測り、用途ごとの合格条件を満たせば`allowed_use`を広げられる。この規律は「永遠に使うな」ではない。**60件の動作実績と60件の妥当性の証明を混同しない。**

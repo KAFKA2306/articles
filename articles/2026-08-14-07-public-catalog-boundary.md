@@ -1,51 +1,18 @@
 ---
-title: "公開カタログに個人予定を混ぜない"
+title: "公開直前に秘密を消すな。公開できる入力だけで作れ"
 emoji: "🧱"
 type: "tech"
 topics: ["dataengineering", "privacy", "github", "testing"]
 published: false
 ---
 
-公開サイトに載せたいのは作品情報だけなのに、運用を続けると別のデータが近づいてくる。
+**秘密を含むデータから公開直前に項目を削る方式を、最初の設計にするな。**
 
-「この作品は9人用」「所要時間は180〜210分」という公開メタデータの隣に、参加者、通過状況、開催予定、内部メモまで置き始めると、実装上は扱いやすい。1つのJSONにまとめれば検索もしやすい。
+作品情報と参加者・内部予定を一つのJSONにまとめれば開発は簡単だ。しかし公開時の除外漏れは、そのまま個人情報の露出になり得る。
 
-でも、その便利さは公開境界を壊す。
+[boardgamelistの変更](https://github.com/KAFKA2306/boardgamelist/commit/9ce9aa8c7eab27b650dd06a478c21319949dc575)では個人の予定を公開カタログへ混ぜず、[公式メタデータ](https://github.com/KAFKA2306/boardgamelist/blob/9ce9aa8c7eab27b650dd06a478c21319949dc575/data/official-metadata/apollo-no-shinpan-2026-08-14.json)に`access_condition: public-web`を記録し、[公開ページ](https://github.com/KAFKA2306/boardgamelist/blob/9ce9aa8c7eab27b650dd06a478c21319949dc575/docs/games/apollo-no-shinpan.md)で保存しない情報を明記した。
 
-2026年8月14日、`KAFKA2306/boardgamelist` に3作品の公式メタデータを追加したcommitでは、同時に「October 2026 BlueBirdStore play plans」を扱いながら、commit messageで **`keep private play plans out of public catalog`** と明示していた。
-
-- commit: https://github.com/KAFKA2306/boardgamelist/commit/9ce9aa8c7eab27b650dd06a478c21319949dc575
-
-そのとき、公開側へ入った『アポロンの審判』の正準JSONはこうなっている。
-
-```json
-{
-  "source": {
-    "source_kind": "creator-official-marketplace",
-    "access_condition": "public-web"
-  },
-  "edition": {
-    "players": 9,
-    "gm_required": true,
-    "duration_minutes_min": 180,
-    "duration_minutes_max": 210
-  }
-}
-```
-
-- metadata: https://github.com/KAFKA2306/boardgamelist/blob/9ce9aa8c7eab27b650dd06a478c21319949dc575/data/official-metadata/apollo-no-shinpan-2026-08-14.json
-
-公開ページ側も、単に「書かなかった」ではなく境界を文章で固定している。
-
-> 公開可能な作品メタデータだけを扱い、シナリオの真相、役職・個別情報、参加者、通過状況、個人の予定は保存しない。
-
-- public page: https://github.com/KAFKA2306/boardgamelist/blob/9ce9aa8c7eab27b650dd06a478c21319949dc575/docs/games/apollo-no-shinpan.md
-
-ここで面白かったのは、**privacy対策を「あとで消す工程」にしなかったこと**だった。
-
-公開物を作る前に、公開可能なデータだけで別のprojectionを作る。その結果、公開側のコードは「秘密を隠す」必要がなくなる。
-
-この記事では、この設計を一般化する。
+規律は **「秘密を後から隠すより、公開可能な素材だけで公開物を組み立てよ」**。入力の分離が最初の保護境界になる。
 
 ## 1つのデータモデルに全部入れる方が楽だった
 
@@ -327,3 +294,10 @@ GitHub自身も、public repositoryは誰でもアクセスでき、commit後の
 公開projectionを先に分ければ、公開コードは秘密を隠す役割から解放される。
 
 それが、公開カタログを長く安全に育てるための境界になる。
+
+
+## この規律の転用と例外
+
+社内分析と公開ダッシュボード、運用ログと公開status pageにも同じ境界を設けることを検討できる。**これは応用仮説**であり、漏洩件数が改善した実測ではない。
+
+匿名化した統計を公開するには非公開データの処理が必要な場合もある。そのときは処理工程を隔離し、再識別の危険を評価する。公開用のallowlistだけで安全と断定しない。**秘密が存在する場所と公開してよい情報の生成経路を、先に決める。**

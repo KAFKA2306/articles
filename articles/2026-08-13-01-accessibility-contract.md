@@ -7,28 +7,11 @@ published: false
 published_at: 2026-08-13 16:58
 ---
 
-画面を大きく作り直した。見た目は良くなった。JavaScriptも動く。テストもgreenだった。
+**UIを刷新するなら、以前できたことを壊す条件を先に固定せよ。**
 
-それでも、昨日まで使えていた人が今日から使いにくくなることがある。
+見た目もJavaScriptも動いていても、動きを減らしたい人の設定や状態更新の読み上げが失われれば後退だ。[finBIのUI改修](https://github.com/KAFKA2306/finBI/commit/bc928ab7806c727086992df838f8ccae62f58040)では、[HTML](https://github.com/KAFKA2306/finBI/blob/bc928ab7806c727086992df838f8ccae62f58040/web/index.html)のstatusと[CSS](https://github.com/KAFKA2306/finBI/blob/bc928ab7806c727086992df838f8ccae62f58040/web/styles.css)のmotion軽減を[CI](https://github.com/KAFKA2306/finBI/blob/bc928ab7806c727086992df838f8ccae62f58040/.github/workflows/static-bi.yml)で守る最低条件へ変えた。
 
-`KAFKA2306/finBI` の静的Web UIを再構築したとき、私はこの種類の退行を「レビューで気をつけること」ではなく、**次のUI改修でも消えてはいけない最低限の利用体験**としてCIへ残した。
-
-対象にしたのは小さい。
-
-- motionを減らしたい利用者向けの分岐を残す
-- 動的なstatus更新を支援技術へ伝えるためのsemantic markerを残す
-- それらがHTML/CSSの全面改稿で消えたら、通常の機能テストが通っていてもmergeを止める
-
-実装証拠:
-
-- finBI commit: https://github.com/KAFKA2306/finBI/commit/bc928ab7806c727086992df838f8ccae62f58040
-- workflow: https://github.com/KAFKA2306/finBI/blob/bc928ab7806c727086992df838f8ccae62f58040/.github/workflows/static-bi.yml
-- HTML: https://github.com/KAFKA2306/finBI/blob/bc928ab7806c727086992df838f8ccae62f58040/web/index.html
-- CSS: https://github.com/KAFKA2306/finBI/blob/bc928ab7806c727086992df838f8ccae62f58040/web/styles.css
-
-この記事で売りたいのは `grep` の書き方ではない。
-
-**UIを速く変え続けても、「以前はできた」を壊しにくい開発プロセスへ変えられること**である。
+失敗の仕組みは単純だ。見栄えを評価する検査では、目立たない利用者の能力を測っていない。**大切な体験を「気をつける」から「失われたら止まる」へ移す。** ただしCSS/ARIAの文字列確認だけで実際の読み上げを検証したとは言わない。
 
 ## UI刷新で失われやすいのは、目立たない要件だった
 
@@ -196,3 +179,10 @@ UIをきれいにすることと、利用者が使い続けられることは別
 **重要なUX要件を「注意事項」から「壊したら止まる契約」へ変えること。**
 
 その境界を小さく始めれば、改修速度と退行防止を両立しやすい。
+
+
+## 規律を適用・撤回する条件
+
+管理画面や音声UIの再設計でも、旧版の利用者が失うと困る操作があるなら、先に代表入力と失敗条件を固定する。これは**別分野への応用仮説**であって回帰件数を測った結果ではない。
+
+旧挙動が不適切で意図的に廃止するなら、守るのではなく代替手段と影響を評価する。静的検査が通っても支援技術の実操作は別に確認する。**機能が残ったことと、体験が残ったことを混同しない。**
