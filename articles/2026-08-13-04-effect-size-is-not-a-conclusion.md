@@ -194,6 +194,22 @@ assert output["interpretation_gate"]["causal_ai_claim"] is False
 
 このnegative contractがあると、将来reportを便利にする変更で禁止用途が勝手に開くのを防げる。
 
+## -0.760を元の平均と標準偏差から検算する
+
+本文のpilotは2022年と2026年の各12件、記事の先頭1000文字だけを対象にした。平均12.0と6.5833、pooled SD約7.125を使うと次の値になる。
+
+```python
+mean_2022 = 12.0
+mean_2026 = 6.5833
+pooled_sd = 7.125
+d = (mean_2026 - mean_2022) / pooled_sd
+print(round(d, 3))  # -0.760
+```
+
+ここで`-0.760`を計算できても、未知の記事が何年のものか、AIが差を生んだかは分からない。`7.125`はこの24件のばらつきであり、母集団の年代識別能力を保証しない。[元の実装・調査](https://github.com/KAFKA2306/detective/commit/64bf09e86ddf76601a4378ac95d7d4d7cb7ffc4e)
+
+このpilotの結果を下流の分類器へ渡す場合は、`allowed_use.production_decision: false`を確認して止める。数式の再計算、用途の合否、未知データでの性能実測を**別々の検証**として扱う。
+
 ## 企業分析やA/B testでも同じ
 
 この考え方は文章特徴量だけではない。

@@ -103,6 +103,28 @@ business logic
 
 まず実際の入力口と、有効な入力を一件用意する。記事の試験では、正の整数が必要な `count` に対して、正常な `{"count": 2}` と、JSONとしては正しい `{"count": -1}` を同じ入口へ渡した。手元でも、正常値が通ることと、業務上無効な値が内部の処理へ入る前に拒否されることを組にして確かめる。
 
+## 正常入力と不正入力を同じ境界に渡す
+
+PythonとPydantic v2なら、本文の`count`を次のコードで再現できる。これは**独立した最小再現例**で、記事の元ベンチマークを再実行したログではない。
+
+```python
+from pydantic import BaseModel, Field, ValidationError
+
+class Request(BaseModel):
+    count: int = Field(gt=0)
+
+assert Request.model_validate({"count": 2}).count == 2
+
+try:
+    Request.model_validate({"count": -1})
+except ValidationError:
+    print("invalid count rejected")
+else:
+    raise AssertionError("invalid count accepted")
+```
+
+`{"count": -1}`は正しいJSONで、`int`型としても成立するが、業務要件の「正の整数」を満たさない。HTTP入口ならボディ取得直後に`Request.model_validate`を呼び、**検証済みの値だけ**を内部処理へ渡す。正常値を通す検査と、負の値を拒否する検査は両方必要。Pydanticが未導入なら依存と版を先に決め、未実行を実測済みと記録しない。[Pydantic Field](https://docs.pydantic.dev/latest/concepts/fields/)
+
 ## 証拠の境界
 
 この記事は、Pydantic/Zodがすべての入力事故を防ぐとは主張しない。schema自体が間違っていればvalidationも間違うし、今回測ったfaultは各言語1件だけだ。

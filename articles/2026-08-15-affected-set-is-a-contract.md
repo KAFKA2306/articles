@@ -121,6 +121,20 @@ must_exclude: docs
 
 候補は同じコミット間の差分で動かし、案件ごとに実行対象を保存する。`must_include` の欠落が一つでもあれば、時間が縮んでも採用を保留する。`must_exclude` が含まれたら、なぜ余分に走ったかを調べる。速度は、比較対象としたプロジェクトやタスクの集合が一致した候補で測る。
 
+## 必須の1件を省いた結果を不合格にする
+
+本文の`core`変更では、`core, ui, web, api`の4プロジェクトが必須だ。もしツールが`core, ui, web`だけを返したら、3件は正しくても`api`のテストを落としている。これは**意図的に作った反例**で、記事で報告したNxの実測3/3とは別の入力である。
+
+```python
+required = {"core", "ui", "web", "api"}
+observed = {"core", "ui", "web"}  # apiが欠落した反例
+missing = required - observed
+assert missing == {"api"}
+print(sorted(missing))  # ['api']
+```
+
+30秒速くなっても、この入力では採用しない。実リポジトリの検証では比較元と変更後のSHA、変更したパス、実際に発火すべきprojectとtask、ツールの出力を同じ表に残す。project集合とbuild task集合は別物なので混ぜない。[固定した3ケースの実測](https://github.com/KAFKA2306/articles/blob/f7368d064d1840a5f66d92563d16deaabb5b3285/benchmarks/verification-stack-v2/results/controlled/workspace.json)
+
 ## 証拠の境界
 
 今回の3ケースから、Nxが一般にTurborepoより正確とも、Turborepoが一般に速いとも言えない。real repositoryで同じ差が出ることも証明していない。
