@@ -20,8 +20,13 @@ class BlockingIssueGateTests(unittest.TestCase):
     def test_reader_evidence_must_be_in_the_article_even_with_perfect_scores(self):
         opening = "公開候補が一件でも、読んだ版と一致するか分からない。"
         outcome = "公開用PRの原稿を実行時点のコミットと照合する。"
-        article = f"# 公開候補の版を確かめる\n\n{opening}\n\n## 原稿を照合する\n\n{outcome}"
-        review = {**self.good, "revision_actions": []}
+        rule = "配布先の版を確かめずに、実装の完了を宣言するな。"
+        mechanism = "CIが通っても配布先が古いままなら読者へ変更が届かない。"
+        falsifier = "公開先が必ず同一の版に同期すると確認できる場合は別確認を省ける。"
+        article = f"# 公開候補の版を確かめる\n\n{opening}\n\n## 原稿を照合する\n\n{outcome}\n\n{rule}\n\n{mechanism}\n\n{falsifier}"
+        review = {**self.good, "revision_actions": [],
+                  "principle_evidence": {"rule": rule, "mechanism": mechanism,
+                                         "falsifier": falsifier}}
         for evidence, eligible in (
             (None, False),
             ({"opening": opening, "outcome": ""}, False),
@@ -36,6 +41,28 @@ class BlockingIssueGateTests(unittest.TestCase):
                 evaluated = editorial.evaluate(article)
                 self.assertEqual(eligible, editorial.passes_quality(evaluated, True))
                 self.assertEqual(not eligible, "weak_reader_value" in evaluated["blocking_issues"])
+
+    def test_missing_principle_excerpts_block_even_perfect_scores(self):
+        opening = "記事を更新したが、読者には古い版が届いた。"
+        outcome = "公開先で版を確認し、届いていなければ完了にしない。"
+        rule = "実装が終わっても、公開先を見ずに完了とするな。"
+        mechanism = "テストと公開環境の版は別に変わるため、片方の成功はもう片方を保証しない。"
+        falsifier = "公開先とCIが常に同じ版へ原子的に更新されると確認できた場合は別の照合を省略できる。"
+        article = "\n\n".join((opening, outcome, rule, mechanism, falsifier))
+        good = {**self.good, "reader_evidence": {"opening": opening, "outcome": outcome},
+                "principle_evidence": {"rule": rule, "mechanism": mechanism,
+                                       "falsifier": falsifier}, "revision_actions": []}
+        with patch.object(editorial.core, "model_call", return_value=json.dumps(good)):
+            self.assertTrue(editorial.passes_quality(editorial.evaluate(article), True))
+        for key in ("rule", "mechanism", "falsifier"):
+            bad = json.loads(json.dumps(good))
+            bad["principle_evidence"][key] = ""
+            with self.subTest(key=key), patch.object(
+                editorial.core, "model_call", return_value=json.dumps(bad)
+            ):
+                checked = editorial.evaluate(article)
+                self.assertIn("weak_transferable_principle", checked["blocking_issues"])
+                self.assertFalse(editorial.passes_quality(checked, True))
 
     def test_nonfinite_scores_never_pass_quality_gate(self):
         # A malformed numeric model output previously made NaN look like 5.0.
