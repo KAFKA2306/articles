@@ -36,6 +36,36 @@ Done条件が未達なら原因を解決して再検証する。
 
 最初は「既存の不具合を一件直す」くらいで試せる。再現手順と対象環境をIssueに貼り、`Done when` に直ったときの画面や出力、`Verify` に同じ手順で確かめる方法を書く。次の会話にはIssueのURLを渡し、PRとCIから修正の証拠をたどる。公開先の動作も完了条件に書いたなら、公開先で再現手順を確認してからCloseする。
 
+## 実際のIssueを4項目へ落とす
+
+抽象的なテンプレートのままでは使いづらいので、[finBI Issue #10](https://github.com/KAFKA2306/finBI/issues/10)を一件の例にする。これは公開Issueに記載された値から作る**読み替え例**であり、元Issueの本文をそのまま転記したものではない。
+
+```text
+Goal:
+  FRED DGS10のsnapshotに、取得時点では未公開の値を混ぜない。
+
+対象:
+  data/snapshots/fred-dgs10-2026-07-20_2026-07-24.json
+  retrieved_at = 2026-07-24T20:17:00Z
+
+Done when:
+  その時点で最新だった2026-07-23 = 4.71までを採用し、
+  availability/vintageの時刻と一次URLをsnapshotに記録する。
+  未検証なら verified: true にしない。
+
+Do not:
+  観測日が取得日以前という理由だけで、公開済みと判定しない。
+
+Verify:
+  retrieved_at=2026-07-24T20:17:00Z と
+  2026-07-24=4.69 の組合せを不正なfixtureとして必ず拒否する。
+  UIの表示期間・取得時刻も修正後のsnapshotに一致させる。
+```
+
+2026年7月24日15:17 CDT（20:17 UTC）のFRED表示で最新だったのは7月23日の4.71。一方、7月24日の4.69を確認できたのは7月27日15:16 CDT更新時だった。同じ日付の観測値でも**公開された時刻**を見落とすと、未来の値を過去に取得したことにしてしまう。出典と要求は[Issue本文](https://github.com/KAFKA2306/finBI/issues/10)で確認できる。
+
+この例を任せるときは、agentにIssue URLを渡すだけでなく、修正前に不正fixtureが落ちるかを固定する。修正後にPRとCIの対象コミットを確認し、Pages公開まで要求した案件なら実際の画面も読む。**IssueのClose、CIのgreen、公開画面の更新は三つの別の証拠**として扱う。実際の修正・公開をこの記事の再演で行ったとは主張しない。
+
 ## Issueは「現在仕様」ではなく、短命な変更契約
 
 Spec-Driven Developmentは有用だ。GitHub Spec Kitも、`Spec → Plan → Tasks → Implement` の順で意図を構造化する。
