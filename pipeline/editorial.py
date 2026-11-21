@@ -30,6 +30,8 @@ STORY_FIELDS = [
     "evidence_urls",
     "why_interesting",
     "generalizable_insight",
+    "mechanism",
+    "falsification_condition",
     "transfer_conditions",
     "non_transfer_conditions",
 ]
@@ -131,6 +133,21 @@ def has_reader_evidence(article: str, evidence: object) -> bool:
     )
 
 
+def has_principle_evidence(article: str, evidence: object) -> bool:
+    """Article-exact evidence of a rule, a mechanism and a falsifier.
+
+    Semantic truth is still assessed by the independent reviewer.
+    """
+    if not isinstance(evidence, dict):
+        return False
+    parts = [evidence.get(key) for key in ("rule", "mechanism", "falsifier")]
+    return (
+        all(isinstance(part, str) and len(part.strip()) >= 8
+            and part.strip() in article for part in parts)
+        and len({part.strip() for part in parts}) == 3
+    )
+
+
 def title_options_ready(topic: dict[str, object]) -> bool:
     title = str(topic.get("title", "")).strip()
     options = topic.get("title_options")
@@ -228,7 +245,9 @@ def choose_topic(signals: list[dict[str, object]]) -> dict[str, object]:
 - 記事数を増やすことを価値にしない。reader valueとproofを作れない候補は落とす。
 
 候補ごとに、個別事例を他の状況へ移すための一般化境界も定義してください。
-- `generalizable_insight`: repository名・tool名を外しても意味が残る中心的な判断・仕組みを書く。
+- `generalizable_insight`: 固有の名前を外しても成立する、読者がやめる・分離する・優先する一つの強い規律を書く。
+- `mechanism`: 旧方法が失敗する仕組みと、なぜこの規律なら回避できるかを書く。相関を因果と呼ばない。
+- `falsification_condition`: この規律を撤回・制限する観測可能な反例を書く。
 - `transfer_conditions`: 同じ判断を別projectへ適用してよい条件を具体的に書く。
 - `non_transfer_conditions`: 単一事例の証拠範囲を越える条件、追加検証が必要な条件を書く。
 - 一例しかない場合は普遍的best practiceと断定しない。一般化部分は推論として扱い、適用条件を狭くする。
@@ -277,6 +296,8 @@ PUBLIC_GITHUB_SIGNALS:
   "desired_reader_action": "本文から自然に導けるdecision rule / comparison lens / experiment protocol等の次action",
   "non_goal": "この記事が証明しないこと・解決しない範囲",
   "generalizable_insight": "固有名詞を外しても再利用できる中心的な知見",
+  "mechanism": "旧方法がなぜ失敗し、新しい規律が何を変えるかの仕組み",
+  "falsification_condition": "この規律を撤回・制限する具体的な観測",
   "transfer_conditions": "この知見を別projectへ移してよい条件",
   "non_transfer_conditions": "適用してはいけない条件・追加検証が必要な範囲",
   "alternatives": [{{"kind":"incumbent","name":"現行方式","reader_job":"同じ読者の目的","primary_urls":["https://..."],"tradeoff":"条件と制約"}},{{"kind":"direct","name":"直接競合","reader_job":"同じ読者の目的","primary_urls":["https://..."],"tradeoff":"条件と制約"}},{{"kind":"adjacent","name":"隣接手段","reader_job":"同じ読者の目的","primary_urls":["https://..."],"tradeoff":"条件と制約"}}],
@@ -326,7 +347,8 @@ def enrich_topic(
 - `why_this_article` が「詳しく説明する」「分かりやすく解説する」だけなら `publishable` を false にする。
 - `proof_of_value` が公開証拠へ接続できない場合は `publishable` を false にする。
 - `desired_reader_action` は本文の価値から自然に導く。相談・契約を無理に要求しない。
-- `generalizable_insight` は固有tool/repository名を外しても成立する判断・仕組みにする。
+- `generalizable_insight` は固有tool/repository名を外しても成立する強い規律にする。何をやめて何をするか示す。
+- `mechanism` は旧方法が失敗する仕組み、`falsification_condition` は反例による撤回条件を書く。
 - `transfer_conditions` と `non_transfer_conditions` を必ず分け、単一事例から証拠以上の普遍化をしない。
 - 読後成果は特定CLI手順だけで終えず、decision rule / comparison lens / experiment protocolの少なくとも一つへ変換する。
 - 十分な発見、読者価値、一般化境界のどれかを作れない場合は `publishable` を false にする。
@@ -366,6 +388,8 @@ JSONのみ返してください。
   "desired_reader_action": "...",
   "non_goal": "...",
   "generalizable_insight": "...",
+  "mechanism": "旧方法がなぜ失敗し、新しい規律が何を変えるかの仕組み",
+  "falsification_condition": "この規律を撤回・制限する具体的な観測",
   "transfer_conditions": "...",
   "non_transfer_conditions": "...",
   "alternatives": [{"kind":"incumbent","name":"現行方式","reader_job":"同じ読者の目的","primary_urls":["https://..."],"tradeoff":"条件と制約"},{"kind":"direct","name":"直接競合","reader_job":"同じ読者の目的","primary_urls":["https://..."],"tradeoff":"条件と制約"},{"kind":"adjacent","name":"隣接手段","reader_job":"同じ読者の目的","primary_urls":["https://..."],"tradeoff":"条件と制約"}],
@@ -417,7 +441,10 @@ Markdown本文のみ。front matterは不要です。
 - `design_philosophy` は採用技術の列挙ではなく、何を優先し何を捨てたかというtrade-offとして自然に本文へ統合する。
 - `why_this_article` は一般論として宣言せず、実測・失敗・比較・制約・判断変更を本文で見せて証明する。
 - `proof_of_value` を「本当にどこまで動いたか」の境界として本文に置く。未実証範囲は `non_goal` と整合させる。
-- 個別事例から `generalizable_insight` へ進むmechanism / decision structureを本文で示す。
+- 個別事例から `generalizable_insight` へ進み、読者が何をやめ・優先するかを一文で明示する。曖昧な「大切」で終わらない。
+- `mechanism` で旧方法の欠陥を因果・責務・情報欠落から説明する。観測していない因果は推論と記す。
+- `falsification_condition` を具体的な撤回・停止条件として書く。空疎な「状況次第」は不可。
+- 別分野の応用は未検証なら仮説と書く。具体例の水増しをしない。
 - `transfer_conditions` を満たす別projectで再利用できる判断規則を示し、`non_transfer_conditions` で証拠以上の一般化を止める。
 - `desired_reader_action` は記事末尾へ広告CTAとして足さない。decision rule / comparison lens / experiment protocol / checklist等として本文へ組み込む。
 - `## Vision`、`## Design philosophy`、`## Why`、`## Commercial intent` の固定見出しを作らない。
@@ -467,6 +494,11 @@ def evaluate(article: str) -> dict[str, object]:
 - `case_specific_without_transfer`: 個別tool/repositoryの手順や変更履歴で終わり、他projectへ持ち帰れる判断規則・comparison lens・experiment protocolがない。
 - `unclear_transfer_conditions`: 一般化した知見はあるが、どの条件なら適用でき、どの条件なら追加検証が必要か本文から判定できない。
 - `overgeneralized_from_narrow_evidence`: 単一または狭い証拠から、適用条件を示さず普遍的best practiceとして断定している。
+- `weak_transferable_principle`: 単なる「重要」「検証する」の美徳で終わり、読者が何をやめ・優先するか分からない。
+- `missing_causal_mechanism`: 旧方法がなぜ失敗するかを仕組みとして説明せず、相関を因果と決めつける。
+- `unfalsifiable_principle`: 原則を適用しない条件・撤回させる具体的な反例がなく、未実行の別分野例を成功実績として扱う。
+
+本文から汎用規律・仕組み・撤回条件に該当する互いに異なる原文を一つずつ `principle_evidence` に引用してください。見つからない場合は空文字にし、対応するblocking issueを返してください。
 
 `Vision` / `Design philosophy` / `Why` / `Commercial intent` という固定見出しの有無では判定しません。意味が自然な本文に統合されているかを見てください。
 
@@ -508,6 +540,7 @@ JSONのみ返してください。
   "narrative": 0.0,
   "context": 0.0,
   "reader_evidence": {{"opening": "", "outcome": ""}},
+  "principle_evidence": {{"rule": "", "mechanism": "", "falsifier": ""}},
   "blocking_issues": [],
   "revision_actions": []
 }}
@@ -530,6 +563,20 @@ JSONのみ返してください。
         actions = result.get("revision_actions")
         if isinstance(actions, list):
             actions.append("冒頭に読む理由を示し、本文に読後の判断か行動ができる一節を置く。")
+
+    if not has_principle_evidence(article, result.get("principle_evidence")):
+        blocking = result.get("blocking_issues")
+        if not isinstance(blocking, list):
+            blocking = []
+        if "weak_transferable_principle" not in blocking:
+            blocking.append("weak_transferable_principle")
+        result["blocking_issues"] = blocking
+        actions = result.get("revision_actions")
+        if isinstance(actions, list):
+            actions.append(
+                "本文から汎用規律・旧方法の失敗の仕組み・撤回条件を"
+                "それぞれ原文で指せるように直す。"
+            )
 
     if opening_has_premature_conclusion(article):
         result["interest"] = min(_score(result.get("interest")), 3.4)
@@ -682,6 +729,9 @@ ARTICLE:
 - `case_specific_without_transfer` がある場合、固有手順の羅列を削り、観測からmechanism / decision structureを抽出して、別projectで使えるdecision rule / comparison lens / experiment protocolへ変換する。
 - `unclear_transfer_conditions` がある場合、知見が成立する前提と、追加検証なしでは移せない条件を明示する。
 - `overgeneralized_from_narrow_evidence` がある場合、主張を証拠範囲まで狭め、単一事例からの一般化を推論として示す。追加証拠を創作しない。
+- `weak_transferable_principle` がある場合、無難な教訓を捨て、読者がやめる・分離・優先する強い汎用規律へ直す。根拠のない絶対化はしない。
+- `missing_causal_mechanism` がある場合、旧方法の欠陥と代案の効果を因果・責務・情報欠落で説明する。
+- `unfalsifiable_principle` がある場合、規律を撤回・制限する具体的観測を示す。
 - `Vision` / `Design philosophy` / `Why` / `Commercial intent` の固定見出しは新設しない。意味をstoryへ統合する。
 - URL一覧がsceneより先にある場合、URLを事実の使用箇所へ移す。
 - 中心の問いを前進させない正しい節を削る。網羅性を増やさない。

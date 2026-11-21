@@ -148,6 +148,20 @@ Use the detail appropriate to the article, not a fixed word count:
 Reject phrases such as 'improved UX', 'verified the implementation', 'made operations reliable', and 'used all Kafstyler skills' unless the nearby text answers *which object, which input, which operation, which output, compared with what, on which version, and where the evidence lives*. Do not add commands merely for decoration; readers of a non-executable analysis still need exact sources, inputs and decisions.
 
 Before accepting a revision, use the article's own steps or source trail to attempt the reader's intended job. Try one wrong-version, missing-data, or failed-action counterexample. If the reader cannot reach the claimed result, give the reviewer `missing_proof_of_value`, spell out the missing detail in `revision_actions`, and revise or withhold the article. Keep operational audit results in the PR/report, not in the public article. Preserve the separate human-controlled Zenn release procedure.
+## 4E. Lead with a strong transferable principle; use cases as proof
+
+Do not turn the portfolio into a logbook of increasingly detailed repository changes. A finished article must give the reader **one forceful, falsifiable operating rule** that survives removing the product and repository names. Treat the [principle-first article contract](pipeline/contracts/article.md#編集の第一原理強い汎用原則を実例で証明し反例で試す) as canonical.
+
+For every article or substantial revision:
+1. Name the reasonable default the evidence challenges, not a straw man.
+2. Declare what a reader must stop, separate, reject, or prioritize. "It is important to consider ..." is not a rule.
+3. Explain the structural or causal mechanism. A single observed correlation is not proof of causation.
+4. Prove the bounded original case with concrete inputs, versions, actual results, and primary evidence.
+5. Show a decision protocol for another domain. Label an unexecuted cross-domain example as a **hypothesis**, never independent proof.
+6. State what observation would falsify or narrow the rule, plus when it should not be applied.
+
+An aggressive headline cannot compensate for a generic body. Do not copy Crash-Driven Development's rhetoric without its actual mechanism and evidence. Strong conditional rules are better than unsupported universals. The editorial reviewer must block `weak_transferable_principle`, `missing_causal_mechanism`, and `unfalsifiable_principle`, irrespective of the score. Keep review records in the existing PR; preserve the human-controlled Zenn release boundary.
+
 ## 5. Topic rejection rules
 
 Reject, merge, or keep private when a candidate is only:

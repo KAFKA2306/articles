@@ -32,7 +32,9 @@ class GeneralizationContractTests(unittest.TestCase):
             "proof_of_value": "candidate gateとpublication blockerを同じcontractで検証する",
             "desired_reader_action": "自分の事例をdecision ruleと適用条件の表へ変換して比較する",
             "non_goal": "単一事例から普遍的なbest practiceを証明しない",
-            "generalizable_insight": "手順ではなく、判断を成立させる条件と失敗境界を再利用単位にする",
+            "generalizable_insight": "同じ手順をコピーするな。適用条件と失敗境界を先に確認せよ",
+            "mechanism": "成功時の入力境界を省略すると、別の失敗条件で同じ処理を誤用してしまう",
+            "falsification_condition": "同条件の再試験で無条件の手順コピーの方が失敗を減らすと確認したら撤回する",
             "transfer_conditions": "同じ目的で入力・観測可能性・失敗コストを比較できる案件",
             "non_transfer_conditions": "安全性や外部制約が異なり、同じ失敗を許容できない案件",
             "alternatives": [
@@ -48,6 +50,8 @@ class GeneralizationContractTests(unittest.TestCase):
         self.assertTrue(editorial.story_ready(self.topic()))
         for field in (
             "generalizable_insight",
+            "mechanism",
+            "falsification_condition",
             "transfer_conditions",
             "non_transfer_conditions",
         ):
