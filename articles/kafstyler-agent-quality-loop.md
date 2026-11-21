@@ -9,13 +9,13 @@ published_at: 2026-11-17 22:03
 
 半年前に公表した数字に訂正が出たとします。何十ものリポジトリを運用するプロジェクトで、Web、ダウンロード用のCSV、報告書はそれぞれ別のリポジトリから公開されています。当時の担当者も、作業に使ったAIも、もう替わっています。どこを直せば三つがそろうのか。半年前の数字を、当時の資料からもう一度出せるのか。
 
-Kafstylerで目指しているのは、担当者やAIが替わっても、前回の判断をたどり、次の更新を確かめられるプロジェクトです。調査・実装・公開を別の人やエージェントに分けても、参照元、合格条件、公開結果を引き継げるようにします。Claude Code、Codex、Antigravity CLIに共通の作業手順を追加するプラグインとして作っています。[Kafstyler 0.5.36の作業規約](https://github.com/KAFKA2306/kafstyler/blob/678c95e0053a0b6a971b54e36b93dc301e4f3f61/AGENTS.md) · [導入手順](https://github.com/KAFKA2306/kafstyler/blob/678c95e0053a0b6a971b54e36b93dc301e4f3f61/README.md#プラグインの使い方)
+Kafstylerで目指しているのは、担当者やAIが替わっても、前回の判断をたどり、次の更新を確かめられるプロジェクトです。調査・実装・公開を別の人やエージェントに分けても、参照元、合格条件、公開結果を引き継げるようにします。Claude Code、Codex、Antigravity CLIに共通の作業手順を追加するプラグインとして作っています。[Kafstylerの作業規約（執筆時点の版）](https://github.com/KAFKA2306/kafstyler/blob/74542d01665cdd1e97ab41a00d6055593f07140d/AGENTS.md) · [導入手順](https://github.com/KAFKA2306/kafstyler/blob/74542d01665cdd1e97ab41a00d6055593f07140d/README.md#プラグインの使い方)
 
 ## 複数のチームで「何を一件と数えるか」を決める
 
-設計の起点は `schema` です。たとえば、毎月出る統計を複数のリポジトリで使うなら、発行元・系列ID・対象月で観測を特定し、公表日や版で初報と改定を区別します。単位と出典も記録します。これで、更新を受け持つ人と画面を作る人が、同じ月のどの版を扱っているか確かめられます。
+設計の起点は `canonicalize` です。たとえば、毎月出る統計を複数のリポジトリで使うなら、発行元・系列ID・対象月で観測を特定し、公表日や版で初報と改定を区別します。単位と出典も記録します。これで、更新を受け持つ人と画面を作る人が、同じ月のどの版を扱っているか確かめられます。
 
-文書では、OKF（Open Knowledge Format）に沿ったMarkdownを正本にし、同じファイルをObsidian Vaultで開きます。たとえば単位の定義を変えたら、旧版から後継の定義へたどれるようにします。分析では、dbtの `source()` と `ref()` で入力から集計までをつなぎ、`dbt build` の結果と、件数や集計値を元データに照合します。画面とCSVは同じ集計から作ります。公開時の入力と集計・実装の版を再取得できるように残し、同じ条件で再計算できるか確かめます。訂正が出たら、当時の根拠をたどれる状態で新しい版を公開します。[文書と分析データの設計手順](https://github.com/KAFKA2306/kafstyler/blob/678c95e0053a0b6a971b54e36b93dc301e4f3f61/skills/schema/SKILL.md)
+文書では、OKF（Open Knowledge Format）に沿ったMarkdownを正本にし、同じファイルをObsidian Vaultで開きます。たとえば単位の定義を変えたら、旧版から後継の定義へたどれるようにします。分析では、dbtの `source()` と `ref()` で入力から集計までをつなぎ、`dbt build` の結果と、件数や集計値を元データに照合します。画面とCSVは同じ集計から作ります。公開時の入力と集計・実装の版を再取得できるように残し、同じ条件で再計算できるか確かめます。訂正が出たら、当時の根拠をたどれる状態で新しい版を公開します。[文書と分析データの設計手順](https://github.com/KAFKA2306/kafstyler/blob/74542d01665cdd1e97ab41a00d6055593f07140d/skills/canonicalize/SKILL.md)
 
 ## 1タップの改修で、出典がずれる条件を試した
 
@@ -34,37 +34,51 @@ NVIDIAの行が画面に見えてから、SECの提出書類ページを開く�
 
 旧配信版と同じ公開データで修正後をビルドし、出典を直接開ける企業数を比べました。公開後は、幅390pxのChromiumで変更前後の公開HTMLからNVIDIAの同じ四半期の行を操作し、同じSECの提出書類ページに着くことを確かめました。生成したHTMLでリンク先を同社の別の四半期の書類に差し替えると、表示された数値の出典と照合する検査が失敗しました。改修時に使ったKafstylerの版と検証手順はPRに残しています。[改修と検証の記録](https://github.com/KAFKA2306/semiconductor-earnings-model/pull/271) · [改修時の作業規約](https://github.com/KAFKA2306/kafstyler/blob/6aaa5f09388cfa51cd886f48afde09c8b4fe645c/AGENTS.md#コマンドの連携)
 
-## 七つのスキルが担当者の間で受け渡すもの
+## 七つのスキルで、実際に何を調べ、直し、確かめるか
 
-冒頭の統計サービスを複数の担当で運用するなら、各スキルが残すものを次のように分けられます。
+「七つを使った」だけでは、次の担当は何も再現できません。たとえば冒頭の統計サービスで、**2026年7月分の公表値が訂正され、WebとCSVと報告書を更新する**という仮の案件を考えます。以下は実務に置き換えるための手順例であり、この統計サービスを実際に運用・実測した記録ではありません。
 
-| スキル | 次の担当が使うもの |
-| --- | --- |
-| `charter` | 訂正後、利用者がWebとCSVで同じ対象月の値を確認し、公式資料を開けるという合格条件 |
-| `schema` | 系列と公表版を特定するキー、元資料と集計の参照関係 |
-| `scrutiny` | Webだけ新しくなりCSVは古いままでも、更新処理が成功と記録する反例 |
-| `benchmark` | 同じ訂正資料を使った前後比較。値、出典、公開先ごとの結果と再実行手順 |
-| `humanizer` | 「対象月」「公表日」「改定後の値」が読み分けられる画面や報告書の文言 |
-| `deliver` | 修正した集計・公開物と、利用者が開くURLから内容を読み戻した結果 |
-| `prune` | 共通集計へ切り替えた後、旧更新処理を止めても必要な情報が届くという確認と削除差分 |
+| スキル | 具体的に開く・行うこと | 次の担当へ渡すもの |
+| --- | --- | --- |
+| [`reconceptualize`](https://github.com/KAFKA2306/kafstyler/blob/74542d01665cdd1e97ab41a00d6055593f07140d/skills/reconceptualize/SKILL.md) | 利用者が開くWebの対象月、CSVの同じ行、報告書の表を選ぶ。訂正後の値と出典が三か所でそろうことを合格条件に固定する | 入口3件、対象年月・系列ID、成功表示、失敗例（CSVだけ旧値） |
+| [`adjudicate`](https://github.com/KAFKA2306/kafstyler/blob/74542d01665cdd1e97ab41a00d6055593f07140d/skills/adjudicate/SKILL.md) | 訂正資料の系列ID・期・版を入力し、WebとCSVと報告書を照合する検査を変更前に決める。件数が同じでも公表版が違えば失敗にする | 固定した入力、期待値、反例、判定条件とその版 |
+| [`canonicalize`](https://github.com/KAFKA2306/kafstyler/blob/74542d01665cdd1e97ab41a00d6055593f07140d/skills/canonicalize/SKILL.md) | 発行元・系列ID・対象月・公表日・単位を正本で確かめる。dbtなら `source()` と `ref()` の依存先、文書ならOKFのタグ・参照先を調べる | 入力資料の版、正本の場所、古い値の由来と更新先一覧 |
+| [`disprove`](https://github.com/KAFKA2306/kafstyler/blob/74542d01665cdd1e97ab41a00d6055593f07140d/skills/disprove/SKILL.md) | 「Webが新しいので全部更新済み」という主張を疑い、CSVだけ旧版・報告書だけ旧版・参照日だけ新しいケースを照合する。一次資料に値と単位があるかも確かめる | 反証入力、失敗箇所、撤回または維持した主張と根拠URL |
+| [`humanizer`](https://github.com/KAFKA2306/kafstyler/blob/74542d01665cdd1e97ab41a00d6055593f07140d/skills/humanizer/SKILL.md) | Webの見出し、CSV列名、報告書の「対象月」「公表日」「改定値」を読み、同じ意味に同じ語を使う。読者が訂正と初報を混同しないか確かめる | 修正した表示文言と、利用者が判断するまでの実際の順序 |
+| [`autocatalyze`](https://github.com/KAFKA2306/kafstyler/blob/74542d01665cdd1e97ab41a00d6055593f07140d/skills/autocatalyze/SKILL.md) | 既存の公開経路で更新し、公開URLとCSVを読み戻す。定期実行なら差分なし・途中停止・再送を試し、通知や更新が重複しないことを確かめる | 実行ID、公開版、到達確認、未確認、次回再開条件 |
+| [`decommission`](https://github.com/KAFKA2306/kafstyler/blob/74542d01665cdd1e97ab41a00d6055593f07140d/skills/decommission/SKILL.md) | 新しい正本からWeb・CSV・報告書が出ることを確かめた後、旧CSV生成処理・重複した集計・古いリンクを整理する。削除で必要な経路が消えないか再試験する | 削除した対象、残した理由、変更前後の検査結果 |
 
-たとえば検査担当が「CSVだけ古い」という反例を見つけたら、比較の入力に加えます。公開担当は同じ入力を使って修正後のWebとCSVを照合でき、運用担当は必要な公開先で確認できた時点を記録できます。委譲するときは、親が使う規約の版と合格条件を渡し、担当者から観測結果と手順の漏れを受け取ります。[スキルの連携](https://github.com/KAFKA2306/kafstyler/blob/678c95e0053a0b6a971b54e36b93dc301e4f3f61/AGENTS.md#コマンドの連携)
+同じスキルは調査・設計・実装・制作・運用にもまたがります。この表は「この案件で、どの実物を確認するか」の例であって、各スキルの機能を一行に限定するものではありません。[現行の連携規約](https://github.com/KAFKA2306/kafstyler/blob/74542d01665cdd1e97ab41a00d6055593f07140d/AGENTS.md#コマンドの連携)
 
+## articlesの既存記事を一件直すときの操作順
+
+このリポジトリの記事を直す場合も、抽象的な査読で終えません。たとえば本記事の古いスキル名やリンクを更新するなら、次の順に対象を明示して進めます。以下のコマンドは**実施方法**であり、ここに記しただけでテストや公開の実行実績にはなりません。
+
+1. **使用版を固定する。** [Kafstyler `main` のコミット情報](https://api.github.com/repos/KAFKA2306/kafstyler/commits/main)から完全なSHAを得る。その版の `AGENTS.md` と `skills/*/SKILL.md` を読む。記事側では `AGENTS.md`、`pipeline/contracts/article.md`、`docs/PUBLICATION.md` と対象 `articles/kafstyler-agent-quality-loop.md` を読む。会話の記憶だけで操作しない。
+2. **編集対象と旧表記を特定する。** `git fetch origin main` → `git checkout main` → `git pull --ff-only` → `git grep -n -E 'charter|schema|scrutiny|benchmark|deliver|prune' -- articles/kafstyler-agent-quality-loop.md`。旧スキル名の記載位置、リンク先が現行版にあるか、固有の履歴として残すべき文章かを分けて記録する。`schema` などの一般語を機械的に全置換しない。
+3. **読者の合格条件を決める。** 初見の読者が本記事の表を開き、現行7スキルの名前・実際の操作・必要な証拠・一次リンクをたどれること。失敗例は「古い名前のスキルURLへ進んで404になる」、または「表にスキル名はあるが入力や判定が書かれていない」。
+4. **差分を最小限にする。** 誤った現行説明、表、関連リンクを直す。半導体サイトのクリック数やSEC提出書類の数値は、元のPRや一次資料を再確認しないまま書き換えない。履歴の根拠リンクは当時の版として残す。
+5. **記事を利用者として読み直す。** タイトルと全見出しだけを読んで目的の節へ進めるか確かめる。本文では実際のファイルパス、入力、操作、出力、失敗例、根拠のどれが欠けているか確認する。旧URLを一つ開いても修正結果の判断ができるかを反証する。
+6. **既存の検査を実行する。** コードを取得したローカル環境で `python -m compileall pipeline demos/python-syntax-gate/syntax_gate.py`、`python -m unittest discover -s tests -v`、`bash scripts/zenn-render-check.sh`、`python -m pipeline.audit` を実行する。終了コードと失敗理由を記録する。ZennのレンダリングはNode.jsとネットワーク接続が必要になる。
+7. **PRで差分とCIの版を確認する。** 対象記事と編集契約の差分を確認し、PRを作る。PRの最新head SHAに対応する `Article Pipeline CI` が成功したか、変更ファイルに無関係のものがないかを見てから `main` に統合する。統合後は `main` の記事本文と `published` を読み戻す。
+8. **公開と統合を区別する。** `main` の更新だけではZennへ配信されない。公開が別途承認された場合に限り、[Zenn Manual Release](https://github.com/KAFKA2306/articles/blob/main/docs/PUBLICATION.md)で記事slugを指定し、作成された `zenn-release` 向けPRを人が確認・統合する。Zenn側の表示まで確認して初めて「本番反映済み」とする。そうでなければ「main反映済み・Zenn未反映」と記録する。
+
+一般化できるのは、「スキル名を更新した」という作業名ではなく、**変更対象と版を固定し、本文内の操作を同じ条件で試し、公開先で読者が用事を済ませられるまで確認する**という判定方法です。公開が手動承認制の媒体や、実機操作が必要な製品では、検査に通っても未到達部分を完了と数えません。
 ## 定期実行を、最後に確認できた地点から再開する
 
 既存のスケジューラーで起動する場合は、作業ID、確認済みの入力の版、公開結果、次の工程を作業台帳に残します。公開処理の直後に応答が途切れたら、再送の前に公開先を読み戻します。その版が届いていれば結果を引き継ぎ、公開を確認してから処理済みの位置を進めます。人の判断が必要で止まった場合は、問う相手、止まった工程、再開条件を質問台帳に残します。
 
-毎回の取得・重複判定・集計はコードで行います。取得がすべて成功し、前回から差分がなければ、AIへの依頼と定型通知を省きます。旧処理を統合するときは、同じ入力で新旧の結果を照合し、再送や取得失敗も試してから切り替えます。[定期実行と再開](https://github.com/KAFKA2306/kafstyler/blob/678c95e0053a0b6a971b54e36b93dc301e4f3f61/skills/deliver/SKILL.md#常駐エージェントと定期実行) · [定期処理の統合](https://github.com/KAFKA2306/kafstyler/blob/678c95e0053a0b6a971b54e36b93dc301e4f3f61/skills/prune/SKILL.md)
+毎回の取得・重複判定・集計はコードで行います。取得がすべて成功し、前回から差分がなければ、AIへの依頼と定型通知を省きます。旧処理を統合するときは、同じ入力で新旧の結果を照合し、再送や取得失敗も試してから切り替えます。[定期実行と再開](https://github.com/KAFKA2306/kafstyler/blob/74542d01665cdd1e97ab41a00d6055593f07140d/skills/autocatalyze/SKILL.md#常駐エージェントと定期実行) · [定期処理の統合](https://github.com/KAFKA2306/kafstyler/blob/74542d01665cdd1e97ab41a00d6055593f07140d/skills/decommission/SKILL.md)
 
 ## 根拠をたどり、作業手順そのものを更新する
 
-「どう確かめるか」も古くなります。Kafstylerでは、一次資料のURLと、その資料をどの判断に使うかを `BIBLES.md` に記録します。たとえば登大遊の論考は完成時の利用場面から考えるとき、Claude Codeチームの検証記事は実物で合否を判定するとき、ISUCON優勝者の記録は実測をもとに自動化を絞るときに参照します。資料を入れ替えるときは、同じ作業で判断や手順がどう変わるかを試し、参照しているスキルも更新します。[一次資料の台帳](https://github.com/KAFKA2306/kafstyler/blob/678c95e0053a0b6a971b54e36b93dc301e4f3f61/BIBLES.md) · [見直し手順](https://github.com/KAFKA2306/kafstyler/blob/678c95e0053a0b6a971b54e36b93dc301e4f3f61/BIBLES.md#資料の見直し)
+「どう確かめるか」も古くなります。Kafstylerでは、一次資料のURLと、その資料をどの判断に使うかを `BIBLES.md` に記録します。たとえば登大遊の論考は完成時の利用場面から考えるとき、Claude Codeチームの検証記事は実物で合否を判定するとき、ISUCON優勝者の記録は実測をもとに自動化を絞るときに参照します。資料を入れ替えるときは、同じ作業で判断や手順がどう変わるかを試し、参照しているスキルも更新します。[一次資料の台帳](https://github.com/KAFKA2306/kafstyler/blob/74542d01665cdd1e97ab41a00d6055593f07140d/BIBLES.md) · [見直し手順](https://github.com/KAFKA2306/kafstyler/blob/74542d01665cdd1e97ab41a00d6055593f07140d/BIBLES.md#資料の見直し)
 
-複数の案件で使う手順に漏れが見つかったら、見逃した入力と合格条件を記録します。修正候補は、失敗した案件と別分野の案件で、同じ入力を旧版と新版に与えて比べます。たとえば「報告書だけが古い」を拾う規則なら、元の報告書と、別案件の公開物でも同種の誤りを拾えるか試します。この手順をKafstyler自身の文書にも適用し、文書とスキルの組ごとに確認した版、結果、根拠を記録します。未確認は未確認として残し、内容が変わったら影響する組を調べ直します。[自己改善の手順](https://github.com/KAFKA2306/kafstyler/blob/678c95e0053a0b6a971b54e36b93dc301e4f3f61/MISSION.md#更新手順) · [文書ごとの検証記録](https://github.com/KAFKA2306/kafstyler/blob/678c95e0053a0b6a971b54e36b93dc301e4f3f61/.agents/markdown-reviews.json)
+複数の案件で使う手順に漏れが見つかったら、見逃した入力と合格条件を記録します。修正候補は、失敗した案件と別分野の案件で、同じ入力を旧版と新版に与えて比べます。たとえば「報告書だけが古い」を拾う規則なら、元の報告書と、別案件の公開物でも同種の誤りを拾えるか試します。この手順をKafstyler自身の文書にも適用し、文書とスキルの組ごとに確認した版、結果、根拠を記録します。未確認は未確認として残し、内容が変わったら影響する組を調べ直します。[自己改善の手順](https://github.com/KAFKA2306/kafstyler/blob/74542d01665cdd1e97ab41a00d6055593f07140d/MISSION.md#更新手順) · [文書ごとの検証記録](https://github.com/KAFKA2306/kafstyler/blob/74542d01665cdd1e97ab41a00d6055593f07140d/.agents/markdown-reviews.json)
 
 ## Kafstyler自身の配布でも変更前後を確かめた
 
-Claude CodeとCodexでは、起動時に同梱の規約を読み込み、依頼を受けたときにスキルの発動条件を渡します。Codexでフックを使うには承認が必要です。Antigravity CLIでは配布規約と標準のスキル検出を使います。[クライアントごとの動作](https://github.com/KAFKA2306/kafstyler/blob/678c95e0053a0b6a971b54e36b93dc301e4f3f61/AGENTS.md#全作業への適用と自己改善)
+Claude CodeとCodexでは、起動時に同梱の規約を読み込み、依頼を受けたときにスキルの発動条件を渡します。Codexでフックを使うには承認が必要です。Antigravity CLIでは配布規約と標準のスキル検出を使います。[クライアントごとの動作](https://github.com/KAFKA2306/kafstyler/blob/74542d01665cdd1e97ab41a00d6055593f07140d/AGENTS.md#全作業への適用と自己改善)
 
 本体の保守では、散らばっていたフック、検査、適用記録を一つのフォルダに移しました。移動前後の両方で、本体と別のリポジトリを対象に、Claude CodeとCodexの起動時・依頼受付時に使うフックを実行しました。8通りの出力を比べ、移動に伴う案内と規約の更新を除いて一致しました。公開元から三つのCLIに導入し、有効になったことも確認しました。認証済みモデルへの依頼実行とClaudeの予約ジョブは、この検証では未確認です。[配布変更の検証記録](https://github.com/KAFKA2306/kafstyler/issues/50)
 

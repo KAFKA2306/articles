@@ -134,6 +134,20 @@ Apply all seven current Kafstyler skills to each Markdown file changed or assess
 
 Review the full Markdown inventory, including repository and pipeline documentation. Use the review ledger to track unassessed files across passes. After changes, run the applicable checks in section 21 and follow the publication and retention rules in sections 12–15 and 20.
 
+## 4D. Make every article operationally specific
+
+**Generalizable does not mean abstract.** For each central finding, show a real, bounded instance before presenting the transferable lesson. A reader must be able to locate the evidence, reproduce the decision, or recognize exactly when the procedure does not apply.
+
+Use the detail appropriate to the article, not a fixed word count:
+
+- **Implementation and operations:** identify the actual repository/file or UI entry point, relevant revision/environment, representative input or click sequence, change made, observed output, failure case, and what was checked again after delivery.
+- **Data, finance, and science:** identify the primary dataset/document and revision or publication date, period, unit, population/denominator, calculation or comparison, actual result, conflicting or missing observations, and applicable limits.
+- **Design and analysis without executable code:** show an actual decision, competing alternatives and the evidence that distinguishes them, a worked example, a counterexample, and a decision rule the reader can apply.
+- **Every type:** distinguish `OBSERVED`, `INFERRED`, `HYPOTHETICAL`, and `UNVERIFIED` in prose when ambiguity would change the reader's decision. Never invent clicks, measurements, commands run, screenshots, user feedback, or production verification. Mask private data without hiding the mechanism needed to understand the case.
+
+Reject phrases such as 'improved UX', 'verified the implementation', 'made operations reliable', and 'used all Kafstyler skills' unless the nearby text answers *which object, which input, which operation, which output, compared with what, on which version, and where the evidence lives*. Do not add commands merely for decoration; readers of a non-executable analysis still need exact sources, inputs and decisions.
+
+Before accepting a revision, use the article's own steps or source trail to attempt the reader's intended job. Try one wrong-version, missing-data, or failed-action counterexample. If the reader cannot reach the claimed result, give the reviewer `missing_proof_of_value`, spell out the missing detail in `revision_actions`, and revise or withhold the article. Keep operational audit results in the PR/report, not in the public article. Preserve the separate human-controlled Zenn release procedure.
 ## 5. Topic rejection rules
 
 Reject, merge, or keep private when a candidate is only:
