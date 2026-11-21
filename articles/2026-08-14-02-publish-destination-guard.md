@@ -4,6 +4,8 @@ emoji: "🛡️"
 type: "tech"
 topics: ["typescript", "youtube", "automation", "testing", "security"]
 published: false
+created_at: "2026-08-14"
+updated_at: "2026-11-21"
 ---
 
 **認証に成功した相手を、意図した投稿先だと思い込むな。**

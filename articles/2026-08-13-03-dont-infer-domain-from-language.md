@@ -5,6 +5,8 @@ type: "tech"
 topics: ["github", "metadata", "python", "architecture"]
 published: false
 published_at: 2026-08-13 20:01
+created_at: "2026-08-13"
+updated_at: "2026-11-21"
 ---
 
 **分からないものを、もっともらしい分類で埋めるな。**

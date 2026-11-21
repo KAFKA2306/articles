@@ -5,6 +5,8 @@ type: "idea"
 topics: ["career", "portfolio", "github", "ai"]
 published: true
 published_at: 2026-08-13 18:11
+created_at: "2026-08-13"
+updated_at: "2026-11-15"
 ---
 
 GitHubには、技術スタック、草の数、リポジトリ数、スター数、コミット履歴が並ぶ。

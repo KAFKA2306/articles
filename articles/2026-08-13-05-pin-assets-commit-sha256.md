@@ -5,6 +5,8 @@ type: "tech"
 topics: ["github", "ci", "frontend", "architecture"]
 published: false
 published_at: 2026-08-13 23:40
+created_at: "2026-08-14"
+updated_at: "2026-11-21"
 ---
 
 **供給元の更新だけで公開画面が変わる状態を、安定した配布と呼ぶな。**

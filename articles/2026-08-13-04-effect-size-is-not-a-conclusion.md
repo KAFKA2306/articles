@@ -5,6 +5,8 @@ type: "tech"
 topics: ["python", "statistics", "dataengineering", "testing"]
 published: false
 published_at: 2026-08-13 21:00
+created_at: "2026-08-14"
+updated_at: "2026-11-21"
 ---
 
 **大きな効果量が出たという理由で、未検証の自動判定を許可するな。**

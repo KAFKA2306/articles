@@ -5,6 +5,8 @@ type: "tech"
 topics: ["api", "pagination", "typescript", "architecture"]
 published: false
 published_at: 2026-08-13 23:03
+created_at: "2026-08-13"
+updated_at: "2026-11-21"
 ---
 
 **旧APIの形を守るために、利用者へ不完全な一覧を返し続けるな。**
