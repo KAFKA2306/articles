@@ -73,6 +73,20 @@ https://github.com/KAFKA2306/articles/blob/822be109de61e5915799fcf7d79e6345dff4f
 
 同じ候補で検出数が変わったら、どの失敗がどの設定で通ったかを記録し、既定の設定も調べる。必須の失敗を拾い、正常時の動作もそろった候補同士で、速度や設定・依存関係の維持にかかる手間を比べる。
 
+## 製品比較の表を、同一ツールの設定比較に戻す
+
+今回固定した5件はsyntax、引数型、戻り値型、未定義名、async誤用だった。Pyrefly 1.2.0で`basic`は2/5、`default`は5/5。どちらも**同一製品**なので、結論は「製品が違う」ではなく「設定で停止する診断が違う」である。[raw evidence](https://github.com/KAFKA2306/articles/blob/822be109de61e5915799fcf7d79e6345dff4f6b1/benchmarks/verification-stack-v2/results/controlled/pyrefly-preset-calibration.json)
+
+```text
+tool/version: Pyrefly 1.2.0
+input:        同じ5件のfault + 正常な入力
+A:            preset=basic   → 2/5
+B:            preset=default → 5/5
+conclusion:   設定差を記録し、製品の優劣とはしない
+```
+
+例えば`def f() -> int: return "text"`は戻り値の型を意図的に壊した例として使える。ただし、**この例が実験のどのpresetで検出されたかは本文からは推測しない**。それは上記の成果物に戻って確かめる。実際のコードベース・Python版・設定・対象範囲まで一致してから旧チェックの削除を決める。
+
 ## benchmark結果と一緒に残す最小メモ
 
 ```text

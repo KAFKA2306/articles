@@ -77,6 +77,19 @@ real repo / same surface
 
 候補を実リポジトリでまだ走らせていない、または必要な診断を取りこぼしたなら、現行コマンドを残す。条件を満たしたら、置換後のCIで正常・失敗の両方を確かめてから旧コマンドを外す。
 
+## 実リポジトリで比べる4行の記録
+
+`tsc --noEmit`を消す前に、同一コミットと同一`tsconfig`から次を実行する。表は**比較手順の例**であり、実測の追加ではない。
+
+| 入力 | tsc | Oxlint `--type-aware --type-check` |
+| --- | --- | --- |
+| 正常なコード | 終了コード・診断を保存 | 終了コード・診断を保存 |
+| 引数の型を一か所壊す | 非0終了と診断を確認 | 非0終了と診断を確認 |
+| 戻り値の型を一か所壊す | 非0終了と診断を確認 | 非0終了と診断を確認 |
+| 実repoで未実行 | 測定なしならNOT_RUN | 測定なしならNOT_RUN |
+
+Oxlint側の対象ファイルとTypeScriptの`include`・`exclude`・`references`が違えば、2/2でも置換条件は成立しない。**NOT_RUNはPASSではない**。旧CIを消してから初めて欠落に気づくのではなく、並行して同じ失敗を検出した証拠を先に残す。[TypeScript tsconfig](https://www.typescriptlang.org/tsconfig/)
+
 ## 同等になった後のtie-breaker
 
 機能、correctness、UI/UX、運用性が同等なら、私は次を小さい方へ寄せる。
