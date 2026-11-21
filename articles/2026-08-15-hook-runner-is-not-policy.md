@@ -59,13 +59,17 @@ https://github.com/KAFKA2306/articles/blob/main/.github/workflows/article-pipeli
 
 Claude Codeが何を実装したかに関係なく、CIは同じ条件をもう一度実行する。この構造なら「Claudeが大丈夫と言った」ではなく、**別主体が同じ合格条件を再実行した**と言える。
 
-自分のrepoでも、入口を1 commandへ寄せると扱いやすい。
+このリポジトリでは、存在しない `./scripts/verify` を例にするのではなく、[実際のCI定義](https://github.com/KAFKA2306/articles/blob/main/.github/workflows/article-pipeline-ci.yml)にある検査を呼ぶ。ルートディレクトリから次を実行する。
 
 ```bash
-./scripts/verify
+python -m compileall pipeline demos/python-syntax-gate/syntax_gate.py
+python -m unittest discover -s tests -v
+python -m pipeline.audit
 ```
 
-中身はprojectごとに違ってよい。重要なのは、Claude Code、ローカル、CIで同じ判定を呼べることだ。
+Zennでの本文の描画も確認するなら `bash scripts/zenn-render-check.sh` を実行する。これはNode.jsとZenn CLIの取得・起動が必要な検査で、上のPython三つだけでは代替できない。PRでは `Article Pipeline CI` が**そのPRのhead SHA**で通ったかを確認する。
+
+ここで守る判定は、例えば「公開を意図していない下書きを勝手に公開扱いにしない」こと。まず `git diff -- .github/workflows/article-pipeline-ci.yml tests/ pipeline/contracts/article.md` で合格条件そのものが変わっていないかを開く。実装だけを直したPRでも、これらの期待値を書き換えたら**同じテストに通った証明にはならない**。期待値の変更には別途理由とレビューが必要だ。
 
 ## 何をagentの外へ残すか
 

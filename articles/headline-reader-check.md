@@ -61,6 +61,20 @@ EOF
 
 2026年公開版を使うなら、生成・評価とJSON出力はPromptfoo 0.125.1、結果の受け渡しと集計はjq 1.8.2に任せられます。用意するのは、媒体ごとの判定項目、対照例、両者をつなぐ短いスクリプトです。 [Promptfooリリース](https://github.com/promptfoo/promptfoo/releases/tag/0.125.1) · [評価結果の出力仕様](https://www.promptfoo.dev/docs/configuration/outputs/) · [jqのリリース記録](https://github.com/jqlang/jq/releases/tag/jq-1.8.2)
 
+## 検査用の3入力と、期待する出力を固定する
+
+上の `jq -nc` は、次の3行を標準出力へ出す想定の**再現用コマンド例**である。記事のために実行した測定ログではない。
+
+```jsonl
+{"id":"ambiguous","result":"missing_comparison"}
+{"id":"overclaim","result":"missing_time_series"}
+{"id":"supported","result":"accept"}
+```
+
+`ambiguous` は「比較対象と指標が読めない」、`overclaim` は「一時点の結果しかないのに差が広がったと述べる」、`supported` は「比較したとだけ述べる」という別の失敗条件を与えている。ここでの `accept` は**この二項目の検査に限った合格**であり、調査の実在や統計的有意性の証明ではない。
+
+自分の原稿に移すときは、(1) 原稿が実際に比較した対象を抜き出す、(2) 原稿にある測定時点を数える、(3) 読者へ見せるタイトルだけで初見テストする、(4) 結果を `id` と一緒に記録する、の順で一回試す。初見の人が無料版と有料版ではなく「AIモデルの世代差」と受け取った場合は、生成した題を採用しない。再実行で誤った一行が通ったら、どの条件が不足したかを個別に直す。
+
 ## 自動化したら、何を見逃したか数える
 
 「短くして」とだけ頼む場合を基準に、同じ原稿と表示条件で比べます。採用済みの題から比較対象だけを削る、指標だけを変える、問いだけを断定に変える。このように一か所ずつ変えると、どの誤りを見逃したか分かります。判定方法の調整に使った原稿は、本番の比較から外します。 [評価設計の公式ガイド](https://developers.openai.com/api/docs/guides/evaluation-best-practices)
