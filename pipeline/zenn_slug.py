@@ -8,7 +8,9 @@ from pathlib import Path
 
 
 ZENN_SLUG_RE = re.compile(r"^[a-z0-9_-]{12,50}$")
-DATED_SLUG_RE = re.compile(r"^(?P<date>\d{4}-\d{2}-\d{2})-[a-z0-9][a-z0-9_-]*$")
+DATED_SLUG_RE = re.compile(
+    r"^(?P<date>\d{4}-\d{2}-\d{2})-(?P<sequence>\d{2})-[a-z0-9]+(?:-[a-z0-9]+)*$"
+)
 FRONTMATTER_RE = re.compile(r"\A---\n(?P<fields>[\s\S]*?)\n---\n")
 
 
@@ -89,7 +91,7 @@ def validate_new_article(path: str, content: str) -> list[str]:
     slug = Path(path).stem
     match = DATED_SLUG_RE.fullmatch(slug)
     if not match or validate_slug(slug):
-        return [f"{path}: new article slug must start YYYY-MM-DD-"] + errors
+        return [f"{path}: new article slug must use YYYY-MM-DD-NN-title"] + errors
     try:
         date.fromisoformat(match.group("date"))
     except ValueError:
