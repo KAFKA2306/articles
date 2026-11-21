@@ -6,41 +6,13 @@ topics: ["typescript", "youtube", "automation", "testing", "security"]
 published: false
 ---
 
-自動投稿で一番怖いのは、API errorではない。
+**認証に成功した相手を、意図した投稿先だと思い込むな。**
 
-**全部成功したまま、違う公開先へ出ること**だ。
+動画生成、OAuth、YouTube API、CIが全部成功しても、違うチャンネルへ投稿したら事故になる。[yt3のADR 0038](https://github.com/KAFKA2306/yt3/blob/main/docs/adr/0038-publish-destination-guard.md)では`byosan` profileのbucketが`daily_pulse`、[現行registry](https://github.com/KAFKA2306/yt3/blob/main/src/domain/youtube_profiles.ts)と[routing監査](https://github.com/KAFKA2306/yt3/blob/main/src/scripts/audit_publish_routing.ts)では`byosan_money`だった。
 
-動画生成は成功。
+これは**実際の誤投稿事故を観測した証拠ではない**。しかし認証は「誰としてアクセスできるか」を示すだけで、「このrunがそこへ投稿する意図か」を保証しない。そこでpublish直前に**runの目的・選択profile・remote identity**を照合する。
 
-OAuthも成功。
-
-YouTube APIも成功。
-
-CIもgreen。
-
-それでも、投稿先が違えば事故である。
-
-`KAFKA2306/yt3` を見直していたとき、実際に気になる差分があった。
-
-ADR 0038では `byosan` profile のbucketが `daily_pulse`、current registryと静的監査では `byosan_money` になっていた。
-
-- ADR: https://github.com/KAFKA2306/yt3/blob/main/docs/adr/0038-publish-destination-guard.md
-- registry: https://github.com/KAFKA2306/yt3/blob/main/src/domain/youtube_profiles.ts
-- audit: https://github.com/KAFKA2306/yt3/blob/main/src/scripts/audit_publish_routing.ts
-
-これは実際の誤投稿事故を示す証拠ではない。
-
-しかし、**「認証先が正しい」だけでは投稿意図まで証明できない**ことをはっきり示していた。
-
-そこでpublish直前に、次の3点を一致させるようにした。
-
-1. **何を公開するrunか** — bucket
-2. **どの公開先を選んだか** — profile
-3. **実際にOAuthで認証されている相手は誰か** — remote identity
-
-この記事で扱うのはYouTube APIの使い方ではない。
-
-**人が毎回宛先確認しなくても、自動投稿を安心して任せられるrouting contract**について書く。
+汎用規律は **「書き込みができるかより先に、そこへ書いてよいかを確かめよ」**。
 
 ## 認証できることと、そこへ投稿してよいことは別
 
@@ -306,3 +278,10 @@ profile ↔ remote identity
 自動化を増やすほど、成功率だけを上げるのでは足りない。
 
 **間違った場所へ成功しないこと**も、同じくらい重要だ。
+
+
+## 他の宛先でも使う条件と撤回条件
+
+メール送信、クラウドストレージへの保存、決済先の指定も、成功応答が正しい宛先を保証しないときには同じ設計を検討できる。これは**応用仮説**であり、それらの事故が減った実績ではない。
+
+目的と認証先が技術的に一対一に固定され、不一致が起こらないことを実環境と検査で証明できるなら、投稿直前の3点照合は簡素化できる。一方、remote identityの取得に失敗したとき、直前の値へ黙って戻すと誤投稿を見逃す。**目的を証明できなければ書き込まない。**

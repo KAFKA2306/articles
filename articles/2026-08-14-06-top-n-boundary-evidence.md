@@ -1,41 +1,16 @@
 ---
-title: "売上上位50社の集計で、51位も記録する理由"
+title: "上位N件だけで選定を正当化するな。N+1件目を残せ"
 emoji: "📏"
 type: "tech"
 topics: ["python", "dataengineering", "testing", "api"]
 published: false
 ---
 
-「売上上位50社です」と一覧を渡されたとき、本当に知りたいのは50社の名前だけだろうか。
+「上位50社」が50件返ってきた。それだけでは**なぜその50社が選ばれたか**を説明できない。途中でデータ取得が打ち切られても、50件の一覧は見栄えよく完成する。
 
-実務でそのランキングを使うなら、むしろ境界が気になる。
+[2026年8月14日の半導体企業の抽出](https://github.com/KAFKA2306/semiconductor-earnings-model/commit/45ccb7dad68c46a3e488b122205b6af2bf27f5e6)では、候補51社から50社を採り、最初に外れたQDレーザ（E35542、売上1,372,801,000円）を`first_excluded_by_limit`へ保存した。[固定snapshot](https://github.com/KAFKA2306/semiconductor-earnings-model/blob/45ccb7dad68c46a3e488b122205b6af2bf27f5e6/data/financial_analysis/sandisk-investor-day-2026-edinet-semiconductor-50.json)と[報告](https://github.com/KAFKA2306/semiconductor-earnings-model/blob/45ccb7dad68c46a3e488b122205b6af2bf27f5e6/docs/reports/semiconductor/2026-08-14-sandisk-investor-day-edinet50.md)に残る。
 
-- 候補は本当に50社しかなかったのか
-- 51社以上あったのか
-- 50位と51位は僅差なのか
-- APIの取得上限で、そもそも候補を落としていないか
-- 翌日1社が入れ替わったとき、それは実際の順位変動なのか
-
-`KAFKA2306/semiconductor-earnings-model` で半導体企業を売上降順に抽出した2026年8月14日の公開snapshotでは、`limit: 50` に対して候補は **51社** だった。
-
-そこで私は50社だけを保存せず、最初に上限外となった51位も `first_excluded_by_limit` として残した。
-
-```text
-candidate_count: 51
-record_count: 50
-first_excluded_by_limit: QDレーザ（E35542）
-revenue: 1,372,801,000 JPY
-```
-
-一次証拠:
-
-- commit: https://github.com/KAFKA2306/semiconductor-earnings-model/commit/45ccb7dad68c46a3e488b122205b6af2bf27f5e6
-- snapshot: https://github.com/KAFKA2306/semiconductor-earnings-model/blob/45ccb7dad68c46a3e488b122205b6af2bf27f5e6/data/financial_analysis/sandisk-investor-day-2026-edinet-semiconductor-50.json
-- report: https://github.com/KAFKA2306/semiconductor-earnings-model/blob/45ccb7dad68c46a3e488b122205b6af2bf27f5e6/docs/reports/semiconductor/2026-08-14-sandisk-investor-day-edinet50.md
-
-この記事で伝えたいのは `sorted(... )[:50]` の書き方ではない。
-
-**ランキングやscreening結果を、利用者が「なぜこの50件なのか」まで後から監査できる成果物に変えられること**である。
+汎用規律は **「上位N件の採否を語るなら、N+1件目と取得範囲を残せ」**。選抜の正当性は選ばれた対象だけからは検証できない。
 
 ## 50件返ってきた、は完全性の証拠にならない
 
@@ -255,3 +230,10 @@ N+1件目を保存すればランキング全体が正しい、とまでは言�
 **ランキング・screening・推薦を、利用者が後から疑っても検証できる成果物にすること。**
 
 データを集めて並べるだけでなく、その判断境界まで証拠として設計する。
+
+
+## この規律の適用・撤回条件
+
+採用候補、推薦商品、補助金の選抜でも境界近くの採否理由を求められるなら、最初の除外対象と同点処理を保存する判断を試せる。ただし、これらは**応用仮説**であって、この金融snapshot以外で実証したわけではない。
+
+候補が最初からN件以下で、全件取得が別の方法で保証されるならN+1件目は存在せず、必要なのは取得完了の証拠になる。逆にN+1件目があってもAPIが51件で打ち切られていたら網羅性は証明できない。**境界一件を完全性の代わりにしない。**
