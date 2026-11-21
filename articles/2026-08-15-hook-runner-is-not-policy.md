@@ -5,6 +5,8 @@ type: "tech"
 topics: ["claudecode", "testing", "ai", "ci", "automation"]
 published: true
 published_at: 2026-08-15 09:33
+created_at: "2026-08-15"
+updated_at: "2026-11-21"
 ---
 
 Claude Codeに実装、テスト追加、失敗修正まで全部任せる。

@@ -4,6 +4,8 @@ emoji: "🔍"
 type: "tech"
 topics: ["ai", "anthropic", "security", "aiagents", "sre"]
 published: false
+created_at: "2026-11-07"
+updated_at: "2026-11-21"
 ---
 
 AIエージェントを仕事に使うとき、「監視ツールを導入した」「権限を設定した」「安全フィルターを有効にした」で安心していないだろうか。

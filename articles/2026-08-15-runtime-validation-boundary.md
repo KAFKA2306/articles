@@ -4,6 +4,8 @@ emoji: "🚧"
 type: "tech"
 topics: ["python", "typescript", "pydantic", "zod", "testing"]
 published: false
+created_at: "2026-08-15"
+updated_at: "2026-11-21"
 ---
 
 **型がついているという理由で、外から来た値を信用するな。**

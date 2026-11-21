@@ -4,6 +4,8 @@ emoji: "📈"
 type: "tech"
 topics: ["ai", "anthropic", "metr", "agi", "research"]
 published: false
+created_at: "2026-11-07"
+updated_at: "2026-11-21"
 ---
 
 「AIの進歩が約2倍に加速した」。この数字から「超知能が2027年に来る」「知能爆発は不可避だ」と結論づけてよいのだろうか。
