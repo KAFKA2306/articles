@@ -77,7 +77,7 @@ NVIDIAの行が画面に見えてから、SECの提出書類ページを開く�
 このリポジトリの記事を直す場合も、抽象的な査読で終えません。たとえば本記事の古いスキル名やリンクを更新するなら、次の順に対象を明示して進めます。以下のコマンドは**実施方法**であり、ここに記しただけでテストや公開の実行実績にはなりません。
 
 1. **使用版を固定する。** [Kafstyler `main` のコミット情報](https://api.github.com/repos/KAFKA2306/kafstyler/commits/main)から完全なSHAを得る。その版の `AGENTS.md` と `skills/*/SKILL.md` を読む。記事側では `AGENTS.md`、`pipeline/contracts/article.md`、`docs/PUBLICATION.md` と対象 `articles/kafstyler-agent-quality-loop.md` を読む。会話の記憶だけで操作しない。
-2. **編集対象と旧表記を特定する。** `git fetch origin main` → `git checkout main` → `git pull --ff-only` → `git grep -n -E 'charter|schema|scrutiny|benchmark|deliver|prune' -- articles/kafstyler-agent-quality-loop.md`。旧スキル名の記載位置、リンク先が現行版にあるか、固有の履歴として残すべき文章かを分けて記録する。`schema` などの一般語を機械的に全置換しない。
+2. **編集対象と旧表記を特定する。** `git status --short` で未コミット変更がないことを確かめ、`git fetch origin main` → `git switch main` → `git pull --ff-only` → `git grep -n -E 'skills/[a-z-]+/SKILL\.md' -- articles/kafstyler-agent-quality-loop.md`。旧スキル名の記載位置、リンク先が現行版にあるか、固有の履歴として残すべき文章かを分けて記録する。`schema` などの一般語を機械的に全置換しない。
 3. **読者の合格条件を決める。** 初見の読者が本記事の表を開き、現行7スキルの名前・実際の操作・必要な証拠・一次リンクをたどれること。失敗例は「古い名前のスキルURLへ進んで404になる」、または「表にスキル名はあるが入力や判定が書かれていない」。
 4. **差分を最小限にする。** 誤った現行説明、表、関連リンクを直す。半導体サイトのクリック数やSEC提出書類の数値は、元のPRや一次資料を再確認しないまま書き換えない。履歴の根拠リンクは当時の版として残す。
 5. **記事を利用者として読み直す。** タイトルと全見出しだけを読んで目的の節へ進めるか確かめる。本文では実際のファイルパス、入力、操作、出力、失敗例、根拠のどれが欠けているか確認する。旧URLを一つ開いても修正結果の判断ができるかを反証する。
