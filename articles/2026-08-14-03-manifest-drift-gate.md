@@ -6,38 +6,13 @@ topics: ["python", "githubactions", "dataengineering", "testing", "ci"]
 published: false
 ---
 
-元データだけ更新して、manifestの更新を忘れた。
+**CIが勝手に修復してgreenになったPRを、完成した成果と呼ぶな。**
 
-本来ならCIに止めてほしい。
+元データだけ更新し、manifestのcommitを忘れた。CIが最初にmanifestを再生成すると、検証器は再生成後の正しい状態だけを見てPASSし得る。PRへ提出した版が不完全だった事実は消える。
 
-しかしCIが最初にmanifestを再生成すると、古かったmanifestを自分で最新へ直してから検証できてしまう。
+[半導体決算モデルのbuilder](https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/scripts/build_earnings_lineage_manifest.py)、[verifier](https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/scripts/verify_earnings_lineage_manifest.py)、[workflow](https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/.github/workflows/earnings-lineage.yml)では、再生成内容の検査とGit差分の検査を分ける。
 
-```text
-checkout時点
-artifact = new
-manifest = old
-
-CI
-  ↓ manifestを再生成
-artifact = new
-manifest = new
-  ↓ verify
-PASS
-```
-
-結果はgreen。
-
-でも、PRにcommitされていた状態は不完全だった。
-
-`KAFKA2306/semiconductor-earnings-model` では、この「勝手に直してからgreen」を防ぐため、manifestの正しさと**commit漏れがないこと**を別々に検証している。
-
-- builder: https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/scripts/build_earnings_lineage_manifest.py
-- workflow: https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/.github/workflows/earnings-lineage.yml
-- verifier: https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/scripts/verify_earnings_lineage_manifest.py
-
-この記事で扱うのはmanifest formatではない。
-
-**green CIを見たとき、「そのcommit自身が必要な生成物を全部含んでいる」と信頼できるようにする設計**について書く。
+規律は **「再生成できることと、必要な成果物が提出されたことを別に検査せよ」**。CIの成功は、何を検査したかが分かって初めて信頼できる。
 
 ## 2種類の「正しい」を分ける
 
@@ -277,3 +252,10 @@ rebuild
 manifestが古いままのPRを、CI自身が直してgreenにする。
 
 その偽の安心を止めるために、最後の `git diff` が効いた。
+
+
+## 使える条件と撤回条件
+
+生成型定義、公開CSV、静的カタログでも**生成物をGitへcommitする契約**なら、再生成後の`git diff --exit-code`が役に立つ。これは他分野での実測ではなく応用仮説だ。
+
+生成物をGitへ保存せず、配布時に必ず正本から作る構成なら、commitされたmanifestとの一致を要求する必要はない。未追跡の新規生成ファイルは`git diff`だけでは見えないので`git status --short`も読む。**CIが作った状態と、PRが提出した状態を同じものと見なさない。**
