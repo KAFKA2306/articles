@@ -5,6 +5,8 @@ type: "tech"
 topics: ["python", "machinelearning", "nlp", "testing"]
 published: true
 published_at: 2026-08-14 16:00
+created_at: "2026-08-14"
+updated_at: "2026-11-21"
 ---
 
 **結果が返ったというだけで、その結果を判断へ使うな。**

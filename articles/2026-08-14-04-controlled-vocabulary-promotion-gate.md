@@ -4,6 +4,8 @@ emoji: "📚"
 type: "tech"
 topics: ["ai", "documentation", "nlp", "testing", "dataengineering"]
 published: false
+created_at: "2026-08-14"
+updated_at: "2026-11-15"
 ---
 
 AIにREADME、Issue、設計文書を書かせると、文章そのものは増やせる。

@@ -5,6 +5,8 @@ type: "idea"
 topics: ["ai", "vrchat", "character", "ux"]
 published: true
 published_at: 2026-08-15 16:03
+created_at: "2026-08-15"
+updated_at: "2026-11-21"
 ---
 
 **AIキャラクターを、正しく答えた数だけで評価するな。**

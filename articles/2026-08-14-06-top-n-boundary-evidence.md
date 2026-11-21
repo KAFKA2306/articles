@@ -4,6 +4,8 @@ emoji: "📏"
 type: "tech"
 topics: ["python", "dataengineering", "testing", "api"]
 published: false
+created_at: "2026-08-14"
+updated_at: "2026-11-21"
 ---
 
 「上位50社」が50件返ってきた。それだけでは**なぜその50社が選ばれたか**を説明できない。途中でデータ取得が打ち切られても、50件の一覧は見栄えよく完成する。

@@ -4,6 +4,8 @@ emoji: "🚦"
 type: "tech"
 topics: ["testing", "ci", "typescript", "quality"]
 published: false
+created_at: "2026-08-14"
+updated_at: "2026-11-21"
 ---
 
 **重大な欠陥を、ほかの項目の加点で相殺するな。**

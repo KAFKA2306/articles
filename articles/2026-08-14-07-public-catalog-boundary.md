@@ -4,6 +4,8 @@ emoji: "🧱"
 type: "tech"
 topics: ["dataengineering", "privacy", "github", "testing"]
 published: false
+created_at: "2026-08-14"
+updated_at: "2026-11-21"
 ---
 
 **秘密を含むデータから公開直前に項目を削る方式を、最初の設計にするな。**

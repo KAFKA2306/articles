@@ -5,6 +5,8 @@ type: "tech"
 topics: ["monorepo", "ci", "nx", "turborepo", "testing"]
 published: false
 published_at: 2026-08-17 19:11
+created_at: "2026-08-15"
+updated_at: "2026-11-21"
 ---
 
 **テストを減らして速くなったCIを、それだけで「改善」と呼ぶな。**
