@@ -1,25 +1,16 @@
 ---
-title: "実行IDに用途を入れて、設定と保存先の取り違えを防ぐ"
+title: "IDが一意でも、所属が不明なら使うな"
 emoji: "🧭"
 type: "tech"
 topics: ["typescript", "backend", "workflow", "design"]
 published: false
 ---
 
-複数のworkflowが同じ保存先を使うとき、`2026-08-14` やUUIDのような「一意そうなrun ID」だけでは足りない。
+**IDの衝突がないというだけで、別の用途の処理が混ざらないと思うな。**
 
-IDが衝突しなくても、**そのrunがどのdomainのものかをID自身から判定できない**と、設定・保存先・監査・再実行で別domainの状態を読む余地が残る。
+UUIDが一意でも、そのrunがどのドメインの設定と保存先へ属すかは分からない。[yt3の入口](https://github.com/KAFKA2306/yt3/blob/849592ae98ce4ea1ea179ae5dd8997b227301791/src/index.ts)と[保存層](https://github.com/KAFKA2306/yt3/blob/849592ae98ce4ea1ea179ae5dd8997b227301791/src/io/core.ts)は、`domain_id/run_id`という形式で所属を運び、入口と保存時に矛盾を拒否する。[起点commit](https://github.com/KAFKA2306/yt3/commit/d1e2c42cfdfdb18d9962d15c38b87bab919df285)
 
-2026年8月13日に公開された `KAFKA2306/yt3` の実装では、run IDを `domain_id/run_id` にし、入口と保存層の両方で境界を検証している。
-
-一次情報:
-
-- implementation entrypoint: https://github.com/KAFKA2306/yt3/blob/849592ae98ce4ea1ea179ae5dd8997b227301791/src/index.ts
-- storage boundary: https://github.com/KAFKA2306/yt3/blob/849592ae98ce4ea1ea179ae5dd8997b227301791/src/io/core.ts
-- originating commit: https://github.com/KAFKA2306/yt3/commit/d1e2c42cfdfdb18d9962d15c38b87bab919df285
-- workflow run history reference: https://docs.github.com/en/actions/how-tos/monitor-workflows/view-workflow-run-history
-
-この記事の狙いはUUIDの作り方ではない。**run IDを名前空間として使い、誤ったdomainの設定やartifactへ到達する前に止める方法**を、再利用できる最小設計に落とすことだ。
+規律は **「複数用途が共通基盤を使うなら、実行IDの所属を入口と保存先の双方で照合せよ」**。衝突防止と誤ったドメインへのアクセス防止は別の問題だ。[GitHub Actionsの実行履歴](https://docs.github.com/en/actions/how-tos/monitor-workflows/view-workflow-run-history)もIDの状態追跡の参考になる。
 
 ## 読む前と読んだ後
 
@@ -383,3 +374,10 @@ domain mismatch: alpha vs beta/2026-08-14
 重要なのはprefixという記法そのものではない。
 
 **曖昧な所属を下流へ流さず、入口で矛盾を止め、保存層で境界を再確認すること**が再利用できる設計判断である。
+
+
+## 別の基盤への転用と撤回条件
+
+複数tenant、channel、pipelineが保存基盤を共有するときは、所属と実行IDを一緒に検証する判断を試せる。これは**応用仮説**であって他の基盤で事故減少を測定した結果ではない。
+
+ドメインが一つで保存先も物理的に分離されている場合、prefixは過剰かもしれない。さらに、利用者が自由に書けるprefixは**権限の証明ではない**。実際の認可と保存先の照合を省かない。所属文字列を足しただけで安全とは呼ばない。

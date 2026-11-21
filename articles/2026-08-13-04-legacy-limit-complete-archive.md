@@ -7,24 +7,13 @@ published: false
 published_at: 2026-08-13 23:03
 ---
 
-公開一覧が60件までは正常に見える。
+**旧APIの形を守るために、利用者へ不完全な一覧を返し続けるな。**
 
-61件目が増えた瞬間、何もエラーを出さずに消える。
+公開一覧が60件までは正しく見えるのに、61件目が増えると静かに消える。古い`limit=60`をそのまま新しい一覧へ持ち込むと、呼び出し側は壊れなくても、利用者の「公開対象を全部見られる」という約束が壊れる。
 
-APIも落ちない。既存callerも壊れない。テストも60件以下ならgreenのまま。
+[vlogのPR #54](https://github.com/KAFKA2306/vlog/pull/54)と[PR #55](https://github.com/KAFKA2306/vlog/pull/55)では、[公開アーカイブ](https://github.com/KAFKA2306/vlog/blob/4bec2f9d04fa12b0b469cc0a3dc68ec6593d58b8/apps/reader/lib/public-archive.ts)の互換引数と[完全取得](https://github.com/KAFKA2306/vlog/blob/4bec2f9d04fa12b0b469cc0a3dc68ec6593d58b8/apps/reader/lib/novels-complete.ts)の意味を分けた。
 
-利用者から見ると、**「全部見える」と思っていた一覧が静かに欠ける。**
-
-`KAFKA2306/vlog` では、以前から残っていた `limit=60` という互換引数と、新しい「公開対象をすべて列挙する」というproduct contractを分離した。
-
-- PR #54: https://github.com/KAFKA2306/vlog/pull/54
-- PR #55: https://github.com/KAFKA2306/vlog/pull/55
-- archive reader: https://github.com/KAFKA2306/vlog/blob/4bec2f9d04fa12b0b469cc0a3dc68ec6593d58b8/apps/reader/lib/public-archive.ts
-- complete reader: https://github.com/KAFKA2306/vlog/blob/4bec2f9d04fa12b0b469cc0a3dc68ec6593d58b8/apps/reader/lib/novels-complete.ts
-
-この記事で扱うのはpaginationの実装方法ではない。
-
-**古い呼び出し元を壊さず、利用者へは現在のproduct promiseどおりの完全な結果を返す移行方法**について書く。
+汎用規律は **「後方互換を守るときは、呼び出し形式と利用者への現在の約束を別々に検証せよ」**。60件のテストがgreenでも61件目の欠落は検出できない。
 
 ## 古い引数が、新しいUXを縛っていた
 
@@ -217,3 +206,10 @@ https://github.com/PostgREST/postgrest/blob/main/docs/references/api/pagination_
 後方互換を守るとき、本当に守るべきなのは古いコードの形だけではない。
 
 現在の利用者に何を約束しているかも、同じくらい重要だった。
+
+
+## 規律の転用と撤回条件
+
+検索結果、顧客台帳、履歴一覧でも旧APIの引数と新しい利用者要件が衝突するときに同じ見直しを試せる。これは**応用仮説**であり他サービスの成果を測ったわけではない。
+
+「最新60件」と明示する製品や、ページ単位の閲覧が契約に含まれる製品へ全件取得を押し付けない。exact countの費用も無視しない。**部分一覧が仕様なら部分一覧と表示し、「全部」とは約束しない。**

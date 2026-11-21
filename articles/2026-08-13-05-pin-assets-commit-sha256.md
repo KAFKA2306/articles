@@ -1,5 +1,5 @@
 ---
-title: "共有画像をコミットで固定し、公開後もSHA-256で照合する"
+title: "共有素材のmainを直参照するな。採用版を固定せよ"
 emoji: "📌"
 type: "tech"
 topics: ["github", "ci", "frontend", "architecture"]
@@ -7,48 +7,16 @@ published: false
 published_at: 2026-08-13 23:40
 ---
 
-複数のサイトで同じ画像やアイコンを使いたい。
+**供給元の更新だけで公開画面が変わる状態を、安定した配布と呼ぶな。**
 
-一番簡単なのは、中央repositoryの `main` を直接参照することだ。
+共有画像のURLに`main`を使うと、利用側のコミットが変わらなくても表示内容が変わる。404にもならず、CIがgreenでも利用者は未審査の変更を見せられ得る。
 
-```text
-https://raw.githubusercontent.com/example/assets/main/hero.webp
-```
+[prompt-vaultの素材管理](https://github.com/KAFKA2306/prompt-vault/commit/f96a2d6b5bb257080f235f04cdfb5745e8700ed3)と[更新](https://github.com/KAFKA2306/prompt-vault/commit/a6ef582f7112b0f504bea3d535b9c45437c107f9)、[travel側の採用](https://github.com/KAFKA2306/travel/commit/cbc7aeae37398a0f50b76c6de6e85319653dfbfe)では、commitとSHA-256で内容を固定し、公開後にも照合する。[permalinkの仕様](https://docs.github.com/en/repositories/working-with-files/using-files/getting-permanent-links-to-files?apiVersion=2022-11-28)
 
-しかし、このURLは同じままでも中身は変わる。
+汎用規律は **「共有素材は最新を無条件に引くな。採用する版と内容を決めよ」**。中央管理と自動追従は同義ではない。
 
-中央repoで `hero.webp` を差し替えれば、consumer側は1行も変更していないのに公開サイトの見た目が変わる。
-
-404にもならない。buildも通る。
-
-**reviewしていない変更が、正常な配信として利用者へ届く。**
-
-`KAFKA2306/prompt-vault` と `KAFKA2306/travel` では、ここを次の境界へ変えた。
-
-```text
-asset IDを選ぶ
-  ↓
-canonical commitを固定
-  ↓
-SHA-256を照合
-  ↓
-consumerへvendor
-  ↓
-build後も同じhashか確認
-  ↓
-deploy後も同じhashか確認
-```
-
-この記事で扱うのはhashの計算方法ではない。
-
-**中央管理の便利さを残しながら、consumerの公開物が知らない間に変わらない運用UX**について書く。
-
-一次情報:
-
-- Prompt Vault: https://github.com/KAFKA2306/prompt-vault/commit/f96a2d6b5bb257080f235f04cdfb5745e8700ed3
-- Prompt Vault: https://github.com/KAFKA2306/prompt-vault/commit/a6ef582f7112b0f504bea3d535b9c45437c107f9
-- travel consumer: https://github.com/KAFKA2306/travel/commit/cbc7aeae37398a0f50b76c6de6e85319653dfbfe
-- GitHub permalink: https://docs.github.com/en/repositories/working-with-files/using-files/getting-permanent-links-to-files?apiVersion=2022-11-28
+元の資料：
+- https://raw.githubusercontent.com/example/assets/main/hero.webp
 
 ## `main` URLは場所を示すが、採用versionは示さない
 
@@ -252,3 +220,10 @@ CIで配置先のSHA-256を再計算し、採用記録と一致すれば次に�
 consumerが更新するときは、その差分がPRとして見える。
 
 **中央管理と公開安定性を両立するには、「最新を共有する」のではなく「採用versionを共有する」方が扱いやすかった。**
+
+
+## この規律の適用・撤回条件
+
+フォント、モデル、CDNの静的ライブラリでも、配布元の更新が消費側の成果物を変える場合に、版とhashの照合を試せる。これは**応用仮説**であり、それらの配布先で事故が減ったという実測ではない。
+
+常に最新内容を取り込むこと自体が仕様の実験なら固定しない方がよい場合もある。その場合は、変化を追跡可能にする。hashが一致しても素材が安全・合法である証明にはならない。**同じものが届いた証拠と、使ってよい根拠を分ける。**
