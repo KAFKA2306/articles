@@ -17,6 +17,32 @@ Broad door
   -> Useful exit
 ```
 
+## 編集の第一原理：強い汎用原則を実例で証明し、反例で試す
+
+**記事は「何を作ったか」の報告ではない。読者がこれまで信じていた判断規則を更新する提案である。** 一記事につき、固有名詞を外しても使える、明確で反論可能な規律を一つ主張する。「〜が大切」「状況に応じて使い分ける」「検証を強化する」は規律として弱い。読者が何を**やめ**、何を**優先**し、どの条件で**止める**かまで変える。
+
+[Crash-Driven Development](https://zenn.dev/kafka2306/articles/11cd731eebded1)の強みは、エラー処理の網羅ではなく「失敗を安易な既定値で隠すな」という、従来の開発感覚への異議にある。その強さは**語気ではなく、既存の選択を変える規則と実証**に由来する。
+
+1. **捨てる前提**：なぜ従来のやり方が合理的に見えたか（`initial_hypothesis`）。
+2. **主張する規律**：何を禁止・分離・優先するか。製品名を外しても成立する一文（`generalizable_insight`）。
+3. **壊れる仕組み**：従来の方法が見逃す原因、代案が変える責務・情報・依存関係（`mechanism`）。相関を因果と偽らない。
+4. **実物の証拠**：版、代表入力、操作、実測結果、比較、一次URL。観測済みと想定例を明確に分ける（[超具体性](#超具体性の必須条件初稿改稿査読の共通ゲート)）。
+5. **別分野へ移す判断**：同じ構造の問題がある別製品・別分野で何を確かめるか（`transfer_conditions`）。未実行なら**応用仮説**であり第二の実績ではない。
+6. **撤回の条件**：どの反例・失敗・追加データがあれば規律を弱めるか（`falsification_condition` と `non_transfer_conditions`）。
+
+**強い規律は条件付きでも断言できる。** 「内部の不変条件を破ったら正常値に丸めるな」は強い。「すべての例外処理を捨てよ」は利用者保護、復旧、一時的な外部障害を区別しておらず、追加検証なしに採用しない。
+
+| 弱い教訓 | 仕事の選択を変える汎用規律 | 実証の入口 |
+| --- | --- | --- |
+| エラー処理は大事 | **異常を正常値に偽装するな。回復の責務を分けよ。** | [Crash-Driven Development](https://zenn.dev/kafka2306/articles/11cd731eebded1) |
+| AIのテストは大事 | **合格の決定権を、成果を作る主体の自己申告に委ねるな。** | [合格条件の保護とCI](../../articles/2026-08-15-hook-runner-is-not-policy.md) |
+| ランキングを正しく | **上位N件だけで選定を正当化するな。N+1件目と取得境界を残せ。** | [候補51社と上位50社](../../articles/2026-08-14-06-top-n-boundary-evidence.md) |
+| 数字に注意しよう | **数値を採用する前に分母・対象期間を固定せよ。** | [Nebiusの異なる分母](../../articles/financial-ratio-denominator-check.md) |
+
+この表は規律の**提案**であり、各単一事例がすべての分野での効果を実証した意味ではない。具体例がなければ大声のスローガン、汎用規律がなければ詳細な作業日誌である。どちらも掲載しない。
+
+**編集の不合格**：固有事例の紹介で終わる、抽象的な美徳で終わる、失敗の仕組みを説明できない、実測のない強い断定をする、未実行の他分野例を実証と呼ぶ、撤回可能な観測がない。品質点数が高くても差し戻す。既知の原則を新しい言葉へ置き換えるだけなら、記事を増やさず既存記事へ統合する。
+
 ## Generic-by-default rule
 
 このrepositoryの**記事編集・評価の規則と、記事本文の中心的な知見は原則として汎用にする**。
@@ -151,7 +177,7 @@ Primary:
 4. first-hand experience / measurement / public artifact
 5. non-obvious finding / reframing
 6. underlying mechanism / decision structure
-7. generalizable insight + transfer conditions
+7. one sharp falsifiable rule + transfer conditions
 8. practical consequence
 9. useful exit
 10. proof limits / non-goal / non-transfer conditions
@@ -187,7 +213,9 @@ Primary:
 
 ### Generalization / transfer
 
-- `generalizable_insight`: 固有事例を越えて再利用できる知見。
+- `generalizable_insight`: 何をやめ・優先・分離するかを断言する、固有事例を越えた規律。
+- `mechanism`: 旧方法が失敗する仕組みと、規律で結果が変わる理由。
+- `falsification_condition`: 規律を撤回または適用停止する具体的な観測・反例。
 - `transfer_conditions`: 同じ知見を適用できる条件。
 - `non_transfer_conditions`: 適用できない条件、または追加検証が必要な範囲。
 
@@ -265,8 +293,9 @@ AIに作らせたものを、誰が「完成」と判定するのか？
 
 合格条件:
 
-- `generalizable_insight` が特定repo名・tool名なしでも意味を持つ。
-- その知見が成立する理由を、観測からmechanism / decision structureとして説明できる。
+- `generalizable_insight` が特定repo名・tool名なしでも意味を持ち、読者がやめる・始める選択を断言する。
+- `mechanism` に観測から推論できる責務・情報の欠落・因果構造を説明する。推論は観測と区別する。
+- `falsification_condition` に、規律を撤回・制限する実際に確認できる反例を示す。
 - `transfer_conditions` を満たす別projectで、読者が同じ判断規則を試せる。
 - `non_transfer_conditions` により、証拠以上の一般化を止めている。
 - useful exitが特定のCLI commandや設定値だけでなく、少なくとも一つの再利用可能なdecision rule / comparison lens / experiment protocolを含む。
@@ -421,6 +450,9 @@ LAPRAS AI Reviewで公開されている5軸を参考にした内部proxyを使�
 - `missing_proof_of_value`
 - `missing_useful_exit`
 - `case_specific_without_transfer`
+- `weak_transferable_principle`
+- `missing_causal_mechanism`
+- `unfalsifiable_principle`
 - `unclear_transfer_conditions`
 - `overgeneralized_from_narrow_evidence`
 - `forced_commercial_cta`
@@ -531,7 +563,9 @@ Customer value:
 Original observation:
 Natural expectation:
 Surprising finding:
-Generalizable insight:
+Generalizable insight (strong rule):
+Mechanism:
+Falsification condition:
 Transfer conditions:
 Non-transfer conditions:
 Strongest proof:
