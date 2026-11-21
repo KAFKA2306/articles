@@ -257,6 +257,18 @@ what destination is actually authenticated/connected?
 
 この3問が一致するかを見る。
 
+## アップロードせずに投稿先を3ケースで試す
+
+`byosan_money`を用途とする実行から、投稿前のrouting checkだけを切り出す。以下は**dry-runの期待結果**であり、実際のYouTubeチャンネルIDや秘密情報は含まない。
+
+| 入力 | 期待結果 | 根拠 |
+| --- | --- | --- |
+| `bucket=byosan_money`、`profile=byosan`、登録済みremote ID | 通過 | 用途・profile・認証先の対応が一致 |
+| `bucket=byosan_money`、`profile=humanity` | 拒否 | runの用途とprofileが食い違う |
+| `bucket=byosan_money`、`profile=byosan`、remote ID取得失敗 | 拒否 | 実際の宛先が不明 |
+
+三つとも**アップロードAPIを呼ばない**。実行ID、選んだprofileの版、ID照合の成否、拒否理由を記録する。正常ケースが通っても動画の内容、公開日時、再生リストが正しいとは限らない。3点照合の完了を「投稿全体が安全」とは言わない。
+
 ## 3点照合だけでも防げないこと
 
 この設計はrouting mismatchを減らす。

@@ -221,6 +221,17 @@ COMMITTED_FRESH = false
 
 なら、ロジックではなくcommit漏れが問題だとすぐ分かる。
 
+## manifestが古いPRを差分で止める
+
+[固定されたworkflow](https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/.github/workflows/earnings-lineage.yml)ではmanifestを再生成した後、検証器とGit差分を別に確かめる。例えば元データを更新し、`data/earnings_ledger/lineage_latest.json`を旧版のままコミットした場合を考える。これは**失敗条件の説明用**で、公開データを実際に壊した報告ではない。
+
+```sh
+# 生成器とverifierを動かした後に
+git diff --exit-code -- data/earnings_ledger/lineage_latest.json
+```
+
+終了コード1なら**再生成できるが、PRに入っていたmanifestが古い**。0なら、この追跡ファイルについては一致する。ただし未追跡の新規ファイルは`git diff`だけでは検出できないため、`git status --short`も確認する。PRには元データの版、再生成コマンド、検証の終了コード、差分結果を一組で残す。CIがgreenでも「何を見たか」は別途必要だ。
+
 ## green CIの価値は「何を検査したか」で決まる
 
 CIがgreenであること自体は証拠にならない。

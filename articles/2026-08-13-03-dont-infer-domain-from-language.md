@@ -195,6 +195,23 @@ unknown
 
 **分類精度だけでなく、分類根拠の透明性をUXにする。**
 
+## 2個の明示タグがある入力はどうなるか
+
+本文の`classify`は`agent-zone-*`タグをソートして**最初の一つ**を採る。例えば次の入力では`investing`が返る。
+
+```python
+repo = {
+    "name": "mixed-purpose",
+    "topics": ["agent-zone-web", "agent-zone-investing"],
+    "language": "Python"
+}
+# 本文のclassify(repo)は "investing" を返す
+```
+
+これは**文字列の順で一つ選んだだけ**で、用途が投資に確定した根拠ではない。現行の[collector](https://github.com/KAFKA2306/agent-resources/blob/main/dashboard/collectors/repositories.py)が複数タグをどう扱うかは別途確認が必要。この簡易例だけで本番の曖昧さを解消したことにはならない。
+
+「用途は一つ」の製品なら、タグ0件は`unclassified`、1件はその用途、2件以上は`review_required`とする合格条件を検討する。複数用途が許される製品なら、一覧へ両方を表示する。どちらを採るにせよ**複数タグの例をテストに入れ、黙って一つに確定しない**。
+
 ## まず1つ見直すなら
 
 リポジトリ一覧から、用途を示すトピックがあるものと、言語しか分からないものを一つずつ選ぶ。両方の `topics` と `language` を手元に置いて、分類ロジックが何を根拠にしているか見る。
