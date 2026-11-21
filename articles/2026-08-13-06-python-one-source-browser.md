@@ -1,5 +1,5 @@
 ---
-title: "ブラウザとテストで、同じPythonの計算ルールを使う"
+title: "ブラウザ用に計算処理を書き直さない。Pythonを共通化する"
 emoji: "🎯"
 type: "tech"
 topics: ["architecture", "python", "javascript", "webassembly"]

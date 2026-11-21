@@ -1,5 +1,5 @@
 ---
-title: "AIの監視はどこで途切れたか。Anthropicの事故報告を読む"
+title: "AIの監視はなぜ事故を防げなかったか。Anthropicの報告を読む"
 emoji: "🔍"
 type: "tech"
 topics: ["ai", "anthropic", "security", "aiagents", "sre"]

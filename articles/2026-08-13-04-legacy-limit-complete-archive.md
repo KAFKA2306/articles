@@ -1,5 +1,5 @@
 ---
-title: "公開一覧から消えた61件目を、古いAPIの呼び出しを保ったまま表示する"
+title: "一覧の61件目が表示されない。古いAPIを変えずに直す"
 emoji: "📚"
 type: "tech"
 topics: ["api", "pagination", "typescript", "architecture"]

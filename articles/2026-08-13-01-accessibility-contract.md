@@ -1,5 +1,5 @@
 ---
-title: "UI改修で読み上げ通知や動きの軽減に必要な記述が消えたら、CIで止める"
+title: "UIの改修で読み上げ対応が消える。CIで検知する方法"
 emoji: "♿"
 type: "tech"
 topics: ["accessibility", "css", "html", "githubactions"]

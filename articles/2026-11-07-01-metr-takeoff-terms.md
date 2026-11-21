@@ -1,5 +1,5 @@
 ---
-title: "AIの能力向上ペースと超知能の到来予測を分けて読む"
+title: "AIの能力が伸びる速さから、超知能の到来日は予測できるか"
 emoji: "📈"
 type: "tech"
 topics: ["ai", "anthropic", "metr", "agi", "research"]

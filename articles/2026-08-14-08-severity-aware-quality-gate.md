@@ -1,5 +1,5 @@
 ---
-title: "自動生成物の品質検査で、警告と公開を止める欠陥を分ける"
+title: "自動生成物の検査は、警告と公開停止をどう分けるか"
 emoji: "🚦"
 type: "tech"
 topics: ["testing", "ci", "typescript", "quality"]

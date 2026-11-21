@@ -1,5 +1,5 @@
 ---
-title: "Unityの作業を別のAIに引き継ぐためのファイル設計"
+title: "Unityの作業を別のAIに渡すには、何をファイルに残すべきか"
 emoji: "🔗"
 type: "tech"
 topics: ["ai", "mcp", "github", "unity", "automation"]

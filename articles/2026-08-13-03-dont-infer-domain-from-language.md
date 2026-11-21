@@ -1,5 +1,5 @@
 ---
-title: "GitHubのリポジトリ一覧で、用途が分からないものを未分類にする"
+title: "用途が分からないGitHubリポジトリを、無理に分類しない理由"
 emoji: "🗂️"
 type: "tech"
 topics: ["github", "metadata", "python", "architecture"]

@@ -1,5 +1,5 @@
 ---
-title: "CIを速くする前に、変更ごとに必要なテストを決める"
+title: "CIを速くしても必要なテストを落とさない。変更範囲から検査を選ぶ"
 emoji: "🧭"
 type: "tech"
 topics: ["monorepo", "ci", "nx", "turborepo", "testing"]
