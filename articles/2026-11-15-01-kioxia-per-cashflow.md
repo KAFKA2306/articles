@@ -4,6 +4,8 @@ emoji: "📉"
 type: "idea"
 topics: ["投資", "半導体", "企業分析", "決算", "Python"]
 published: false
+created_at: "2026-11-15"
+updated_at: "2026-11-21"
 ---
 
 **低いPERを、割安さの証拠として採用するな。成立に必要な将来利益へ逆算してから比べよ。**

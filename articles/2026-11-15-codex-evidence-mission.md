@@ -4,6 +4,8 @@ emoji: "🔎"
 type: "tech"
 topics: ["codex", "aiagents", "evals", "github", "automation"]
 published: false
+created_at: "2026-11-15"
+updated_at: "2026-11-15"
 ---
 
 記事の公開フラグを変えると、CIと同じ検査が通りました。でも、公開用ブランチを調べると、その記事はまだ入っていませんでした。「公開できる差分か」と「読者が読めるか」では、見る場所が違います。

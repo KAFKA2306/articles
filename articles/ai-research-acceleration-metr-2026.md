@@ -4,6 +4,8 @@ emoji: "🚀"
 type: "tech"
 topics: ["ai", "anthropic", "claude", "metr", "automation"]
 published: false
+created_at: "2026-11-07"
+updated_at: "2026-11-21"
 ---
 
 AIにコードを書かせる。資料を読ませる。テストを実行させる。
