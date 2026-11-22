@@ -144,7 +144,7 @@ specific case / measurement / failure
 
 ### 文章の推敲と反証
 
-初稿・改稿・査読の共通手順。参照版は [Kafstyler 0.7.0の作業規約](https://github.com/KAFKA2306/kafstyler/blob/36d819f5222981c88295642a6e4534f54a7582ba/AGENTS.md#コマンドの連携)。読者の用事と見出しの設計は、[英国国家統計局の編集ガイド](https://service-manual.ons.gov.uk/content/writing-for-users/user-needs)と、[Nielsen Norman Groupの視線計測](https://www.nngroup.com/articles/layer-cake-pattern-scanning/)に基づく。
+初稿・改稿・査読の共通手順。[Kafstylerの現行執筆規約](https://github.com/KAFKA2306/kafstyler/blob/main/skills/didactization/SKILL.md#本文の推敲と提出前の確認)を参照する。読者の用事と見出しの設計は、[英国国家統計局の編集ガイド](https://service-manual.ons.gov.uk/content/writing-for-users/user-needs)と、[Nielsen Norman Groupの視線計測](https://www.nngroup.com/articles/layer-cake-pattern-scanning/)に基づく。
 
 - 誰がどんな場面で読み、読後に何を判断・実行するかを決める。初稿を書く前に、合格時に観測できる結果と失敗例を一つずつ決める。困り事は利用者の相談、実際の操作、観測した失敗で確かめ、確認できない場合は想定とする。
 - タイトル・冒頭・見出しだけを順に読み、初見の読者が自分の用事に関係するか、答えをどこで見つけられるかを確かめる。タイトルを変えるときは、読者の困り事と得られる結果が異なる角度から伝わる案を比べる。同じ意味には同じ語を使い、用語を直したら本文、図表、手順を照合する。

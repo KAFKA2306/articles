@@ -123,16 +123,16 @@ Use the installed Kafstyler plugin where available. Otherwise, resolve [Kafstyle
 
 Scheduled Copilot receives the [editorial contract](pipeline/contracts/article.md#文章の推敲と反証) in each draft, revision, and review prompt. That contract holds the instructions the model can follow from the supplied evidence. The repository workflow owns fetching, validation, and output. Verify the adaptation against upstream when updating the contract. Bring reproducible failures shared by multiple repositories back to Kafstyler with the input and observed result.
 
-## 4C. Full Kafstyler review for every Markdown file
+## 4C. Choose the Kafstyler skills that affect the article
 
-Apply all seven current Kafstyler skills to each Markdown file changed or assessed in an editorial review. Prioritize broken reader journeys, misleading claims, duplicated articles, and missing original evidence. Record the path, content SHA, Kafstyler SHA, finding and decision for each skill, and verification in the existing review report or PR.
+Select the skills needed for the actual editorial change, rather than invoking all seven on every Markdown file.
 
-- `reconceptualize` defines what the reader should be able to do. `adjudicate` fixes the observable success condition and failure example before drafting and uses them again on the revision.
-- `canonicalize` checks metadata and references against the source of truth. For `articles/`, use the Zenn front matter and dated `YYYY-MM-DD-NN-topic.md` rule defined in the [editorial contract](pipeline/contracts/article.md#記事ファイル名と作成改定日). Existing slugs are immutable for URL and reference compatibility. Keep `created_at`, `updated_at`, and `published_at` distinct.
-- `disprove` checks primary evidence and tries a counterexample. `humanizer` makes the title, headings, and text tell readers where to find the answer and act on it.
-- `autocatalyze` carries the work through the normal delivery path and records the result. `decommission` removes redundant text, dead links, and obsolete material after confirming that unique evidence and necessary reader paths are accounted for.
+- `reconceptualize` sets the reader's decision or action. `adjudicate` measures the article's evidence and whether that result can be reached.
+- `canonicalize` reconciles the article slug, `created_at`, `updated_at`, `published_at`, primary sources, revision and the reader's canonical entry point. Keep existing published slugs unchanged, and preserve the source of a historical result.
+- `disprove` challenges the strongest claim with a counterexample. `didactization` turns the observed result into a generalizable principle while preserving meaning.
+- `autocatalyze` carries the edit through the authorized repository delivery path. `decommission` removes superseded instructions and dead references after accounting for unique evidence and live links.
 
-Review the full Markdown inventory, including repository and pipeline documentation. Use the review ledger to track unassessed files across passes. After changes, run the applicable checks in section 21 and follow the publication and retention rules in sections 12–15 and 20.
+Use the existing Issue, PR, or edit history as the work record. For the files changed, verify their affected links, front matter, evidence and reader journey. Apply section 21's relevant checks and sections 12–15 and 20's publication and retention rules.
 
 ## 4D. Make every article operationally specific
 
