@@ -31,7 +31,7 @@
 | [AIに書かせた開発文書から、独自用語と略語を減らす](../../../articles/2026-08-16-ai-added-decision-cost-audit.md) | 更新 | 独自語の定義と使用箇所を集め、言い換えると消える意味を確認する |
 | [AIの能力向上ペースと超知能の到来予測を分けて読む](../../../articles/2026-11-07-01-metr-takeoff-terms.md) | 更新 | 見出しと原典を開き、AIの能力指数の伸びと予測の日付を区別する |
 | [AIの監視はどこで途切れたか。Anthropicの事故報告を読む](../../../articles/2026-11-07-02-ai-agent-safety-blind-spots.md) | 更新 | 定時処理を一つ選び、起動設定・依頼・ログ・成果を照合する |
-| [Unityの作業を別のAIに引き継ぐためのファイル設計](../../../articles/2026-11-09-01-portable-agent-contracts.md) | 更新 | Unityのパス・GUID・合格条件から、操作結果と検証結果を照合する |
+| [Unityの作業を別のAIに引き継ぐためのファイル設計](https://github.com/KAFKA2306/articles/blob/5f01a8b42eb40c3db80c573e289c371ce6b11ecc/articles/2026-11-09-01-portable-agent-contracts.md) | 更新 | Unityのパス・GUID・合格条件から、操作結果と検証結果を照合する |
 | [AIを替えるとき、作業手順と合格条件をGitで引き継ぐ設計](../../../articles/2026-11-09-portable-agent-contracts.md) | 更新 | 記事のJSONとスキーマを用意し、正しい結果と必須項目の欠落を試す |
 | [キオクシアのPER2.5倍に必要な純利益と、好況後のキャッシュフロー](../../../articles/2026-11-15-01-kioxia-per-cashflow.md) | 更新 | 決算の元データと表計算の式から、現在の倍率が前提とする利益を逆算する |
 | [AIが「完了しました」と言ったら、どこを見れば確かめられるか](../../../articles/2026-11-15-codex-evidence-mission.md) | 更新 | GitとPythonで公開状態の差分を再現し、判定の終了状態を読む |
