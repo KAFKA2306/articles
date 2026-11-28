@@ -40,19 +40,55 @@ public = {k: v for k, v in source.items() if k not in blocked}
 
 ただし公開元が閲覧可能であることは、転載権や個々の値の公開適切性まで保証しない。項目名が `notes` なら、公開方針の説明も秘密の担当者メモも入れられる。出典、公開してよい値、承認された項目を合わせて判断する必要がある。
 
-## 自分の公開データで一列増やしてみる
+## 公開する値を、実際の作品データから取り出す
 
-先ほどの架空の入力を使い、公開する項目を明示する方式へ変える。
+前述の2026年8月14日のメタデータには、次の値が保存されている。
+
+| 公開ページの項目 | メタデータの参照先 | 保存された値 |
+| --- | --- | --- |
+| 作品名 | `edition.name` | アポロンの審判 |
+| プレイヤー数 | `edition.players` | 9人 |
+| 所要時間 | `edition.duration_minutes_min` / `duration_minutes_max` | 180〜210分 |
+| 出典 | `source.url` | [制作者公式BOOTH](https://booth.pm/ja/items/6508051) |
+
+この構造を自分の公開カタログへ移すなら、公開情報だけのファイルを入力に指定し、表示する項目を明示して取り出す。次は[保存された実データ](https://github.com/KAFKA2306/boardgamelist/blob/9ce9aa8c7eab27b650dd06a478c21319949dc575/data/official-metadata/apollo-no-shinpan-2026-08-14.json)を使う実装例である。
 
 ```python
-source["planned_at"] = "internal schedule"
-fields = ("name", "players", "duration_minutes_min")
-public = {k: source[k] for k in fields}
-print(public)
+import json
+from pathlib import Path
+
+record = json.loads(
+    Path("data/official-metadata/apollo-no-shinpan-2026-08-14.json")
+    .read_text(encoding="utf-8")
+)
+edition = record["edition"]
+public = {
+    "name": edition["name"],
+    "players": edition["players"],
+    "duration_minutes_min": edition["duration_minutes_min"],
+    "duration_minutes_max": edition["duration_minutes_max"],
+    "source_url": record["source"]["url"],
+}
+print(json.dumps(public, ensure_ascii=False, indent=2))
 ```
 
-出力に残るのは作品名、人数、所要時間の三項目である。内部項目をさらに追加しても、許可一覧を変えない限り出力されない。これは構造の比較例であって、実際に漏洩事故が起きたという記録ではない。
+指定した版のリポジトリを取得し、そのルートでこのコードを使えば、上の表に対応する値を取り出せる。これは既存の作品ページの生成処理を転載したものではなく、実データを使うための最小実装例である。
 
-実データでは公開側の各値を公式資料へ結びつけ、秘密の入力を生成処理へ渡さない。匿名化統計のように内部情報を処理しなければ公開物を作れない場合は、処理を隔離し、集計結果の再識別可能性も評価する。項目の許可一覧だけでは匿名性を保証できない。
+重要なのは二つの境界を設けることだ。
 
-公開側が知る必要のない内部情報を増やさずに済むか。次にデータモデルを変更するときは、その問いから公開経路を設計する。
+- 入力：公開処理には公式メタデータだけを渡す。個人の予定や参加履歴を読む必要がない。
+- 出力：公開ページに必要な項目だけを取り出す。公開用メタデータに項目が増えても、自動的に表示項目を増やさない。
+
+たとえば内部の予定管理に `planned_at` を追加しても、公開処理がそのファイルを読まなければ、追加した値は公開側へ届かない。これは構造から導ける性質であり、実際の漏洩事故を記録したものではない。
+
+## 次に公開物を作るときの判断順序
+
+| 必要な情報 | 選ぶ方法 |
+| --- | --- |
+| 公式の公開資料から取得できる | 公開資料を直接入力にする |
+| 内部と公開で共通の項目がある | 公開が認められた値だけを独立した入力に渡す |
+| 内部情報を集計しなければ作れない | 内部処理と公開処理を分け、公開する集計値の再識別可能性も考慮する |
+
+匿名化統計のように内部情報が不可欠な場合、公開情報だけから作ることはできない。項目の許可一覧だけでは匿名性も保証できない。
+
+公開側が知る必要のない内部情報を、公開処理から読めなくする。次にデータモデルを変更するときは、秘密の項目を何個除外するかではなく、そもそも何を入力する必要があるかから考える。
