@@ -36,6 +36,12 @@ def strip_internal_meta(text: str) -> str:
     return INTERNAL_META_RE.sub("", text, count=1).lstrip()
 
 
+def _strip_code_fence(text: str) -> str:
+    value = text.strip()
+    match = re.fullmatch(r"```(?:json)?\s*(.*?)\s*```", value, flags=re.I | re.S)
+    return match.group(1).strip() if match else value
+
+
 def http_json(
     url: str,
     *,
@@ -49,14 +55,51 @@ def http_json(
         return json.loads(response.read().decode("utf-8"))
 
 
-def _strip_code_fence(text: str) -> str:
-    value = text.strip()
-    match = re.fullmatch(
-        r"```(?:json)?\s*(.*?)\s*```",
-        value,
-        flags=re.DOTALL | re.IGNORECASE,
-    )
-    return match.group(1).strip() if match else value
+def _scan_top_level_json(segment: str) -> list[dict | list]:
+    decoder = json.JSONDecoder()
+    values: list[dict | list] = []
+    pos = 0
+    while pos < len(segment):
+        if segment[pos].isspace():
+            pos += 1
+            continue
+        if segment[pos] not in "[{":
+            pos += 1
+            continue
+        try:
+            value, end = decoder.raw_decode(segment, pos)
+        except json.JSONDecodeError:
+            pos += 1
+            continue
+        if isinstance(value, (dict, list)):
+            values.append(value)
+            pos = end
+        else:
+            pos += 1
+    return values
+
+
+def _extract_json_payload(text: str) -> str:
+    """Extract one unambiguous top-level JSON object/array from model output."""
+    fences = re.findall(r"```\s*(?:json)?\s*\n?(.*?)```", text, flags=re.I | re.S)
+    fenced_values = [value for fence in fences for value in _scan_top_level_json(fence)]
+    values = fenced_values if fenced_values else _scan_top_level_json(text)
+    unique = {
+        json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        for value in values
+    }
+    if len(unique) != 1:
+        raise ValueError("response does not contain exactly one unambiguous JSON object/array")
+    return next(iter(unique))
+
+
+def _safe_model_diagnostic(output: str, stderr: str) -> str:
+    secret = re.compile(r"(?:github_pat_[A-Za-z0-9_]+|gh(?:p|o|s|u)_[A-Za-z0-9_]+)", re.I)
+    def redact(value: str) -> str:
+        return secret.sub("[REDACTED]", value)
+    return (f"response_bytes={len(output.encode('utf-8'))} "
+            f"response_head={redact(output[:200])!r} response_tail={redact(output[-200:])!r} "
+            f"stderr_tail={redact(stderr[-400:])!r}")
 
 
 def model_call(
@@ -133,11 +176,28 @@ def model_call(
             f"copilot CLI failed with exit={result.returncode}: {detail}"
         )
 
-    output = _strip_code_fence(result.stdout)
+    output = result.stdout.strip() if json_mode else _strip_code_fence(result.stdout)
     if not output:
         raise RuntimeError("copilot CLI returned an empty response")
     if json_mode:
-        json.loads(output)
+        for attempt in range(2):
+            try:
+                output = _extract_json_payload(output)
+                json.loads(output)
+                break
+            except (ValueError, json.JSONDecodeError):
+                if attempt == 0:
+                    correction = prompt + "\n\nYour previous response was not valid JSON. Return only one valid JSON object, with no prose or Markdown."
+                    result = subprocess.run(
+                        [executable, "-p", correction, "-s", "--no-ask-user", "--deny-tool=shell,write,read,url,memory"]
+                        + (["--model", model] if model else []),
+                        stdin=subprocess.DEVNULL, text=True, capture_output=True,
+                        timeout=420, cwd=ROOT, env=os.environ.copy(), check=False,
+                    )
+                    if result.returncode == 0:
+                        output = result.stdout.strip()
+                        continue
+                raise RuntimeError("copilot CLI returned invalid JSON: " + _safe_model_diagnostic(output, result.stderr or ""))
     return output
 
 

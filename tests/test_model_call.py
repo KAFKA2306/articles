@@ -39,6 +39,37 @@ class ModelCallTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "specific failure"):
             core.model_call("system", "task")
 
+    def test_extracts_json_from_markdown_prose(self):
+        self.assertEqual(core._extract_json_payload('Here is the result:\n```json\n{"ok": true}\n```'), '{"ok":true}')
+
+    def test_extracts_nested_topic_json_without_false_ambiguity(self):
+        source = 'Here is the topic:\n```json\n{"selected": {"title": "foo", "alternatives": [{"kind": "incumbent"}]}, "alternatives": [{"a": 1}]}\n```\nDone.'
+        self.assertEqual(
+            core._extract_json_payload(source),
+            '{"alternatives":[{"a":1}],"selected":{"alternatives":[{"kind":"incumbent"}],"title":"foo"}}',
+        )
+
+    def test_rejects_conflicting_json_payloads(self):
+        with self.assertRaises(ValueError):
+            core._extract_json_payload('{"a":1} then {"b":2}')
+
+    @patch.object(core.shutil, "which", return_value="copilot")
+    @patch.object(core.subprocess, "run")
+    def test_json_mode_retries_once_for_non_json(self, run, _which):
+        run.side_effect = [
+            subprocess.CompletedProcess([], 0, "thinking...", ""),
+            subprocess.CompletedProcess([], 0, '{"ok":true}', ""),
+        ]
+        self.assertEqual(core.model_call("system", "task", json_mode=True), '{"ok":true}')
+        self.assertEqual(run.call_count, 2)
+
+    @patch.object(core.shutil, "which", return_value="copilot")
+    @patch.object(core.subprocess, "run")
+    def test_json_failure_has_sanitized_diagnostic(self, run, _which):
+        run.return_value = subprocess.CompletedProcess([], 0, "no json github_pat_abcdefghijklmnop gho_abcde12345", "stderr ghs_secret123")
+        with self.assertRaisesRegex(RuntimeError, "response_bytes=.*REDACTED"):
+            core.model_call("system", "task", json_mode=True)
+
 
 if __name__ == "__main__":
     unittest.main()
