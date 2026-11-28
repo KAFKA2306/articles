@@ -1,66 +1,113 @@
 ---
-title: "製品の性能差に見えて、設定の差だった"
+title: "ツールの優劣を語る前に、設定差を消せ"
 emoji: "🧪"
 type: "tech"
 topics: ["python", "typechecking", "ci", "testing", "developerexperience"]
 published: false
 created_at: "2026-08-15"
-updated_at: "2026-11-28"
+updated_at: "2026-11-21"
 ---
 
-二つの型チェッカーを比較したところ、一方は五つの不具合のうち二つしか検出できず、他方は五つすべてを検出した。この数字だけなら、後者を選ぶ理由になりそうだ。
+**異なる設定の測定値を、製品の優劣として比べるな。**
 
-ところが同じ製品の設定を変更するだけで、検出数が2/5から5/5へ変わった。**製品の性能を比較するには、その製品に何をさせたかをそろえる必要がある。** 設定の違いを製品の能力差と呼ばないための方法を考える。
+同じPyrefly 1.2.0、同じ五つの故障入力で、`basic`は **2/5**、`default`は **5/5** を検出した。ツールを一つも変えず、presetだけで三件増えた。「別製品が優秀だった」と説明してしまえば、設定の効果を製品の手柄にできる。
 
-## 製品を変えずに検出数が増えた
+規律は **「道具を比較する前に、入力・版・設定・検査対象を固定せよ」**。実際に測ったのはこの一製品の設定差であり、別の型チェッカーの優劣や本番repoでの有効性ではない。
 
-Pyrefly 1.2.0を使い、構文エラー、引数型の不一致、戻り値型の不一致、未定義名、asyncの誤用という五つの失敗を固定した。[測定結果](https://github.com/KAFKA2306/articles/blob/822be109de61e5915799fcf7d79e6345dff4f6b1/benchmarks/verification-stack-v2/results/controlled/pyrefly-preset-calibration.json)は次のとおりである。
+## 2/5から5/5へ動いた
 
-| 設定 | 検出数 |
-| --- | ---: |
-| 設定なし（basic） | 2/5 |
-| basic | 2/5 |
-| default | 5/5 |
+固定fixtureは5 failure classだけに絞った。
 
-[Pyreflyの設定仕様](https://pyrefly.org/en/docs/configuration/)では、設定のないプロジェクトではbasicを使い、確信度の高い診断へ絞ると説明されている。設定は単なる好みではなく、どの失敗を診断するかを変える。
+- syntax failure
+- incompatible argument type
+- incompatible return type
+- undefined name
+- async misuse
 
-修正後に同じ五件を比較した[結果](https://github.com/KAFKA2306/articles/blob/822be109de61e5915799fcf7d79e6345dff4f6b1/benchmarks/verification-stack-v2/results/controlled/summary.json)では、mypy、Pyright、ty、Pyreflyがそれぞれ試した構成で5/5を検出した。これは四製品の能力全体が同等だという証拠ではない。当初の検出数の差だけでは製品固有の優劣を説明できなくなったのである。
+同じPyrefly 1.2.0の結果はこうだった。
 
-## 比較する問いを先に決める
+| configuration | detected |
+|---|---:|
+| no config → `basic` | 2/5 |
+| `basic` | 2/5 |
+| `default` | 5/5 |
 
-比較には少なくとも二種類ある。
+raw evidence:
+https://github.com/KAFKA2306/articles/blob/822be109de61e5915799fcf7d79e6345dff4f6b1/benchmarks/verification-stack-v2/results/controlled/pyrefly-preset-calibration.json
 
-| 問い | そろえる条件 |
-| --- | --- |
-| 同じ仕事を任せたらどちらが優れるか | 入力、必要な診断、正常時の扱い、測定方法 |
-| 初期設定のままでどちらが便利か | 導入環境、入力、初期設定を変更しないという条件 |
+Pyrefly公式も、設定のないprojectでは`basic`を使い、高confidenceなdiagnosticへ絞ると説明している。`default`や`strict`は別のdiagnostic surfaceを持つ。
 
-後者なら初期設定の違いは正当な比較対象である。前者なら必要な診断が有効かを先に確かめる。製品間で設定名が同じでも意味が同じとは限らないため、文字列としての設定値ではなく、要求する仕事をそろえる。
+https://pyrefly.org/en/docs/configuration/
 
-また、故障を多く検出するだけでは十分ではない。正常な入力まで拒否する道具は、そのまま採用できない。
+つまり「Pyreflyは2/5だった」という書き方では情報が欠ける。正しくは、**Pyrefly 1.2.0をbasic presetで、この5 faultへ当てたとき2/5だった**だ。
 
-## 手元の比較表を作り直す
+## 私が捨てた比較方法
 
-まず現在の型チェッカーの設定を開き、必ず検出したい失敗を一つ選ぶ。例えば戻り値がintであると宣言した関数が文字列を返すケースだ。
-
-```python
-def healthy() -> int:
-    return 1
-
-def faulty() -> int:
-    return "text"
+```text
+pyrefly: 2/5
+pyright: 5/5
+↓
+pyrightの方が強い
 ```
 
-この二つを別ファイルとして用意し、候補ごとの診断を比較する。この例が上の実験でどの設定に検出されたかは、固定された測定結果から確認する必要がある。
+この比較は、両者へ何をblockさせたかが揃っていないと製品比較にならない。
 
-| 記録項目 | 記入する内容 |
-| --- | --- |
-| 製品・版 | 実際に起動したもの |
-| 入力・対象範囲 | 同じファイルとPython版 |
-| 設定 | preset、設定ファイル、診断の重大度 |
-| 正常入力 | 拒否されなかったか |
-| 故障入力 | 必要な診断が得られたか |
+修復後、同じ5 mutantに対するtested configurationでは、mypy / Pyright / ty / Pyreflyはいずれも5/5だった。
 
-必要な仕事を満たした構成同士で、速度、導入費用、保守負担を比べる。五つの固定入力は大規模プロジェクト、外部スタブ、エディタでの挙動、増分解析までは評価していない。実際の採用では目的に関係する差を比較対象に加える。
+https://github.com/KAFKA2306/articles/blob/822be109de61e5915799fcf7d79e6345dff4f6b1/benchmarks/verification-stack-v2/results/controlled/summary.json
 
-データベース、LLM、画像圧縮にもこの考え方は移せる。設定を含む運用構成を比較するのか、設定による影響を切り分けて製品を比較するのかを区別する。比較表に数字を増やす前に、その数字がどの問いに答えるかを決める。
+ここから「4製品は同等」とも言えない。5件しか測っていない。消えたのは、旧2/5対5/5を**製品固有の差だとする根拠**だけだ。
+
+## 比較を6段階にする
+
+型チェッカーを移行するときは、現在CIが読む設定ファイルと、必ず検出したい失敗を用意する。各失敗は別々のサンプルにし、同じファイル群をすべての候補に渡す。
+
+1. repoで絶対にblockしたいfailureを1 root faultずつfixture化する
+2. clean baselineを用意する
+3. tool versionを固定する
+4. preset / mode / config / scope / severityを固定する
+5. `clean=pass && fault=block`だけを成功として数える
+6. correctnessを満たした候補だけ速度・導入コスト・保守量を比べる
+
+同じ候補で検出数が変わったら、どの失敗がどの設定で通ったかを記録し、既定の設定も調べる。必須の失敗を拾い、正常時の動作もそろった候補同士で、速度や設定・依存関係の維持にかかる手間を比べる。
+
+## 製品比較の表を、同一ツールの設定比較に戻す
+
+今回固定した5件はsyntax、引数型、戻り値型、未定義名、async誤用だった。Pyrefly 1.2.0で`basic`は2/5、`default`は5/5。どちらも**同一製品**なので、結論は「製品が違う」ではなく「設定で停止する診断が違う」である。[raw evidence](https://github.com/KAFKA2306/articles/blob/822be109de61e5915799fcf7d79e6345dff4f6b1/benchmarks/verification-stack-v2/results/controlled/pyrefly-preset-calibration.json)
+
+```text
+tool/version: Pyrefly 1.2.0
+input:        同じ5件のfault + 正常な入力
+A:            preset=basic   → 2/5
+B:            preset=default → 5/5
+conclusion:   設定差を記録し、製品の優劣とはしない
+```
+
+例えば`def f() -> int: return "text"`は戻り値の型を意図的に壊した例として使える。ただし、**この例が実験のどのpresetで検出されたかは本文からは推測しない**。それは上記の成果物に戻って確かめる。実際のコードベース・Python版・設定・対象範囲まで一致してから旧チェックの削除を決める。
+
+## benchmark結果と一緒に残す最小メモ
+
+```text
+checker: pyrefly 1.2.0
+preset: default
+config: pyproject.toml
+scope: src + tests
+python: 3.12
+blocking severity: error
+```
+
+この6項目があれば、半年後でも「製品を比較したのか、設定を比較したのか」を追いやすい。
+
+## 証拠の境界
+
+今回の5 mutantはtyping全体のaccuracyを証明しない。editor behavior、third-party stubs、incremental analysis、大規模repoも未評価だ。
+
+それでも比較手順を変える理由にはなった。**同一binary・同一version・同一fixtureで、presetだけを変えると2/5→5/5になった**からだ。
+
+型チェッカーを選ぶ前に、まず比較対象から設定差を消す。それから初めて、製品差と複雑性を比べる。
+
+## この規律が適用できる条件と撤回条件
+
+データベースの速度、LLMの費用、画像圧縮の品質も、入力や設定が違えば「製品差」という説明は危うい。これらは比較手順の**応用仮説**であり各分野の評価を実行した結果ではない。
+
+設定・入力・対象・計測方法をそろえてなお差が残るなら、初めて製品側の違いを検討できる。製品ごとに対応設定が根本的に異なる場合は「同じ構成の比較」とは呼ばず、実際の運用構成を含む比較だと明記する。**比較の結論より、比較できる条件を先に作る。**

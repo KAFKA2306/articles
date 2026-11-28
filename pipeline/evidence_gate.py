@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 import csv
-import io
 import subprocess
 from urllib.parse import unquote
 from pathlib import Path

@@ -1,49 +1,148 @@
 ---
-title: "再生成できることと、完成品を届けたことは違う"
+title: "CIでマニフェストを再生成し、差分が出たら失敗させる"
 emoji: "🧾"
 type: "tech"
 topics: ["python", "githubactions", "dataengineering", "testing", "ci"]
 published: false
 created_at: "2026-08-14"
-updated_at: "2026-11-28"
+updated_at: "2026-11-21"
 ---
 
-元データを更新したのに、配布する一覧表は古いままだった。ところがCIは、一覧表を再生成してから内容を調べるため、成功と表示する。利用者が受け取る版と、CIが調べた版は同じではない。
+**CIが勝手に修復してgreenになったPRを、完成した成果と呼ぶな。**
 
-生成物を配布物として保存するなら、**生成できることと、生成済みの成果物が提出されていることを分ける。** 半導体決算データの来歴を記録するマニフェストの実装から、その差を考える。
+元データだけ更新し、manifestのcommitを忘れた。CIが最初にmanifestを再生成すると、検証器は再生成後の正しい状態だけを見てPASSし得る。PRへ提出した版が不完全だった事実は消える。
 
-## 入力を修復すると、最初の欠陥が見えなくなる
+[半導体決算モデルのbuilder](https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/scripts/build_earnings_lineage_manifest.py)、[verifier](https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/scripts/verify_earnings_lineage_manifest.py)、[workflow](https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/.github/workflows/earnings-lineage.yml)では、再生成内容の検査とGit差分の検査を分ける。
 
-決算データのマニフェストには、対象ファイルのパス、SHA-256、バイト数などが記録される。[当時の生成処理](https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/scripts/build_earnings_lineage_manifest.py)は入力からマニフェストを作り、[照合処理](https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/scripts/verify_earnings_lineage_manifest.py)は記録された値と実ファイルの整合性を扱う。
+規律は **「再生成できることと、必要な成果物が提出されたことを別に検査せよ」**。CIの成功は、何を検査したかが分かって初めて信頼できる。
 
-例えば入力だけを更新し、古いマニフェストをコミットしたとする。これは失敗条件を説明するための仮定であり、実際に公開データを壊した報告ではない。
+## 2種類の「正しい」を分ける
 
-CIが先にマニフェストを再生成すると、その後の照合は新しい内容を対象にする。元のコミットに不整合があったかどうかは、その成功結果から分からない。
+manifest運用には、似ているが別の整合性がある。
 
-[当時のワークフロー](https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/.github/workflows/earnings-lineage.yml)では、再生成と内容の照合に加え、コミットされたマニフェストとの差分を扱っている。
+### artifact integrity
 
-```sh
+manifestに書かれたSHA-256やbyte sizeと、実fileが一致するか。
+
+```text
+manifest.sha256 == sha256(file bytes)
+manifest.size_bytes == len(file bytes)
+```
+
+これはverifierで確認できる。
+
+### repository freshness
+
+PRへcommitされたmanifestが、現在の入力から再生成した結果と一致するか。
+
+```text
+committed manifest
+      ↓
+rebuild from current inputs
+      ↓
+git diff --exit-code
+```
+
+こちらはhash verificationだけでは分からない。
+
+**正しいmanifestを生成できることと、そのmanifestがPRへ入っていることは別である。**
+
+## builderが成功したことを完成条件にしない
+
+`build_earnings_lineage_manifest.py` はartifactを読み、SHA-256とsizeを計算し、lineage manifestを生成する。
+
+このbuilder自体が正しくても、CIの順序を間違えると stale manifest を隠せる。
+
+悪い順序:
+
+```text
+checkout
+→ build manifest
+→ verify manifest
+→ PASS
+```
+
+改善後:
+
+```text
+checkout
+→ tests
+→ build manifest
+→ verify manifest
+→ git diff --exit-code -- manifest
+```
+
+再生成はする。
+
+しかし、**再生成した結果がcheckout時点と違えば失敗させる。**
+
+これで「CIが直せた」は成功条件にならない。
+
+## verifierとdiff gateは守る対象が違う
+
+verifierは、manifest内の各artifactについて、
+
+- path
+- SHA-256
+- byte size
+- file existence
+- duplicate path
+- path traversal
+- status
+
+などを確認する。
+
+これは「manifestが指している実体」を守る。
+
+一方、
+
+```bash
 git diff --exit-code -- data/earnings_ledger/lineage_latest.json
 ```
 
-終了コード1は、再生成した追跡ファイルが元のコミットと異なることを示す。未追跡のファイルはこのコマンドだけでは分からないため、必要なら git status で対象を把握する。
+は、「PRが必要なmanifest更新まで含んでいるか」を守る。
 
-## そもそも生成物を保存する必要はあるか
+```text
+verifier
+→ bytes bindingの正しさ
 
-ここで選ぶべき設計は二つある。
+diff gate
+→ commit completenessの正しさ
+```
 
-| 配布の契約 | 適した扱い |
-| --- | --- |
-| 正本の入力と生成器から配布時に必ず生成する | 生成物を重複して管理しない |
-| コミットだけで完成した成果物を取得できる | 入力変更と生成物更新を同じ変更として届ける |
+一つの巨大な `verified: true` へ押し込まない。
 
-前者なら、保存していない生成物との差分を確認する必要はない。後者では生成器の成功だけでなく、配布する版に生成結果を含めることが必要になる。管理の手間を減らしたいなら、差分確認を増やすより、生成物を保存する理由を先に問う。
+## PR reviewで見たいものをrepositoryへ残すなら、drift gateが必要になる
 
-## 二つのファイルで違いを見てみる
+manifestをCI artifactとして毎回作るだけなら、repositoryへcommitしなくてもよい。
 
-Gitとuv、Pythonを利用できる環境で、次を空の一時ディレクトリ内で実行する。元の実験を簡略化した再現例であり、実データを変更しない。
+しかし、
 
-```sh
+- code reviewでmanifest差分を見たい
+- commit単位でlineageを残したい
+- checkoutだけで状態を復元したい
+
+なら、manifest自体がrepository stateの一部になる。
+
+その場合、
+
+```text
+生成可能
+```
+
+だけでは足りない。
+
+```text
+そのcommitに生成結果が含まれている
+```
+
+ことまで必要になる。
+
+## 更新忘れを一時ディレクトリで再現する
+
+GitとPythonがあれば、入力ファイルとそのSHA-256を保存するマニフェストの2ファイルで試せる。何を記録するかは本番と同じで、再生成と照合は短いコマンドで置き換える。
+
+```bash
 (
   set -eu
   scratch=$(mktemp -d)
@@ -52,20 +151,113 @@ Gitとuv、Pythonを利用できる環境で、次を空の一時ディレクト
   git init -q
 
   digest() {
-    uv run --no-project python -c 'from hashlib import sha256; from pathlib import Path; print(sha256(Path("input.txt").read_bytes()).hexdigest())'
+    python -c 'from hashlib import sha256; from pathlib import Path; print(sha256(Path("input.txt").read_bytes()).hexdigest())'
   }
 
   printf 'v1\n' > input.txt
   digest > manifest.sha256
   git add input.txt manifest.sha256
   git -c user.name=Example -c user.email=example@example.com commit -qm initial
+  git diff --exit-code -- manifest.sha256
 
   printf 'v2\n' > input.txt
   digest > manifest.sha256
-  git diff -- manifest.sha256
+  test "$(cat manifest.sha256)" = "$(digest)"
+  git diff --exit-code -- manifest.sha256
 )
 ```
 
-再生成後のマニフェストは新しい入力のハッシュを持つが、最後の差分には変更が現れる。作業中に正しい成果物を作れたことは、コミットにその成果物が含まれていたことを意味しない。
+最初の差分検査は終了コード0。入力だけを書き換えた後は、再生成したハッシュと入力の照合が通っても、最後の差分検査は差分を表示し、終了コード1を返す。CIでこの終了コードを失敗として扱えば、更新をコミットし忘れた状態を検出できる。
 
-この区別はロックファイル、生成型定義、静的カタログにも適用できる。配布時に正本から生成する方式を選べるなら、重複保存をやめる。保存が必要なら、入力と成果物を一緒に更新する。利用者が追加作業なしで必要な版を使えることが目的である。
+**「正しいmanifestを作れた」ではなく「最初から正しいmanifestをcommitしていたか」を観測できる。**
+
+## generated artifactをcommitするなら、3つのstateを見る
+
+設計を一般化すると次の3つになる。
+
+```text
+GENERATABLE
+  builderが成功する
+
+INTERNALLY_VALID
+  manifestと実artifactが一致する
+
+COMMITTED_FRESH
+  再生成してもgit diffが出ない
+```
+
+この3つを別々に持つと、失敗理由が分かりやすい。
+
+例えば、
+
+```text
+GENERATABLE = true
+INTERNALLY_VALID = true
+COMMITTED_FRESH = false
+```
+
+なら、ロジックではなくcommit漏れが問題だとすぐ分かる。
+
+## manifestが古いPRを差分で止める
+
+[固定されたworkflow](https://github.com/KAFKA2306/semiconductor-earnings-model/blob/7595f0b0b7f7535d9eaea182fe5f2ba415bce8f4/.github/workflows/earnings-lineage.yml)ではmanifestを再生成した後、検証器とGit差分を別に確かめる。例えば元データを更新し、`data/earnings_ledger/lineage_latest.json`を旧版のままコミットした場合を考える。これは**失敗条件の説明用**で、公開データを実際に壊した報告ではない。
+
+```sh
+# 生成器とverifierを動かした後に
+git diff --exit-code -- data/earnings_ledger/lineage_latest.json
+```
+
+終了コード1なら**再生成できるが、PRに入っていたmanifestが古い**。0なら、この追跡ファイルについては一致する。ただし未追跡の新規ファイルは`git diff`だけでは検出できないため、`git status --short`も確認する。PRには元データの版、再生成コマンド、検証の終了コード、差分結果を一組で残す。CIがgreenでも「何を見たか」は別途必要だ。
+
+## green CIの価値は「何を検査したか」で決まる
+
+CIがgreenであること自体は証拠にならない。
+
+CIが、checkout時点の不整合を上書きしてから検査していれば、greenは弱い。
+
+今回の設計では、
+
+- builder
+- verifier
+- repository diff
+
+を分けることで、greenの意味を強くした。
+
+**PRを開いた人が追加作業をしなくても、そのcommitだけで再現できる状態か**を最後に見る。
+
+## このpatternはmanifest以外にも使える
+
+同じ問題は、commit管理するgenerated fileで起こる。
+
+- API schema
+- lock file
+- generated docs
+- index
+- catalog
+- snapshot metadata
+- codegen output
+
+CIが先に再生成すると、更新忘れを隠せる。
+
+だから、
+
+```text
+rebuild
+→ validate
+→ diff must be empty
+```
+
+という順序を使う。
+
+生成物をGitへ入れるなら、**「再生成できる」を「更新不要」と取り違えないこと**が重要だった。
+
+manifestが古いままのPRを、CI自身が直してgreenにする。
+
+その偽の安心を止めるために、最後の `git diff` が効いた。
+
+
+## 使える条件と撤回条件
+
+生成型定義、公開CSV、静的カタログでも**生成物をGitへcommitする契約**なら、再生成後の`git diff --exit-code`が役に立つ。これは他分野での実測ではなく応用仮説だ。
+
+生成物をGitへ保存せず、配布時に必ず正本から作る構成なら、commitされたmanifestとの一致を要求する必要はない。未追跡の新規生成ファイルは`git diff`だけでは見えないので`git status --short`も読む。**CIが作った状態と、PRが提出した状態を同じものと見なさない。**

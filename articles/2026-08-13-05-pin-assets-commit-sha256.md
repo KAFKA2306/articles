@@ -17,9 +17,6 @@ updated_at: "2026-11-21"
 
 汎用規律は **「共有素材は最新を無条件に引くな。採用する版と内容を決めよ」**。中央管理と自動追従は同義ではない。
 
-元の資料：
-- https://raw.githubusercontent.com/example/assets/main/hero.webp
-
 ## `main` URLは場所を示すが、採用versionは示さない
 
 branch URLは便利である。

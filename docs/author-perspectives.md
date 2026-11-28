@@ -123,7 +123,7 @@
 
 ## 創作・製造・UI・人間の体験
 
-根拠：[AIキャラ](../articles/2026-08-15-ai-character-intelligence-muchio.md)、[映像の意図](../articles/video-storyboard-ir-provider-compile.md)、[Workflow採用](../articles/comfyui-8-missions-selection-20261107.md)、[3Dの打撃](../articles/3d-animation-contact-timing.md)、[ゲーム選択](../articles/sts2-one-hp-choice-test.md)、[UI](../articles/web-dialog-keyboard-eval.md)、[アクセシビリティ](../articles/2026-08-13-01-accessibility-contract.md)、[音楽設計](../articles/yt3-electropop-sound.md)。
+根拠：[AIキャラ](../articles/2026-08-15-ai-character-intelligence-muchio.md)、[映像の意図](../articles/video-storyboard-ir-provider-compile.md)、[Workflow採用](../articles/comfyui-8-missions-selection-20261107.md)、[3Dの打撃](../articles/3d-animation-contact-timing.md)、[ゲーム選択](../articles/sts2-one-hp-choice-test.md)、[UI](../articles/web-dialog-keyboard-eval.md)、[アクセシビリティ](../articles/2026-08-13-01-accessibility-contract.md)。音楽設計の草稿は、生成結果と比較評価を残していないため、記事候補から退役させた。
 
 | ID | 視点 | 聖典への統合先 |
 | --- | --- | --- |

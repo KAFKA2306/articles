@@ -40,7 +40,7 @@ The goal is not to preserve article count. The public surface should show a smal
 | `compatibility-vs-validity-gate.md` | REWRITE | 「動いた != 判断に使える」は実務価値が広い。複数detective pilotを統合し、AI/OSS評価を安全に業務へ持ち込む能力として一本化。 |
 | `csv-migration-dry-run-before-write.md` | REWRITE | booksのWork/Edition/Holdingとdry-run実装が具体的。「壊さずに既存データを移行する」導入価値を前面に出す。 |
 | `fail-close-data-pipeline.md` | DELETE / ARCHIVE | 本文自身が「固有事故の一次証拠がないので公開しない」と結論。一般則は他の強い記事へ吸収でき、単独記事を維持する理由がない。 |
-| `muchio-shiroinu-body-adapter.md` | KEEP_PRIVATE | 公式説明で仮説は更新されたが、本文自身が実装済み証拠不足を認めている。Unity/VRChatで完成proofが得られるまで非公開。 |
+| `muchio-shiroinu-body-adapter.md` | RETIRED (2026-11-28) | 公式説明で仮説は更新されたが、Prefab/runtimeの観測証拠がない。実験を再開する場合は既存のIssueから始め、確認できた成果が生まれた後で別途記事候補にする。 |
 | `one-diagram-one-message-image-pipeline.md` | REWRITE | 「画像内のCI SUCCESSは証拠ではない」という具体的失敗像が強い。生成AIをproduction contentへ安全に入れる監査能力として構成する。 |
 | `opencode-go-deepseek-v4-chatgpt-usage-scale.md` | KEEP_PRIVATE | 料金/usage limitが変わりやすく、現状は製品比較ニュース寄り。継続運用の実コスト・成果と接続できるまで公開しない。 |
 | `primary-source-derived-data-provenance.md` | KEEP | 856→7,699という強い反転、scope差の説明、OGE一次資料、実装snapshotが揃う。金融/公開データを監査可能に扱える能力が技術名なしでも伝わる。 |
