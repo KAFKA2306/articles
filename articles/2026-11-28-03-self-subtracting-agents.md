@@ -56,6 +56,8 @@ KISS、YAGNI、疎結合は既存の開発原則である。本稿の方針は�
 
 移行費用は継続的な維持費用と区別する。対象期間内で費用を比較する。記録がなければ効果を未測定とする。
 
+効果を調べる場合は旧方式を対照にし、同等の入力と受入条件で一つの介入を比較する。例として差分保守なら変更あり・変更なし・取得失敗を別々に扱い、実際の起動数、成果、失敗、人間の介入、費用を記録する。比較条件は第1部に従う。機械判定が再現できても、その判定による組織全体の効果まで再現されたとはいえない。
+
 ## 6. 実践：後継へ切り替えてから旧経路を廃止する
 
 Kafstylerの[decommission Skill](https://github.com/KAFKA2306/kafstyler/blob/007137cb1ba50aa1c1d5409b935a8e7616c252f6/skills/decommission/SKILL.md)を参照する。
@@ -67,6 +69,45 @@ Kafstylerの[decommission Skill](https://github.com/KAFKA2306/kafstyler/blob/007
 5. 廃止した対象、後継、残る負担を記録し、第1部と第2部の観測へ戻す。
 
 この手順は既存の開発方針を説明したものであり、比較試験で効果が確立された標準手順ではない。
+
+### 実行の必要性を確定処理に移す
+
+最初の介入対象は、入力が同じなら何もしなくてよいと仕様で決まっている日常保守である。取得・差分判定を既存ツールに任せ、変更があった場合だけ意味判断を起動する。探索、創作、新しい外部情報の調査など、入力ファイルが同じでも実行する価値がある仕事は対象外とする。
+
+具体例としてKafstylerの実行契約 `COMMANDS.md` の固定版3点を比較した。
+
+| 比較対象 | 取得したGit blob ID | 機械判定 |
+| --- | --- | --- |
+| [A](https://github.com/KAFKA2306/kafstyler/blob/bc5d2cc801a364bf580d86de441d7754903762e3/COMMANDS.md) → [B](https://github.com/KAFKA2306/kafstyler/blob/25afa7800567fdd5321502ccf730d12816c27212/COMMANDS.md) | ff1c775… → feddd1e… | 変更あり |
+| [B](https://github.com/KAFKA2306/kafstyler/blob/25afa7800567fdd5321502ccf730d12816c27212/COMMANDS.md) → [C](https://github.com/KAFKA2306/kafstyler/blob/60918ff6d60aa5d2ecdc7e8c982c28ae6587f561/COMMANDS.md) | feddd1e… → feddd1e… | 変更なし |
+| Cの存在しないパス `COMMANDS.md.missing-example` | GitHub Contents APIが404を返した | 取得失敗 |
+
+GitHubから実際に取得したblob IDを比較した結果である。変更ありでは後続の必要な処理へ進み、変更なしならそのファイルに依存する差分保守を省略する。取得失敗は正常な無変更として扱わない。
+
+同じGit履歴を持つ環境では、対象パスのblob IDを取得して比較するだけで、この判定を再現できる。以下は既存のKafstyler checkoutで実行する、読み取り専用のBash例である。
+
+```bash
+classify() {
+  local old new
+  old=$(git rev-parse --verify "$1:$3") || return 2
+  new=$(git rev-parse --verify "$2:$3") || return 2
+  if [ "$old" = "$new" ]; then
+    printf '%s\n' noop
+  else
+    printf '%s\n' changed
+  fi
+}
+A=bc5d2cc801a364bf580d86de441d7754903762e3
+B=25afa7800567fdd5321502ccf730d12816c27212
+C=60918ff6d60aa5d2ecdc7e8c982c28ae6587f561
+classify "$A" "$B" COMMANDS.md
+classify "$B" "$C" COMMANDS.md
+classify "$B" "$C" COMMANDS.md.missing-example
+```
+
+期待する判定は順に `changed`、`noop`、取得エラー（終了コード2）である。Bash例そのものは実行していない。blob IDの同異と、GitHub APIによる存在しないパスの取得失敗を観測した。実際のLLM起動数、時間、費用は未測定である。
+
+省略対象が複数のファイルや外部入力に依存する場合は、必要な入力全体を比較する。一つのファイルが同じという理由で仕事全体を止めてはいけない。既存のスケジューラやCLIでこの判定を実現できるなら、判断用エージェントを追加しない。
 
 ### 採否を決める順序
 
@@ -100,7 +141,7 @@ Kafstylerのdecommission Skillは[圧縮版](https://github.com/KAFKA2306/kafsty
 
 出力：採否と根拠、実際に廃止・保持した対象、後継の入口、移行費用、変更後の成果・能力・総管理負荷・判断箇所、出典、未測定項目。
 
-変更後の観測値は第1部と同じ範囲・単位で比較し、第2部の変更前の判断箇所と照合する。無変更が適切な場合は何もしない。自律エージェントが自身の改善機構を廃止する長期効果は今後の実証課題である。
+変更後の観測値は第1部と同じ範囲・単位で比較し、第2部の変更前の判断箇所と照合する。異なる業務で効果が再現しない場合は、その入力条件・依存・費用・失敗の違いを残し、適用範囲を狭める。無変更が適切な場合は何もしない。自律エージェントが自身の改善機構を廃止する長期効果は今後の実証課題である。
 
 ## 連載の位置づけ
 
