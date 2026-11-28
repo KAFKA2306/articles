@@ -150,6 +150,8 @@ Reject phrases such as 'improved UX', 'verified the implementation', 'made opera
 Before accepting a revision, use the article's own steps or source trail to attempt the reader's intended job. Try one wrong-version, missing-data, or failed-action counterexample. If the reader cannot reach the claimed result, give the reviewer `missing_proof_of_value`, spell out the missing detail in `revision_actions`, and revise or withhold the article. Keep operational audit results in the PR/report, not in the public article. Preserve the separate human-controlled Zenn release procedure.
 ## 4E. Lead with a strong transferable principle; use cases as proof
 
+Use the [author's canon](pipeline/contracts/author-canon.md) for topic selection, drafting, revision, and review. It defines the author's distinctive decision principles, not predetermined empirical conclusions. The pipeline includes the same canonical text in its prompts; do not copy it into other rules. Keep publication authorization and evidence boundaries unchanged.
+
 Do not turn the portfolio into a logbook of increasingly detailed repository changes. A finished article must give the reader **one forceful, falsifiable operating rule** that survives removing the product and repository names. Treat the [principle-first article contract](pipeline/contracts/article.md#編集の第一原理強い汎用原則を実例で証明し反例で試す) as canonical.
 
 For every article or substantial revision:

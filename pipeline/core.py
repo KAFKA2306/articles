@@ -16,7 +16,8 @@ from .zenn_slug import create_article_file, require_valid_slug
 ROOT = Path(__file__).resolve().parents[1]
 PIPELINE_DIR = ROOT / "pipeline"
 CONFIG = json.loads((PIPELINE_DIR / "config.json").read_text(encoding="utf-8"))
-PROMPT = (PIPELINE_DIR / "contracts" / "article.md").read_text(encoding="utf-8")
+AUTHOR_CANON = (PIPELINE_DIR / "contracts" / "author-canon.md").read_text(encoding="utf-8")
+PROMPT = (PIPELINE_DIR / "contracts" / "article.md").read_text(encoding="utf-8") + "\n\n" + AUTHOR_CANON
 JST = timezone(timedelta(hours=9))
 URL_RE = re.compile(r"https://[^\s)\]>\"']+")
 INTERNAL_META_RE = re.compile(r"\A<!-- (?:pipeline|factory)_meta: [^\n]*-->\s*", flags=re.MULTILINE)
