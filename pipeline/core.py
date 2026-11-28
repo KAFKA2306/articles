@@ -209,6 +209,9 @@ def choose_topic(
 一般論より、実装証拠・設計判断・失敗・定量検証が揃う題材を優先します。
 既存記事との焼き直しは禁止です。
 
+編集契約と著者の判断原理:
+{PROMPT}
+
 既存タイトル:
 {json.dumps(existing_titles(), ensure_ascii=False)}
 

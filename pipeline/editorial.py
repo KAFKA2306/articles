@@ -213,8 +213,8 @@ def choose_topic(signals: list[dict[str, object]]) -> dict[str, object]:
 公開GitHubシグナルから記事候補を{core.CONFIG['candidate_count']}件作り、
 最も強い1件を選んでください。
 
-著者の判断原理（題材選定に適用し、証拠と矛盾する結論を強制しない）:
-{core.AUTHOR_CANON}
+編集契約と著者の判断原理（題材選定に適用し、証拠と矛盾する結論を強制しない）:
+{core.PROMPT}
 
 記事は技術用語の解説から始めません。各候補は、実装やデータを追った結果として
 見つかる一つの現象を主役にしてください。候補の種類は次のいずれかです。
