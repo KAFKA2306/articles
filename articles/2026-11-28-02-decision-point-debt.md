@@ -71,7 +71,16 @@ Kafstylerはこの論点を、共通規約と専門手順の分離、単一正�
 4. 確定処理へ移せる箇所、正本を統一できる箇所、必要な人間の判断を区別する。
 5. 変更候補と保持条件を第3部に渡し、変更後も同じ観測項目で比較する。
 
-この手順は観測と設計の提案である。専用の台帳は不要であり、既存のIssueや実行履歴を優先する。
+### 同じ履歴から同じ判断箇所を抽出する
+
+Runeson & Höst (2009) はソフトウェア工学の事例研究で、対象、データの収集・分析手順と変更の来歴を明確にすることを論じている [6]。本稿では次のように観測の定義を固定する。
+
+- 判断を始めた時点から、行動を決定して実行へ渡す時点までの人間の作業時間を測る。単なる機械の実行待ち時間と区別する。ただし監視し続ける必要がある時間や、失敗の復旧判断は管理時間に含める。
+- 一つの判断箇所に複数の発生を対応させ、同じイベントを重複計上しない。前後の記録の取得範囲と欠落を揃える。未測定の時間、失敗、回数をゼロで補わない。
+- 構造から候補を抽出した段階では「削減候補」とする。変更後の実際の発生頻度・人時間・失敗と比較できたものだけを、観測された削減として扱う。
+- 可能なら同じ履歴の一部を別の担当者が独立に分類し、分類が一致しない箇所の発生条件・役割・根拠を明確にする。分類方法が変わったら旧方式の結果と混ぜない。
+
+専用の台帳は不要であり、既存のIssueや実行履歴を優先する。これは研究・改善対象を調べるための観測手順で、すべての日常作業に追加する検査ではない。
 
 ### 具体例：共通の実行入口が内部変更を隠す
 
@@ -119,7 +128,7 @@ Kafstylerの参照実装では、[canonicalize](https://github.com/KAFKA2306/kaf
 
 入力：第1部の対象業務、観測期間、受入条件、既存の操作・実行履歴。
 
-出力：判断箇所ごとの発生条件、選択肢、担当の役割、頻度、時間、参照先、依存、失敗、削減候補、保持条件、出典、未測定項目。
+出力：判断箇所の識別子（発生条件・選択肢・根拠・役割の組）、頻度、時間、参照先、依存、失敗、削減候補、保持条件、出典、未測定項目。変更前後で同じ判断箇所を対応づけ、新設・廃止・統合を区別する。
 
 実測した判断時間は第1部の総管理時間に含め、二重計上しない。第3部にはこのうち変更候補に必要な情報を渡す。分野を越えた計測尺度としての妥当性は未確認である。
 
@@ -138,3 +147,4 @@ Kafstylerの参照実装では、[canonicalize](https://github.com/KAFKA2306/kaf
 3. Parnas, D. L. (1972). On the criteria to be used in decomposing systems into modules. *Communications of the ACM*, 15(12), 1053–1058. https://doi.org/10.1145/361598.361623
 4. Borg, M., et al. (2026). Echoes of AI: Investigating the downstream effects of AI assistants on software maintainability. *Empirical Software Engineering*, 31(6), 161. https://doi.org/10.1007/s10664-026-10889-1
 5. Cemri, M., et al. (2025). Why Do Multi-Agent LLM Systems Fail? *Advances in Neural Information Processing Systems*, 38, Datasets and Benchmarks Track. https://doi.org/10.52202/085713-4082
+6. Runeson, P., & Höst, M. (2009). Guidelines for conducting and reporting case study research in software engineering. *Empirical Software Engineering*, 14, 131–164. https://doi.org/10.1007/s10664-008-9102-8
