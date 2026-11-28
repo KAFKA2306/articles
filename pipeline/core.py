@@ -21,6 +21,7 @@ PROMPT = (PIPELINE_DIR / "contracts" / "article.md").read_text(encoding="utf-8")
 JST = timezone(timedelta(hours=9))
 URL_RE = re.compile(r"https://[^\s)\]>\"']+")
 INTERNAL_META_RE = re.compile(r"\A<!-- (?:pipeline|factory)_meta: [^\n]*-->\s*", flags=re.MULTILINE)
+COPILOT_PROMPT_ARG_LIMIT = 100_000
 
 
 def now_jst() -> datetime:
@@ -98,8 +99,17 @@ def model_call(
             "Do not use Markdown code fences or commentary.\n"
         )
 
+    prompt_bytes = len(prompt.encode("utf-8"))
+    if prompt_bytes > COPILOT_PROMPT_ARG_LIMIT:
+        raise ValueError(
+            "copilot prompt is too large for a safe Linux argv element: "
+            f"{prompt_bytes} bytes (limit {COPILOT_PROMPT_ARG_LIMIT})"
+        )
+
     command = [
         executable,
+        "-p",
+        prompt,
         "-s",
         "--no-ask-user",
         "--deny-tool=shell,write,read,url,memory",
@@ -109,10 +119,10 @@ def model_call(
 
     result = subprocess.run(
         command,
-        input=prompt,
+        stdin=subprocess.DEVNULL,
         text=True,
         capture_output=True,
-        timeout=240,
+        timeout=420,
         cwd=ROOT,
         env=os.environ.copy(),
         check=False,
