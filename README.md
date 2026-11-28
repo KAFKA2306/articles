@@ -1,7 +1,19 @@
 # KAFKA2306/articles
 
+## Evidence-first authoring
+
+Co-author articles from first-hand fixtures: reproducible diffs, logs,
+measurements, datasets, or observed comparisons. Preserve input, revision, method,
+result, counterexample, and limits. Do not replace these with generic abstraction.
+Scheduled candidate generation is retired. Pull requests run deterministic
+Zenn/frontmatter and anti-slop checks; public release remains human-triggered
+through `zenn-manual-release.yml`, followed by `zenn-production-verify.yml`.
+
+Local checks: `python3.12 -m pipeline.evidence_gate`,
+`python3.12 -m pipeline.zenn_slug`, `python3.12 -m pipeline.audit`, and
+`python3.12 -m unittest discover -s tests -v`.
+
 [![Article Pipeline CI](https://github.com/KAFKA2306/articles/actions/workflows/article-pipeline-ci.yml/badge.svg)](https://github.com/KAFKA2306/articles/actions/workflows/article-pipeline-ci.yml)
-[![Canonical Article Pipeline](https://github.com/KAFKA2306/articles/actions/workflows/article-pipeline.yml/badge.svg)](https://github.com/KAFKA2306/articles/actions/workflows/article-pipeline.yml)
 [![Zenn Production Verification](https://github.com/KAFKA2306/articles/actions/workflows/zenn-production-verify.yml/badge.svg)](https://github.com/KAFKA2306/articles/actions/workflows/zenn-production-verify.yml)
 
 **広い読者が自分事にできる問題を入口に、実体験・実測・失敗から、読後の判断や行動を一段よくする技術記事を作るrepository。**
@@ -48,7 +60,7 @@
 
 例として、[AIの合格条件](articles/2026-08-15-hook-runner-is-not-policy.md)は「テストが大事」ではなく **「合格の決定権を実装者の自己採点に委ねるな」**、[上位50社の選定](articles/2026-08-14-06-top-n-boundary-evidence.md)は「一覧を正しく」ではなく **「上位N件だけで選定を正当化するな。N+1件目を保存せよ」**、[財務比率](articles/financial-ratio-denominator-check.md)は「数値に注意」ではなく **「比率を使う前に分母と期間を固定せよ」**まで踏み込みます。
 
-そして毎回、元の常識、規律が必要な理由、実際に観測された数値・変更・結果、別の分野への応用条件、規律を撤回すべき反例を示します。**他分野へ移せるのは判断規則。実証済みなのは、観測した範囲だけ。** [編集契約](pipeline/contracts/article.md#編集の第一原理強い汎用原則を実例で証明し反例で試す)
+そして毎回、元の常識、規律が必要な理由、実際に観測された数値・変更・結果、別の分野への応用条件、規律を撤回すべき反例を示します。**他分野へ移せるのは判断規則。実証済みなのは、観測した範囲だけ。** [編集契約](pipeline/contracts/article.md)
 
 ### 具体性の最低ライン
 
@@ -56,7 +68,7 @@
 
 例：「決算データの出典が開きやすくなった」ではなく、「[半導体決算一覧](https://kafka2306.github.io/semiconductor-earnings-model/earnings/)のNVIDIA行から、対象期末のSEC提出書類を2クリックから1クリックで開けるようにし、対象11社の直接リンクを0社から11社にした。別の四半期への誤リンクは検査で失敗する」まで書きます。実測条件と[検証記録](articles/kafstyler-agent-quality-loop.md#1タップの改修で出典がずれる条件を試した)を併記します。
 
-執筆・改稿・査読では[超具体性の必須条件](pipeline/contracts/article.md#超具体性の必須条件初稿改稿査読の共通ゲート)を使います。「どこを開く？ 何を入力する？ どう変わる？ 失敗したら？ 根拠は？」の一つが欠けて読者が先へ進めなければ差し戻します。**具体例を増やしただけではなく、読者が自分で使えるか**を合格条件にします。
+執筆・改稿・査読では[超具体性の必須条件](pipeline/contracts/article.md)を使います。「どこを開く？ 何を入力する？ どう変わる？ 失敗したら？ 根拠は？」の一つが欠けて読者が先へ進めなければ差し戻します。**具体例を増やしただけではなく、読者が自分で使えるか**を合格条件にします。
 ### 入口は広く、証拠は狭く深く
 
 記事タイトルや冒頭は、技術名を知っている人だけに通じる入口にしません。
@@ -155,7 +167,7 @@ Zennも、生成AIで一般知識を得やすくなった現在、具体的な�
 
 ## Article signature
 
-誰が読み、読後に何を判断できるか、どの実体験や実測が根拠になるかを、執筆前に一文ずつ書きます。必要な項目は[記事候補の必須項目](pipeline/contracts/article.md#required-candidate-fields)で確認できます。
+誰が読み、読後に何を判断できるか、どの実体験や実測が根拠になるかを、執筆前に一文ずつ書きます。必要な項目は[記事候補の必須項目](pipeline/contracts/article.md)で確認できます。
 
 ## What we do not publish
 
@@ -270,15 +282,14 @@ schedule、score、CI green、mergeはpublication authorizationではありま�
 
 全記事のfrontmatterに `created_at: "YYYY-MM-DD"`（作成日）と `updated_at: "YYYY-MM-DD"`（改定日）を明記する。新規作成時は両者を同日とし、本文を改定した日は `updated_at` を更新する。`published_at` はZennの公開日時であり、両者と混同しない。
 
-既存記事の初期値にはGitで確認できる初回記録日・最終変更日（JST）を用いた。原稿の執筆開始日そのものを証明するものではない。既存の非日付slugは参照先や公開URLの互換性を保つため維持し、新規作成には使わない。[編集契約](pipeline/contracts/article.md#記事ファイル名と作成改定日) · [Zennのslug仕様](https://zenn.dev/zenn/articles/what-is-slug)
+既存記事の初期値にはGitで確認できる初回記録日・最終変更日（JST）を用いた。原稿の執筆開始日そのものを証明するものではない。既存の非日付slugは参照先や公開URLの互換性を保つため維持し、新規作成には使わない。[記事契約](pipeline/contracts/article.md) · [Zennのslug仕様](https://zenn.dev/zenn/articles/what-is-slug)
 
 ## Repository structure
 
 ```text
 articles/                    # Zenn-compatible sources
-artifacts/candidates/        # unpublished candidates
-artifacts/reports/           # evidence / review / selection reports
-pipeline/                    # generation / review / audit implementation
+artifacts/reports/           # durable evidence and review reports
+pipeline/                    # deterministic Zenn, evidence, publication checks
 pipeline/contracts/article.md
 AGENTS.md                    # autonomous-agent operating rules
 ```
@@ -286,23 +297,14 @@ AGENTS.md                    # autonomous-agent operating rules
 ## Quick verification
 
 ```bash
-python -m compileall pipeline demos/python-syntax-gate/syntax_gate.py
-python -m unittest discover -s tests -v
+python3.12 -m compileall -q pipeline tests
+python3.12 -m unittest discover -s tests -v
+python3.12 -m pipeline.evidence_gate
+python3.12 -m pipeline.zenn_slug
+python3.12 -m pipeline.audit
 node --check demos/_shared/pyodide-worker.mjs
 node --check demos/python-syntax-gate/app.mjs
-python -m pipeline.audit
-```
-
-Candidate generation:
-
-```bash
-python -m pipeline.cli candidate
-```
-
-Human-triggered selection to an unpublished Zenn draft:
-
-```bash
-ARTICLE_MANUAL=1 python -m pipeline.cli publish
+bash scripts/zenn-render-check.sh
 ```
 
 ---

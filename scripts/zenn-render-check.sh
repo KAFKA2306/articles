@@ -25,7 +25,7 @@ catalog="$tmp/articles.json"
   done
   test -s "$catalog" || { cat "$log"; exit 1; }
 
-  python - "$catalog" "$port" <<'PY'
+  python3 - "$catalog" "$port" <<'PY'
 import json
 import sys
 from pathlib import Path

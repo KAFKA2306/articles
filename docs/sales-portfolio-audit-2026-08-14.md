@@ -100,7 +100,7 @@ Merge:
 
 ### 大量projectを「次を決める」ところまで自律運用する
 
-Canonical candidate: `artifacts/candidates/2026-08/2026-08-13-chatgpt-multiproject-autonomy.md`
+Selected article: `articles/chatgpt-multiproject-autonomy.md`
 
 Merge as supporting proof / story material:
 
