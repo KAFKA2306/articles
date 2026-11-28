@@ -109,7 +109,7 @@ Adams et al. (2021) の8実験では、人は改善案を考える際に追加�
 
 これは削除が常に優れるという結果ではない。探索する選択肢に削除を明示的に含める理由になる。
 
-また、組織が旧来のルーチンや知識を意図的に手放すことは、組織的アンラーニングの研究対象である。2023年の研究レビューは、その過程が組織・チーム・個人の条件に依存することを整理している [11]。2024年の統合的文献レビューは、概念や過程について論争が残ること、特定の知識を手放すことで別の部分の機能を損ねる可能性を指摘している [12]。
+また、組織が旧来のルーチンや知識を意図的に手放すことは、組織的アンラーニングの研究対象である。Kluge (2023) は31件の実証研究を整理し、その過程に関わる組織・チーム・個人の条件を示す一方、組織・チームレベルでは横断調査や質的研究が多く、因果推論には限界があると指摘した [11]。Klammer et al. (2025、オンライン公開2024年) の統合的文献レビューは、概念や過程について論争が残ること、特定の知識を手放すことで別の部分の機能を損ねる可能性を指摘している [12]。
 
 本稿の提案は、削除の探索を単発の整理作業で終わらせず、改善を担当する機構自身にも適用することである。「自己減算型知能機関」とは、必要な成果を維持する条件の下で、自らの規約、ジョブ、ツール、役割、実行経路を廃止できる組織設計を指す。AIに限定しない。
 
@@ -195,11 +195,11 @@ Adams et al. (2021) の8実験では、人は改善案を考える際に追加�
 2. Brynjolfsson, E., Li, D., & Raymond, L. (2025). Generative AI at Work. *The Quarterly Journal of Economics*, 140, 889–942. https://doi.org/10.1093/qje/qjae044
 3. Galbraith, J. R. (1974). Organization Design: An Information Processing View. *Interfaces*, 4(3), 28–36. https://doi.org/10.1287/inte.4.3.28
 4. Malone, T. W., & Crowston, K. (1994). The interdisciplinary study of coordination. *ACM Computing Surveys*, 26(1), 87–119. https://doi.org/10.1145/174666.174668
-5. Sablis et al. (2021). Team-external coordination in large-scale software development projects. *Journal of Software: Evolution and Process*, 33(3), e2297. https://doi.org/10.1002/smr.2297
+5. Sablis, A., Smite, D., & Moe, N. (2021). Team-external coordination in large-scale software development projects. *Journal of Software: Evolution and Process*, 33(3), e2297. https://doi.org/10.1002/smr.2297
 6. Besker, T., Martini, A., & Bosch, J. (2019). Software developer productivity loss due to technical debt—A replication and extension study examining developers' development work. *Journal of Systems and Software*, 156, 41–61. https://doi.org/10.1016/j.jss.2019.06.004
 7. Parnas, D. L. (1972). On the criteria to be used in decomposing systems into modules. *Communications of the ACM*, 15(12), 1053–1058. https://doi.org/10.1145/361598.361623
 8. Onnasch, L., Wickens, C. D., Li, H., & Manzey, D. (2014). Human performance consequences of stages and levels of automation: An integrated meta-analysis. *Human Factors*, 56, 476–488. https://doi.org/10.1177/0018720813501549
 9. Levitt, B., & March, J. G. (1988). Organizational Learning. *Annual Review of Sociology*, 14, 319–338. https://doi.org/10.1146/annurev.so.14.080188.001535
 10. Adams, G. S., Converse, B. A., Hales, A. H., & Klotz, L. E. (2021). People systematically overlook subtractive changes. *Nature*, 592, 258–261. https://doi.org/10.1038/s41586-021-03380-y
-11. Recent findings on organizational unlearning and intentional forgetting research (2019–2022). (2023). *Frontiers in Psychology*. https://doi.org/10.3389/fpsyg.2023.1160173
-12. Organizational unlearning as a process: What we know, what we don’t know, what we should know. (2024, online publication). *Management Review Quarterly*. https://doi.org/10.1007/s11301-024-00430-3
+11. Kluge, A. (2023). Recent findings on organizational unlearning and intentional forgetting research (2019–2022). *Frontiers in Psychology*, 14, 1160173. https://doi.org/10.3389/fpsyg.2023.1160173
+12. Klammer, A., Grisold, T., Nguyen, N., & Hsu, S. (2025; online 2024). Organizational unlearning as a process: What we know, what we don’t know, what we should know. *Management Review Quarterly*, 75, 2147–2171. https://doi.org/10.1007/s11301-024-00430-3
