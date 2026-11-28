@@ -10,7 +10,7 @@ from .zenn_slug import validate_slug
 
 ROOT = Path(__file__).resolve().parents[1]
 FORBIDDEN = ("<!-- pipeline_meta:", "internal_lapras_rubric_proxy", "story_interest_proxy")
-FILLER = ("具体的な入力、出力、テスト結果は未確認", "rows = fetch_rows()")
+FILLER = ("具体的な入力、出力、テスト結果は未確認",)
 
 
 def check_article(path: Path) -> list[str]:
@@ -19,7 +19,7 @@ def check_article(path: Path) -> list[str]:
     prose = re.sub(r"(?ms)^(```|~~~).*?^\1\s*$", "", text)
     if any(marker in text for marker in FORBIDDEN):
         errors.append("contains retired pipeline scoring metadata")
-    if any(marker in prose for marker in FILLER):
+    if any(marker in text for marker in FILLER) or re.search(r"(?m)^\s*rows\s*=\s*fetch_rows\(\)\s*$", text):
         errors.append("contains an explicit unverified placeholder")
     if not re.search(r"https://[^\s)\]>]+", prose):
         errors.append("requires at least one linked primary source or public evidence artifact")

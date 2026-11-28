@@ -139,7 +139,7 @@
 
 ## 文章・伝達・仕事の評価
 
-根拠：[編集契約](../pipeline/contracts/article.md)、[ポートフォリオ](../articles/2026-08-13-02-how-people-compress-a-person.md)、[見出し](../articles/headline-reader-check.md)、[didactization](https://github.com/KAFKA2306/kafstyler/blob/main/skills/didactization/SKILL.md)。
+根拠：[編集契約](../pipeline/contracts/article.md)、[ポートフォリオ](../articles/2026-08-13-02-how-people-compress-a-person.md)、[didactization](https://github.com/KAFKA2306/kafstyler/blob/main/skills/didactization/SKILL.md)。
 
 | ID | 視点 | 聖典への統合先 |
 | --- | --- | --- |

@@ -1,0 +1,12 @@
+# Reproduced SHA-256 outputs of the controlled workspace benchmark, not credentials.
+# Source: 81848adca34e077835735a1f8586c6e8cd8cd511; PR #260 records independent reproduction.
+81848adca34e077835735a1f8586c6e8cd8cd511:benchmarks/verification-stack-v2/results/controlled/workspace.json:generic-api-key:202
+81848adca34e077835735a1f8586c6e8cd8cd511:benchmarks/verification-stack-v2/results/controlled/workspace.json:generic-api-key:209
+81848adca34e077835735a1f8586c6e8cd8cd511:benchmarks/verification-stack-v2/results/controlled/workspace.json:generic-api-key:245
+81848adca34e077835735a1f8586c6e8cd8cd511:benchmarks/verification-stack-v2/results/controlled/workspace.json:generic-api-key:252
+81848adca34e077835735a1f8586c6e8cd8cd511:benchmarks/verification-stack-v2/results/controlled/workspace.json:generic-api-key:287
+81848adca34e077835735a1f8586c6e8cd8cd511:benchmarks/verification-stack-v2/results/controlled/workspace.json:generic-api-key:306
+81848adca34e077835735a1f8586c6e8cd8cd511:benchmarks/verification-stack-v2/results/controlled/workspace.json:generic-api-key:353
+81848adca34e077835735a1f8586c6e8cd8cd511:benchmarks/verification-stack-v2/results/controlled/workspace.json:generic-api-key:374
+81848adca34e077835735a1f8586c6e8cd8cd511:benchmarks/verification-stack-v2/results/controlled/workspace.json:generic-api-key:392
+81848adca34e077835735a1f8586c6e8cd8cd511:benchmarks/verification-stack-v2/results/controlled/workspace.json:generic-api-key:437

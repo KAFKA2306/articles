@@ -31,10 +31,10 @@ class EvidenceGateTests(unittest.TestCase):
         self.assertIn("type must be tech or idea", errors)
         self.assertIn("topics must contain 1..5 non-empty strings", errors)
 
-    def test_rejects_unverified_prose_but_allows_code_example(self) -> None:
+    def test_rejects_unverified_prose_and_placeholder_code(self) -> None:
         base = '---\ntitle: Example\nemoji: "🧪"\ntype: tech\ntopics: [python]\npublished: false\n---\n'
         self.assertIn("contains an explicit unverified placeholder", self.check(base + "具体的な入力、出力、テスト結果は未確認。\n"))
-        self.assertNotIn("contains an explicit unverified placeholder", self.check(base + "```python\nrows = fetch_rows()\n```\n"))
+        self.assertIn("contains an explicit unverified placeholder", self.check(base + "```python\nrows = fetch_rows()\n```\n"))
 
     def test_rejects_broken_local_reference(self) -> None:
         base = '---\ntitle: Example\nemoji: "🧪"\ntype: tech\ntopics: [python]\npublished: false\n---\n'

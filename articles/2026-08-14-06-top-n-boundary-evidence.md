@@ -16,11 +16,7 @@ updated_at: "2026-11-28"
 
 典型的な実装は次のようになる。
 
-```python
-rows = fetch_rows()
-ranked = sorted(rows, key=lambda row: row["revenue"], reverse=True)
-top50 = ranked[:50]
-```
+2026年8月14日の実例では、候補51社から50社を選んだ。上限で外れたQDレーザの企業コードと売上を出力へ残し、取得件数と採用件数を分けている。
 
 GitHub REST APIなどでは、検索結果は複数ページに分割される。[公式のページネーション仕様](https://docs.github.com/en/rest/using-the-rest-api/using-pagination-in-the-rest-api)が示すように、一回の応答は全体の一部分であり得る。最初のページだけを取得しても、50件以上あれば上のコードは50件を返す。
 
