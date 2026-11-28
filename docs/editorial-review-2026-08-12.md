@@ -224,7 +224,9 @@ ISBNは新規
 
 ---
 
-## 5. muchio-shiroinu-body-adapter.md
+## 5. muchio-shiroinu-body-adapter.md — retired in the 2026-11-28 evidence audit
+
+The following was the 2026-08-12 editorial assessment. Later review found no prefab/runtime observations to support an article; the draft was retired and this historical assessment is not a keep decision.
 
 ### 判定: **現行でも上位。ただし仕様列挙を後ろへ送る**
 
@@ -611,7 +613,7 @@ LAPRAS proxyで技術品質を落としていないか検査
 6. `csv-migration-dry-run-before-write.md` — 結論先出しを撤去
 7. `video-storyboard-ir-provider-compile.md` — provider incompatibilityから開始
 8. `unity-mcp-editor-boundary.md` — 操作成功と完成の差を具体scene化
-9. `muchio-shiroinu-body-adapter.md` — 強い前提反転を残し仕様表を後ろへ
+9. `muchio-shiroinu-body-adapter.md` — historical candidate; retired 2026-11-28 because prefab/runtime evidence was absent
 10. `liltoon-reimport-first-aid-qa.md` — quick-fix用途へ限定
 
 # 公開判定の新しい原則

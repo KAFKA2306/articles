@@ -84,23 +84,23 @@ OpenCode Goに調査も記事も全部移したいわけではない。
 ChatGPT側で渡す情報を、曖昧な「良くして」ではなく次のように固定する。
 
 ```text
-対象: articles/headline-reader-check.md
-目的: 見出しの良し悪しを、入力・期待結果・反例で追える説明にする
+対象: articles/2026-08-14-06-top-n-boundary-evidence.md
+目的: 実際の51社から50社を選んだ証拠と、N+1件目の出力を読者が追えるようにする
 変更してよいもの: 上記の記事本文だけ
-変えないもの: published: false、タイトル、他の記事、公開用ブランチ
+変えないもの: published: false、slug、他の記事、公開用ブランチ
 完了条件:
-  1. 比較対象・指標を伏せた題を不合格と説明できる
-  2. 一時点だけの結果を「差が拡大した」と言わない
-  3. 記事の具体例・根拠URL・公開状態が保たれる
+  1. 51社の候補数と採用50件を区別して説明できる
+  2. 除外されたQDレーザのID・売上が一次資料に結び付く
+  3. slug・根拠URL・公開状態が保たれる
 ```
 
 OpenCode側では、変更前後に同じリポジトリで次を確認する。
 
 ```sh
 git status --short
-git diff -- articles/headline-reader-check.md
-python -m unittest discover -s tests -v
-python -m pipeline.audit
+git diff -- articles/2026-08-14-06-top-n-boundary-evidence.md
+python3.12 -m unittest discover -s tests -v
+python3.12 -m pipeline.evidence_gate
 ```
 
 最初の `git status --short` で他人の未コミット変更があれば、自動で上書きしない。差分が対象記事以外に広がったら採用を保留する。テストが通っても**公開状態の変更やZenn本番への反映は許可しない**。追加した説明から読者が誤った見出しを落とせるか、本文と一緒に読み直す。これはローカルで試すための例で、今ここでのOpenCode Go導入結果や費用対効果の実測ではない。

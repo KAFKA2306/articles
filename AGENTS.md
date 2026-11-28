@@ -2,7 +2,7 @@
 
 This repository is the canonical system for discovering, testing, drafting, reviewing, selecting, revalidating, and retiring KAFKA2306 technical articles.
 
-`README.md` describes the portfolio to humans. `pipeline/contracts/article.md` defines the editorial contract. This file defines what an autonomous agent may do and what it must never decide on its own.
+`README.md` describes the portfolio to humans. `pipeline/contracts/article.md` defines the concise evidence-first editorial contract. This file defines what an autonomous agent may do and what it must never decide on its own.
 
 ## 1. Mission
 
@@ -121,7 +121,7 @@ This discovery rule **does not change** the human-controlled publication boundar
 
 Use the installed Kafstyler plugin where available. Otherwise, resolve [Kafstyler `main`](https://api.github.com/repos/KAFKA2306/kafstyler/commits/main) to a full commit SHA and read `AGENTS.md`, `MISSION.md`, and the applicable `SKILL.md` files at that SHA. Use the existing Issue or PR as the work record. Record the reader's intended action, the acceptance check, the Kafstyler SHA, and the observed result at the reader's usual entry point.
 
-Scheduled Copilot receives the [editorial contract](pipeline/contracts/article.md#文章の推敲と反証) in each draft, revision, and review prompt. That contract holds the instructions the model can follow from the supplied evidence. The repository workflow owns fetching, validation, and output. Verify the adaptation against upstream when updating the contract. Bring reproducible failures shared by multiple repositories back to Kafstyler with the input and observed result.
+Local human-directed co-authoring starts from a first-hand fixture and uses the [editorial contract](pipeline/contracts/article.md) to preserve the claim boundary. There is no scheduled article generation. CI validates repository and Zenn invariants; release remains human-triggered.
 
 ## 4C. Choose the Kafstyler skills that affect the article
 
@@ -150,9 +150,9 @@ Reject phrases such as 'improved UX', 'verified the implementation', 'made opera
 Before accepting a revision, use the article's own steps or source trail to attempt the reader's intended job. Try one wrong-version, missing-data, or failed-action counterexample. If the reader cannot reach the claimed result, give the reviewer `missing_proof_of_value`, spell out the missing detail in `revision_actions`, and revise or withhold the article. Keep operational audit results in the PR/report, not in the public article. Preserve the separate human-controlled Zenn release procedure.
 ## 4E. Lead with a strong transferable principle; use cases as proof
 
-Use the [author's canon](pipeline/contracts/author-canon.md) for topic selection, drafting, revision, and review. It defines the author's distinctive decision principles, not predetermined empirical conclusions. The pipeline includes the same canonical text in its prompts; do not copy it into other rules. Keep publication authorization and evidence boundaries unchanged.
+Use the evidence-first contract in `pipeline/contracts/article.md` for topic selection, drafting, revision, and review. Keep publication authorization and evidence boundaries unchanged.
 
-Do not turn the portfolio into a logbook of increasingly detailed repository changes. A finished article must give the reader **one forceful, falsifiable operating rule** that survives removing the product and repository names. Treat the [principle-first article contract](pipeline/contracts/article.md#編集の第一原理強い汎用原則を実例で証明し反例で試す) as canonical.
+Do not turn the portfolio into a logbook of increasingly detailed repository changes. A finished article must give the reader **one forceful, falsifiable operating rule** that survives removing the product and repository names. Treat the [principle-first article contract](pipeline/contracts/article.md) as canonical.
 
 For every article or substantial revision:
 1. Name the reasonable default the evidence challenges, not a straw man.
@@ -291,9 +291,8 @@ Run `python -m pipeline.audit` whenever its scope is affected.
 
 ## 12. Repository state boundaries
 
-- `artifacts/candidates/YYYY-MM/` — unpublished public-safe candidates;
-- `artifacts/reports/YYYY-MM/` — source/review/selection evidence;
-- `pipeline/` — generation/review/selection/audit implementation;
+- `artifacts/reports/YYYY-MM/` — durable source and review evidence only;
+- `pipeline/` — deterministic Zenn, evidence, publication, and audit checks;
 - `pipeline/contracts/article.md` — canonical editorial contract;
 - `articles/` — Zenn-compatible source for published articles and deliberately human-selected `published:false` drafts;
 - `images/` / `demos/` — support only when they materially improve understanding or proof.
@@ -304,11 +303,7 @@ Merging, CI green, article selection, or placement under `articles/` does not au
 
 ## 13. Human-controlled publication
 
-Scheduled automation may discover, research, draft, audit, compare, and report.
-
-Scheduled automation must never change `published: false` to `published: true`.
-
-The internal `publish` command may only materialize a selected candidate as `published: false`.
+Automation may run deterministic validation and report results. Article discovery and drafting are human-directed and grounded in first-hand evidence.
 
 Public publication requires an explicit current human instruction or equivalent explicit approval state. A calendar event, score threshold, merge, or "best candidate" result is never publication authorization.
 
@@ -377,7 +372,7 @@ Deleting low-value work is portfolio maintenance, not failure.
 ### Builder may
 
 - research public evidence;
-- draft/revise candidates;
+- co-author evidence-grounded article drafts;
 - create tests, images, demos, reports, and pipeline code;
 - run deterministic validation;
 - open/update the canonical PR;
@@ -392,7 +387,7 @@ Deleting low-value work is portfolio maintenance, not failure.
 - current source support and claim calibration;
 - privacy boundaries;
 - portfolio overlap;
-- candidate/published state;
+- article publication state;
 - exact-head CI where applicable;
 - no helper/staging residue;
 - publication state did not change without explicit authorization.
@@ -440,7 +435,7 @@ Before creating a branch or PR:
 ### Repository ownership and retention
 
 - `main` is the sole editing source of truth. `zenn-release` is the output of the existing authorized Zenn release workflow. Article edits and operational rule changes enter through a PR to `main`. [Zenn's GitHub integration](https://zenn.dev/zenn/articles/connect-to-github)
-- Keep one canonical article per reader problem. Rework its existing path and slug when extending it. Store unpublished candidates and public-safe evaluation reports in the locations in section 12. Reference durable evidence by commit, run, or artifact ID from the corresponding PR or report. Discard temporary comparisons and render output after verification.
+- Keep one canonical article per reader problem. Rework its existing path and slug when extending it. Store only durable source and review evidence in section 12. Reference durable evidence by commit, run, or artifact ID from the corresponding PR or report. Discard temporary comparisons and render output after verification.
 - Inspect the exact PR head, check status, and changed files before merge. After merge, read back the article on `main`, verify its publication flag, and confirm the merged work branch was removed. Verify the public page when a Zenn release is explicitly authorized. [GitHub branch removal](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-your-repositorys-settings-and-features/managing-the-automatic-deletion-of-branches)
 
 ## 21. Validation ladder
@@ -448,11 +443,13 @@ Before creating a branch or PR:
 Use the cheapest deterministic verifier that can falsify the change, then escalate.
 
 ```bash
-python -m compileall pipeline demos/python-syntax-gate/syntax_gate.py
-python -m unittest discover -s tests -v
+python3.12 -m compileall -q pipeline tests demos/python-syntax-gate/syntax_gate.py
+python3.12 -m unittest discover -s tests -v
+python3.12 -m pipeline.evidence_gate
+python3.12 -m pipeline.zenn_slug
 node --check demos/_shared/pyodide-worker.mjs
 node --check demos/python-syntax-gate/app.mjs
-python -m pipeline.audit
+python3.12 -m pipeline.audit
 ```
 
 For PRs, verify GitHub Actions on the exact head SHA. A green run on another SHA is not evidence.

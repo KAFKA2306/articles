@@ -20,7 +20,7 @@
 | `codex-chatgpt-github-issue-bridge.md` | A | 「AIにPCを触らせる橋は信用できるか」が技術名なしでも分かる | 維持 |
 | `csv-migration-dry-run-before-write.md` | B | `CSV importer` / `dry-run` / CLI が入口になり、記録を使えるデータへ変える一般問題が隠れている | 改題 |
 | `fail-close-data-pipeline.md` | A | 「取れなかったを0件にしない」が一般語で問題を表している | 維持。ただし本文の主題再設計Issueは別管理 |
-| `muchio-shiroinu-body-adapter.md` | A | 「モデル差し替えを作ろうとしたら設計が変わった」という失敗・反転が先にある | 維持 |
+| `muchio-shiroinu-body-adapter.md` | A | 「モデル差し替えを作ろうとしたら設計が変わった」という失敗・反転が先にある | 2026-11-28監査でPrefab/runtime evidence不足により草稿退役 |
 | `one-diagram-one-message-image-pipeline.md` | A | 「生成AIの図にCI成功と書いてあった」という具体的事故が入口 | 維持 |
 | `primary-source-derived-data-provenance.md` | B | 数字の反転は強いが、`scope` が結論語になっている | 改題 |
 | `python-bulk-sync-syntax-gate.md` | B | 事故は分かるが `Python` / `compileall` が解決策の入口を狭める | 改題 |

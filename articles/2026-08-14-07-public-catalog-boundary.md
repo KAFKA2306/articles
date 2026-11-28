@@ -1,20 +1,240 @@
 ---
-title: "公開データは、秘密を消すのではなく公開できる情報から作る"
+title: "公開直前に秘密を消すな。公開できる入力だけで作れ"
 emoji: "🧱"
 type: "tech"
 topics: ["dataengineering", "privacy", "github", "testing"]
 published: false
 created_at: "2026-08-14"
-updated_at: "2026-11-28"
+updated_at: "2026-11-21"
 ---
 
-社内データから公開ダッシュボードを作るとき、秘密の列を取り除けば公開できると考えがちだ。だが新しい内部項目が追加されるたびに、公開側でも除外を忘れないようにする仕事が生まれる。
+**秘密を含むデータから公開直前に項目を削る方式を、最初の設計にするな。**
 
-公開に必要な情報が独立して取得できるなら、**秘密を含む入力を公開処理へ渡さない**設計を選ぶ。公開カタログの実例から、その違いと実装の最小単位を考える。
+作品情報と参加者・内部予定を一つのJSONにまとめれば開発は簡単だ。しかし公開時の除外漏れは、そのまま個人情報の露出になり得る。
 
-## 項目が増えたときに何が起きるか
+[boardgamelistの変更](https://github.com/KAFKA2306/boardgamelist/commit/9ce9aa8c7eab27b650dd06a478c21319949dc575)では個人の予定を公開カタログへ混ぜず、[公式メタデータ](https://github.com/KAFKA2306/boardgamelist/blob/9ce9aa8c7eab27b650dd06a478c21319949dc575/data/official-metadata/apollo-no-shinpan-2026-08-14.json)に`access_condition: public-web`を記録し、[公開ページ](https://github.com/KAFKA2306/boardgamelist/blob/9ce9aa8c7eab27b650dd06a478c21319949dc575/docs/games/apollo-no-shinpan.md)で保存しない情報を明記した。
 
-作品情報と参加予定を同じデータに置く場合を考える。次は架空の入力である。
+同じ固定版の公式メタデータから、作品名「アポロンの審判」、プレイヤー数9人、所要時間180〜210分、出典URLを取り出せる。ここにあるのは公開情報の値であり、個人の参加者や予定ではない。公開可能な入力を先に分ける判断が、実データ上でも何を残すかまでつながっている。
+
+規律は **「秘密を後から隠すより、公開可能な素材だけで公開物を組み立てよ」**。入力の分離が最初の保護境界になる。
+
+## 1つのデータモデルに全部入れる方が楽だった
+
+最初に考えやすい構造はこれだ。
+
+```text
+Game
+├─ title
+├─ players
+├─ duration
+├─ source_url
+├─ participants
+├─ played_by
+├─ planned_at
+└─ private_note
+```
+
+内部ツールだけなら、かなり便利である。
+
+検索対象も1つ、joinも少ない。UIも1モデルを読めば済む。
+
+しかし同じモデルをpublic site generatorへ渡すと、毎回「どのfieldを落とすか」が必要になる。
+
+```python
+def to_public(game):
+    return {
+        "title": game["title"],
+        "players": game["players"],
+        "duration": game["duration"],
+        # participants は出さない
+        # planned_at は出さない
+        # private_note は出さない
+    }
+```
+
+一見安全そうだが、これはdenylist型の運用になる。
+
+新しいprivate fieldが追加されたとき、公開変換側の修正を忘れれば漏れる。
+
+壊れた例はこうだ。
+
+```python
+def to_public(game):
+    return dict(game)  # 新fieldも全部流れる
+```
+
+あるいは、より現実的にはこうなる。
+
+```python
+PUBLIC_BLOCKLIST = {"participants", "private_note"}
+
+public = {
+    key: value
+    for key, value in game.items()
+    if key not in PUBLIC_BLOCKLIST
+}
+```
+
+後から `planned_at` や `passed_by` が増えれば、blocklist更新漏れが公開事故になる。
+
+## 設計判断を逆にした
+
+`boardgamelist` の公開メタデータは、最初から `public-web` の証拠だけで構成されている。
+
+```text
+creator-official marketplace
+        ↓
+public-web metadata
+        ↓
+official-metadata JSON
+        ↓
+spoiler-free public page
+```
+
+この構造なら、公開generatorへ渡す入力自体がpublic-safeである。
+
+実装としては、private dataから不要fieldを削るのではなく、公開可能なfieldを正準schemaへ昇格させる。
+
+```python
+PUBLIC_FIELDS = {
+    "name",
+    "players",
+    "gm_required",
+    "gm_count",
+    "duration_minutes_min",
+    "duration_minutes_max",
+    "play_environment",
+    "pc_recommended",
+}
+
+
+def build_public_metadata(source_record):
+    return {
+        key: source_record[key]
+        for key in PUBLIC_FIELDS
+        if key in source_record
+    }
+```
+
+重要なのは、このコード断片そのものではない。
+
+**公開側のデフォルトを「全部出す」から「承認したものだけ出す」へ変えること**である。
+
+## なぜ「あとで消す」では遅いのか
+
+GitHub公式ドキュメントでは、public repositoryはインターネット上の誰でもアクセスできると説明されている。
+
+- https://docs.github.com/en/repositories/creating-and-managing-repositories/about-repositories
+
+さらに、機密情報をcommitした後の除去は単純なfile deleteでは終わらない。GitHubの公式手順はhistory rewrite、cloneやforkへの対応、cached viewやPR参照への対応まで必要になり得ると説明している。
+
+- https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository
+
+つまり、public repoでのprivacy設計は「公開画面に表示されたか」だけで判定できない。
+
+```text
+private value
+   ↓
+commit history      ← ここに入った時点で問題になり得る
+   ↓
+generated artifact
+   ↓
+public page
+```
+
+だから、最終HTMLで隠すより前に、repositoryへ入れるprojectionを分ける価値がある。
+
+## allowlistだけでも足りない
+
+ここで1つ注意がある。
+
+`PUBLIC_FIELDS` を作れば自動的に安全になるわけではない。
+
+たとえば `notes` というfieldは名前だけではpublicかprivateか分からない。
+
+```json
+{
+  "notes": "BOOTH公式商品ページで確認した公開メタデータのみを記録。ネタバレ本文は保存しない。"
+}
+```
+
+今回の公開JSONでは、この`notes`自体が公開方針の説明であり、private情報ではない。
+
+しかし別システムで同じfield名に担当者メモが入れば、allowlistに入れた瞬間に漏れる。
+
+そのため、field名だけでなく **provenance** も必要になる。
+
+```json
+{
+  "source": {
+    "url": "...",
+    "source_kind": "creator-official-marketplace",
+    "access_condition": "public-web"
+  }
+}
+```
+
+公開対象を次の積で決める。
+
+```text
+approved field
+AND
+public provenance
+AND
+publication-safe value
+```
+
+この3条件を満たすものだけをpublic projectionへ送る。
+
+## CIで守るなら何を検査するか
+
+この境界は人間の注意力だけに置かない方がよい。
+
+最低限、次をtestにできる。
+
+```python
+FORBIDDEN_PUBLIC_KEYS = {
+    "participants",
+    "played_by",
+    "passed_by",
+    "planned_at",
+    "private_note",
+}
+
+
+def assert_public_record(record):
+    leaked = FORBIDDEN_PUBLIC_KEYS & record.keys()
+    assert not leaked, f"private keys in public record: {sorted(leaked)}"
+    assert record["source"]["access_condition"] == "public-web"
+```
+
+さらにpublic artifact全体を走査する。
+
+```python
+for path in public_artifacts():
+    record = load_json(path)
+    assert_public_record(record)
+```
+
+ただし、このtestも万能ではない。
+
+秘密が `title` に誤って貼り付けられればkey検査では検出できない。PII detectorも誤検知・見逃しがある。
+
+したがって私は、次の順序で守るのが現実的だと考える。
+
+```text
+1. sourceをpublic/privateで分類
+2. public schemaへallowlist projection
+3. forbidden key / provenance test
+4. generated artifactをprivacy audit
+5. public repoへmerge
+```
+
+最後のscannerを主役にしない。**入力境界で落とし、CIは境界が壊れていないことを確認する。**
+
+## 再現してみる
+
+公開カタログを見直すときは、公開したい項目と内部だけで使う項目を両方含む、架空のレコードを一つ用意する。公開側で使う項目は、公式情報から取得できるものに絞る。まず下の例で、公開用のデータに何が残るか確かめる。
 
 ```python
 source = {
@@ -22,73 +242,66 @@ source = {
     "players": 4,
     "duration_minutes_min": 60,
     "participants": ["Alice", "Bob"],
+    "planned_at": "2026-10-08T21:00:00+09:00",
     "private_note": "internal only",
 }
-blocked = {"participants", "private_note"}
-public = {k: v for k, v in source.items() if k not in blocked}
-```
 
-この時点では内部項目を除外できる。ところが新しく `planned_at` を加えると、除外一覧も変えなければ公開データへ流れる。内部機能の変更が公開側の安全性を変えてしまうのである。
-
-最終画面で非表示にしても、元のJSONが公開リポジトリに入っていれば問題は残る。[GitHubの公開リポジトリの説明](https://docs.github.com/en/repositories/creating-and-managing-repositories/about-repositories)によれば誰でもアクセスでき、[機密情報の削除手順](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository)では履歴の書き換えやコピーへの対応が必要になる場合がある。
-
-## 公開物の入力を独立させる
-
-2026年8月14日の[ボードゲームカタログの変更](https://github.com/KAFKA2306/boardgamelist/commit/9ce9aa8c7eab27b650dd06a478c21319949dc575)では、[公式メタデータ](https://github.com/KAFKA2306/boardgamelist/blob/9ce9aa8c7eab27b650dd06a478c21319949dc575/data/official-metadata/apollo-no-shinpan-2026-08-14.json)に出典のアクセス条件 `public-web` を記録した。[作品ページの原稿](https://github.com/KAFKA2306/boardgamelist/blob/9ce9aa8c7eab27b650dd06a478c21319949dc575/docs/games/apollo-no-shinpan.md)には参加者、通過状況、個人の予定を保存しない方針がある。
-
-公開側は公式情報から取得した作品名、人数、所要時間などを使う。内部の予定管理は別の責務である。こうすれば、予定管理に項目を追加するだけで公開カタログの入力が増えることはない。
-
-ただし公開元が閲覧可能であることは、転載権や個々の値の公開適切性まで保証しない。項目名が `notes` なら、公開方針の説明も秘密の担当者メモも入れられる。出典、公開してよい値、承認された項目を合わせて判断する必要がある。
-
-## 公開する値を、実際の作品データから取り出す
-
-前述の2026年8月14日のメタデータには、次の値が保存されている。
-
-| 公開ページの項目 | メタデータの参照先 | 保存された値 |
-| --- | --- | --- |
-| 作品名 | `edition.name` | アポロンの審判 |
-| プレイヤー数 | `edition.players` | 9人 |
-| 所要時間 | `edition.duration_minutes_min` / `duration_minutes_max` | 180〜210分 |
-| 出典 | `source.url` | [制作者公式BOOTH](https://booth.pm/ja/items/6508051) |
-
-この構造を自分の公開カタログへ移すなら、公開情報だけのファイルを入力に指定し、表示する項目を明示して取り出す。次は[保存された実データ](https://github.com/KAFKA2306/boardgamelist/blob/9ce9aa8c7eab27b650dd06a478c21319949dc575/data/official-metadata/apollo-no-shinpan-2026-08-14.json)を使う実装例である。
-
-```python
-import json
-from pathlib import Path
-
-record = json.loads(
-    Path("data/official-metadata/apollo-no-shinpan-2026-08-14.json")
-    .read_text(encoding="utf-8")
-)
-edition = record["edition"]
-public = {
-    "name": edition["name"],
-    "players": edition["players"],
-    "duration_minutes_min": edition["duration_minutes_min"],
-    "duration_minutes_max": edition["duration_minutes_max"],
-    "source_url": record["source"]["url"],
+PUBLIC_FIELDS = {
+    "name",
+    "players",
+    "duration_minutes_min",
 }
-print(json.dumps(public, ensure_ascii=False, indent=2))
+
+public = {k: source[k] for k in PUBLIC_FIELDS if k in source}
+
+assert public == {
+    "name": "Example Game",
+    "players": 4,
+    "duration_minutes_min": 60,
+}
 ```
 
-指定した版のリポジトリを取得し、そのルートでこのコードを使えば、上の表に対応する値を取り出せる。これは既存の作品ページの生成処理を転載したものではなく、実データを使うための最小実装例である。
+改善前は `dict(source)` をそのまま公開していた。
 
-重要なのは二つの境界を設けることだ。
+この例の続きとして、架空の内部項目を `source` に一つ足して再実行する。結果が例と同じ3項目なら、新しい内部項目は選び出しの段階で落ちている。自分のデータに適用するときは、公開JSONの各値を元の公開資料とも照合する。
 
-- 入力：公開処理には公式メタデータだけを渡す。個人の予定や参加履歴を読む必要がない。
-- 出力：公開ページに必要な項目だけを取り出す。公開用メタデータに項目が増えても、自動的に表示項目を増やさない。
+改善後は、private fieldを知っていることではなく、**public fieldを明示的に知っていること**が公開条件になる。
 
-たとえば内部の予定管理に `planned_at` を追加しても、公開処理がそのファイルを読まなければ、追加した値は公開側へ届かない。これは構造から導ける性質であり、実際の漏洩事故を記録したものではない。
+この差は小さいが、schemaが成長するほど効く。
 
-## 次に公開物を作るときの判断順序
+## 読後にできるようになること
 
-| 必要な情報 | 選ぶ方法 |
-| --- | --- |
-| 公式の公開資料から取得できる | 公開資料を直接入力にする |
-| 内部と公開で共通の項目がある | 公開が認められた値だけを独立した入力に渡す |
-| 内部情報を集計しなければ作れない | 内部処理と公開処理を分け、公開する集計値の再識別可能性も考慮する |
+この設計を使うと、公開サイトや公開APIを作るときに次を判断できる。
 
-匿名化統計のように内部情報が不可欠な場合、公開情報だけから作ることはできない。項目の許可一覧だけでは匿名性も保証できない。
+- そのfieldは「公開禁止リストにないから出す」のか
+- 「公開sourceから得た、承認済みfieldだから出す」のか
+- private modelをそのままpublic serializerへ渡していないか
+- repositoryへcommitする前にpublic projectionを確定できているか
+- privacy auditを最後の防波堤ではなく、境界検証として置けているか
 
-公開側が知る必要のない内部情報を、公開処理から読めなくする。次にデータモデルを変更するときは、秘密の項目を何個除外するかではなく、そもそも何を入力する必要があるかから考える。
+特に、個人用DBと公開カタログ、社内分析と公開dashboard、運用ログとstatus pageを同じpipelineで扱うときに再利用できる。
+
+## 今回の発見
+
+私は当初、privacy対策は「private fieldを公開時に削ればよい」と考えやすかった。
+
+しかしpublic GitHubを運用するなら、その設計では遅い。
+
+`boardgamelist` の実例では、公開JSONに `access_condition: public-web` を持たせ、公開ページでも「参加者、通過状況、個人の予定は保存しない」と境界を固定していた。
+
+GitHub自身も、public repositoryは誰でもアクセスでき、commit後のsensitive-data cleanupはhistory rewriteまで必要になり得ると説明している。
+
+だから、再利用したい原則はこれである。
+
+**private dataから何を消すかではなく、public evidenceから何を公開物として組み立てるかを先に決める。**
+
+公開projectionを先に分ければ、公開コードは秘密を隠す役割から解放される。
+
+それが、公開カタログを長く安全に育てるための境界になる。
+
+
+## この規律の転用と例外
+
+社内分析と公開ダッシュボード、運用ログと公開status pageにも同じ境界を設けることを検討できる。**これは応用仮説**であり、漏洩件数が改善した実測ではない。
+
+匿名化した統計を公開するには非公開データの処理が必要な場合もある。そのときは処理工程を隔離し、再識別の危険を評価する。公開用のallowlistだけで安全と断定しない。**秘密が存在する場所と公開してよい情報の生成経路を、先に決める。**

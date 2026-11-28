@@ -1,7 +1,7 @@
 # Evidence report: false success is the real failure
 
 Date: 2026-08-15
-Candidate: `artifacts/candidates/2026-08/2026-08-15-false-success-is-the-real-failure.md`
+Historical candidate: https://github.com/KAFKA2306/articles/blob/a12216782d400407381e72bb51a9ead8bed06ce7/artifacts/candidates/2026-08/2026-08-15-false-success-is-the-real-failure.md (removed from active candidate tree)`artifacts/candidates/2026-08/2026-08-15-false-success-is-the-real-failure.md`
 Publication state: `published: false`
 
 ## Contract

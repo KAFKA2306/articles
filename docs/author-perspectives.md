@@ -12,7 +12,7 @@
 - 反例や適用外を説明できる。製品名・一時的な設定や個別事情に依存しない。
 - 記事の主張を強制せず、事実と反例を優先する。
 
-右欄は[厳選した聖典](../pipeline/contracts/author-canon.md)の対応番号。複数番号は横断的な応用。個別は原則に昇格させない。この棚卸しは選定理由の参照資料であり、定期プロンプトへ毎回全文投入しない。
+右欄は[厳選した聖典](../pipeline/contracts/article.md)の対応番号。複数番号は横断的な応用。個別は原則に昇格させない。この棚卸しは選定理由の参照資料であり、定期プロンプトへ毎回全文投入しない。
 
 ## 人生・価値
 
@@ -123,7 +123,7 @@
 
 ## 創作・製造・UI・人間の体験
 
-根拠：[AIキャラ](../articles/2026-08-15-ai-character-intelligence-muchio.md)、[映像の意図](../articles/video-storyboard-ir-provider-compile.md)、[Workflow採用](../articles/comfyui-8-missions-selection-20261107.md)、[3Dの打撃](../articles/3d-animation-contact-timing.md)、[ゲーム選択](../articles/sts2-one-hp-choice-test.md)、[UI](../articles/web-dialog-keyboard-eval.md)、[アクセシビリティ](../articles/2026-08-13-01-accessibility-contract.md)、[音楽設計](../articles/yt3-electropop-sound.md)。
+根拠：[AIキャラ](../articles/2026-08-15-ai-character-intelligence-muchio.md)、[映像の意図](../articles/video-storyboard-ir-provider-compile.md)、[Workflow採用](../articles/comfyui-8-missions-selection-20261107.md)、[3Dの打撃](../articles/3d-animation-contact-timing.md)、[ゲーム選択](../articles/sts2-one-hp-choice-test.md)、[UI](../articles/web-dialog-keyboard-eval.md)、[アクセシビリティ](../articles/2026-08-13-01-accessibility-contract.md)。音楽設計の草稿は、生成結果と比較評価を残していないため、記事候補から退役させた。
 
 | ID | 視点 | 聖典への統合先 |
 | --- | --- | --- |
@@ -139,7 +139,7 @@
 
 ## 文章・伝達・仕事の評価
 
-根拠：[編集契約](../pipeline/contracts/article.md)、[ポートフォリオ](../articles/2026-08-13-02-how-people-compress-a-person.md)、[見出し](../articles/headline-reader-check.md)、[didactization](https://github.com/KAFKA2306/kafstyler/blob/main/skills/didactization/SKILL.md)。
+根拠：[編集契約](../pipeline/contracts/article.md)、[ポートフォリオ](../articles/2026-08-13-02-how-people-compress-a-person.md)、[didactization](https://github.com/KAFKA2306/kafstyler/blob/main/skills/didactization/SKILL.md)。
 
 | ID | 視点 | 聖典への統合先 |
 | --- | --- | --- |
@@ -156,4 +156,4 @@
 
 ## 選定結果
 
-計84視点から15原則へ統合。個別の運用方針は昇格させない。聖典の本文と適用条件は[author-canon.md](../pipeline/contracts/author-canon.md)を正本とする。定期運用の題材選定・執筆・改稿・査読はその本文を読む。棚卸し自体を記事数・思想数のKPIにしない。
+計84視点から15原則へ統合。個別の運用方針は昇格させない。現在の適用条件は[記事契約](../pipeline/contracts/article.md)とリポジトリの`AGENTS.md`を正本とする。題材選定・執筆・改稿・査読は第一手の証拠を起点にする。棚卸し自体を記事数・思想数のKPIにしない。

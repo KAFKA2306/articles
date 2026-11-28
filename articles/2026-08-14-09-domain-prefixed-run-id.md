@@ -1,83 +1,385 @@
 ---
-title: "一意なIDだけでは、誤った保存先を防げない"
+title: "IDが一意でも、所属が不明なら使うな"
 emoji: "🧭"
 type: "tech"
 topics: ["typescript", "backend", "workflow", "design"]
 published: false
 created_at: "2026-08-14"
-updated_at: "2026-11-28"
+updated_at: "2026-11-21"
 ---
 
-複数の顧客や制作企画を同じ実行基盤で扱うとき、実行ごとにUUIDを発行すれば識別子の衝突は防ぎやすくなる。だが、ある実行が別の企画の設定を使って保存されたとき、UUIDの一意性は何の助けにもならない。
+**IDの衝突がないというだけで、別の用途の処理が混ざらないと思うな。**
 
-守りたいのは識別子の重複だけではない。**実行の所属と、設定・保存先の整合性である。** 動画制作基盤の実装から、一意性と所属を分けて考える方法を導く。
+UUIDが一意でも、そのrunがどのドメインの設定と保存先へ属すかは分からない。[yt3の入口](https://github.com/KAFKA2306/yt3/blob/849592ae98ce4ea1ea179ae5dd8997b227301791/src/index.ts)と[保存層](https://github.com/KAFKA2306/yt3/blob/849592ae98ce4ea1ea179ae5dd8997b227301791/src/io/core.ts)は、`domain_id/run_id`という形式で所属を運び、入口と保存時に矛盾を拒否する。[起点commit](https://github.com/KAFKA2306/yt3/commit/d1e2c42cfdfdb18d9962d15c38b87bab919df285)
 
-## 正しいIDと正しい設定の組み合わせが、間違っている
+規律は **「複数用途が共通基盤を使うなら、実行IDの所属を入口と保存先の双方で照合せよ」**。衝突防止と誤ったドメインへのアクセス防止は別の問題だ。[GitHub Actionsの実行履歴](https://docs.github.com/en/actions/how-tos/monitor-workflows/view-workflow-run-history)もIDの状態追跡の参考になる。
 
-[yt3の実行入口](https://github.com/KAFKA2306/yt3/blob/849592ae98ce4ea1ea179ae5dd8997b227301791/src/index.ts)は、用途を表すBUCKETとRUN_IDを受け取る。例えば次の入力を考える。
+## 読む前と読んだ後
+
+読む前は、run IDを「重複しなければよい識別子」と考えているかもしれない。
+
+読んだ後は、複数domainを1つのrunner・storage・audit基盤で扱うときに、次を実装できる。
+
+1. `domain/run` を正準IDにする
+2. 実行時domainとID prefixを照合する
+3. storage層でも形式を再検証する
+4. mismatch時は推測で補正せず停止する
+
+設計思想は **一意性ではなく境界の可視化** である。
+
+## 問題: 一意なIDでもdomainは分からない
+
+次の2つのrunを考える。
 
 ```text
-BUCKET=humanity_observatory
-RUN_ID=2026-08-14
+byosan_money       + 2026-08-14
+humanity_observatory + 2026-08-14
 ```
 
-所属のないIDは `humanity_observatory/2026-08-14` に正規化され、同じ値が実行状態と保存処理に渡る。
+保存キーを日付だけにすると、どちらも同じ見た目になる。
 
-ところが次の入力では事情が違う。
+```text
+runs/2026-08-14/
+```
+
+UUIDへ変えれば衝突確率の問題は小さくできるが、別の問題は残る。
+
+```text
+runs/4d0d.../
+runs/91a2.../
+```
+
+この文字列だけ見ても、どちらのdomainか分からない。
+
+障害調査、再実行、設定選択、artifact参照のたびに、外側の状態からdomainを復元する必要がある。
+
+## 実際の入力例
+
+`yt3` のentrypointは `BUCKET` と `RUN_ID` を別々に受け取る。
+
+公開実装では、たとえば `BUCKET=humanity_observatory` のとき、prefixのないrun IDは次の形に正規化される。
+
+```text
+入力:
+BUCKET=humanity_observatory
+RUN_ID=2026-08-14
+
+正規run ID:
+humanity_observatory/2026-08-14
+```
+
+`src/index.ts` は、その正規化後の値を `AssetStore` とworkflow stateの両方へ渡している。
+
+```ts
+const initialState = {
+  run_id: runId,
+  bucket: BUCKET,
+  mission_file: MISSION_FILE,
+};
+```
+
+重要なのは、保存先だけdomain付きにするのではなく、**state自身も同じrun IDを持つ**ことだ。
+
+## 壊れた失敗例: BUCKETとprefixが食い違う
+
+次は一見すると両方とも有効な文字列である。
 
 ```text
 BUCKET=humanity_observatory
 RUN_ID=daily_pulse/2026-08-14
 ```
 
-二つの文字列はそれぞれ有効に見えても、所属が矛盾している。公開実装では期待する接頭辞と一致しない入力を例外として扱う。[導入時の変更](https://github.com/KAFKA2306/yt3/commit/d1e2c42cfdfdb18d9962d15c38b87bab919df285)
+しかし意味は矛盾している。
 
-ここで接頭辞を自動的に書き換えると、別用途の実行を再開するつもりだったのか、単なる入力ミスなのかという重要な情報を失う。所属が明示されているのに矛盾する場合、推測で修復しない。
+`yt3` の公開実装は、このケースを自動補正しない。`RUN_ID` に `/` が含まれ、期待prefixと一致しない場合に例外を投げる。
 
-## 入口で意味を確定し、保存先へ所属を運ぶ
+```ts
+if (RUN_ID.includes("/") && !RUN_ID.startsWith("humanity_observatory/")) {
+  throw new Error(
+    `Domain mismatch: BUCKET is ${BUCKET} but RUN_ID starts with a different prefix: ${RUN_ID}`,
+  );
+}
+```
 
-[保存処理の実装](https://github.com/KAFKA2306/yt3/blob/849592ae98ce4ea1ea179ae5dd8997b227301791/src/io/core.ts)では、所属のないIDを拒否し、IDから用途別設定を読み、保存ディレクトリを決める。
+ここで「BUCKETを優先してprefixを書き換える」のは危険である。
 
-この設計では、入口が実行の意図とIDの整合性を扱い、保存層が識別子と保存先の構造を扱う。別のCLIや再実行処理が保存層を直接呼ぶ場合にも、所属のない入力を受け取らない契約になる。
+誤入力なのか、別domainのrunを意図的に再実行したかったのかを機械側では確定できないからだ。
 
-UUIDと信頼できる所属メタデータを組み合わせる方法も成立する。所属をIDへ含める利点は、ログやキューへIDだけを渡した場合にも所属を読み取れることだ。ただし、文字列を信頼できる認可情報の代わりにしてはいけない。
+**曖昧な矛盾は修復ではなく停止させる。**
 
-## 三つの入力から設計を始める
+## 原因: domainを外部コンテキストにだけ持たせる
 
-次は外部ライブラリを使わないNode.jsの例である。実際の製品コードではなく、所属を確定する処理の最小例として使える。 `run-id.mjs` として保存し、`node run-id.mjs` で実行する。
+壊れやすい設計は、run IDとdomainを独立したまま最後まで運ぶ。
+
+```ts
+run("2026-08-14", { bucket: "humanity_observatory" });
+```
+
+この設計では、呼び出し先が増えるたびに2値の整合性確認が必要になる。
+
+```text
+scheduler
+  ↓ run_id + bucket
+workflow
+  ↓ run_id + bucket
+storage
+  ↓ run_id + bucket
+logger
+  ↓ run_id + bucket
+audit
+```
+
+どこか1か所で `bucket` を落としたり、default値へ戻したりすると、run IDだけでは異常を発見しにくい。
+
+## 設計判断: IDをnamespace付きの正準値にする
+
+正準値を次の形にする。
+
+```text
+<domain>/<run>
+```
+
+例:
+
+```text
+byosan_money/2026-08-14
+humanity_observatory/2026-08-14
+```
+
+すると、下流はrun IDからdomainを復元できる。
+
+`yt3` の `AssetStore` はこの前提をさらにstorage層で検証している。
+
+```ts
+constructor(runId: string) {
+  if (!runId.includes("/")) {
+    throw new Error(
+      `CRITICAL: Naming Boundary Violation. runId must be 'domain_id/run_id', got: '${runId}'`,
+    );
+  }
+
+  const [domainId, id] = runId.split("/");
+  if (!domainId || !id) {
+    throw new Error(`CRITICAL: Malformed runId: '${runId}'`);
+  }
+
+  this.domainId = domainId;
+  const c = loadConfig(domainId);
+  this.cfg = c;
+  this.runDir = path.join(ROOT, c.workflow.paths.runs_dir, domainId, id);
+}
+```
+
+ここには3つの効果がある。
+
+- domainなしIDを保存層へ到達させない
+- domainから設定を選ぶ
+- directoryも `runs_dir/domain/id` に固定する
+
+## なぜ入口とstorageの2段階で検証するのか
+
+入口だけで検証すると、将来別のCLI、batch、test helperが `AssetStore` を直接呼び出したときに境界を迂回できる。
+
+逆にstorageだけで検証すると、workflowをかなり進めた後で初めて不整合が見つかる可能性がある。
+
+そこで責務を分ける。
+
+```text
+entrypoint
+  BUCKET ↔ RUN_ID prefix の意味整合性を検証
+
+storage
+  domain/run 形式と保存先構造を検証
+```
+
+これは同じcheckの重複ではない。
+
+入口は **意味** を、storageは **構造** を守っている。
+
+## 代替案1: UUIDだけ使う
+
+```text
+550e8400-e29b-41d4-a716-446655440000
+```
+
+一意性には有効だが、そのID単体からdomainは分からない。
+
+複数domainで同じstorage・監査・再実行機構を共有するなら、別途metadata lookupが必要になる。
+
+## 代替案2: directoryだけdomainで分ける
+
+```text
+runs/humanity_observatory/<uuid>
+```
+
+保存先としては十分に見える。
+
+ただし、loggerやqueue messageに `<uuid>` だけを渡すと、directoryを離れた瞬間にnamespace情報が失われる。
+
+そのため、この記事ではpathだけでなく **識別子そのものをnamespace付きにする** 方を採る。
+
+## 代替案3: mismatchを自動修復する
+
+```ts
+const runId = `${bucket}/${inputRunId.split("/").at(-1)}`;
+```
+
+実装は短いが、矛盾を隠す。
+
+誤ったdomainのrunを別domainとして再解釈する危険があるため、入力がすでにprefix付きならfail-closeの方が監査しやすい。
+
+## 改善後の最小実装
+
+実務で再利用するなら、まずこの程度でよい。
+
+```ts
+function normalizeRunId(domain: string, raw: string): string {
+  if (!domain) throw new Error("domain is required");
+  if (!raw) throw new Error("run id is required");
+
+  if (raw.includes("/")) {
+    if (!raw.startsWith(`${domain}/`)) {
+      throw new Error(`domain mismatch: ${domain} vs ${raw}`);
+    }
+    return raw;
+  }
+
+  return `${domain}/${raw}`;
+}
+```
+
+storage側も独立して検証する。
+
+```ts
+function parseRunId(runId: string) {
+  const parts = runId.split("/");
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    throw new Error("runId must be domain/run");
+  }
+
+  return {
+    domain: parts[0],
+    id: parts[1],
+  };
+}
+```
+
+## 検証: 正常系より境界ケースを先に書く
+
+最低限、次の4ケースを固定する。
+
+```ts
+import assert from "node:assert/strict";
+
+assert.equal(
+  normalizeRunId("alpha", "2026-08-14"),
+  "alpha/2026-08-14",
+);
+
+assert.equal(
+  normalizeRunId("alpha", "alpha/2026-08-14"),
+  "alpha/2026-08-14",
+);
+
+assert.throws(() =>
+  normalizeRunId("alpha", "beta/2026-08-14"),
+);
+
+assert.throws(() => parseRunId("2026-08-14"));
+```
+
+特に3つ目が重要だ。
+
+```text
+期待domain: alpha
+入力prefix: beta
+```
+
+という **両方が単体では妥当だが組み合わせが不正** なケースを検証する。
+
+## 再現方法
+
+Node.jsで次を `run-id.mjs` として保存する。
 
 ```js
 function normalizeRunId(domain, raw) {
-  const valid = s => /^[A-Za-z0-9_-]+$/.test(s);
-  if (!valid(domain)) throw new Error("invalid domain");
-  const parts = raw.split("/");
-  if (parts.length === 1 && valid(parts[0])) {
-    return domain + "/" + parts[0];
+  if (raw.includes("/")) {
+    if (!raw.startsWith(`${domain}/`)) {
+      throw new Error(`domain mismatch: ${domain} vs ${raw}`);
+    }
+    return raw;
   }
-  if (parts.length !== 2 || !parts.every(valid)) {
-    throw new Error("invalid run id");
-  }
-  if (parts[0] !== domain) throw new Error("domain mismatch");
-  return raw;
+  return `${domain}/${raw}`;
 }
 
-for (const raw of ["2026-08-14", "alpha/2026-08-14", "beta/2026-08-14"]) {
+for (const [domain, id] of [
+  ["alpha", "2026-08-14"],
+  ["alpha", "alpha/2026-08-14"],
+  ["alpha", "beta/2026-08-14"],
+]) {
   try {
-    console.log(normalizeRunId("alpha", raw));
+    console.log(normalizeRunId(domain, id));
   } catch (error) {
-    console.log(error.message);
+    console.error(error.message);
   }
 }
 ```
 
-期待する出力は次のとおりだ。
+実行する。
+
+```bash
+node run-id.mjs
+```
+
+期待結果は次の通り。
 
 ```text
 alpha/2026-08-14
 alpha/2026-08-14
-domain mismatch
+domain mismatch: alpha vs beta/2026-08-14
 ```
 
-この例は許可する文字を限定するが、実際の保存処理には認可、パスの安全性、同じ所属内でのIDの一意性も必要である。日付をIDにする場合は同日に複数回実行する条件にも注意する。
+この再現例は外部libraryを必要としない。
 
-複数用途で実行基盤を共有するとき、自分のシステムで所属、設定、保存先を一組ずつ書き出し、矛盾した組み合わせがどこで拒否されるかを調べる。用途が一つで保存先も分離されているなら、新しい接頭辞を強制する必要はない。目的は命名規則を増やすことではなく、誤った所属のまま処理を進めないことである。
+## 失敗と学び
+
+この設計から得られる学びは、ID設計を「重複しない文字列を作る問題」だけにしないことだ。
+
+複数のdomainが同じ基盤を共有するとき、本当に守りたいのは次である。
+
+```text
+一意性
++ 所属domain
++ 設定選択
++ 保存先
++ audit trace
+```
+
+`domain/run` にすると、1本の文字列がこの境界を運べる。
+
+ただし、prefixを付けるだけでは不十分である。**呼び出し側のdomainと一致するかを検証し、保存層でも形式を再検証する**ところまでが1セットになる。
+
+## 実務へ持ち込むときの判断基準
+
+この方式が特に効くのは、次の条件があるsystemだ。
+
+- 複数product・tenant・channel・pipelineが同じrunnerを使う
+- run artifactを同じroot directoryへ保存する
+- 過去runをID指定で再実行する
+- audit/logからartifactへ遡る
+- domainごとに設定が異なる
+
+手元の処理では、同じ日に動く二つの用途から、設定と保存先を一つずつ控える。まず用途を付けたIDで、それぞれ予定した設定と保存先に進むか確かめる。次に用途とIDの先頭をわざと違わせ、設定や保存先を決める前にエラーになるかを確認する。
+
+逆に、domainが1つしかなく、保存先も完全に分離されている小さなbatchなら、namespace prefixは過剰設計になり得る。
+
+重要なのはprefixという記法そのものではない。
+
+**曖昧な所属を下流へ流さず、入口で矛盾を止め、保存層で境界を再確認すること**が再利用できる設計判断である。
+
+
+## 別の基盤への転用と撤回条件
+
+複数tenant、channel、pipelineが保存基盤を共有するときは、所属と実行IDを一緒に検証する判断を試せる。これは**応用仮説**であって他の基盤で事故減少を測定した結果ではない。
+
+ドメインが一つで保存先も物理的に分離されている場合、prefixは過剰かもしれない。さらに、利用者が自由に書けるprefixは**権限の証明ではない**。実際の認可と保存先の照合を省かない。所属文字列を足しただけで安全とは呼ばない。

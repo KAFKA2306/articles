@@ -12,7 +12,6 @@ on:
       - "scripts/**"
       - "README.md"
       - "AGENTS.md"
-      - ".github/workflows/article-pipeline.yml"
       - ".github/workflows/article-pipeline-ci.yml"
       - ".github/workflows/zenn-manual-release.yml"
       - ".github/workflows/zenn-production-verify.yml"
@@ -29,7 +28,6 @@ on:
       - "scripts/**"
       - "README.md"
       - "AGENTS.md"
-      - ".github/workflows/article-pipeline.yml"
       - ".github/workflows/article-pipeline-ci.yml"
       - ".github/workflows/zenn-manual-release.yml"
       - ".github/workflows/zenn-production-verify.yml"
@@ -47,15 +45,15 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - name: Zenn article slug contract
-        run: python -m pipeline.zenn_slug
+      - name: Evidence and Zenn article gate
+        run: python3 -m pipeline.evidence_gate && python3 -m pipeline.zenn_slug
       - uses: actions/setup-node@v6
         with:
           node-version: "22"
       - name: Compile
-        run: python -m compileall pipeline demos/python-syntax-gate/syntax_gate.py
+        run: python3 -m compileall -q pipeline tests demos/python-syntax-gate/syntax_gate.py
       - name: Contract tests
-        run: python -m unittest discover -s tests -v
+        run: python3 -m unittest discover -s tests -v
       - name: Publication transition guard
         shell: bash
         run: |
@@ -73,7 +71,7 @@ jobs:
           fi
           git cat-file -e "$base^{commit}" 2>/dev/null || git fetch origin "$base" --depth=1
           git cat-file -e "$head^{commit}" 2>/dev/null || git fetch origin "$head" --depth=1
-          python -m pipeline.publication_diff --base "$base" --head "$head"
+          python3 -m pipeline.publication_diff --base "$base" --head "$head"
       - name: Zenn CLI compatibility
         run: bash scripts/zenn-render-check.sh
       - name: Demo JavaScript syntax
@@ -103,7 +101,7 @@ jobs:
             curl --fail --silent --show-error "http://127.0.0.1:8000/$path" >/dev/null
           done
       - name: Repository and privacy audit
-        run: python -m pipeline.audit
+        run: python3 -m pipeline.audit
       - name: Verify clean checkout
         shell: bash
         run: |

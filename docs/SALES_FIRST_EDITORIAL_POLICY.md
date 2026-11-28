@@ -127,7 +127,7 @@ Sales-firstを理由に断定を強めない。
 
 ### Multi-project autonomy
 
-`artifacts/candidates/2026-08/2026-08-13-chatgpt-multiproject-autonomy.md`
+`articles/chatgpt-multiproject-autonomy.md`
 
 良い点は、AI agentという技術名ではなく、**123個のnon-fork個人projectを横断し、「次に何をするか」「何をもって完了か」まで制御loopへ移した**という運用能力を中心に置いていること。Issue / PR / merge規模と複数repositoryのproduction evidenceを示している。
 
